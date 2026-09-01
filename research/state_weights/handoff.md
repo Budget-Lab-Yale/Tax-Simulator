@@ -105,6 +105,20 @@ only on three SSA workbooks — `eedata_sc14/15/16.xlsx`, workstation
 download), HT2's 2022 ceiling and what it does and does not cap, and
 per-state rollout resumption.
 
+**Intended home of the builder (recorded 2026-08-31, JI): Tax-Data,
+eventually — not yet.** Constructing a population in PUF schema is Tax-Data's
+mission, the schema being guessed at from outside is how the `qual_div` and
+`wages1/2` contract breaks happened, and the S18(c) annual rebuild matches
+Tax-Data's production cadence. It stays here for now because the pool build
+shares its core machinery with the state work above — `asec_tax_units.R`,
+the filing model, the residual anchors, and the SAME `units_{y}.rds` /
+`scored_units_{y}.rds` feed both the pool emit and the state margins — so a
+move today would fork the unit builder across repos or couple the state work
+to Tax-Data internals. Revisit after the group F re-fit stabilizes; the
+`ASEC-Nonfilers` interface (pinned vintage, manifest, consumer-side
+contract) is the boundary that makes the eventual migration cheap, and it
+should survive the move.
+
 ## Ceilings and splits a reader must carry
 
 | fact | value |
