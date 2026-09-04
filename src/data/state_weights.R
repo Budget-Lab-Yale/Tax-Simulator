@@ -91,7 +91,7 @@ ht2_path <- function(year) {
   file.path(raw_data_root(), "IRS-Ind/state/HT2", sprintf("ht2_%d.csv.gz", year))
 }
 acs_extract_dir <- function(acs_year) {
-  file.path(raw_data_root(), "ACS/acs_common", sprintf("us%da", acs_year))
+  file.path(raw_data_root(), "ACS/acs_common_v2", sprintf("us%da", acs_year))
 }
 ssa_workbook <- function(family, year) {
   stem <- c(`SSA-OASDI-SC` = "oasdi_sc", `SSA-EEDATA-SC` = "eedata_sc")[family]
@@ -185,8 +185,10 @@ read_ht2 <- function(path, year) {
 # HT2 covers filers only, so the non-filer PUF partition is targeted to ACS/Census
 # state × age × income margins instead (plan §2.1). This builds those margins from
 # the local IPUMS USA extract; shared cluster copies live at
-# /nfs/roberts/project/pi_nrs36/shared/raw_data/ACS/acs_common (us{year}a/
-# vintages 2006-2024: usa_{year}a.dat.gz + DDI xml + variables.csv). The authority for WHO is a non-filer is the Tax-Data
+# /nfs/roberts/project/pi_nrs36/shared/raw_data/ACS/acs_common_v2 (us{year}a/
+# vintages 2006-2024: usa_{year}a.dat.gz + DDI xml + variables.csv). Re-pointed
+# from acs_common 2026-09-04; record counts are identical sample-for-sample, so
+# the state x age x income margins this builds are unchanged. The authority for WHO is a non-filer is the Tax-Data
 # `filer` flag on the PUF; ACS supplies only the geographic MARGINS across which the
 # non-filer partition is spread — so the ACS filing model here need only be a
 # reasonable v0, refined against the reconciliation total (plan risk item).
