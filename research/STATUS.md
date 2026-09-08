@@ -408,8 +408,9 @@ uniform placeholder weights until Phase 1 lands (state levels not yet
 meaningful; all contracts real).
 
 **Phase 1 — state weights (engines and data done; harness remains).**
-- Data: shared stores built and wired — IRS-Ind mirror (HT2 2012–2022,
-  percentile, county, ZIP + SOI docguides + per-family change notes;
+- Data: shared stores built and wired — IRS-Ind mirror (HT2 2012–2023,
+  percentile 2013–2023, county 2011–2023, ZIP 2011–2022 + SOI docguides +
+  per-family change notes;
   public repo johniselin-budget-lab/IRS-Ind, data on the cluster share) and
   the IPUMS ACS extracts. `read_ht2()` ingests the full 24-series target
   map; `read_acs_extract()` handles the fixed-width format, implied

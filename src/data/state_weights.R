@@ -101,7 +101,7 @@ ssa_workbook <- function(family, year) {
 
 # -----------------------------------------------------------------------------
 # SOI HT2 AGI_STUB → [lower, upper) AGI bracket, in nominal dollars.
-# 10-class scheme, verified from the data (2017–2022 all carry stubs 1..10, with
+# 10-class scheme, verified from the data (2017–2023 all carry stubs 1..10, with
 # stub 1 = "under $1": it holds negative AGI). A record's stub is found by
 # lower ≤ agi < upper. Pre-2017 HT2 used a coarser scheme; extend here if needed.
 # -----------------------------------------------------------------------------
@@ -231,7 +231,8 @@ filing_threshold <- function(year) {
     `2019` = c(single = 12200, joint = 24400, hoh = 18350),
     `2020` = c(single = 12400, joint = 24800, hoh = 18650),
     `2021` = c(single = 12550, joint = 25100, hoh = 18800),
-    `2022` = c(single = 12950, joint = 25900, hoh = 19400))
+    `2022` = c(single = 12950, joint = 25900, hoh = 19400),
+    `2023` = c(single = 13850, joint = 27700, hoh = 20800))
   tbl[[as.character(year)]]
 }
 

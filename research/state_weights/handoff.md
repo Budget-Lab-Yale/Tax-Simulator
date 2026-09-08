@@ -60,11 +60,17 @@ script per stage, gates printed and committed. The method reference is the
 *Non-Filer Residual* artifact; decisions S13–S18; benchmark disputes in
 `notes/anchor_basis_comparison.md`.
 
-- **Years.** Built directly for every year 2014–2023. The ceiling is set by
-  the inputs, not the survey: HT2 ends 2022 (state products), Pub 1304 T1.6
+- **Years.** Built directly for every year 2014–2023. The ceiling was set by
+  the inputs, not the survey: HT2 ended 2022 (state products), Pub 1304 T1.6
   ends 2023 (the national anchor), the ASEC reaches income year 2024. For
-  2023 the two S15 level corrections are *carried* from 2022 at 0.59% of the
-  published level, since HT2 cannot measure them there.
+  2023 the two S15 level corrections were *carried* from 2022 at 0.59% of the
+  published level, since HT2 could not measure them there.
+  **Superseded in part, 2026-09: SOI published HT2 TY2023** (mirrored; see
+  johniselin-budget-lab/IRS-Ind). HT2 and T1.6 now end in the same year, so
+  the state ceiling and the national ceiling coincide at 2023 and the 2023
+  level corrections can be measured rather than carried. The anchor pair is
+  still 2017/2022 and nothing has been rebuilt — moving it is an open
+  decision, not a done change (S18).
 - **Calibration basis.** The hazard calibrates on each year's own Pub 5785
   column (2014–16) and on rates against our own above-threshold population
   after (S18); the mean-income ratio is flat to 1.1% across the published
@@ -102,7 +108,7 @@ script per stage, gates printed and committed. The method reference is the
 Proposed in `notes/state_work_proposal.md`: the split-weights re-fit on the
 new pool (group F), the state wage and age margins for 2014–2016 (blocked
 only on three SSA workbooks — `eedata_sc14/15/16.xlsx`, workstation
-download), HT2's 2022 ceiling and what it does and does not cap, and
+download), what the HT2 ceiling caps now that it has moved to 2023, and
 per-state rollout resumption.
 
 **Intended home of the builder (recorded 2026-08-31, JI): Tax-Data,

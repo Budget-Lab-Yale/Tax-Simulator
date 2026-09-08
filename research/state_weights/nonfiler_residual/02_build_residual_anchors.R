@@ -137,22 +137,29 @@ for (yr in years) {
   # HT2 identities by state. Read BEFORE the national anchor because the two
   # universe corrections below are measured off HT2 and applied to T1.6's level.
   #
-  # HT2 ends at TY2022. A later year (TY2023: T1.6 and PEP exist, HT2 does
-  # not) can still get its NATIONAL anchor and age shape -- the two level
-  # corrections just cannot be MEASURED that year, so they are CARRIED from
-  # the latest HT2 year as a fraction of the published level -- 0.549% (2017)
-  # and 0.591% (2022) of it, i.e. the 2.2-2.6% they add to the RESIDUAL. The
-  # stability across years is what makes carrying a fraction defensible.
-  # Every state product is skipped for such a year.
+  # HT2 now reaches TY2023 (SOI published it 2026-08; mirrored 2026-09), so
+  # it no longer ends before Pub 1304 Table 1.6 and this branch has no
+  # currently-published year that takes it. It is kept for the year AFTER the
+  # latest HT2: such a year can still get its NATIONAL anchor and age shape --
+  # the two level corrections just cannot be MEASURED that year, so they are
+  # CARRIED from the latest HT2 year as a fraction of the published level --
+  # 0.549% (2017) and 0.591% (2022) of it, i.e. the 2.2-2.6% they add to the
+  # RESIDUAL. The stability across years is what makes carrying a fraction
+  # defensible. Every state product is skipped for such a year.
+  #
+  # NOTE (2026-09): TY2023 now takes the MEASURED branch instead of the
+  # carried one. The anchor years are still 2017/2022, so nothing rebuilds
+  # here on its own -- but a TY2023 run is now a different computation than
+  # it was, and HT2_REF_YEAR below is no longer the latest measured year.
   have_ht2 <- file.exists(ht2_path(yr))
   if (have_ht2) {
     ht2 <- read_ht2(ht2_path(yr), yr)
     fp  <- ht2_filing_persons(ht2)
     ht2_filing_adults <- fp[, sum(married_filing_adults + single_filing_adults)]
   } else {
-    message(sprintf(paste('  NO HT2 for TY%d (series ends 2022): national',
-                          'anchor and age shape only; corrections carried;',
-                          'state products skipped.'), yr))
+    message(sprintf(paste('  NO HT2 for TY%d (mirror reaches 2023):',
+                          'national anchor and age shape only; corrections',
+                          'carried; state products skipped.'), yr))
   }
 
   #--------------------------------------------------------------------------
@@ -220,6 +227,10 @@ for (yr in years) {
     # as `fa` above) and take 1 - corrected/published from its committed
     # anchor. The bounds bracket the measured values (0.549% in 2017, 0.591%
     # in 2022) with margin -- outside them means the reference file changed.
+    # This is the latest year with a COMMITTED anchor file, not simply the
+    # latest HT2 year: HT2 reaches 2023 as of 2026-09 but the anchors are
+    # still built for 2017/2022, so 2022 remains the reference until the
+    # anchor pair moves (see decisions_log S18).
     HT2_REF_YEAR <- 2022L
     ref_anchor <- fread(file.path(res_dir,
                                   sprintf('national_anchor_%d.csv', HT2_REF_YEAR)))

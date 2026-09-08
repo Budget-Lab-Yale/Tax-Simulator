@@ -358,7 +358,7 @@ reading uses `fread(cmd = 'zcat …')` and is POSIX-only. Load the R module in t
 | `notes/nonfiler_proposal_rewrite_plan.md` | **open** | Rewriting the narrative proposal as a co-author-facing methodology document. Communication, not modelling; best cut once the record stops moving. |
 | `notes/state_weights_alternatives.md` | **deferred** | Alternative weight constructions; superseded in practice by the Phase 1 bake-off, kept for the reasoning. |
 | `handoff.md` | **open** | The collaborator-facing map of the non-filer replacement, four parts: this plan's group C evidence, the Tax-Data branch's three commits, the ceilings and splits a reader must carry, and the mortality write-up. Rendered per S8 for review. |
-| `notes/state_work_proposal.md` | **open** | Part (d) of the handoff: the state work that follows — the group F re-fit on the new pool, the 2014–16 state margins (blocked on three SSA workbooks), what HT2's 2022 ceiling caps, rollout resumption. |
+| `notes/state_work_proposal.md` | **open** | Part (d) of the handoff: the state work that follows — the group F re-fit on the new pool, the 2014–16 state margins (blocked on three SSA workbooks), what the HT2 ceiling caps now that SOI has published TY2023, rollout resumption. |
 
 ---
 

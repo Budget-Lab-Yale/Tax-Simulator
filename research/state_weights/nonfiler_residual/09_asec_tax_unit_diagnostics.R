@@ -222,16 +222,16 @@ for (ty in ANCHOR_YEARS) {
   message('\n=== A4. Income aggregates, TY', ty)
   full <- read_asec(ty)
   ddi  <- attr(full, 'ddi')
-  # HT2 ends at 2022; for a later year the SOI columns are NA and only the
-  # ASEC side of this table -- which is what 01_build_units.R's C0 gate reads
-  # -- is populated.
+  # HT2 reaches 2023 (mirrored 2026-09); for a year beyond it the SOI columns
+  # are NA and only the ASEC side of this table -- which is what
+  # 01_build_units.R's C0 gate reads -- is populated.
   ht2 <- if (file.exists(ht2_path(ty))) {
     h <- as.data.table(read_ht2(ht2_path(ty), ty))[
       !(state %in% NONTAX_BUCKETS), .(v = sum(value)), by = variable]
     setkey(h, variable)
     h
   } else {
-    message(sprintf('  NOTE: no HT2 for TY%d (series ends 2022) -- SOI columns are NA.', ty))
+    message(sprintf('  NOTE: no HT2 for TY%d (mirror reaches 2023) -- SOI columns are NA.', ty))
     data.table(variable = character(), v = numeric(), key = 'variable')
   }
   # SSA EEDATA-SC is manually downloaded (the cluster is 403-blocked) and the

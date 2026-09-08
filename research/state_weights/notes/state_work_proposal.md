@@ -32,14 +32,27 @@ cluster. QCEW is already backfilled. Drop the files in,
 `13_verify_ssa_backfill.R` checks and registers them, and one anchor re-run
 completes both products for all three years.
 
-## 3. Name what HT2's 2022 ceiling caps, and what it does not
+## 3. Name what the HT2 ceiling caps, and what it does not
 
-HT2 ends at 2022, so **state** shares end there; the **national** anchor
-reaches 2023 with carried level corrections (0.59%). Proposal: state weights
-for 2023+ hold the 2022 state shares against the national path — the same
-carried-forward logic the level corrections use — with the assumption named
-in the fit's documentation rather than discovered. Revisit when SOI publishes
-HT2 2023.
+**The trigger at the end of this item has fired: SOI published HT2 TY2023 in
+August 2026 and it was mirrored 2026-09.** The ceiling moves from 2022 to
+2023, where Pub 1304 T1.6 already sits — so state shares and the national
+anchor now end in the same year, and the 0.59% carried level corrections are
+measurable for 2023 rather than carried.
+
+What that changes, and what it does not: `02_build_residual_anchors.R` will
+now take its MEASURED branch for TY2023 instead of the carried one, so a
+TY2023 run is a different computation than it was — but nothing rebuilds on
+its own, because the anchor pair is still 2017/2022 and every committed
+anchor file is a 2017 or 2022 product. The open decision is whether to move
+the pair to 2017/2023 (≈15 scripts' `ANCHOR_YEARS`, plus `HT2_REF_YEAR`, and
+a full rebuild and re-verification of the anchors).
+
+The original proposal, now moot for 2023 and still live for 2024+: state
+weights for years past the latest HT2 hold the latest HT2 state shares
+against the national path — the same carried-forward logic the level
+corrections use — with the assumption named in the fit's documentation
+rather than discovered.
 
 ## 4. Resume the per-state rollout on the settled base
 

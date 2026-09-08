@@ -249,8 +249,8 @@ for (yr in YEARS) {
     stopifnot(abs(dorm_03 / dorm_anch - 1) < 0.05)
   } else {
     message(sprintf(paste('  dorm tripwire SKIPPED for TY%d: no state anchor',
-                          'file (HT2 ends 2022). Informational only -- dorm',
-                          'students are not a term in the identity.'), yr))
+                          'file built for that year. Informational only --',
+                          'dorm students are not a term in the identity.'), yr))
   }
 
   # Our claimed-adult-dependent netting, non-filing portion, by the
