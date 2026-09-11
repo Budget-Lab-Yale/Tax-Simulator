@@ -282,8 +282,8 @@ important because the whole population is being swapped:
   *filer*-target problem.
 
 **G — swap-in.** Tune to the ≥99%-within-2% bar, write
-`state_weights_{year}.csv` for 2014–2022 (**2013 is the only HT2 gap** — the
-store carries 2012 and 2014–2022, verified 2026-08-27; earlier drafts said
+`state_weights_{year}.csv` for 2014–2023 (**2013 is the only HT2 gap** — the
+store carries 2012 and 2014–2023, TY2023 added 2026-09; verified 2026-08-27 through 2022; earlier drafts said
 "2013/2015" and `ht2_2015.csv.gz` is in fact present),
 carry forward to projection years, vintage-tag the files, and flip the
 dispatcher off `placeholder` at `src/sim/run.R:433`.

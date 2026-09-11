@@ -199,8 +199,10 @@ for (yr in YEARS) {
   st <- readRDS(file.path(RES, sprintf('units_%d.rds', yr)))
   gq <- fread(file.path(RES, sprintf('gq_backfill_summary_%d.csv', yr)))
   shape <- fread(file.path(SHAPE, sprintf('nonfiler_age_shape_%d.csv', yr)))
-  # State anchors need HT2, which ends at 2022; a later year has none and the
-  # dorm tripwire below (its only consumer here) is skipped with a message.
+  # State anchors need HT2 and a committed residual_anchors file. HT2 reaches
+  # TY2023 as of 2026-09, but anchors are committed only for the 2017/2022
+  # pair (S18 premise note), so a year without the file skips the dorm
+  # tripwire below (its only consumer here) with a message.
   ranch_path <- file.path(ANCH, sprintf('residual_anchors_%d.csv', yr))
   ranch <- if (file.exists(ranch_path)) fread(ranch_path) else NULL
 

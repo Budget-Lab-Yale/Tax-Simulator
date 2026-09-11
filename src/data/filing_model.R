@@ -1,3 +1,4 @@
+# MOVED 2026-09-11: maintained in Tax-Data/src/nonfilers/filing_model.R (see research/state_weights/MOVED.md). This copy is frozen; kept only until the runtime loader is split out.
 # =============================================================================
 # FILING MODEL: Mok probits, the Pub 5785 hazard, and their combination
 #

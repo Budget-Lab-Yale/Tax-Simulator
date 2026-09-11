@@ -1,3 +1,4 @@
+# MOVED 2026-09-11: maintained in Tax-Data/src/nonfilers/state_weights.R (see research/state_weights/MOVED.md). This copy is frozen; kept only until the runtime loader is split out.
 # =============================================================================
 # state_weights.R  —  Phase 1 prototype: split state weights for the PUF
 #

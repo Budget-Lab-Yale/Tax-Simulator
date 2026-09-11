@@ -1,3 +1,4 @@
+# MOVED 2026-09-11: maintained in Tax-Data/src/nonfilers/asec_tax_units.R (see research/state_weights/MOVED.md). This copy is frozen; kept only until the runtime loader is split out.
 # =============================================================================
 # ASEC TAX UNITS: reader, income concepts, unit builder, filing threshold
 #

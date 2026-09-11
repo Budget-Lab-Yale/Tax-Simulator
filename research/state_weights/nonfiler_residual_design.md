@@ -223,7 +223,7 @@ students. Three consequences:
 
 ### 3.1 The anchors
 
-For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
+For each HT2 year (2014, 2016-2023 -- TY2023 published 2026-08 and mirrored 2026-09; 2017 and 2022 first):
 
 1. **Filing adults by state** from HT2 filing-status identities, implemented as
    `ht2_filing_persons()` (`state_weights.R:382`), with the QSS/MFS and

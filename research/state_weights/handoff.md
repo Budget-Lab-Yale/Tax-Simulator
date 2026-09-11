@@ -129,7 +129,7 @@ should survive the move.
 
 | fact | value |
 |---|---|
-| non-filer file rebuildable through | **2023** national, 2022 with state products. 2020–21 build under **S20**: the held Pub 5785 hazard level is infeasible there (band 18_25 over-subscribed by the stimulus filing spike), so it is deflated per band by observed excess filing — level 12.39M → 8.89M units in 2020, 12.49M → 10.89M in 2021 (`16_pandemic_filing_adjustment.R`) |
+| non-filer file rebuildable through | **2023**, national and state alike since HT2 TY2023 landed (2026-09); state products for 2023 wait on the anchor pair moving to 2017/2023 (S18 premise note). Was "2023 national, 2022 with state products". 2020–21 build under **S20**: the held Pub 5785 hazard level is infeasible there (band 18_25 over-subscribed by the stimulus filing spike), so it is deflated per band by observed excess filing — level 12.39M → 8.89M units in 2020, 12.49M → 10.89M in 2021 (`16_pandemic_filing_adjustment.R`) |
 | filer weight targets observed through | **2023** (then CBO demography) |
 | income growth factors observed through | 2022, with a 2020–21 gap (upstream) |
 | projection universe | CBO ssArea ≡ Macro-Projections cells (verified to the person) |
