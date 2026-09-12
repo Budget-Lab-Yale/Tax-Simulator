@@ -3,7 +3,7 @@ title: "State-tax research decisions log"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-31
+updated: 2026-09-12
 sot: self
 supersedes: []
 superseded_by: null
@@ -70,6 +70,13 @@ before the move to `research/`. Each is now stated once, in one place.
 ---
 
 ## Revision history
+
+- **2026-09-12** — The **state_weights workstream and its S-series (S13–S22)
+  are maintained in Tax-Data**, not here. Its tree, the three builder modules
+  and their tests were deleted from this repo the same day; `src/data/
+  state_weights.R` keeps only the jurisdiction set and the runtime dispatcher
+  `build_state_weights()`. See `research/state_weights/MOVED.md`. The entries
+  below are kept as a mirror of the state they were in at the move.
 
 - **2026-08-31** — S20: the 2020–21 above-threshold hazard level is deflated
   per band by observed pandemic excess filing (T1.6 against a 2019→2023 rate

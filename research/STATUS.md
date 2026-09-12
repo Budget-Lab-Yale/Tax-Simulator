@@ -3,7 +3,7 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-27
+updated: 2026-09-12
 sot: self
 supersedes: []
 superseded_by: null
@@ -367,6 +367,15 @@ prior-only-vs-joint-fit — the built harness is
 `research/state_weights/scripts/{sweep,validate}_state_weights.R` (S3).
 
 ---
+
+## The non-filer and state-weights workstream moved (2026-09-12)
+
+It is built and tracked in **Tax-Data** now — `research/state_weights/` there,
+with the builder modules in `src/nonfilers/` and the S-series decisions in its
+own `research/decisions_log.md`. This repo keeps the state tax law and consumes
+weights through the interface; `research/state_weights/MOVED.md` records the
+split. Statements below that describe that workstream are point-in-time as of
+the move and are not maintained here.
 
 ## Done
 

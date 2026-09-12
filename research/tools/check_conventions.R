@@ -50,7 +50,7 @@ ARCHIVE_REASON_RE <- '(pre-[a-z0-9-]+|stale-render|executed|superseded|imported)
 
 # Workstreams that own a plan. `cross-cutting` documents sit at the root and
 # have no plan to be cited from.
-PLAN_WORKSTREAMS <- c('state_tax', 'state_weights')
+PLAN_WORKSTREAMS <- c('state_tax')   # state_weights moved to Tax-Data (2026-09-12); MOVED.md is all that stays
 
 # Directories holding ARTIFACTS rather than documents. Front matter is a
 # document convention: source packets defer their status to the rollout CSV

@@ -43,18 +43,16 @@ lives in `src/tests/state/cross_model/`; only its *records* are here.
 
 ### `state_weights/` — split state weights and the non-filer rework
 
-One workstream: the non-filer rework lands before the Phase 1 weights swap-in, so
-they share a plan.
+**Moved to Tax-Data on 2026-09-12** (JI): everything that builds a population
+or a weight lives there, and this repo keeps the state tax *law* and *consumes*
+weights through the Tax-Data interface. The tree kept its shape, so a citation
+like `research/state_weights/plan.md` resolves in Tax-Data unchanged. What
+stays here is [`state_weights/MOVED.md`](state_weights/MOVED.md), which records
+the split and what this repo still owes.
 
-| Role | Document |
-|---|---|
-| **plan** | [`state_weights/plan.md`](state_weights/plan.md) |
-| method — non-filers | [`state_weights/nonfiler_residual_design.md`](state_weights/nonfiler_residual_design.md) |
-| method — the fit | [`state_weights/state_weights_phase1_summary.md`](state_weights/state_weights_phase1_summary.md) |
-| procedure | [`state_weights/nonfiler_federal_validation.md`](state_weights/nonfiler_federal_validation.md) |
-| evidence | [`state_weights/nonfiler_residual/04_findings.md`](state_weights/nonfiler_residual/04_findings.md) + `nonfiler_residual/results/` |
-| notes | [`state_weights/notes/`](state_weights/notes/) |
-| scripts | [`state_weights/scripts/`](state_weights/scripts/) — the Phase 1 harness (`sweep_`, `validate_`) and drivers |
+The S-series decisions for that workstream (S13–S22) are maintained in
+**Tax-Data's** `research/decisions_log.md`; the copy here is a mirror and is no
+longer updated for them.
 
 ## Folder rules
 
