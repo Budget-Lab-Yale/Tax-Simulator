@@ -96,7 +96,7 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
     filter(in_subsample(id, globals$pct_sample)) %>%
     mutate(weight = weight / globals$pct_sample,
            year   = year) %>%
-    bind_cols(globals$random_numbers) %>%
+    (\(d) bind_cols(d, build_random_numbers(d$id))) %>%
     mutate(filing_status_input = filing_status) %>%
     left_join(tax_law %>%
                 distinct(year, filing.repeal_hoh),
