@@ -61,7 +61,8 @@ RNG_STREAMS = c(
   behavior1       = 6L,
   behavior2       = 7L,
   behavior3       = 8L,
-  eitc_precert    = 9L
+  eitc_precert    = 9L,
+  subsample       = 10L   # design C: which records a pct_sample < 1 run keeps
 )
 stopifnot(!anyDuplicated(RNG_STREAMS), !anyDuplicated(names(RNG_STREAMS)))
 
@@ -90,6 +91,24 @@ draw_by_id = function(ids, stream) {
   }
   set.seed(RNG_BASE_SEED + RNG_STREAMS[[stream]] * 1000L)
   runif(RNG_ID_SPACE)[ids]
+}
+
+
+#' Is this record in the subsample? Keyed by id, so a `pct_sample < 1` run
+#' keeps the SAME records in every year.
+#'
+#' The positional `sample_frac(pct_sample)` it replaces drew its members from
+#' the 2017 id vector and reused that one vector for every year. That works
+#' only while every year holds the same records. Under design C each year
+#' emits its own live set, so membership has to be a property of the record:
+#' a filer is kept in all years or none, and each non-filer pool is sampled by
+#' the same rule.
+#'
+#' @param ids  record ids.
+#' @param pct  sample fraction in (0, 1]; 1 keeps everything.
+in_subsample = function(ids, pct) {
+  if (pct == 1) return(rep(TRUE, length(ids)))
+  draw_by_id(ids, 'subsample') < pct
 }
 
 

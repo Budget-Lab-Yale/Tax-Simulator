@@ -39,15 +39,12 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #                              'year' is not a valid option and will result in
   #                              a race condition. Always review before running!
   #
-  # Returns: list of 8:
-  #   - random_numbers (df)  : tibble of random numbers used across simulations
+  # Returns: list of 7:
   #   - runscript (df)       : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
   #   - baseline_root (str)  : path where baseline data is written/read from
   #   - pct_sample (dbl)     : share of records used in simulation 
-  #   - sample_ids (int[])   : vector of tax unit IDs comprising the
-  #                            sample population (all IDs for 100%)
   #   - detail_vars (str[])  : vector of microdata output column names
   #   - multicore (str)      : parallelization setting (see arguments)
   #----------------------------------------------------------------------------
@@ -215,45 +212,27 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     stop("Invalid argument for 'multicore' runtime parameter")
   }
   
-  # Tax unit IDs in the sample, IN FILE ORDER (S23).
+  # DESIGN C: the record set is a property of the YEAR, not of 2017.
   #
-  # File order matters because run.R filters the year's file with
-  # `id %in% sample_ids` -- which preserves the FILE's order, not this
-  # vector's -- and then binds `random_numbers` positionally. Keeping this
-  # vector in file order is what makes row i of the draws belong to row i of
-  # the filtered frame.
+  # This used to read the 2017 file, keep its id vector, and apply it to every
+  # year via `id %in% sample_ids` in run.R. That is correct only while every
+  # year holds the same records. Under design C each year emits just its own
+  # live records, so the 2017 vector would drop every later year's own
+  # non-filer pool -- the 2018 file would lose the 2018 pool entirely.
   #
-  # `sample_frac(size = 1)` used to sit here. At a full sample it returns
-  # every row in random order, and its only consumer is the order-insensitive
-  # `%in%` above, so it selected nothing -- but it consumed RNG in proportion
-  # to the record count, which desynchronised the draws between two Tax-Data
-  # vintages of different sizes and made an A/B between them unreadable
-  # (measured 2026-09-12; see Tax-Data
-  # research/state_weights/nonfiler_federal_validation_findings.md).
-  ids_in_file = interface_paths %>%
-    filter(interface == 'Tax-Data') %>%
-    slice(1) %>%
-    get_vector('path') %>%
-    read_microdata(2017) %>%
-    get_vector('id')
-
-  sample_ids = if (pct_sample == 1) {
-    ids_in_file
-  } else {
-    # A strict subsample still draws its members positionally, but the
-    # result is put back in file order so the binding above holds.
-    drawn = tibble(id = ids_in_file) %>%
-      sample_frac(size = pct_sample) %>%
-      get_vector('id')
-    ids_in_file[ids_in_file %in% drawn]
-  }
-
-  # Precalculated random numbers, keyed by record id (src/misc/rng.R), so a
-  # record's draws depend on its id and nothing else -- not on the record
-  # count, the row order or the sample fraction. That is what makes them
-  # comparable across scenarios, vintages and years, which is what
-  # precomputing them was for.
-  random_numbers = build_random_numbers(sample_ids)
+  # So membership becomes a rule rather than a list, evaluated per year in
+  # run.R against that year's own ids: `in_subsample(id, pct_sample)`, keyed
+  # by record id (src/misc/rng.R). A filer is kept in every year or none, and
+  # each pool is sampled by the same rule, so a subsampled run carries no more
+  # year-over-year sampling noise than a full one.
+  #
+  # `random_numbers` goes the same way. S23 made every draw a function of the
+  # record's id alone, so there is nothing to gain by hoisting it out of the
+  # year loop -- and hoisting it is what forced the id vector to be kept in
+  # file order for a positional bind_cols. run.R now builds the draws for the
+  # year's own ids, and the positional binding goes with it.
+  #
+  # See Tax-Data research/state_weights/nonfiler_design_c_scope.md.
 
   # Specifiy microdata output variable
   detail_vars = c(
@@ -276,13 +255,11 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   
   # Return runtime args and interface paths  
-  return(list(random_numbers  = random_numbers,
-              runscript       = runscript,
+  return(list(runscript       = runscript,
               interface_paths = interface_paths, 
               output_root     = output_root,
               baseline_root   = baseline_root,
               pct_sample      = pct_sample,
-              sample_ids      = sample_ids, 
               detail_vars     = detail_vars,
               multicore       = multicore))
 }

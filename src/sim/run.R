@@ -348,13 +348,17 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%
     read_microdata(year) %>%
 
-    # Subset records if running with a sample of the full data
-    filter(id %in% globals$sample_ids) %>%
+    # Subset records if running with a sample of the full data. Design C:
+    # membership is a rule keyed on the record's id, evaluated against THIS
+    # year's ids, because each year emits only its own live records.
+    filter(in_subsample(id, globals$pct_sample)) %>%
     mutate(weight = weight / globals$pct_sample,
            year   = year) %>%
 
-    # Assign random numbers
-    bind_cols(globals$random_numbers) %>%
+    # Assign random numbers, built for this year's own ids. S23 makes every
+    # draw a function of the id alone, so a record gets the same values here
+    # as it would in any other year or vintage.
+    (\(d) bind_cols(d, build_random_numbers(d$id))) %>%
 
     # Preserve the filed status so a reference-law context can apply its own
     # filing-status rules instead of inheriting a scenario-only recode.

@@ -93,7 +93,7 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
   # Load and process microdata (mirrors run_one_year(), src/sim/run.R)
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%
     read_microdata(year) %>%
-    filter(id %in% globals$sample_ids) %>%
+    filter(in_subsample(id, globals$pct_sample)) %>%
     mutate(weight = weight / globals$pct_sample,
            year   = year) %>%
     bind_cols(globals$random_numbers) %>%
