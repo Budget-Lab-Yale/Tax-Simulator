@@ -215,28 +215,46 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     stop("Invalid argument for 'multicore' runtime parameter")
   }
   
-  # Tax unit ID in sample
-  sample_ids = interface_paths %>% 
+  # Tax unit IDs in the sample, IN FILE ORDER (S23).
+  #
+  # File order matters because run.R filters the year's file with
+  # `id %in% sample_ids` -- which preserves the FILE's order, not this
+  # vector's -- and then binds `random_numbers` positionally. Keeping this
+  # vector in file order is what makes row i of the draws belong to row i of
+  # the filtered frame.
+  #
+  # `sample_frac(size = 1)` used to sit here. At a full sample it returns
+  # every row in random order, and its only consumer is the order-insensitive
+  # `%in%` above, so it selected nothing -- but it consumed RNG in proportion
+  # to the record count, which desynchronised the draws between two Tax-Data
+  # vintages of different sizes and made an A/B between them unreadable
+  # (measured 2026-09-12; see Tax-Data
+  # research/state_weights/nonfiler_federal_validation_findings.md).
+  ids_in_file = interface_paths %>%
     filter(interface == 'Tax-Data') %>%
-    slice(1) %>% 
-    get_vector('path') %>% 
+    slice(1) %>%
+    get_vector('path') %>%
     read_microdata(2017) %>%
-    sample_frac(size = pct_sample) %>% 
     get_vector('id')
-  
-  # Precalculate random numbers for consistency across scenarios 
-  random_numbers = tibble(
-    r.bus_loss        = runif(length(sample_ids)),             # Excess business loss limitation eligibility rate
-    r.cdctc_takeup    = runif(length(sample_ids)),             # CDCTC takeup rate
-    r.salt_workaround = runif(length(sample_ids)),             # SALT workaround participation rate
-    r.oasdi_exp       = round(rexp(length(sample_ids), 1/4)),  # For OASDI claiming year imputation in do_ss_cola()  
-    r.new_car         = runif(length(sample_ids)),             # For imputation of p(new car | car loan interest) for auto loan deduction
-    r.behavior1       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
-    r.behavior2       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
-    r.behavior3       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
-    r.eitc_precert    = runif(length(sample_ids))              # For EITC pre-certification check
-  )
-  
+
+  sample_ids = if (pct_sample == 1) {
+    ids_in_file
+  } else {
+    # A strict subsample still draws its members positionally, but the
+    # result is put back in file order so the binding above holds.
+    drawn = tibble(id = ids_in_file) %>%
+      sample_frac(size = pct_sample) %>%
+      get_vector('id')
+    ids_in_file[ids_in_file %in% drawn]
+  }
+
+  # Precalculated random numbers, keyed by record id (src/misc/rng.R), so a
+  # record's draws depend on its id and nothing else -- not on the record
+  # count, the row order or the sample fraction. That is what makes them
+  # comparable across scenarios, vintages and years, which is what
+  # precomputing them was for.
+  random_numbers = build_random_numbers(sample_ids)
+
   # Specifiy microdata output variable
   detail_vars = c(
     'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2', 
