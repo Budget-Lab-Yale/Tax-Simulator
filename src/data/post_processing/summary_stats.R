@@ -28,6 +28,10 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'n_simple_filers'
   )
   
+  # The refundable credits, reported at three margins below. Named here so
+  # the list is one definition rather than two.
+  refundable_vars = c('eitc', 'ctc_ref', 'cdctc_ref', 'ed_ref', 'rebate', 'ref')
+
   # Choose tax variables to report
   tax_vars = c(
     'wages',
@@ -194,6 +198,36 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
              .fns   = list(n      = ~ sum((. != 0) * weight * filer) / 1e6,
                            amount = ~ sum(.        * weight * filer) / 1e9),
              .names = '{fn}_{col}'), 
+
+      # Refundable credits at two further margins. The filer-gated amount
+      # above is what we publish and does not change; these sit beside it.
+      #
+      #   induced  the credit going to records that switched INTO filing this
+      #            run, via become_filer_rebate / become_filer_ctc. Already
+      #            computed, and until now folded invisibly into the filer
+      #            total -- so our one behavioural response was unauditable.
+      #            NOTE this is a SUBSET of the filer-gated amount, not
+      #            disjoint from it; keeping it so is what leaves every
+      #            published number untouched.
+      #
+      #   reach    the credit going to records that stay filer == 0. The filer
+      #            gate multiplies it by zero, so it is invisible rather than
+      #            absent. This is the un-modelled population: the model has no
+      #            filing elasticity and no EITC filing arm, so nothing can
+      #            move these records in. Reporting it states in dollars what
+      #            an estimate cannot see, and benchmarks against administrative
+      #            data -- Census/IRS matched data put $5.6B of EITC unclaimed
+      #            by non-filers in TY2021, so a reach line far from that is a
+      #            signal about the non-filer population, not about tax law.
+      #
+      # See Tax-Data research/state_weights/refundable_credit_takeup_proposal.md
+      # and filer_margin_practice.md.
+      across(.cols  = all_of(refundable_vars),
+             .fns   = list(
+               induced = ~ sum(. * weight *
+                               (become_filer_ctc == 1 | become_filer_rebate == 1)) / 1e9,
+               reach   = ~ sum(. * weight * (1 - filer)) / 1e9),
+             .names = '{fn}_{col}'),
       
       # MTR vars
       across(.cols  = starts_with('mtr_'), 
