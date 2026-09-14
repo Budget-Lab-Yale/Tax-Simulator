@@ -107,22 +107,14 @@ draw_by_id = function(ids, stream) {
 #' @param ids  record ids.
 #' @param pct  sample fraction in (0, 1]; 1 keeps everything.
 in_subsample = function(ids, pct) {
-  # Forbes synthetic records sit OUTSIDE the modelled id space:
-  # make_forbes_id() is year * 1e6 + rank, so the 2022 cohort runs
-  # 2,022,000,001..2,022,000,717 against an RNG_ID_SPACE of 1e7. They have
-  # never reached the simulation -- the 2017-derived sample_ids dropped them,
-  # on main too -- and admitting them moves the top of the distribution. That
-  # is a separate decision with its own evidence (Tax-Data
-  # research/state_weights/nonfiler_design_c_scope.md section 5), and it needs
-  # either a wider id space, which moves every draw, or Forbes ids renumbered
-  # into the existing one. Until then they are excluded HERE, visibly, rather
-  # than as a side effect of where sample_ids happened to be read from.
-  in_space = ids >= 1 & ids <= RNG_ID_SPACE
-  keep = in_space
-  if (pct < 1) {
-    keep[in_space] = draw_by_id(ids[in_space], 'subsample') < pct
-  }
-  keep
+  # Every id Tax-Data emits now lies inside the space: filers below 1e6,
+  # non-filer pool year y at [1e6*(y-2016)+1, 1e6*(y-2015)], and the Forbes
+  # synthetic records in their reserved block from 9e6 (Tax-Data S25, which
+  # renumbered them from year*1e6 + rank -- about 2.0e9 -- once S24 stopped
+  # dropping them). So an out-of-space id is a real fault now, not a class of
+  # record to skip, and draw_by_id() says so.
+  if (pct == 1) return(rep(TRUE, length(ids)))
+  draw_by_id(ids, 'subsample') < pct
 }
 
 
