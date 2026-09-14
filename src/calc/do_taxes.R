@@ -123,7 +123,30 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   tax_units %<>%
     mutate(
       
-      # Update filer status
+      # Update filer status.
+      #
+      # LIMITATION, STATED DELIBERATELY: there is NO FILING ELASTICITY in this
+      # model. Switching into filing is a deterministic, provision-specific
+      # rule -- a non-filer files if and only if a recovery rebate
+      # (rebate.R: filer == 0 & rebate > 0) or the fully-refundable CTC
+      # (ctc.R: filer == 0 & qual_ei == 0 & ctc_ref > 0) would pay them. There
+      # is no elasticity parameter, no take-up probability, and no
+      # filing-cost threshold anywhere in the model.
+      #
+      # The consequence that bites hardest: NO EITC-INDUCED FILING. An EITC
+      # expansion mechanically produces zero new filers here, so all induced
+      # take-up among the non-filing population is missed, and the credit
+      # accrues only to records already carrying filer == 1. Note the
+      # asymmetry -- the CTC rule's `qual_ei == 0` was written for the 2021
+      # fully-refundable credit, which needs no earnings, whereas the EITC
+      # REQUIRES earned income and targets exactly the below-threshold earners
+      # the ASEC non-filer pool now represents explicitly (Mok 2017 probits
+      # below the filing threshold, IRS Pub 5785 hazard above it). Replacing
+      # the coarse DINA append with that pool therefore WIDENS this gap rather
+      # than narrowing it.
+      #
+      # Any run of a refundable-credit expansion should report this as a known
+      # downward bias on participation, not as a modelled behavioural result.
       filer = filer + (become_filer_ctc == 1 | become_filer_rebate == 1),
       
       # Expanded income metric for distributional tables: gross realized income 
