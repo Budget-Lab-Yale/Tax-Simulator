@@ -27,7 +27,7 @@ Extract from the user's request (use defaults for anything not specified):
 | `multicore` | `none` | Only used for Rscript mode: `none`, `scenario`, or `year` |
 | `execution_mode` | auto-detect | `slurm` or `rscript` (see auto-detection below) |
 
-**Auto-detect execution mode:** Read `config/interfaces/output_roots.yaml`. If the `local` path contains `/vast/palmer` or `/gpfs/gibbs` (Yale HPC cluster paths), default to `slurm`. Otherwise default to `rscript`. The user can override by saying "on slurm", "locally via rscript", "not on slurm", etc.
+**Auto-detect execution mode:** Read the `TAXSIM_LOCAL_ROOT` environment variable (set in `~/.Renviron`; `config/interfaces/output_roots.yaml` no longer carries a `local` key, because it is per-user). If that path is on cluster storage (`/vast/palmer`, `/gpfs/gibbs`, `/nfs/roberts`), default to `slurm`. Otherwise default to `rscript`. The user can override by saying "on slurm", "locally via rscript", "not on slurm", etc.
 
 ### 2. Validate before running
 
