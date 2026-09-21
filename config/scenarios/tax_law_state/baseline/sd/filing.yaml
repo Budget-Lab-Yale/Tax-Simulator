@@ -1,0 +1,11 @@
+---
+# South Dakota: no broad individual income tax; do not flag federal filers as
+# state income tax filers.
+
+req_type:
+  value: 3
+  reference: 'No broad individual income tax return requirement; South Dakota Governor''s Office of Economic Development tax climate; https://sdgoed.com/build-your-business/tax-incentives/'
+
+req_if_fed_filer:
+  value: 0
+  reference: 'No broad individual income tax return requirement; South Dakota Governor''s Office of Economic Development tax climate; https://sdgoed.com/build-your-business/tax-incentives/'

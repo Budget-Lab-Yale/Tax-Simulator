@@ -1,0 +1,71 @@
+---
+# Colorado: deductions. No state standard/itemized deduction -- the federal
+# deduction flows through the federal-taxable-income starting point. What CO
+# has instead: (1) the state income tax addback for federal itemizers
+# (DR 0104 line 2, with the two statutory limitations and the SALT-cap
+# interaction), and (2) the high-income federal deduction addback, which has
+# THREE regimes:
+#   2022 (HB21-1311, 39-22-104(3)(p)):    AGI >= 400k, ITEMIZED only, cap 30k/60k
+#   2023-2025 (Prop FF, (3)(p.5)):        AGI > 300k, itemized OR standard, cap 12k/16k
+#   2026+ (Prop MM):                      AGI > 300k, itemized or standard, cap 1k/2k
+# The addback amount is reduced by state income tax already added back on
+# line 2 (2023+ booklets).
+
+filing_status_mapper:
+  addback_cap:
+    '1': addback_cap_single
+    '2': addback_cap_joint
+    '3': addback_cap_single
+    '4': addback_cap_single
+
+# Standard deduction amount (none; federal flows through)
+std_amount:
+  value: 0
+  reference: 'DR 0104 structure (base = federal taxable income)'
+
+# Whether itemized deductions are allowed at the state level (federal
+# deduction already in the base; no separate state election)
+item_allowed:
+  value: 0
+  reference: 'DR 0104 structure'
+
+# Itemized/standard coupling: 1 = follows the federal choice (via the base)
+item_coupling:
+  value: 1
+  reference: 'DR 0104 structure (federal taxable income start)'
+
+# State income tax deducted federally added back: lesser of (a) state income
+# tax on Schedule A (post-SALT-cap allocation from 2018) and (b) itemized
+# minus allowable standard deduction. SALT Parity pass-through addback (2022+)
+# is handled with the federal SALT-workaround machinery, not here
+salt_addback:
+  value: 1
+  reference: 'C.R.S. 39-22-104(3)(d); DR 0104 line 2 worksheets, verified 2017-2025; DOR Income Tax Topics: State Income Tax Addback'
+
+# High-income federal deduction addback: AGI threshold, caps, and whether the
+# standard deduction is also subject (2022 = itemized only)
+addback_cap_thresh:
+  value:
+    '2017': Inf
+    '2022': 400000
+    '2023': 300000
+  reference: 'HB21-1311 39-22-104(3)(p) (TY2022); Prop FF (3)(p.5) (TY2023+); 2023-2025 booklets DR 0104 line 4'
+addback_cap_single:
+  value:
+    '2017': Inf
+    '2022': 30000
+    '2023': 12000
+    '2026': 1000
+  reference: 'HB21-1311 (30k); Prop FF (12k); Prop MM (1k, TY2026+); DOR Guide + Jan 2026 Tax Policy Updates'
+addback_cap_joint:
+  value:
+    '2017': Inf
+    '2022': 60000
+    '2023': 16000
+    '2026': 2000
+  reference: 'HB21-1311 (60k); Prop FF (16k); Prop MM (2k, TY2026+)'
+addback_incl_std:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: '2022 rule covers itemized only (39-22-104(3)(p)); Prop FF (p.5) covers itemized or standard'

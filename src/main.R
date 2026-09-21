@@ -19,7 +19,7 @@ suppressPackageStartupMessages(
 
 # Source all function scripts
 return_vars = list()
-list.files('./src', recursive = T) %>%
+list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
   walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/')) source(file.path('./src/', .x)))
 
 
@@ -106,8 +106,8 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (globals$multicore == 'scenario') {
     mc_out = mclapply(
       X        = counterfactual_ids, 
-      FUN      = do_scenario, baseline_mtrs, 
-      mc.cores = min(32, detectCores(logical = F))
+      FUN      = do_scenario, baseline_mtrs,
+      mc.cores = mc_cores()   # scheduler-aware; see mc_cores() in src/sim/run.R (upstream #130)
     )
   } else {
     walk(.x = counterfactual_ids, .f = ~ do_scenario(.x, baseline_mtrs))
@@ -123,6 +123,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (stacked == 1) {
     build_stacked_1040_reports(counterfactual_ids)
     calc_stacked_rev_est(counterfactual_ids)
+    build_stacked_state_rev_est(counterfactual_ids)
   }
   
   # Delete microdata files

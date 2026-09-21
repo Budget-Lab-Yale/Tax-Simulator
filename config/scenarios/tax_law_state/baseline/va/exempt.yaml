@@ -1,0 +1,28 @@
+---
+# Virginia: exemptions (Form 760 Exemption Sections A and B -> Line 12;
+# Line 13 in 2017-2018; Va. Code 58.1-322.03(2)). NOTE: personal_amount is
+# PER TAXPAYER (x2 for MFJ), matching the form's per-person boxes. No
+# phase-out. Aged/blind add-ons apply to taxpayer and spouse only,
+# stackable per instance (65+ AND blind = 2 x $800).
+
+# $930 per taxpayer/spouse and per dependent, constant 2017-2025
+personal_amount:
+  value: 930
+  reference: 'Form 760 Exemption Section A ("x $930"), verified in every 2017-2025 booklet; Va. Code 58.1-322.03(2)(a)'
+dep_amount:
+  value: 930
+  reference: 'Form 760 Exemption Section A (dependents box), 2017-2025 booklets; Va. Code 58.1-322.03(2)(a)'
+
+# $800 per 65+ and per blind instance (taxpayer/spouse only), constant
+aged_addl:
+  value: 800
+  reference: 'Form 760 Exemption Section B ("x $800"), 2017-2025 booklets; Va. Code 58.1-322.03(2)(b); age test: 65 on or before Jan 1 following the tax year (end-of-year age 65 approximation)'
+blind_addl:
+  value: 800
+  reference: 'Form 760 Exemption Section B, 2017-2025 booklets; Va. Code 58.1-322.03(2)(b)'
+
+# The aged/blind add-ons are part of the age package that is mutually
+# exclusive with the CLI/state EITC (choice made in calc_st_agi)
+aged_blind_addl_excl_eitc:
+  value: 1
+  reference: 'Schedule ADJ Line 17 eligibility (2017-2025 booklets): no CLI/EITC if anyone on the return claims the 65+/blind exemption'

@@ -1,0 +1,70 @@
+---
+# Maine rate schedule (36 M.R.S. 5111 sub-secs 1-F/2-F/3-F; the annual MRS
+# rate-schedule releases). Three brackets at 5.8% / 6.75% / 7.15% in every
+# year 2017-2025 -- only the thresholds index (5403(4), chained CPI, lower
+# and upper bounds carrying separate cumulative COLAs). MFS uses the single
+# schedule; surviving spouses use the married schedule.
+#
+# The 2016 ballot-initiative 3% surcharge on income over $200,000 was
+# repealed before taking effect (P.L. 2017 c. 284 Pt. D repealed 5111(6));
+# the official 2017 schedule is titled "no surcharge" and none is encoded.
+#
+# TY2019 note: the standalone 2019 rate schedule is unobtainable (maine.gov
+# 404, Wayback down at retrieval). The 2019 lower thresholds and all bases
+# were verified against the official 2019 tax table; the HoH and MFJ UPPER
+# thresholds ($77,550 / $103,400) are DERIVED from the verified single
+# upper ($51,700) times the statutory 1.5/2.0 structure and the uniform
+# top-bracket COLA -- flagged in the source packet.
+#
+# Thresholds are transcribed through TY2025 and held flat after (vector
+# families carry no indexation; the VT convention) [understates ME tax in
+# out-years as real income grows into the frozen brackets; revisit with
+# each year's published schedule].
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_head
+
+rates:
+  value: [0.058, 0.0675, 0.0715]
+  reference: '36 M.R.S. 5111(1-F)/(2-F)/(3-F); every annual MRS rate schedule 2017-2025 (5.8%, 6.75%, 7.15%, unchanged)'
+
+brackets_single:
+  value:
+    '2017': [0, 21100, 50000]
+    '2018': [0, 21450, 50750]
+    '2019': [0, 21850, 51700]
+    '2020': [0, 22200, 52600]
+    '2021': [0, 22450, 53150]
+    '2022': [0, 23000, 54450]
+    '2023': [0, 24500, 58050]
+    '2024': [0, 26050, 61600]
+    '2025': [0, 26800, 63450]
+  reference: 'MRS rate schedules, Tax Rate Schedule #1 (single and married filing separately), 2017-2025 releases; 2019 verified against the official 2019 tax table'
+brackets_joint:
+  value:
+    '2017': [0, 42250, 100000]
+    '2018': [0, 42900, 101550]
+    '2019': [0, 43700, 103400]
+    '2020': [0, 44450, 105200]
+    '2021': [0, 44950, 106350]
+    '2022': [0, 46000, 108900]
+    '2023': [0, 49050, 116100]
+    '2024': [0, 52100, 123250]
+    '2025': [0, 53600, 126900]
+  reference: 'MRS rate schedules, Tax Rate Schedule #3 (married filing jointly and surviving spouses), 2017-2025. The 2019 upper threshold is derived (see header note)'
+brackets_head:
+  value:
+    '2017': [0, 31650, 75000]
+    '2018': [0, 32150, 76150]
+    '2019': [0, 32750, 77550]
+    '2020': [0, 33300, 78900]
+    '2021': [0, 33650, 79750]
+    '2022': [0, 34500, 81700]
+    '2023': [0, 36750, 87100]
+    '2024': [0, 39050, 92450]
+    '2025': [0, 40200, 95150]
+  reference: 'MRS rate schedules, Tax Rate Schedule #2 (heads of household), 2017-2025. The 2019 upper threshold is derived (see header note)'

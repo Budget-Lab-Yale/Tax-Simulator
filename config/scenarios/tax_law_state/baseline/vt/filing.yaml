@@ -1,0 +1,22 @@
+---
+# Vermont: filing requirement (32 V.S.A. 5861; IN-111 instructions "Who Must
+# File", substantively unchanged 2017-2025). A resident must file if required to
+# file a federal return AND has any Vermont taxable income or earned Vermont
+# income, or if Vermont tax is due. No standalone state dollar threshold is
+# published, so the federal requirement plus the liability branch of st_filer
+# carries it -- the same shape as Rhode Island and New Mexico.
+
+# 3 = no separate state income test
+req_type:
+  value: 3
+  reference: '32 V.S.A. 5861; IN-111 instructions "Who Must File a Vermont Income Tax Return", TY2017-2025'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for Vermont -- no standalone dollar threshold is published'
+req_if_fed_filer:
+  value: 1
+  reference: 'IN-111 instructions: a Vermont resident "who is required to file a federal income tax return" and had Vermont income must file'
+
+documented_not_modeled:
+  refund_only_filers:
+    reference: 'Vermont also invites returns from residents owing no tax who qualify for the refundable EITC, child tax credit, child and dependent care credit or renter credit. The first three already make liab_st_iit nonzero, which flags the unit as a filer; the renter credit is not modeled at all (see credits.yaml)'

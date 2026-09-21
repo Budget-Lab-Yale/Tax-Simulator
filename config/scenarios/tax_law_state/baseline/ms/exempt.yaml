@@ -1,0 +1,35 @@
+---
+# Mississippi: exemptions (Form 80-105 lines 9-15).
+#
+# Generous exemptions in place of a large standard deduction, and NOTHING
+# here changed in any year 2017-2025. The amounts are per RETURN on the form,
+# so the joint $12,000 is encoded as $6,000 per taxpayer and doubled by the
+# calculator.
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_single
+    '3': personal_single
+    '4': personal_head
+
+personal_single:
+  value: 6000
+  reference: 'Form 80-105 filing-status boxes: single $6,000, married filing joint or combined $12,000 -- exactly twice the single figure, so it is encoded per taxpayer. A married filer filing separately enters $12,000 but deducts only half, which is the same $6,000 per taxpayer. Identical in every booklet TY2017-TY2025 and not indexed'
+personal_head:
+  value: 8000
+  reference: 'Form 80-105 box 4, head of family $8,000. The booklets describe an effective $9,500, but the extra $1,500 is the REQUIRED dependent counted on the dependent line, not a separate head-of-family amount -- counting both would double-count that dependent'
+
+dep_amount:
+  value: 1500
+  reference: 'Form 80-105 line 10, "Line 9 x $1,500": $1,500 for each dependent other than the taxpayer or spouse. Unchanged TY2017-TY2025'
+aged_addl:
+  value: 1500
+  reference: 'Additional exemption of $1,500 for age 65 or over, for the taxpayer and spouse only (up to two boxes on a married return). Unchanged TY2017-TY2025'
+blind_addl:
+  value: 1500
+  reference: 'Additional exemption of $1,500 for blindness, taxpayer and spouse only. Unchanged TY2017-TY2025'
+
+documented_not_modeled:
+  free_allocation_on_a_combined_return:
+    reference: 'On a combined return the exemption and standard deduction may be split between the spouses IN ANY MANNER THE COUPLE CHOOSES, and the booklet says so explicitly. That makes the split an optimisation: a two-earner couple can shelter two zero-brackets ($20,000 of taxable income at TY2025 rates) where a one-earner couple shelters one. Not modeled -- see the source packet'

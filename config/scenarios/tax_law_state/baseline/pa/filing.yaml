@@ -1,0 +1,23 @@
+---
+# Pennsylvania: filing requirement. A PA-40 is required for total PA gross
+# taxable income in excess of $33 (about $1 of tax), regardless of the
+# federal requirement; dependents with PA taxable income above $33 file
+# their own returns. The loss-transaction prong (file if any class shows a
+# loss) is not modeled (no liability consequence).
+
+# 2 = state base above a fixed threshold
+req_type:
+  value: 2
+  reference: 'PA-40 booklet "Who Must File", verified verbatim 2017-2025 (2024 p.4)'
+
+req_income_thresh:
+  value: 33
+  reference: 'PA-40 booklet 2017-2025: "total PA gross taxable income in excess of $33 during [year], even if no tax is due"'
+
+req_income_thresh_dep:
+  value: 33
+  reference: 'PA-40 booklet 2017-2025: a dependent child with PA taxable income above $33 must file their own return'
+
+req_if_fed_filer:
+  value: 0
+  reference: 'PA filing requirement is independent of the federal requirement (PA-40 booklet, Who Must File)'

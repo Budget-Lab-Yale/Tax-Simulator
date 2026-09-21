@@ -1,0 +1,10 @@
+---
+# Wyoming: no broad individual income tax.
+
+std_amount:
+  value: 0
+  reference: 'No broad individual income tax; Wyoming Department of Revenue tax programs; https://revenue.wyo.gov'
+
+item_allowed:
+  value: 0
+  reference: 'No broad individual income tax; Wyoming Department of Revenue tax programs; https://revenue.wyo.gov'

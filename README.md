@@ -53,7 +53,8 @@ Tax-Simulator/
 │   └── misc/                # Utilities
 ├── other/
 │   └── analysis_scripts/    # Policy analysis tools
-├── docs/                    # Documentation
+├── docs/                    # Shipped model documentation
+├── research/                # State-tax research corpus (plans, methods, evidence)
 └── resources/               # Supporting data files
 ```
 
@@ -109,6 +110,11 @@ output_root/
 
 ## Documentation
 
-- `CLAUDE.md` – Detailed technical reference
-- `docs/website/` – User guide and module documentation
+- `docs/model_documentation.md` – Model documentation: data, configuration,
+  calculator, behavior, outputs, validation, and the state module
+- `CLAUDE.md` – Operational reference for contributors and agents
+- `docs/website/` – User guide and module documentation (older R Markdown site)
+- `research/README.md` – **State-tax research corpus**: the index to plans,
+  methods, evidence, reviews, decisions, and dated Word releases
+- `research/STATUS.md` – What is true today across the state-tax workstreams
 

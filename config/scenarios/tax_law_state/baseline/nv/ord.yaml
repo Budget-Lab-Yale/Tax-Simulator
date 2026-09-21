@@ -1,0 +1,10 @@
+---
+# Nevada: no broad individual income tax.
+
+rates:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'No broad individual income tax; Nevada Department of Taxation tax programs; https://tax.nv.gov'
+
+brackets:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'No broad individual income tax; Nevada Department of Taxation tax programs; https://tax.nv.gov'

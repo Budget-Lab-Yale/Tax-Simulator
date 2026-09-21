@@ -1,0 +1,65 @@
+---
+filing_status_mapper:
+  exemption_amount:
+    '1': exemption_single
+    '2': exemption_joint
+    '3': exemption_single
+    '4': exemption_single
+  filing_threshold:
+    '1': filing_threshold_single
+    '2': filing_threshold_joint
+    '3': filing_threshold_single
+    '4': filing_threshold_single
+
+# The PUF proxy is taxable interest plus ordinary and qualified dividends.
+# NH also reaches distributions and some federally exempt interest that are
+# not separately observable; see the NH source packet for this limitation.
+interest_share:
+  value: 1
+  reference: 'NH RSA 77 / DRA Interest & Dividends Tax FAQ: https://www.revenue.nh.gov/resource-center/frequently-asked-questions/interest-dividends-tax-frequently-asked-questions'
+ordinary_div_share:
+  value: 1
+  reference: 'NH RSA 77 / DRA Interest & Dividends Tax FAQ: https://www.revenue.nh.gov/resource-center/frequently-asked-questions/interest-dividends-tax-frequently-asked-questions'
+qualified_div_share:
+  value: 1
+  reference: 'NH RSA 77 / DRA Interest & Dividends Tax FAQ: https://www.revenue.nh.gov/resource-center/frequently-asked-questions/interest-dividends-tax-frequently-asked-questions'
+exemption_single:
+  value: 2400
+  reference: 'NH DRA DP-10 instructions: $2,400 exemption for individual filers'
+exemption_joint:
+  value: 4800
+  reference: 'NH DRA DP-10 instructions: $4,800 exemption for joint filers'
+filing_threshold_single:
+  value: 2400
+  reference: 'NH DRA FAQ: filing required when gross interest and dividends exceed $2,400'
+filing_threshold_joint:
+  value: 4800
+  reference: 'NH DRA FAQ: filing required when gross interest and dividends exceed $4,800 for joint filers'
+age_exemption:
+  value: 1200
+  reference: 'NH DRA DP-10 instructions: additional $1,200 exemption at age 65 or older'
+blind_exemption:
+  value: 1200
+  reference: 'NH DRA DP-10 instructions: additional $1,200 blindness exemption'
+rate:
+  value:
+    '2017': 0.05
+    '2023': 0.04
+    '2024': 0.03
+    '2025': 0
+  reference: 'NH DRA Interest & Dividends Tax rate schedule and repeal notice'
+full_age_min_age:
+  value: Inf
+  reference: 'NH has an additional age exemption, not a full senior exemption'
+full_age_income_limit:
+  value: -Inf
+  reference: 'NH has no income-tested full senior exemption'
+age_100_full_exempt:
+  value: 0
+  reference: 'NH law does not provide Tennessee-style age-100 exemption'
+blind_full_exempt:
+  value: 0
+  reference: 'NH provides an additional blindness exemption, not full exemption'
+blind_mfj_exempt_share:
+  value: 0
+  reference: 'Not applicable to NH'

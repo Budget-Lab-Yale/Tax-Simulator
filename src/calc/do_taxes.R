@@ -123,7 +123,30 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   tax_units %<>%
     mutate(
       
-      # Update filer status
+      # Update filer status.
+      #
+      # LIMITATION, STATED DELIBERATELY: there is NO FILING ELASTICITY in this
+      # model. Switching into filing is a deterministic, provision-specific
+      # rule -- a non-filer files if and only if a recovery rebate
+      # (rebate.R: filer == 0 & rebate > 0) or the fully-refundable CTC
+      # (ctc.R: filer == 0 & qual_ei == 0 & ctc_ref > 0) would pay them. There
+      # is no elasticity parameter, no take-up probability, and no
+      # filing-cost threshold anywhere in the model.
+      #
+      # The consequence that bites hardest: NO EITC-INDUCED FILING. An EITC
+      # expansion mechanically produces zero new filers here, so all induced
+      # take-up among the non-filing population is missed, and the credit
+      # accrues only to records already carrying filer == 1. Note the
+      # asymmetry -- the CTC rule's `qual_ei == 0` was written for the 2021
+      # fully-refundable credit, which needs no earnings, whereas the EITC
+      # REQUIRES earned income and targets exactly the below-threshold earners
+      # the ASEC non-filer pool now represents explicitly (Mok 2017 probits
+      # below the filing threshold, IRS Pub 5785 hazard above it). Replacing
+      # the coarse DINA append with that pool therefore WIDENS this gap rather
+      # than narrowing it.
+      #
+      # Any run of a refundable-credit expansion should report this as a known
+      # downward bias on participation, not as a modelled behavioural result.
       filer = filer + (become_filer_ctc == 1 | become_filer_rebate == 1),
       
       # Expanded income metric for distributional tables: gross realized income 
@@ -294,12 +317,24 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     bind_cols(calc_txbl_inc(.)) %>%
     mutate(item_ded = item_ded_limited) %>%  # Update value of itemized deductions to reflect any tax value limitation 
     
+    # Preserve as-if-itemizing Schedule A amounts before non-itemizer zeroing:
+    # states with an independent itemization election (e.g. CA Schedule CA,
+    # AZ Form 140 Schedule A, NY IT-196) let federal standard-deduction takers
+    # itemize on the state return, so the state calculator needs the amounts
+    # the unit COULD have claimed, not the zeroed as-claimed values
+    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded',
+                            'inv_int_item_ded', 'char_item_ded',
+                            'casualty_item_ded', 'misc_item_ded',
+                            'other_item_ded', 'item_ded_ex_limits', 'item_ded'),
+                  .fns   = ~ .,
+                  .names = '{.col}_potential')) %>%
+
     # Set itemized deduction variables to 0 for nonitemizers
-    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
-                            'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
-                            'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
-                            'item_ded_ex_limits', 'item_ded'), 
-                  .fns  = ~ if_else(itemizing, ., 0))) %>% 
+    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded',
+                            'inv_int_item_ded', 'int_item_ded', 'char_item_ded',
+                            'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
+                            'item_ded_ex_limits', 'item_ded'),
+                  .fns  = ~ if_else(itemizing, ., 0))) %>%
     
     # Set standard deduction to 0 for itemizers
     mutate(std_ded = if_else(itemizing, 0, std_ded)) %>% 
@@ -621,8 +656,8 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     do_taxes(
       baseline_pr_er = NULL,
       vars_payroll   = return_vars$calc_pr,
-      vars_1040      = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL)
-    ) %>% 
+      vars_1040      = fed_calc_vars(incl_payroll = F)
+    ) %>%
     
     # Calculate MTR and return
     mutate(

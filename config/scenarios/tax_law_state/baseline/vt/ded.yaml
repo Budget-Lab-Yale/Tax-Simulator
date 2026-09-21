@@ -1,0 +1,134 @@
+---
+# Vermont: deductions (Form IN-111 lines 3-5, TY2018+).
+#
+# Act 11 of the 2018 special session gave Vermont its own standard deduction
+# and ABOLISHED state itemization -- there is no Vermont itemized deduction in
+# any year from 2018, and the charitable-contribution CREDIT in credits.yaml is
+# what replaced it. In 2017 the base is federal taxable income, so the federal
+# deduction is already inside it and nothing is subtracted here; what 2017 DOES
+# need is the Schedule IN-155 addback, which is the salt_addback branch below.
+#
+# Standard deduction amounts are indexed annually (32 V.S.A. 5811(21)(C)); the
+# published series is transcribed through TY2025 and indexed forward from there.
+# MFS equals the single amount in every year. The aged/blind add-on is PER BOX
+# (per instance of 65-or-older or blind), matching the federal structure.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+
+std_single:
+  value:
+    '2017': 0
+    '2018': 6000
+    '2019': 6150
+    '2020': 6250
+    '2021': 6350
+    '2022': 6500
+    '2023': 7000
+    '2024': 7400
+    '2025': 7650
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: '32 V.S.A. 5811(21)(C); IN-111 line 3 instructions 2018-2025 (single; married filing separately takes the same amount). Zero in 2017 because the federal deduction is inside that year''s taxable-income base'
+std_joint:
+  value:
+    '2017': 0
+    '2018': 12000
+    '2019': 12300
+    '2020': 12500
+    '2021': 12700
+    '2022': 13050
+    '2023': 14050
+    '2024': 14850
+    '2025': 15300
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: '32 V.S.A. 5811(21)(C); IN-111 line 3 instructions 2018-2025 (married filing jointly and surviving spouse)'
+std_head:
+  value:
+    '2017': 0
+    '2018': 9000
+    '2019': 9200
+    '2020': 9400
+    '2021': 9500
+    '2022': 9800
+    '2023': 10550
+    '2024': 11100
+    '2025': 11450
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: '32 V.S.A. 5811(21)(C); IN-111 line 3 instructions 2018-2025 (head of household)'
+
+# Additional deduction per instance of aged-65-or-older or blind, same amount
+# for both boxes and every filing status
+std_aged_addl:
+  value:
+    '2017': 0
+    '2018': 1000
+    '2020': 1050
+    '2023': 1150
+    '2024': 1200
+    '2025': 1250
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: '32 V.S.A. 5811(21)(C); IN-111 line 4 instructions 2018-2025 ("additional $X for each box checked"). $1,000 2018-2019, $1,050 2020-2022, $1,150 2023, $1,200 2024, $1,250 2025'
+std_blind_addl:
+  value:
+    '2017': 0
+    '2018': 1000
+    '2020': 1050
+    '2023': 1150
+    '2024': 1200
+    '2025': 1250
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: 'Same IN-111 line 4 amount as the aged box -- the instruction counts boxes, not categories'
+
+item_allowed:
+  value: 0
+  reference: 'Act 11 of the 2018 special session abolished Vermont itemization; IN-111 2018-2025 offers only the standard deduction plus the line 4 add-ons. In 2017 the federal itemized deduction is inside the taxable-income base rather than claimed at the state level, so this is zero in every year'
+item_coupling:
+  value: 1
+  reference: 'No state election exists in either regime: 2017 inherits the federal choice through the base, and 2018+ has no itemized option at all'
+
+# 2017 Schedule IN-155 addback, first term: the state and local INCOME tax
+# component of the federal itemized deduction, limited to the excess of
+# itemized over the federal standard deduction. The calculator's salt_addback
+# branch computes exactly min(income-tax component, itemized - standard) for
+# federal itemizers when no state itemized deduction exists, which is this
+# term. The SECOND IN-155 term (non-protected itemized over 2.5x the federal
+# standard) has no parameter and is documented in agi.yaml
+salt_addback:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: '2017 IN-111 line 12c ("Addback of Itemized Deductions -- Enter amount from Schedule IN-155, Line 11") with the line 12c instruction requiring IN-155 from every federal Schedule A filer. Zero from 2018: Act 11 removed the addback along with itemization'

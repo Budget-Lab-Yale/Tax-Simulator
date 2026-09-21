@@ -1,0 +1,67 @@
+---
+# District of Columbia: filing requirement (D-40 booklet "Who must file a DC
+# return"). A resident must file if DC gross income exceeds the standard
+# deduction for the filing status -- the booklet's filing chart simply
+# reproduces the deduction amounts.
+#
+# Approximation, affecting filer counts only and not liability: the chart tests
+# GROSS income inclusively while req_type 2 tests st_agi strictly.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_thresh_single
+    '2': req_thresh_joint
+    '3': req_thresh_single
+    '4': req_thresh_head
+
+req_type:
+  value: 2
+  reference: 'D-40 booklet filing chart, TY2017-2025: a dollar threshold on DC income by filing status'
+req_thresh_single:
+  value:
+    '2017': 5650
+    '2018': 12000
+    '2019': 12200
+    '2020': 12400
+    '2021': 12550
+    '2022': 12950
+    '2023': 13850
+    '2024': 14600
+    '2025': 15000
+  reference: 'D-40 filing chart, single and married filing separately -- the same amounts as the standard deduction in each year'
+req_thresh_joint:
+  value:
+    '2017': 10275
+    '2018': 24000
+    '2019': 24400
+    '2020': 24800
+    '2021': 25100
+    '2022': 25900
+    '2023': 27700
+    '2024': 29200
+    '2025': 30000
+  reference: 'D-40 filing chart, married filing jointly and qualifying widow(er)'
+req_thresh_head:
+  value:
+    '2017': 7800
+    '2018': 18000
+    '2019': 18350
+    '2020': 18650
+    '2021': 18800
+    '2022': 19400
+    '2023': 20800
+    '2024': 21900
+    '2025': 22500
+  reference: 'D-40 filing chart, head of household'
+req_income_thresh_dep:
+  value:
+    '2017': 5650
+    '2018': 12000
+    '2019': 12200
+    '2020': 12400
+    '2021': 12550
+    '2022': 12950
+    '2023': 13850
+    '2024': 14600
+    '2025': 15000
+  reference: 'D-40 filing chart dependent-filer row; the TY2025 chart lists "Dependent filer $15,000" explicitly'

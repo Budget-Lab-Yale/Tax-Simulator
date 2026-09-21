@@ -1,0 +1,47 @@
+---
+# Idaho: deductions. The federal standard or itemized deduction flows through
+# the federal-taxable-income starting point unchanged (Form 40 lines 13-16
+# rebuild the identical federal amounts, incl. aged/blind add-ons and the
+# dependent-filer limitation), and the full federal QBI deduction is allowed.
+# What Idaho changes: (1) the state income/sales tax component of itemized
+# deductions is added back (Form 40 line 14, CO-style mechanics: for capped
+# SALT, property taxes fill the $10k cap first and only the residual
+# income/sales amount is added back -- exactly the salt_inc_component rule);
+# the addback is limited to the itemized-over-standard excess, replicating
+# the form's option to itemize federally but take the standard deduction for
+# Idaho. (2) A dependent-care expense DEDUCTION (63-3022D) of up to
+# $3,000/$6,000 (one/two-plus qualifying persons; Idaho did NOT adopt ARPA's
+# 2021 expansion), limited to the lesser earner's earned income.
+
+std_amount:
+  value: 0
+  reference: 'Form 40 structure (base = federal taxable income); Idaho grants the federal standard deduction via the starting point, no separate Idaho amount'
+
+item_allowed:
+  value: 0
+  reference: 'Form 40 structure; federal itemized deductions flow through the starting point (line 14 addback handled below)'
+
+item_coupling:
+  value: 1
+  reference: 'Form 40 lines 13-16 (federal deduction embedded in the federal-taxable-income start)'
+
+salt_addback:
+  value: 1
+  reference: 'Idaho Code 63-3022(j)(2); Form 40 line 14, verified 2017-2025: addback = Sch A line 5a income-or-sales taxes when total SALT under the cap, else capped total less real-estate and personal-property taxes (floor 0); 2017 Pease proration approximated by the itemized-over-standard limitation [known-difference]'
+
+# Dependent care expense deduction (63-3022D; 39R Part B line 6)
+care_exp_ded:
+  value: 1
+  reference: 'Idaho Code 63-3022D; Form 39R Part B line 6 worksheet, verified 2018/2021/2022: lesser of expenses, the per-person cap, and earned income; Idaho did not adopt the ARPA 2021 federal expansion'
+
+care_exp_ded_per_dep_cap:
+  value: 3000
+  reference: 'Form 39R Part B line 6 worksheet: $3,000 one qualifying person / $6,000 two or more, all years 2017-2025 (the $12,000 sometimes attributed to 63-3022D appears on no form worksheet)'
+
+care_exp_ded_dep_limit:
+  value: 2
+  reference: 'Form 39R Part B line 6 worksheet: cap tops out at $6,000 = 2 x $3,000 for two or more qualifying persons'
+
+care_exp_ded_age_limit:
+  value: 12
+  reference: 'IRC 21(b) qualifying individual (child under 13), incorporated by 63-3022D; disabled dependents/spouse unobserved [known-difference]'

@@ -1,0 +1,139 @@
+---
+# Delaware: base and additions/subtractions (Form PIT-RES, formerly 200-01,
+# Lines 1-12; 30 Del. C. 1106). DE starts from federal AGI, adds non-Delaware
+# municipal interest, and subtracts Social Security, the age-60 retirement
+# exclusion, and the Delaware state tax refund. Nothing in the DE base is
+# inflation-indexed: every amount below is constant 2017-2025 unless a year
+# key says otherwise.
+#
+# The two-tier retirement exclusion (1106(b)(3)) is split across two
+# machinery families because its BASE changes at age 60, not just its cap:
+#   under 60: $2,000 of PENSION income only -> pension_excl_band family
+#   60 or over: $12,500 of pension PLUS "eligible retirement income"
+#     (dividends, capital gains net of losses, interest, net real-property
+#     rental income, and qualified plans incl. IRA/401(k)/Keogh/457)
+#     -> retirement_excl family (GA-style, per person, min_age 60)
+# The band amounts go to ZERO at age 60 so the two tiers cannot stack.
+
+filing_status_mapper:
+  pension_excl_band_amounts:
+    '1': pension_excl_band_amounts_all
+    '2': pension_excl_band_amounts_all
+    '3': pension_excl_band_amounts_all
+    '4': pension_excl_band_amounts_all
+
+# Starting point: 1 = federal AGI (PIT-RES Line 1)
+start_point:
+  value: 1
+  reference: 'Form PIT-RES Line 1 federal adjusted gross income (Form 200-01 Line 1 in 2017-2020); 30 Del. C. 1105'
+
+conformity_group:
+  value: 0
+  reference: '30 Del. C. 1101/1105 (federal AGI under the Internal Revenue Code, no fixed date); rolling conformity -> conformity_groups.yaml group 0'
+
+# Municipal bond interest: DE adds back interest on obligations of states
+# OTHER than Delaware; Delaware and its subdivisions stay exempt
+add_exempt_int:
+  value: 1
+  reference: '30 Del. C. 1106(a)(1); PIT-RES Line 2 ("Interest you received from any obligations of States other than Delaware... is taxable and must be added"), 2017-2025 instructions'
+own_state_exempt:
+  value: 1
+  reference: 'PIT-RES Line 2: mutual fund dividends attributable to state or local obligations "minus those attributable to the State of Delaware and its authorities and political subdivisions"'
+
+# US government obligation interest subtraction. Carried as a flag; the
+# US-obligation share of taxable interest is unobserved in the PUF, so no
+# subtraction is taken (model-wide known-difference, same as CO/ND/KY)
+sub_us_int:
+  value: 1
+  reference: '30 Del. C. 1106(b)(1) (interest on obligations of the United States); PUF share unobserved [known-difference]'
+
+# Delaware state tax refund included in federal AGI is subtracted
+sub_state_ref:
+  value: 1
+  reference: 'PIT-RES Line 7 "Delaware State Tax Refund" ("include the amount on line 7 to reduce your Delaware AGI"), 2017-2025 instructions'
+
+# Social Security and Railroad Retirement benefits are never taxable in DE
+ss_sub_share:
+  value: 1
+  reference: 'PIT-RES Line 8a: "Social Security and Railroad Retirement benefits are not taxable in Delaware"; 30 Del. C. 1106(b)(4)'
+
+# Unemployment compensation excluded for calendar 2020 and 2021 only
+sub_ui_share:
+  value:
+    '2017': 0
+    '2020': 1
+    '2022': 0
+  reference: '30 Del. C. 1106(b)(10) (HB 65 of 2021; HB 285 of 2022): "unemployment benefits received in calendar years 2020 and 2021"; TY2020 and TY2021 booklets'
+
+# ---------------------------------------------------------------------------
+# Age-60 retirement exclusion, tier 1 (under 60): $2,000 of PENSION income
+# only, per person. Encoded through the age-BANDED pension family with
+# per-person amounts (each spouse's own age) so the amount drops to zero at
+# 60, where tier 2 below takes over. IRA distributions are excluded from this
+# tier: an under-60 IRA distribution is an early distribution and the
+# instructions deny the exclusion where the 1099-R box 7 code is 1 or an
+# early-withdrawal penalty was assessed
+# ---------------------------------------------------------------------------
+pension_excl_band_per_return:
+  value: 0
+  reference: '30 Del. C. 1106(b)(3): the exclusion is per person ("Spouses who each receive pensions are entitled to one exclusion each", PIT-RES Line 6 instructions)'
+pension_excl_band_ages:
+  value: [0, 60]
+  reference: '30 Del. C. 1106(b)(3): $2,000 for "persons under age 60", $12,500 at "age 60 or older"; PIT-RES Line 6, constant 2017-2025'
+pension_excl_band_amounts_all:
+  value: [2000, 0]
+  reference: 'PIT-RES Line 6: "IF YOU WERE UNDER 60... your exclusion equals $2,000 or the amount of your pension, whichever is less"; zero at 60+ because tier 2 (retirement_excl) governs there'
+pension_excl_incl_ira:
+  value: 0
+  reference: 'PIT-RES Line 6: "An early distribution from an IRA or pension fund... does not qualify for the pension exclusion" (1099-R box 7 code 1 or an early-withdrawal penalty)'
+
+# ---------------------------------------------------------------------------
+# Age-60 retirement exclusion, tier 2 (60 or over): $12,500 per person of
+# pension PLUS eligible retirement income. Jointly held non-wage income is
+# split equally between spouses because ownership is unobserved in the PUF --
+# which is what the form's own example does ("The income from these joint
+# accounts would be split equally between the two taxpayers")
+# ---------------------------------------------------------------------------
+retirement_excl_style:
+  value: 1
+  reference: '30 Del. C. 1106(b)(3); PIT-RES Line 6 worksheet (pension + eligible retirement income, capped), 2017-2025'
+retirement_excl_min_age:
+  value: 60
+  reference: '30 Del. C. 1106(b)(3) ("age 60 or older"); PIT-RES Line 6: "IF YOU WERE 60 OR OVER on December 31"'
+retirement_excl_under65:
+  value: 12500
+  reference: 'PIT-RES Line 6 worksheet line 4: "Enter Line 3 or $12,500, whichever is less" (ages 60-64), constant 2017-2025'
+retirement_excl_65plus:
+  value: 12500
+  reference: 'PIT-RES Line 6 worksheet line 4 ($12,500; DE has no separate age-65 cap), constant 2017-2025'
+retirement_excl_earned_cap:
+  value: 0
+  reference: 'PIT-RES Line 6: eligible retirement income is "dividends, capital gains net of capital losses, interest, net rental income from real property and qualified retirement plans" -- earned income is NOT eligible'
+
+# Documentation-only entries (the parser skips this block)
+documented_not_modeled:
+  # 1106(b)(2) / PIT-RES Line 11: $2,000 (single/MFS) or $4,000 (joint) for
+  # persons 60+ or totally and permanently disabled whose earned income is
+  # under $2,500 ($5,000 joint) AND whose Line 10 income is $10,000 or less
+  # ($20,000 joint). NOT MODELED: the earned-income test is unobservable at
+  # the required precision, disability status is unobserved, and the
+  # exclusion is INFRAMARGINAL -- at the income ceiling a 60+ single owes
+  # $134 of schedule tax against $220 of personal credits ($429 vs $440 for
+  # a 60+ couple), so it changes no liability
+  elderly_disabled_exclusion:
+    value: 2000
+    reference: '30 Del. C. 1106(b)(2); PIT-RES Line 11 worksheet ($2,000/$4,000; earned income under $2,500/$5,000; Line 10 at most $10,000/$20,000), 2017-2025'
+  # Under-60 MILITARY pension exclusion of $12,500 (rather than $2,000);
+  # military retirement status is unobserved in the PUF
+  military_pension_excl_under60:
+    value: 12500
+    reference: 'PIT-RES Line 6: "IF YOU WERE UNDER 60... and retired from the United States military... your exclusion equals $12,500"; 30 Del. C. 1106(b)(3)'
+  # 529 / ABLE contribution subtraction (HB 145, TY2022+): $1,000 single /
+  # $2,000 joint capped at FAGI under $100,000/$200,000; contributions
+  # unobserved in the PUF
+  sub_529_cap:
+    value:
+      '2022': 1000
+    reference: 'PIT-RES Line 8b (2022-2025 instructions); DE HB 145'
+  other_modifications:
+    reference: 'Higher-education distribution exclusion, PIT-STC/Form 329 lump-sum treatment, fiduciary adjustments, oil percentage depletion, Delaware NOL carryovers ($30,000 carryback limit, 1106(a)), Work Opportunity Credit wage deduction, and the TY2021 DE Wins! prize exclusion are not modeled (unobservable or out of scope)'

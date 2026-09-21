@@ -1,0 +1,52 @@
+---
+# Arkansas: deductions (Form AR1000F line 27; Form AR3 for itemizers).
+#
+# The standard deduction was frozen at $2,200 single / $4,400 joint from
+# TY2017 through TY2021 and began indexing in TY2022 under Ark. Code Ann.
+# 26-51-430(c), which caps the CPI adjustment at 3% and rounds to the nearest
+# $10. Every non-joint status takes the single amount, and under filing
+# status 4 each spouse takes it separately.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_married
+    '3': std_single
+    '4': std_single
+
+std_single:
+  value:
+    '2017': 2200
+    '2022': 2270
+    '2023': 2340
+    '2024': 2410
+    '2025': 2470
+  reference: 'Booklet "Standard Deduction:" block, printed p.13 for TY2017-TY2021 and p.14 from TY2022. Flat at $2,200 through TY2021, then indexed under Ark. Code Ann. 26-51-430(c), added by Act 2 of the 2021 Second Extraordinary Session: a CPI adjustment capped at 3% and rounded to the nearest $10, measured over the twelve months ending August 31. The observed steps of +3.18%, +3.08%, +2.99% and +2.49% are consistent with that rule'
+std_married:
+  value:
+    '2017': 4400
+    '2022': 4540
+    '2023': 4680
+    '2024': 4820
+    '2025': 4940
+  reference: 'Same block; the married filing jointly amount is exactly twice the single amount in every year'
+
+item_allowed:
+  value: 1
+  reference: 'Form AR3 "Itemized Deduction Schedule"'
+item_coupling:
+  value: 0
+  reference: 'The Arkansas election is independent of the federal one -- a filer may itemize for Arkansas while taking the federal standard deduction, which matters because Arkansas allows deductions TCJA suspended'
+salt_addback:
+  value: 1
+  reference: 'Form AR3 removes state income taxes from the deductible taxes; Arkansas allows no deduction for its own income tax'
+
+documented_not_modeled:
+  tcja_nonconformity:
+    reference: 'Arkansas did NOT conform to the TCJA itemized changes -- "Arkansas has not conformed to certain provisions in the Tax Cuts and Jobs Act", 2018 booklet p.5. It still allows miscellaneous deductions above the 2% floor and personal casualty losses, applies NO SALT cap to property taxes, uses a 10% medical floor, and still allows moving expenses. The model carries federal post-TCJA components, in which the 2%-floor and casualty amounts are zero and SALT is capped [understates Arkansas itemized deductions, so overstates tax, for itemizers -- the largest deduction-side difference in this state]'
+  dependent_filers:
+    reference: 'The standard deduction is not available to a taxpayer dependent (booklet NOTE). Not gated here, so a dependent filer receives it [understates Arkansas tax for dependent filers]'
+  low_income_table_zero_deduction:
+    reference: 'A filer using the Low Income Tax Tables enters a deduction of ZERO, because the tables have the deduction built in. Since the tables themselves are not modeled, neither is this interaction'
+  status_4_per_spouse_deduction:
+    reference: 'Under filing status 4 each spouse claims the single standard deduction against their own column. Separate returns are not modeled -- see the source packet'

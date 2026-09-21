@@ -1,0 +1,19 @@
+---
+# Minnesota: filing requirement. Residents must file if required to file a
+# federal return or if MN gross income meets the year's threshold (which
+# equals the standard deduction from 2019 -- approximately redundant with
+# the deduction itself, so the federal-requirement prong is the modeled
+# gate).
+
+# 3 = federal filing requirement or any state liability
+req_type:
+  value: 3
+  reference: 'M1 booklet "Who Must File" chart, 2017-2025: federal filing requirement or MN gross income at/above the threshold (= standard deduction from 2019)'
+
+req_income_thresh:
+  value: 0
+  reference: 'n/a (threshold redundant with the standard deduction)'
+
+req_if_fed_filer:
+  value: 1
+  reference: 'M1 booklet "Who Must File": every resident required to file federally'

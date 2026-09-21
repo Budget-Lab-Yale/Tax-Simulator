@@ -1,0 +1,13 @@
+TAXSIM-35, Delaware, TY2019, single, wages 1,500,000, NO itemized
+inputs of any kind (no mortgage, otheritem, or proptax).
+
+Expected: DE deduction = the 3,250 standard (30 Del. C. 1108(a));
+v34 is correct throughout. TAXSIM instead reports
+v35_state_itemized_deduction = 10,000 -- exactly the federal SALT
+cap (5,000 MFS) -- and uses it, since it exceeds the DE standard
+deduction (v36 = state AGI - 10,000). The share of our sampled DE
+records with v35 > 0 jumps from ~54% in 2017-2018 to 97.0% in both
+2019 and 2020, suggesting a vintage change. Presumably TAXSIM's own
+computed DE income tax is being written into the DE itemized base;
+Delaware strips state income taxes from its base (PIT-RES Line 17b),
+so the 10,000 has no legal source.

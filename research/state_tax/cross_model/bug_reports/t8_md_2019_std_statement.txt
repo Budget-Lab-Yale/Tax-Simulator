@@ -1,0 +1,11 @@
+TAXSIM-35, Maryland, TY2019, single, wages 100,000, standard
+deduction.
+
+Expected: MD standard deduction = 2,250. Form 502 instruction 16
+(TY2019): 15% of Maryland AGI bounded between 1,550 and 2,250 for
+single filers; 15% x 100,000 caps at the 2,250 MAXIMUM. TAXSIM
+returns v34_state_std_deduction_amount = 1,550 -- the minimum where
+the maximum belongs. TY2019 only (2018 and 2020 probe correctly,
+though 2020 uses the 2019 maxima, one indexing step stale). Effect:
+flat +33/+69/+83 overstatement of MD tax on every 2019
+standard-deduction return.

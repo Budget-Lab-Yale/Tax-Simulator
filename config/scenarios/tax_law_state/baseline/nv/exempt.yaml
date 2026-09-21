@@ -1,0 +1,6 @@
+---
+# Nevada: no broad individual income tax.
+
+personal_amount:
+  value: 0
+  reference: 'No broad individual income tax; Nevada Department of Taxation tax programs; https://tax.nv.gov'

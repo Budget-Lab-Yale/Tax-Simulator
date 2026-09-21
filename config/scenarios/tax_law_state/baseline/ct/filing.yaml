@@ -1,0 +1,42 @@
+---
+# Connecticut: filing requirement (Gross Income Test; 2017-2021 booklets
+# "Who Must File", 2022+ DRS Tax Information page). A resident files if
+# gross income exceeds the threshold (equal to the maximum personal
+# exemption), or on other triggers (withholding, estimated payments, AMT,
+# CT EITC claim) -- the liability-based and EITC cases are caught by the
+# calculator's nonzero-liability rule. No federal-filer rule. Approximation:
+# req_type 2 tests state AGI rather than gross income (subtractions make
+# state AGI smaller; documented known-difference in ct.md).
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': thresh_single
+    '2': thresh_married
+    '3': thresh_mfs
+    '4': thresh_head
+  req_income_thresh_dep:
+    '1': thresh_single
+    '2': thresh_married
+    '3': thresh_mfs
+    '4': thresh_head
+
+req_type:
+  value: 2
+  reference: 'Gross Income Test, 2017-2021 booklets pp.8-10; DRS Tax Information page (TY2025); unchanged all years'
+
+thresh_single:
+  value: 15000
+  reference: 'Gross Income Test ($15,000 single), 2017-2025; equals the maximum Table A exemption'
+thresh_married:
+  value: 24000
+  reference: 'Gross Income Test ($24,000 MFJ/QSS), 2017-2025'
+thresh_mfs:
+  value: 12000
+  reference: 'Gross Income Test ($12,000 MFS), 2017-2025'
+thresh_head:
+  value: 19000
+  reference: 'Gross Income Test ($19,000 HoH), 2017-2025'
+
+req_if_fed_filer:
+  value: 0
+  reference: 'DRS instructions: filing a federal return is not among the six CT filing triggers'

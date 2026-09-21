@@ -1,0 +1,47 @@
+---
+# Mississippi rate schedule (Form 80-105 line 17).
+#
+# The brackets are the SAME for every filing status -- Mississippi has no
+# status-varying schedule at all. Only two things move across the window: the
+# ZERO-BRACKET ceiling and the top rate. The $10,000 top-bracket threshold
+# never moves, in any year from 2017 through 2030.
+#
+# The "3% bracket phase-out" was never a rate cut. A zero bracket appeared in
+# TY2018 and grew $1,000 a year from below until it had eaten the whole 3%
+# band by TY2022; the 4% band then died in TY2023 when the zero bracket
+# jumped straight to $10,000. Encoding it as a disappearing 3% RATE would get
+# the intermediate years wrong.
+#
+# ENACTED versus CONTINGENT: HB 531 (2022) and HB 1 (2025) enact the top rate
+# through TY2030. Further reductions from TY2031 are conditioned on the
+# Working Cash-Stabilization Reserve Fund being fully funded plus
+# revenue-over-appropriation triggers, so they are NOT encoded -- the
+# enacted-only convention, as for North Carolina and Missouri.
+
+brackets:
+  value:
+    '2017': [0.0, 0.0, 5000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    '2018': [0.0, 1000.0, 5000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    '2019': [0.0, 2000.0, 5000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    '2020': [0.0, 3000.0, 5000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    '2021': [0.0, 4000.0, 5000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    '2022': [0.0, 5000.0, 5000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+    '2023': [0.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0, 10000.0]
+  reference: 'Each booklet''s TAX RATES paragraph and Schedule of Tax Computation. The second bound is the zero-bracket ceiling, which the booklets state directly: none in TY2017, then $1,000 / $2,000 / $3,000 / $4,000 / $5,000 for TY2018-TY2022 and $10,000 from TY2023. Where the zero bracket has reached a bound the band between them is empty, which is how the 3% band disappears in TY2022 and the 4% band in TY2023. Padded to ten elements'
+rates:
+  value:
+    '2017': [0.0, 0.03, 0.04, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+    '2024': [0.0, 0.03, 0.04, 0.047, 0.047, 0.047, 0.047, 0.047, 0.047, 0.047]
+    '2025': [0.0, 0.03, 0.04, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044]
+    '2026': [0.0, 0.03, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04]
+    '2027': [0.0, 0.03, 0.04, 0.0375, 0.0375, 0.0375, 0.0375, 0.0375, 0.0375, 0.0375]
+    '2028': [0.0, 0.03, 0.04, 0.035, 0.035, 0.035, 0.035, 0.035, 0.035, 0.035]
+    '2029': [0.0, 0.03, 0.04, 0.0325, 0.0325, 0.0325, 0.0325, 0.0325, 0.0325, 0.0325]
+    '2030': [0.0, 0.03, 0.04, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03]
+  reference: 'Booklet TAX RATES paragraphs for TY2017-TY2025 (5% through TY2023, 4.7% in TY2024, 4.4% in TY2025). TY2026 is enacted by HB 531 (2022) and TY2027-TY2030 by HB 1 (2025). The 3% and 4% rates are left in place for the years their bands still exist; from TY2023 both bands are empty, so those entries can never be selected. Reductions from TY2031 are TRIGGER-CONTINGENT on the Working Cash-Stabilization Reserve Fund and revenue tests, and are deliberately NOT encoded'
+
+documented_not_modeled:
+  gaming_winnings_flat_tax:
+    reference: 'Mississippi casino winnings carry a 3% final withholding, are EXCLUDED from Mississippi income entirely, and the withholding is NOT creditable against the income tax. So a gambler pays 3% and the amount never touches this schedule. Gambling winnings are not separable in the model [overstates Mississippi income tax for filers with casino winnings, while missing the 3% they actually paid]'
+  trigger_contingent_rates_2031:
+    reference: 'HB 1 (2025) provides for further reductions below 3% from TY2031, of 0.2, 0.25 or 0.3 percentage points per qualifying year, conditioned on the reserve fund being fully funded and revenue exceeding appropriations. Enacted rates only are encoded'

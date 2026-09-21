@@ -1,0 +1,278 @@
+---
+# Minnesota: deductions. 2017: federal deductions flow through the
+# federal-taxable-income start, with the state income/sales tax addback
+# (salt_addback, CO-style). 2018+: MN's OWN standard deduction (Minn. Stat.
+# 290.0123; pre-TCJA amounts in 2018, TCJA-level MN-indexed amounts from
+# 2019) or MN itemized deductions (Schedule M1SA, 290.0122) -- the MN
+# election is fully decoupled from the federal one. Both deductions face
+# the same high-income limitation: min(3% of AGI over T1 [+ 10% over T2
+# from 2023], 80% of the deduction), flat 80% above the $1M-indexed
+# trigger from 2023.
+#
+# M1SA component approximations [known-differences]: medical uses the
+# federal-floor amount (MN floor is 10% of AGI vs federal 7.5% -- overstates
+# for medical itemizers); misc-2% deductions are zero in post-TCJA PUF data
+# (MN still allows them -- understates); casualty uses the federal
+# disaster-only amount (MN allows non-disaster losses); real-estate +
+# personal-property taxes share the 10k cap on the form but the cap is
+# applied to property taxes only here.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  std_aged_addl:
+    '1': aged_addl_single
+    '2': aged_addl_married
+    '3': aged_addl_married
+    '4': aged_addl_single
+  std_blind_addl:
+    '1': aged_addl_single
+    '2': aged_addl_married
+    '3': aged_addl_married
+    '4': aged_addl_single
+  item_prop_tax_cap:
+    '1': prop_cap_regular
+    '2': prop_cap_regular
+    '3': prop_cap_mfs
+    '4': prop_cap_regular
+  pease_thresh:
+    '1': pease_t1_regular
+    '2': pease_t1_regular
+    '3': pease_t1_mfs
+    '4': pease_t1_regular
+  pease_thresh2:
+    '1': pease_t2_regular
+    '2': pease_t2_regular
+    '3': pease_t2_mfs
+    '4': pease_t2_regular
+
+std_single:
+  value:
+    '2017': 0
+    '2018': 6500
+    '2019': 12200
+    '2020': 12400
+    '2021': 12525
+    '2022': 12900
+    '2023': 13825
+    '2024': 14575
+    '2025': 14950
+  reference: 'M1 booklet Standard Deduction Table for Line 4, single/MFS: pre-TCJA 6,500 in 2018; MN-indexed series 2019+ (2024-25 diverge from federal: 14,575 vs 14,600; DOR memos note the 2023 bill''s inflation-base drafting error, fixed 2024 -- booklet amounts encoded). 2017: zero (federal deduction embedded in the taxable-income start)'
+
+std_joint:
+  value:
+    '2017': 0
+    '2018': 13000
+    '2019': 24400
+    '2020': 24800
+    '2021': 25050
+    '2022': 25800
+    '2023': 27650
+    '2024': 29150
+    '2025': 29900
+  reference: 'M1 booklet Standard Deduction Table, MFJ/QSS'
+
+std_head:
+  value:
+    '2017': 0
+    '2018': 9550
+    '2019': 18350
+    '2020': 18650
+    '2021': 18800
+    '2022': 19400
+    '2023': 20800
+    '2024': 21900
+    '2025': 22500
+  reference: 'M1 booklet Standard Deduction Table, head of household'
+
+aged_addl_single:
+  value:
+    '2017': 0
+    '2018': 1600
+    '2019': 1650
+    '2022': 1700
+    '2023': 1850
+    '2024': 1950
+    '2025': 2000
+  reference: 'M1 booklet Standard Deduction Table aged/blind add-on per box, single/HoH (2022 inferred from indexation [UNVERIFIED]; others transcribed)'
+
+aged_addl_married:
+  value:
+    '2017': 0
+    '2018': 1300
+    '2022': 1350
+    '2023': 1450
+    '2024': 1550
+  reference: 'M1 booklet Standard Deduction Table aged/blind add-on per box, married/MFS (2022 inferred [UNVERIFIED])'
+
+std_dependent_style:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'M1 Worksheet for Line 4 -- Dependent Standard Deduction (greater of the minimum or earned income + increment, capped at the regular deduction), 2018+'
+
+std_dependent_floor:
+  value:
+    '2017': 0
+    '2018': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1200
+    '2024': 1300
+    '2025': 1250
+  reference: 'M1 dependent standard deduction minimums (2018 pre-TCJA 1,050 [UNVERIFIED]; 2019-2025 from booklets; the non-monotonic 2024->2025 step is the drafting-error base-year switch, as printed)'
+
+std_dependent_earned_add:
+  value:
+    '2017': 0
+    '2018': 350
+    '2024': 400
+    '2025': 350
+  reference: 'M1 dependent standard deduction earned-income increment (350; 400 in 2024 only, as printed)'
+
+item_allowed:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: '2017: federal itemized flow through the taxable-income start; 2018+: Schedule M1SA'
+
+item_coupling:
+  value: 0
+  reference: '2019 booklet What''s New (and every later year): MN itemization is independent of the federal election; 2018 M1SA likewise independent. 2017 coupling is inherent in the taxable-income start'
+
+item_component_style:
+  value: 1
+  reference: 'Schedule M1SA components selected below, 2018-2025'
+
+item_include_medical:
+  value: 1
+  reference: 'M1SA lines 1-4: medical over 10% of AGI all years (federal-floor amount used as proxy [known-difference])'
+
+item_include_mortgage:
+  value: 1
+  reference: 'M1SA lines 11-12: home mortgage interest and points'
+
+item_include_investment:
+  value: 1
+  reference: 'M1SA line 13: investment interest'
+
+item_include_charity:
+  value: 1
+  reference: 'M1SA lines 15-17: charitable contributions'
+
+item_include_casualty:
+  value: 1
+  reference: 'M1SA line 19 (Schedule M1CAT): casualty/theft incl. non-disaster losses (federal disaster-only amount used [known-difference])'
+
+item_include_misc:
+  value: 1
+  reference: 'M1SA lines 20-23: unreimbursed employee expenses + misc over 2% AGI (TCJA suspension not adopted; zero in post-TCJA PUF data [known-difference])'
+
+item_include_other:
+  value: 1
+  reference: 'M1SA line 24: other miscellaneous deductions'
+
+item_include_prop_tax:
+  value: 1
+  reference: 'M1SA lines 5-8: real estate taxes (capped below)'
+
+item_include_pers_tax:
+  value: 1
+  reference: 'M1SA line 6: personal property taxes (form combines with real estate under the cap; cap applied to property taxes only here [known-difference])'
+
+item_include_income_sales_tax:
+  value: 0
+  reference: 'M1SA 2019+: no line for state income or sales taxes; 2018 M1SA deducted then added back in full (line 27) -- net exclusion both ways'
+
+prop_cap_regular:
+  value:
+    '2017': .inf
+    '2018': .inf
+    '2019': 10000
+  reference: 'M1SA line 8: combined property-tax cap 10,000 from 2019; UNCAPPED on the 2018 M1SA; n/a 2017'
+
+prop_cap_mfs:
+  value:
+    '2017': .inf
+    '2018': .inf
+    '2019': 5000
+  reference: 'M1SA line 8: 5,000 MFS from 2019'
+
+# High-income limitation on itemized AND standard deductions
+pease:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: '2018 M1SA line 28 own Pease; 2019+ identical limitation on M1SA line 26 and the Line 4 standard-deduction worksheet. The 2017 M1M incremental Pease addback is NOT modeled [known-difference]'
+
+pease_incl_std:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'Minn. Stat. 290.0123 subd. 5: the limitation applies to the standard deduction from 2019 (2018 standard deduction unlimited); worksheets in every booklet 2019-2025'
+
+pease_t1_regular:
+  value:
+    '2017': .inf
+    '2018': 190050
+    '2019': 194650
+    '2020': 197850
+    '2021': 199850
+    '2022': 206050
+    '2023': 220650
+    '2024': 232500
+    '2025': 238950
+  reference: 'Limitation thresholds, all statuses except MFS: 2018 M1SA line 28; 2019-2022 worksheets; 2023+ Worksheet A tier 1 (DOR memos 290.0122 subd. 2 / 290.0123 subd. 5)'
+
+pease_t1_mfs:
+  value:
+    '2017': .inf
+    '2018': 95025
+    '2019': 97325
+    '2020': 98925
+    '2021': 99925
+    '2022': 103025
+    '2023': 110325
+    '2024': 116250
+    '2025': 119475
+  reference: 'Limitation thresholds, MFS (half)'
+
+pease_t2_regular:
+  value:
+    '2017': .inf
+    '2023': 304970
+    '2024': 321350
+    '2025': 330300
+  reference: '2023+ second tier (10% rate) start, all statuses except MFS (equals the MFJ top-bracket threshold); single-tier before 2023'
+
+pease_t2_mfs:
+  value:
+    '2017': .inf
+    '2023': 152485
+    '2024': 160675
+    '2025': 165150
+  reference: '2023+ second tier start, MFS'
+
+pease_rate2:
+  value:
+    '2017': 0
+    '2023': 0.10
+  reference: '2023 act: 10% rate above the second threshold (Worksheet A)'
+
+pease_flat_thresh:
+  value:
+    '2017': .inf
+    '2023': 1000000
+    '2024': 1053750
+    '2025': 1083150
+  reference: '2023+ Worksheet B: flat 80% reduction when AGI exceeds the trigger'
+
+# 2017 state income/sales tax addback (federal-taxable start year)
+salt_addback:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: '2017 Form M1 line 2 (state income or sales tax deducted federally, added back); 2018+ handled inside the M1SA component structure'

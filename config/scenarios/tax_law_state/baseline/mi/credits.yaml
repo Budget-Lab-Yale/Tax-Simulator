@@ -1,0 +1,9 @@
+---
+eitc_match:
+  value:
+    '2017': 0.06
+    '2022': 0.30
+  reference: 'Michigan EITC guidance; Public Act 4 of 2023 retroactive 2022 expansion from 6% to 30% of federal EITC'
+eitc_refundable:
+  value: 1
+  reference: 'Michigan MI-1040 Schedule 1, refundable Michigan EITC, 2017-2025'

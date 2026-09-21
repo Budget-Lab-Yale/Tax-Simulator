@@ -1,0 +1,195 @@
+---
+# Rhode Island: base and modifications (RI-1040 lines 1-3; RI Schedule M;
+# R.I.G.L. 44-30-12). RI AGI ("modified federal adjusted gross income", line 3)
+# = federal AGI + Schedule M increasing modifications - decreasing
+# modifications. This is the measure that drives BOTH the standard-deduction
+# and the exemption phase-outs (ded.yaml / exempt.yaml use income base 2),
+# while the Social Security and pension modification ELIGIBILITY tests use
+# UNMODIFIED federal AGI (line 1) -- which is what the calculator's `agi` is.
+# Both are correct as encoded.
+
+filing_status_mapper:
+  ss_allages_agi_limit:
+    '1': ss_agi_limit_single
+    '2': ss_agi_limit_joint
+    '3': ss_agi_limit_mfs
+    '4': ss_agi_limit_single
+  pension_excl_agi_limit:
+    '1': pension_agi_limit_single
+    '2': pension_agi_limit_joint
+    '3': pension_agi_limit_mfs
+    '4': pension_agi_limit_single
+
+# Starting point: 1 = federal AGI (RI-1040 line 1)
+start_point:
+  value: 1
+  reference: 'RI-1040 line 1 (federal adjusted gross income); R.I.G.L. 44-30-12(a)'
+
+conformity_group:
+  value: 0
+  reference: 'R.I.G.L. 44-30-12(a) (federal AGI as defined in the IRC; rolling) -> reference-law group 0'
+
+# Out-of-state municipal bond interest IS added back (44-30-12(b)(1),(2);
+# Schedule M line 2a). RI's own obligations remain exempt
+add_exempt_int:
+  value: 1
+  reference: 'R.I.G.L. 44-30-12(b)(1),(2); RI Schedule M line 2a (interest on obligations of any state other than Rhode Island)'
+own_state_exempt:
+  value: 1
+  reference: 'RI obligations remain exempt; only out-of-state muni interest is added back (44-30-12(b)(1) carve-out for RI and its subdivisions); own-state share unobserved, model convention [known-difference]'
+
+# US government obligation interest subtraction (44-30-12(c)(1); Schedule M
+# line 1a). Carried as a flag; the US-obligation share of taxable interest is
+# unobserved in the PUF (model-wide known-difference, same as CO/ND)
+sub_us_int:
+  value: 1
+  reference: 'R.I.G.L. 44-30-12(c)(1); RI Schedule M line 1a (US obligation interest); PUF share unobserved [known-difference]'
+
+# RI allows NO itemized deduction, so no state income tax is ever deducted and
+# there is nothing to add back; the state income-tax refund inside federal AGI
+# is correspondingly NOT subtracted (RI Schedule M has no refund line)
+sub_state_ref:
+  value: 0
+  reference: 'RI Schedule M has no state income-tax refund subtraction (RI allows no itemized deduction, so no state-tax deduction was taken)'
+
+# ----------------------------------------------------------------------------
+# Social Security modification (44-30-12(c)(8); Schedule M line 1u;
+# "Modification for Taxable Social Security Income Worksheet"). Enacted 2015,
+# effective TY2016. Full subtraction of federally taxable SS if BOTH:
+#   (a) the taxpayer has reached FULL RETIREMENT AGE (published as a birth-date
+#       gate advancing ~2 months per year: born on or before 01/01/1952 for
+#       TY2017 through 03/01/1959 for TY2025), AND
+#   (b) federal AGI is at or below the filing-status limit (a CLIFF).
+# The age gate uses the new generic ss_allages_min_age. Year-end age 66 is the
+# closest single-integer fit to the advancing birth-date gate in every year
+# 2017-2025 [documented approximation: admits filers born after the cutoff
+# month, i.e. slightly overstates eligibility].
+# ----------------------------------------------------------------------------
+ss_full_sub_allages:
+  value: 1
+  reference: 'R.I.G.L. 44-30-12(c)(8); RI Schedule M line 1u SS worksheet, TY2017-2025: full subtraction of taxable SS at or below the federal-AGI limit'
+ss_allages_min_age:
+  value: 66
+  reference: 'Worksheet question 1 full-retirement-age gate, published as a birth date advancing ~2 months per year (01/01/1952 for TY2017 ... 03/01/1959 for TY2025); year-end age 66 is the closest fit in every year [documented approximation]'
+ss_agi_limit_single:
+  value:
+    '2017': 81575
+    '2018': 83550
+    '2019': 85150
+    '2020': 86350
+    '2021': 88950
+    '2022': 95800
+    '2023': 101000
+    '2024': 104200
+    '2025': 107000
+  reference: 'SS Modification Worksheet line 6, single/head of household, TY2017-2025 (2019/2020 also in ADV 2019-30 / ADV 2020-59)'
+ss_agi_limit_joint:
+  value:
+    '2017': 101950
+    '2018': 104450
+    '2019': 106400
+    '2020': 107950
+    '2021': 111200
+    '2022': 119750
+    '2023': 126250
+    '2024': 130250
+    '2025': 133750
+  reference: 'SS Modification Worksheet line 6, married filing jointly / qualifying widow(er), TY2017-2025'
+ss_agi_limit_mfs:
+  value:
+    '2017': 81575
+    '2018': 83550
+    '2019': 85150
+    '2020': 86375
+    '2021': 88975
+    '2022': 95800
+    '2023': 101025
+    '2024': 104225
+    '2025': 107000
+  reference: 'SS Modification Worksheet line 6, married filing separately, TY2017-2025 (MFS carries its own $25 rounding in 2020/2021/2023/2024)'
+
+# ----------------------------------------------------------------------------
+# Pension / 401(k) / 403(b) / annuity modification (44-30-12(c)(9); Schedule M
+# line 1v (2017-2021) / 1t (2022+)). Enacted 2016, effective TY2017.
+# Per-qualifying-person cap on federally taxable pension and annuity income,
+# for taxpayers at full retirement age with federal AGI at or below the
+# filing-status limit. The worksheet has separate Primary/Spouse columns, each
+# capped and then summed -- exactly the calculator's per-person cap sum.
+#
+# IRA distributions are NOT eligible: the instructions restrict the
+# modification to Form 1040 line 5b pensions and annuities and state it
+# "should NOT include any amounts for IRAs listed on line 4b".
+# ----------------------------------------------------------------------------
+pension_excl_min_age:
+  value: 66
+  reference: 'R.I.G.L. 44-30-12(c)(9) full-retirement-age gate, same advancing birth-date rule as the SS modification; year-end age 66 is the closest fit 2017-2025 [documented approximation]'
+pension_excl_65plus:
+  value:
+    '2017': 15000
+    '2023': 20000
+    '2025': 50000
+  reference: 'RI-1040 instructions Schedule M line 1v/1t: modification up to $15,000 (TY2017-2022), $20,000 (TY2023-2024), $50,000 (TY2025), per qualifying person'
+pension_excl_under65:
+  value: 0
+  reference: 'No RI pension modification below full retirement age; the min-age gate makes this path unreachable'
+pension_excl_incl_ira:
+  value: 0
+  reference: 'RI-1040 instructions: the modification covers Form 1040 line 5b pensions/annuities ONLY and "should NOT include any amounts for IRAs listed on line 4b"'
+pension_cap_incl_ss:
+  value: 0
+  reference: 'The RI Social Security modification (44-30-12(c)(8)) is separate and uncapped; it does not share the pension cap'
+pension_agi_limit_single:
+  value:
+    '2017': 80000
+    '2018': 81900
+    '2019': 83450
+    '2020': 84700
+    '2021': 87200
+    '2022': 95800
+    '2023': 101000
+    '2024': 104200
+    '2025': 107000
+  reference: 'RI-1040 instructions Schedule M line 1v/1t AGI table, single/head of household, TY2017-2025 (TY2017 statutory $80,000). NOTE: DISTINCT from the SS limit series through TY2021, identical from TY2022 -- do not cross-contaminate the two series'
+pension_agi_limit_joint:
+  value:
+    '2017': 100000
+    '2018': 102400
+    '2019': 104350
+    '2020': 105850
+    '2021': 109050
+    '2022': 119750
+    '2023': 126250
+    '2024': 130250
+    '2025': 133750
+  reference: 'RI-1040 instructions Schedule M line 1v/1t AGI table, married filing jointly / qualifying widow(er), TY2017-2025'
+pension_agi_limit_mfs:
+  value:
+    '2017': 80000
+    '2018': 81925
+    '2019': 83475
+    '2020': 84700
+    '2021': 87225
+    '2022': 95800
+    '2023': 101025
+    '2024': 104225
+    '2025': 107000
+  reference: 'RI-1040 instructions Schedule M line 1v/1t AGI table, married filing separately, TY2017-2025'
+
+# RI taxes capital gains and dividends as ordinary income -- no exclusion or
+# preferential rate in 2017-2025 (the pre-2010 special capital-gains rates
+# were repealed before this window).
+
+documented_not_modeled:
+  railroad_retirement_sub:
+    reference: 'RI Schedule M line 1d: Railroad Retirement benefits fully exempt (1974 RRA). Not separable from Social Security / pension income in the PUF'
+  tuition_savings_529:
+    value: 500
+    reference: 'R.I.G.L. 44-30-12(c)(4); Schedule M line 1g: contributions to a RI 529 plan, max $500 ($1,000 joint), all years. Contributions unobserved in the PUF'
+  military_service_pension_sub:
+    reference: 'R.I.G.L. 44-30-12(c)(11), TY2023+: military service pension benefits fully subtracted. Military pension not separable from txbl_pens_dist in the PUF'
+  ui_excluded_addback:
+    reference: 'R.I.G.L. 44-30-12(b)(6); 2020 Schedule M line 2g: unemployment compensation excluded from federal AGI (the ARPA TY2020 exclusion) is added back for RI. One-year item; no addition parameter exists [known-difference, TY2020]'
+  bonus_depreciation:
+    reference: 'R.I.G.L. 44-61-1 / 44-61-1.1: bonus depreciation and the post-2003 s.179 increase are decoupled (pre-2015 assets), via Schedule M lines 1i/1j/2d. The basis tracking required is not PUF-representable'
+  fiduciary_adjustment:
+    reference: 'R.I.G.L. 44-30-17; Schedule M lines 1b/2b. Not observable'

@@ -28,6 +28,10 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'n_simple_filers'
   )
   
+  # The refundable credits, reported at three margins below. Named here so
+  # the list is one definition rather than two.
+  refundable_vars = c('eitc', 'ctc_ref', 'cdctc_ref', 'ed_ref', 'rebate', 'ref')
+
   # Choose tax variables to report
   tax_vars = c(
     'wages',
@@ -194,6 +198,36 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
              .fns   = list(n      = ~ sum((. != 0) * weight * filer) / 1e6,
                            amount = ~ sum(.        * weight * filer) / 1e9),
              .names = '{fn}_{col}'), 
+
+      # Refundable credits at two further margins. The filer-gated amount
+      # above is what we publish and does not change; these sit beside it.
+      #
+      #   induced  the credit going to records that switched INTO filing this
+      #            run, via become_filer_rebate / become_filer_ctc. Already
+      #            computed, and until now folded invisibly into the filer
+      #            total -- so our one behavioural response was unauditable.
+      #            NOTE this is a SUBSET of the filer-gated amount, not
+      #            disjoint from it; keeping it so is what leaves every
+      #            published number untouched.
+      #
+      #   reach    the credit going to records that stay filer == 0. The filer
+      #            gate multiplies it by zero, so it is invisible rather than
+      #            absent. This is the un-modelled population: the model has no
+      #            filing elasticity and no EITC filing arm, so nothing can
+      #            move these records in. Reporting it states in dollars what
+      #            an estimate cannot see, and benchmarks against administrative
+      #            data -- Census/IRS matched data put $5.6B of EITC unclaimed
+      #            by non-filers in TY2021, so a reach line far from that is a
+      #            signal about the non-filer population, not about tax law.
+      #
+      # See Tax-Data research/state_weights/refundable_credit_takeup_proposal.md
+      # and filer_margin_practice.md.
+      across(.cols  = all_of(refundable_vars),
+             .fns   = list(
+               induced = ~ sum(. * weight *
+                               (become_filer_ctc == 1 | become_filer_rebate == 1)) / 1e9,
+               reach   = ~ sum(. * weight * (1 - filer)) / 1e9),
+             .names = '{fn}_{col}'),
       
       # MTR vars
       across(.cols  = starts_with('mtr_'), 
@@ -277,3 +311,116 @@ get_pr_totals = function(tax_units, yr) {
     relocate(year) %>% 
     return()
 } 
+
+
+get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
+                            detail_path = NULL, state_tax_contexts = list(),
+                            conformity_groups = load_state_conformity_groups()) {
+
+  #----------------------------------------------------------------------------
+  # Calculates state-level aggregates: runs the state calculator per
+  # jurisdiction on federally-calculated tax units and aggregates with the
+  # split state weights (plan §2.4). Optionally writes the compact per-year
+  # state detail matrix -- id plus one liability column per state (plan §5.3)
+  # -- accumulated in the same pass, no recomputation.
+  #
+  # Parameters:
+  #   - tax_units_calc (df) : tax units post-federal calculation
+  #   - state_tax_law (df)  : state tax law tibble; see build_state_tax_law()
+  #   - state_weights (df)  : long (id, state, weight) split weights
+  #   - yr (int)            : year
+  #   - detail_path (str)   : when non-NULL, path for the per-year state
+  #                           detail matrix CSV
+  #
+  # Returns: tibble long in (year, state, variable) with weighted totals, or
+  #          NULL when no state law exists for the year (df | NULL).
+  #----------------------------------------------------------------------------
+
+  if (is.null(state_tax_law) || nrow(state_tax_law) == 0) {
+    return(NULL)
+  }
+  credit_tables = attr(state_tax_law, 'credit_tables')
+  law_yr = state_tax_law %>%
+    filter(year == yr)
+  if (nrow(law_yr) == 0) {
+    return(NULL)
+  }
+  state_groups = state_conformity_groups_for_law(law_yr, conformity_groups)
+
+  detail = list()
+
+  totals = unique(law_yr$state) %>%
+    map(.f = function(st) {
+
+      group = state_groups %>% filter(state == st)
+      state_tax_context = state_tax_context_for_group(
+        tax_units_calc     = tax_units_calc,
+        conformity_group   = group$conformity_group,
+        group_ready        = group$ready,
+        state_tax_contexts = state_tax_contexts
+      )
+
+      # Join this state's law to its rolling or reference federal context,
+      # calculate, and reattach ids and weights.
+      st_results = state_tax_context %>%
+        left_join(law_yr %>%
+                    filter(state == st) %>%
+                    select(-state),
+                  by = c('year', 'filing_status')) %>%
+        do_state_taxes(
+          credit_tables = state_credit_tables_for_year(credit_tables, st, yr),
+          # Married-separate law row, for states offering the split election
+          law_mfs = law_yr %>%
+                      filter(state == st, filing_status == 3) %>%
+                      select(-state, -year, -filing_status)
+        ) %>%
+        mutate(id = state_tax_context$id) %>%
+        left_join(state_weights %>%
+                    filter(state == st) %>%
+                    select(id, st_weight = weight),
+                  by = 'id') %>%
+        mutate(st_weight = replace_na(st_weight, 0))
+
+        # Accumulate the per-record net individual fiscal amount for detail
+      if (!is.null(detail_path)) {
+          detail[[st]] <<- st_results %>%
+            select(id, !!st := liab_st_individual_net)
+      }
+
+      st_results %>%
+
+        # Weighted aggregates
+        summarise(
+            returns           = sum(st_weight * st_tax_filer),
+            liab_st_iit       = sum(st_weight * liab_st_iit),
+            liab_st_narrow_iit = sum(st_weight * liab_st_narrow_iit),
+            liab_st_ltcg_excise = sum(st_weight * liab_st_ltcg_excise),
+            st_refund_wftc    = sum(st_weight * st_refund_wftc),
+            liab_st_individual_net = sum(st_weight * liab_st_individual_net),
+            st_agi            = sum(st_weight * st_agi),
+          st_txbl_inc       = sum(st_weight * st_txbl_inc),
+          st_tax_pre_credit = sum(st_weight * st_tax_pre_credit),
+          st_eitc           = sum(st_weight * st_eitc),
+          st_ctc            = sum(st_weight * st_ctc),
+          st_yctc           = sum(st_weight * st_yctc),
+          st_cdctc          = sum(st_weight * st_cdctc),
+          st_credits_nonref = sum(st_weight * st_credits_nonref),
+          st_credits_ref    = sum(st_weight * st_credits_ref)
+        ) %>%
+        mutate(year = yr, state = st) %>%
+        pivot_longer(cols      = -c(year, state),
+                     names_to  = 'variable',
+                     values_to = 'value')
+    }) %>%
+    bind_rows()
+
+  # Write the compact detail matrix: id + one liability column per state
+  if (!is.null(detail_path) && length(detail) > 0) {
+    dir.create(dirname(detail_path), recursive = T, showWarnings = F)
+    detail %>%
+      reduce(.f = ~ left_join(.x, .y, by = 'id')) %>%
+      write_csv(detail_path)
+  }
+
+  return(totals)
+}

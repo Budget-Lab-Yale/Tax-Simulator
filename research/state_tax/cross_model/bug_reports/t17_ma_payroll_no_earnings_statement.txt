@@ -1,0 +1,51 @@
+TAXSIM-35, Massachusetts, TY2018, single, age 70, taxable pension
+40,000, gross Social Security 20,000, NO wages and no
+self-employment income.
+
+Expected: siitax = 1,779.90. This filer paid no FICA, Medicare or
+Railroad Retirement contributions during the year and made no
+contribution to a U.S. or Massachusetts public retirement system,
+so the Form 1 line 11 deduction is zero. Massachusetts excludes
+Social Security from its base entirely, leaving 40,000 less the
+4,400 personal exemption and the 700 age-65 exemption = 34,900, at
+5.1% = 1,779.90.
+
+TAXSIM returns siitax = 1,677.90 -- an implied line 11 deduction of
+exactly 2,000 on a return with no earnings at all.
+
+The trigger is positive gross Social Security. It is a FLAT 2,000,
+not a computed contribution: holding the return otherwise identical
+and varying gssi alone, TY2018 Massachusetts,
+  gssi      0 -> implied deduction     0 (correct)
+  gssi  5,000 -> implied deduction 2,000  (7.65% of gssi = 383)
+  gssi 10,000 -> implied deduction 2,000  (7.65% of gssi = 765)
+  gssi 20,000 -> implied deduction 2,000  (7.65% of gssi = 1,530)
+  gssi 30,000 -> implied deduction 2,000
+  gssi 60,000 -> implied deduction 2,000
+so it is not FICA computed on the Social Security amount either --
+5,000 of Social Security draws the full 2,000.
+
+It is ADDITIVE on top of a legitimate wage-based deduction, so it
+also hits working filers, not only retirees:
+  age 70, wages 40,000, no gssi     -> implied 2,000 (correct)
+  age 70, wages 40,000, gssi 20,000 -> implied 4,000 (-102.00)
+  age 70, pension 40,000, no gssi   -> implied     0 (correct)
+  age 70, pension 40,000, gssi 20k  -> implied 2,000 (-102.00)
+  age 40, pension 40,000, no gssi   -> implied     0 (correct)
+Age is irrelevant; the presence of gssi is what produces it.
+
+The likely source is Medicare premiums withheld from Social
+Security, which Massachusetts expressly disallows: the 2018 booklet
+(p.10) states that Medicare PREMIUMS withheld from Social Security
+or retirement payments are not deductible, in contrast to the
+Medicare tax withheld from wages, which is. If that is the source,
+the amount should in any case be the premiums actually withheld
+rather than the statutory cap.
+
+This is the same shape as the Utah retirement-credit issue reported
+separately: a flat state amount keyed to positive gssi alone.
+
+On our TY2018 validation sample the ours-high side of this affects
+496 records, 89.1% of them Social Security recipients and 71.8%
+aged 65 or over, median age 69, each overstated by about 102
+dollars of deduction value.

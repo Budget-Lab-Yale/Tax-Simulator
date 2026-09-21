@@ -1,0 +1,10 @@
+---
+# Texas: no broad individual income tax.
+
+std_amount:
+  value: 0
+  reference: 'No broad individual income tax; Texas Constitution Art. VIII, Sec. 24; https://statutes.capitol.texas.gov/Docs/CN/htm/CN.8.htm#8.24'
+
+item_allowed:
+  value: 0
+  reference: 'No broad individual income tax; Texas Constitution Art. VIII, Sec. 24; https://statutes.capitol.texas.gov/Docs/CN/htm/CN.8.htm#8.24'

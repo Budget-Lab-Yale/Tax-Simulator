@@ -1,0 +1,36 @@
+---
+# Massachusetts: rates (Form 1 lines 22, 23a/23b, 24, 28b).
+#
+# Massachusetts has no bracket schedule -- it is a FLAT rate per income class.
+# The headline rate covers Part B (wages and other ordinary income), Part A
+# interest and ordinary dividends, and Part C long-term capital gains, all at
+# the same figure in every year of the window. Short-term capital gains are
+# the one class that diverges, so they carry their own rate.
+#
+# On top of that sits the 4% surtax on total taxable income above an indexed
+# threshold, from TY2023.
+
+rates:
+  value:
+    '2017': [0.051, 0.051, 0.051, 0.051, 0.051, 0.051, 0.051, 0.051, 0.051, 0.051]
+    '2019': [0.0505, 0.0505, 0.0505, 0.0505, 0.0505, 0.0505, 0.0505, 0.0505, 0.0505, 0.0505]
+    '2020': [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+  reference: 'Booklet "Personal Income Tax Rates" page: 2017 p.3 ("remains unchanged at 5.1%"), 2018 p.3 (same), 2019 p.3 ("is changed to 5.05%"), 2020 p.3 ("is changed to 5%"), 2021-2024 p.3 (5%). The 2025 booklet has no such paragraph; the rate is established by the tax-table header at p.47 ("2025 Massachusetts Income Tax Table at the 5.0% Rate ... multiply the amount by .05") and by the interest-and-dividend computation at p.13. Interest and ordinary dividends take this same rate, reaching it via Schedule B line 38 -> Form 1 line 20 -> line 21, NOT the 12% rate that secondary summaries sometimes attach to all of Part A'
+brackets:
+  value:
+    '2017': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  reference: 'A single bracket, padded to the ten-element uniform width the other flat-rate states use (IL precedent) so that mixed law slices line up: Massachusetts taxes each class at a flat rate with no graduated schedule. The progressivity comes from the exemptions, No Tax Status, the Limited Income Credit and (from TY2023) the surtax'
+
+st_gains_rate:
+  value:
+    '2017': 0.12
+    '2023': 0.085
+  reference: 'Short-term capital gains are Part A, taxed at 12% through TY2022 ("the tax rate on short-term gains ... remains at 12%", 2017 booklet p.3 through 2022 booklet p.3) and at 8.5% from TY2023 ("For tax years beginning on or after January 1, 2023, the tax rate on short-term gains from the sale or exchange of capital assets is 8.5%", 2023 booklet p.3; Form 1 line 23a "x .085"). Held out of the ordinary base by st_agi.ob_st_gains_share'
+
+documented_not_modeled:
+  collectibles_rate:
+    reference: 'Long-term gains on collectibles keep the 12% rate throughout, after a 50% deduction that is itself reduced by half of any excess short-term losses (Form 1 line 23b "x .12"; 2025 booklet p.25). Collectibles are not separable from other long-term gains in the microdata, so they are taxed at the headline rate [understates tax on the affected gains]'
+  optional_585_rate:
+    reference: 'A taxpayer may elect to compute Part B and Part C tax at 5.85% instead of the statutory rate (M.G.L. c. 62 s.4(a); e.g. 2025 booklet p.47). Essentially never taken; not modeled'
+  installment_sale_and_recapture_additions:
+    reference: 'Form 1 lines 25 and 26 add credit recapture and additional tax on installment sales, and both survive No Tax Status. Neither is a model input'

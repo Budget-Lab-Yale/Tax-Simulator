@@ -1,0 +1,44 @@
+---
+# Kansas exemptions (K.S.A. 79-32,121). Through 2023: $2,250 per federal
+# exemption; the K-40 grants Head of Household ONE ADDITIONAL exemption in
+# ALL years (2017/2019/2021 booklets: "If your filing status is Head of
+# Household, you are allowed an additional Kansas exemption"). SB 1 (2024
+# s.s.) sec. 20: $18,320 MFJ / $9,160 all others, plus $2,320 per dependent;
+# the 2024-2025 K-40 keeps the HoH additional exemption at $2,320 (the
+# amended statute is silent -- the form governs). personal_amount is per
+# TAXPAYER (x2 for MFJ), so the HoH mapping carries base + additional.
+
+filing_status_mapper:
+  personal_amount:
+    '1': pe_regular
+    '2': pe_regular
+    '3': pe_regular
+    '4': pe_head
+
+pe_regular:
+  value:
+    '2017': 2250
+    '2024': 9160
+  reference: 'K.S.A. 79-32,121: $2,250 per exemption through TY2023 (2017 K-40 line 5); SB 1 sec. 20 / Notice 24-08: $9,160 single/HoH/MFS, $18,320 MFJ (= 2 x $9,160) TY2024+'
+pe_head:
+  value:
+    '2017': 4500
+    '2024': 11480
+  reference: 'HoH base + one additional exemption: 2017-2023 $2,250 + $2,250 (2017/2019/2021 booklets); 2024+ $9,160 + $2,320 (2024/2025 booklets: "If your filing status is Head of Household, you are allowed an additional exemption of $2,320")'
+dep_amount:
+  value:
+    '2017': 2250
+    '2024': 2320
+  reference: 'K.S.A. 79-32,121: $2,250 per federal exemption (incl. dependents) through 2023; SB 1 sec. 20: $2,320 per dependent TY2024+'
+
+# Dependent filers claim zero exemptions
+dep_filer_zero:
+  value: 1
+  reference: '2017-2025 booklets, K-40 line 5: "If you are claimed as a dependent by another taxpayer, enter 0"'
+
+# Documented-not-modeled: disabled-veteran additional exemption of $2,250
+# (unamended by SB 1; 100%-disability status unobservable in the PUF)
+documented_not_modeled:
+  disabled_veteran_exemption:
+    value: 2250
+    reference: 'K.S.A. 79-32,121(b); 2024 booklet Disabled Veteran Personal Exemption [unobservable]'

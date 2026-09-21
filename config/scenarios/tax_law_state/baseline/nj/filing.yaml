@@ -1,0 +1,29 @@
+---
+# New Jersey filing requirement (NJ-1040 booklet, "Who Must File").
+#
+# A gross-income threshold that has not moved in nine years and is not
+# indexed: $20,000 for a joint, head of household or surviving spouse return
+# and $10,000 for single or separate.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_single
+    '4': req_joint
+
+req_type:
+  value: 2
+  reference: 'NJ-1040 booklet "Who Must File": a fixed New Jersey gross income threshold rather than a federal-filing trigger'
+req_single:
+  value: 10000
+  reference: 'Single and married/CU partner filing separately: a return is required where New Jersey gross income exceeds $10,000. Identical in all nine booklets and not indexed'
+req_joint:
+  value: 20000
+  reference: 'Married/CU couple filing jointly, head of household and qualifying widow(er)/surviving CU partner: $20,000. Identical in all nine booklets and not indexed'
+
+documented_not_modeled:
+  gross_income_basis:
+    reference: 'The test is on New Jersey GROSS income -- the total of the income categories before the retirement exclusions, exemptions and deductions -- and the exempt items in agi.yaml (Social Security, unemployment) never count toward it. The calculator applies the threshold to the state income base it computes; any unit with positive liability is flagged as a filer regardless'
+  civil_union_and_domestic_partner_statuses:
+    reference: 'New Jersey recognises civil union partners as spouses for filing purposes and prints five statuses accordingly. The model carries federal filing status, so civil union couples are treated as the federal status they file under'

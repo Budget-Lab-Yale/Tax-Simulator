@@ -1,0 +1,49 @@
+---
+# Maryland: exemptions (Tax-Gen 10-211/10-212; Exemption Chart 10A,
+# identical 2017-2025). $3,200 per taxpayer/spouse/dependent, phased DOWN
+# in FAGI cliff bands via the income-tiered machinery; $1,000 aged/blind
+# add-ons per filer are NOT phased. Dependent taxpayers get no personal
+# exemption. The extra $3,200 for 65+ dependents is documented in agi.yaml.
+
+filing_status_mapper:
+  tier_bounds:
+    '1': tier_bounds_single
+    '2': tier_bounds_joint
+    '3': tier_bounds_single
+    '4': tier_bounds_joint
+
+tier_income_base:
+  value: 1
+  reference: 'Chart 10A bands are federal AGI'
+
+tier_bounds_single:
+  value: [100000, 125000, 150000]
+  reference: 'Chart 10A, single/MFS: $3,200 to 100k, $1,600 to 125k, $800 to 150k, zero above; unchanged 2017-2025'
+
+tier_bounds_joint:
+  value: [150000, 175000, 200000]
+  reference: 'Chart 10A, MFJ/HoH/QSS: $3,200 to 150k, $1,600 to 175k, $800 to 200k, zero above'
+
+tier_amounts:
+  value: [3200, 1600, 800]
+  reference: 'Chart 10A per-exemption amounts, all statuses, unchanged 2017-2025'
+
+personal_amount:
+  value: 3200
+  reference: 'Tax-Gen 10-211 (overridden by the tier machinery; kept for documentation)'
+
+dep_amount:
+  value: 3200
+  reference: 'Tax-Gen 10-211 per dependent (tier machinery applies)'
+
+aged_addl:
+  value: 1000
+  reference: 'Chart 10A header: $1,000 age-65+ exemption per filer, NOT subject to the phase-down'
+
+blind_addl:
+  value: 1000
+  reference: 'Chart 10A header: $1,000 blindness exemption per filer, not phased'
+
+dep_filer_zero:
+  value: 1
+  reference: 'Filing status 6 (dependent taxpayer): no personal exemption'

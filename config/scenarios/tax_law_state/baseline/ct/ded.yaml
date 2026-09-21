@@ -1,0 +1,19 @@
+---
+# Connecticut: deductions. None -- CT has no standard deduction and no
+# itemized deductions (confirmed in all 2017-2025 booklets; OLR 2024-R-0130).
+# The personal exemption (exempt.yaml) and the percentage-of-tax personal
+# credit (credits.yaml) fill that role. Federal deductions never enter the
+# CT calculation (the base starts from federal AGI, not taxable income).
+
+std_amount:
+  value: 0
+  reference: 'Form CT-1040 structure 2017-2025 (no deduction line between CT AGI and taxable income); OLR 2024-R-0130'
+item_allowed:
+  value: 0
+  reference: 'Form CT-1040 structure 2017-2025; OLR 2024-R-0130 (no itemized deductions)'
+item_coupling:
+  value: 0
+  reference: 'CT base is federal AGI (Line 1) -- no federal deduction embedded'
+salt_addback:
+  value: 0
+  reference: 'No deduction, so no addback; CT-1040 Schedule 1 has no such line'

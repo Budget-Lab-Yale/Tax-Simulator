@@ -1,0 +1,82 @@
+---
+# Hawaii: credits. The refundable food/excise tax credit (Form N-311) is a
+# dense published table -- per-exemption amount by federal-AGI band, filing-
+# status keyed -- carried in this state's credit_tables.csv under credit_id
+# percap_credit (the banded leg of the ID-style per-person credit family).
+#
+# ACT 163 SLH 2023 SUNSET: the 40% EITC rate, the $10,000/$20,000 care-
+# credit expense caps, and the doubled food-credit table all self-repeal
+# December 31, 2027 and revert to their prior form for TY2028+ under
+# current law (Act 163 sec. 5) -- the reversion is encoded.
+
+# Hawaii EITC (HRS 235-55.75; Form N-356): created by Act 107 SLH 2017 at
+# 20% of the federal credit, NONREFUNDABLE with carryforward, TY2018-2022;
+# made refundable and permanent by Act 114 SLH 2022 (HB2510) from TY2023;
+# raised to 40% by Act 163 SLH 2023 for TY2023-2027, reverting to 20%
+# (still refundable) for TY2028+
+eitc_match:
+  value:
+    '2017': 0.0
+    '2018': 0.20
+    '2023': 0.40
+    '2028': 0.20
+  reference: 'Act 107 SLH 2017 sec. 1 (new HRS 235-55.75, 20% "after December 31, 2017"); 2019 Form N-356 line 3 "Multiply line 2 by 20%"; Act 163 SLH 2023 sec. 2 (40% after 12/31/2022; 2023-2025 N-356 forms print 40%); Act 163 sec. 5 sunset re-enacts the 20% text for taxable years after the December 31, 2027 repeal'
+eitc_refundable:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'Act 107 made the 2018-2022 credit nonrefundable with carryforward; Act 114 SLH 2022 sec. 2 makes it refundable for taxable years beginning after December 31, 2022, permanently (refundability is not part of the Act 163 sunset)'
+
+# Child and dependent care expenses credit (HRS 235-55.6; Schedule X Part
+# II): REFUNDABLE, own-rate credit on capped expenses. The rate slides from
+# 25% to 15% in one-point steps per $5,000 band of Hawaii AGI over $25,000
+# (the printed percentage table, unchanged 2017-2025). Expenses are capped
+# per the count of under-13 qualifying persons and, federal-2441-style, at
+# each spouse's earned income. Act 163 SLH 2023 raised only the dollar caps
+# ($2,400/$4,800 -> $10,000/$20,000) for TY2023-2027; they revert TY2028+
+cdctc_style:
+  value: 2
+  reference: 'Schedule X Part II computes its own rate on Hawaii-capped expenses (2017 Schedule X p.2; identical structure through 2025)'
+cdctc_refundable:
+  value: 1
+  reference: 'N-11 line 30 sits in the refundable-credits block (lines 28-33) on every form 2017-2025'
+cdctc_rate_max:
+  value: 0.25
+  reference: 'Schedule X percentage table: 25% under $25,001 of Hawaii AGI (identical on the 2017-2025 forms)'
+cdctc_rate_floor:
+  value: 0.15
+  reference: 'Schedule X percentage table: 15% at $50,001 and over'
+cdctc_rate_po_start:
+  value: 25000
+  reference: 'The first reduced band is $25,001-$30,000 at 24%'
+cdctc_rate_po_step:
+  value: 5000
+  reference: 'One percentage point per $5,000 band ($25,001-30,000 = .24, ..., $45,001-50,000 = .20, then the floor)'
+cdctc_rate_po_per_1k:
+  value: 0.01
+  reference: 'Read as the per-step decrement because a step is encoded (see params_schema.yaml)'
+cdctc_expense_ei_limit:
+  value: 1
+  reference: 'Schedule X Section C mirrors federal Form 2441: expenses limited to the lower-earning spouse''s earned income'
+cdctc_expense_caps:
+  value:
+    '2017': [2400.0, 4800.0, 4800.0, 4800.0, 4800.0]
+    '2023': [10000.0, 20000.0, 20000.0, 20000.0, 20000.0]
+    '2028': [2400.0, 4800.0, 4800.0, 4800.0, 4800.0]
+  reference: 'Schedule X line 22: $2,400 one qualifying person / $4,800 two or more (2017-2022 forms); Act 163 SLH 2023 sec. 1 raises them to $10,000/$20,000 (printed on the 2023-2025 forms); Act 163 sec. 5 sunset reverts them for TY2028+'
+
+documented_not_modeled:
+  food_excise_credit_public_support_children:
+    reference: 'Form N-311 line 3 (2017-2022): minor children receiving more than half their support from public agencies get a flat $110 each, allowed even when the taxpayer fails the AGI gate. The 2023 redesign folded them into the band amount and removed the gate exception. Public-support status is unobservable [understates the credit for the affected units in 2017-2022]'
+  food_excise_credit_mfs_combined_agi:
+    reference: 'N-311 lines 4-6: married-filing-separately filers must combine both spouses'' federal AGI for the gate and band lookup. PUF units are single-filer records, so own AGI is used (the MD/CT combined-income convention) [overstates the credit for MFS filers whose spouses have income]'
+  food_excise_credit_presence_tests:
+    reference: 'N-311 counts only persons present in Hawaii more than nine months, not incarcerated the full year, and not claimable by another taxpayer. Presence and incarceration are unobservable'
+  eitc_nonrefundable_carryforwards:
+    reference: 'The 2018-2021 nonrefundable EITC carryforwards expired after TY2024 (Act 114 sec. 2(g)); the TY2022 carryforward''s unlimited life ends after TY2025 (Act 25 SLH 2025 per the 2025 booklet p.2 -- act text not separately retrieved). Carryforward stocks are not modeled [understates HI credits in 2019-2025 for units whose nonrefundable EITC exceeded liability]'
+  low_income_household_renters_credit:
+    reference: 'Schedule X Part I: $50 per qualified exemption (with an extra exemption per aged-65+ taxpayer/spouse) for renters with Hawaii AGI under $30,000 paying more than $1,000 of rent on a unit fully subject to property tax; refundable. Rent paid is not a tax-unit variable (imputation plan Tier 1) [understates HI refunds for low-income renters; PolicyEngine models it]'
+  child_passenger_restraint_credit:
+    reference: 'N-11 line 31: $25 refundable for a child passenger restraint purchase (Form N-356 not required). Purchases unobservable; trivially small'
+  credit_for_taxes_paid_other_states:
+    reference: 'N-105/Schedule CR nonrefundable credit for income taxes paid to other states and countries -- out of scope for the single-state resident calculator (the interaction denying a 21b deduction for the same taxes is inside the SALT component)'

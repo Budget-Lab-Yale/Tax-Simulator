@@ -1,0 +1,66 @@
+---
+# District of Columbia: personal exemptions (D-40 Schedule S Calculation G),
+# TY2017 ONLY. DC followed TCJA and repealed the allowance from 2018, which the
+# booklet states explicitly.
+#
+# $1,775 per exemption, with an EXTRA exemption for head-of-household filers and
+# one per aged-65-or-blind filer, and a stepped phase-out of 2% of the allowance
+# per $2,500 (or fraction) of federal AGI over $150,000 -- reaching exactly zero
+# at $275,000, since 50 steps at 2% is 100%.
+#
+# The head-of-household extra exemption rides the personal_amount mapper, the
+# same construction Kansas uses: personal_amount is per TAXPAYER, so the HoH
+# slot simply carries two exemptions' worth.
+
+filing_status_mapper:
+  personal_amount:
+    '1': pe_regular
+    '2': pe_regular
+    '3': pe_regular
+    '4': pe_head
+
+pe_regular:
+  value:
+    '2017': 1775
+    '2018': 0
+  reference: 'D.C. Code 47-1806.02; TY2017 D-40 Schedule S Calculation G, $1,775 per exemption. Zero from TY2018 -- the TY2018 booklet states the personal exemption is no longer allowed, following TCJA'
+pe_head:
+  value:
+    '2017': 3550
+    '2018': 0
+  reference: 'TY2017 Schedule S Calculation G line b grants a head-of-household filer an ADDITIONAL exemption, so the per-taxpayer amount carries two at $1,775 each. Read off the TY2017 form; the narrative instructions mention it only obliquely and PolicyEngine has no 2017 exemptions, so there is NO cross-check -- worth $71-$159 per affected HoH filer. Same construction as the Kansas HoH additional exemption, which was booklet-verified across five years'
+dep_amount:
+  value:
+    '2017': 1775
+    '2018': 0
+  reference: 'TY2017 Schedule S Calculation G: the same $1,775 for each dependent'
+aged_addl:
+  value:
+    '2017': 1775
+    '2018': 0
+  reference: 'TY2017 Schedule S Calculation G: an additional exemption for each filer aged 65 or over'
+blind_addl:
+  value:
+    '2017': 1775
+    '2018': 0
+  reference: 'TY2017 Schedule S Calculation G: an additional exemption for each blind filer'
+
+po_type:
+  value: 1
+  reference: 'A stepped reduction, not a cliff -- the TY2017 Calculation G worksheet removes 2% of the allowance per step'
+po_thresh:
+  value:
+    '2017': 150000
+    '2018': .inf
+  reference: 'TY2017 Schedule S Calculation G: the phase-out begins above $150,000 of federal adjusted gross income'
+po_step:
+  value: 2500
+  reference: 'TY2017 Calculation G: each $2,500, OR FRACTION THEREOF, of AGI over the threshold'
+po_share_per_step:
+  value:
+    '2017': 0.02
+    '2018': 0
+  reference: 'TY2017 Calculation G: 2% of the allowance per step, which zeroes the exemption exactly at $275,000 (50 steps x 2% = 100%) -- so no separate limit is needed'
+po_agi_base:
+  value: 1
+  reference: 'TY2017 Calculation G is keyed to federal adjusted gross income'

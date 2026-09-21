@@ -1,0 +1,16 @@
+---
+# Idaho: Permanent Building Fund tax (63-3082). A flat $10 excise per return
+# for everyone required to file an Idaho return (one $10 for MFJ), imposed
+# outside the credit stack (Form 40 "other taxes" section). NOT repealed --
+# present on the 2023, 2024, and 2025 forms and 63-3082 remains in force.
+# Exemptions: below the filing requirement (modeled via the required-filer
+# gate), legally blind taxpayer or spouse (modeled), and Idaho
+# public-assistance recipients at year-end (unobserved; known-difference).
+
+per_return_amount:
+  value: 10
+  reference: 'Idaho Code 63-3082 (last amended 2014 ch.36); Form 40 line 31 (2017), line 32 (2018-2024), line 31 (2025), verified present every year 2017-2025 incl. post-flat-tax years'
+
+per_return_blind_exempt:
+  value: 1
+  reference: 'Form 40 instructions PBF exemption list (verified 2021 and 2025, stable): taxpayer or spouse legally blind at year-end'

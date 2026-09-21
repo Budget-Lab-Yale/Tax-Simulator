@@ -9,6 +9,50 @@
 
 
 
+wtd_pctile_rank = function(x, w) {
+
+  #--------------------------------------------------------------------------
+  # Weighted percentile rank (1..100) by value, point-mass safe.
+  #
+  # The previous implementation binned income with
+  #   cut(inc, breaks = c(-Inf, wtd.quantile(inc, w, seq(.01,.99,.01)), Inf),
+  #       labels = 1:100)
+  # which errors "'breaks' are not unique" whenever the weighted income
+  # distribution has point masses (many units at an identical income — which a
+  # counterfactual that shifts a block of units to the same value induces):
+  # adjacent quantiles collapse to the same number and cut() rejects the
+  # duplicated breaks.
+  #
+  # Ranking directly off the weighted ECDF sidesteps cut() entirely. For each
+  # record, F(x) = (weight of units with income <= x) / total weight, and the
+  # rank is ceiling(F(x) * 100). Tied incomes share the max F within the tie, so
+  # a point mass lands wholly in one percentile (the correct behavior) instead of
+  # crashing. In the non-degenerate case this matches the old cut() labels for
+  # ~98% of records and never by more than one percentile: for F(x) in
+  # ((k-1)/100, k/100] ceiling gives k, matching the interval (q_{k-1}, q_k]; the
+  # residual off-by-one at bin boundaries is just the ECDF step function vs
+  # wtd.quantile's interpolation, immaterial to the grouped IQR measure.
+  #
+  # AI-Fiscal Issue 2 / upstream Budget-Lab-Yale/Tax-Simulator#129.
+  #
+  # Parameters:
+  #   - x (dbl) : income (or any orderable value)
+  #   - w (dbl) : record weights
+  #
+  # Returns: integer vector of percentile ranks in 1..100.
+  #--------------------------------------------------------------------------
+
+  ord        = order(x)
+  frac_upper = cumsum(w[ord]) / sum(w)             # weighted ECDF at each point
+  frac_upper = ave(frac_upper, x[ord], FUN = max)  # ties share F(x) = P(X <= x)
+  rank       = pmin(100L, pmax(1L, as.integer(ceiling(frac_upper * 100))))
+  out        = integer(length(x))
+  out[ord]   = rank
+  out
+}
+
+
+
 build_horizontal_table = function(id) {
 
   #--------------------------------------------------------------------------
@@ -60,16 +104,10 @@ build_horizontal_table = function(id) {
         etr     = pmax(-1, pmin(1, liab_iit_net / inc))
       ) %>%
 
-      # Assign income percentiles (within each scenario, using baseline income)
+      # Assign income percentiles (within each scenario, using baseline income).
+      # Point-mass-safe weighted ECDF rank; see wtd_pctile_rank() above (#129).
       group_by(scenario) %>%
-      mutate(
-        inc_pctile = cut(
-          x      = inc,
-          breaks = c(-Inf, Hmisc::wtd.quantile(inc, weight, seq(0.01, 0.99, 0.01)), Inf),
-          labels = 1:100,
-          include.lowest = TRUE
-        ) %>% as.character() %>% as.numeric()
-      ) %>%
+      mutate(inc_pctile = wtd_pctile_rank(inc, weight)) %>%
       ungroup()
 
     # Compute within-group IQR of ETR

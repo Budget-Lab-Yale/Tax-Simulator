@@ -1,0 +1,11 @@
+---
+# Texas: no broad individual income tax; do not flag federal filers as
+# state income tax filers.
+
+req_type:
+  value: 3
+  reference: 'No broad individual income tax return requirement; Texas Constitution Art. VIII, Sec. 24; https://statutes.capitol.texas.gov/Docs/CN/htm/CN.8.htm#8.24'
+
+req_if_fed_filer:
+  value: 0
+  reference: 'No broad individual income tax return requirement; Texas Constitution Art. VIII, Sec. 24; https://statutes.capitol.texas.gov/Docs/CN/htm/CN.8.htm#8.24'

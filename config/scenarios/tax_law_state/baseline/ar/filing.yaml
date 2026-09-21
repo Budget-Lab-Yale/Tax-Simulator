@@ -1,0 +1,79 @@
+---
+# Arkansas filing requirement (booklet "Who Must File", printed p.9 through
+# TY2021 and p.10 from TY2022).
+#
+# The gross-income thresholds are indexed and also rise with the number of
+# dependents for head-of-household, joint and surviving-spouse filers. Only
+# the zero-or-one-dependent column is carried here: the threshold governs the
+# filer flag alone, and any unit with positive liability is flagged
+# regardless.
+#
+# A structural check worth recording: for every status except married filing
+# separately, the threshold is exactly the Low Income Tax Table zero-tax
+# threshold plus one dollar, in all nine years.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_mfs
+    '4': req_head
+
+req_type:
+  value: 2
+  reference: 'Booklet "Who Must File": fixed gross-income thresholds by filing status'
+req_single:
+  value:
+    '2017': 11970
+    '2018': 12260
+    '2019': 12493
+    '2020': 12675
+    '2021': 13055
+    '2022': 13447
+    '2023': 13850
+    '2024': 14266
+    '2025': 14644
+  reference: 'Booklet filing-threshold table, single, each year'
+req_joint:
+  value:
+    '2017': 20187
+    '2018': 20675
+    '2019': 21068
+    '2020': 21375
+    '2021': 22016
+    '2022': 22676
+    '2023': 23357
+    '2024': 24058
+    '2025': 24696
+  reference: 'Booklet filing-threshold table, married filing jointly with zero or one dependent, each year'
+req_mfs:
+  value:
+    '2017': 5099
+    '2019': 8099
+    '2020': 8400
+    '2021': 8500
+    '2022': 8870
+    '2023': 9140
+    '2024': 9410
+    '2025': 9470
+  reference: 'Booklet filing-threshold table, married filing separately (statuses 4 and 5). Note the jump from $5,099 to $8,099 for TY2019'
+req_head:
+  value:
+    '2017': 17019
+    '2018': 17431
+    '2019': 17762
+    '2020': 18021
+    '2021': 18561
+    '2022': 19118
+    '2023': 19692
+    '2024': 20283
+    '2025': 20821
+  reference: 'Booklet filing-threshold table, head of household with zero or one dependent, each year. Surviving spouse takes the same amounts'
+
+documented_not_modeled:
+  per_dependent_thresholds:
+    reference: 'The head-of-household, joint and surviving-spouse thresholds rise for filers with two or more dependents -- TY2024 joint is $24,058 with zero or one and $28,954 with two or more. Only the zero-or-one column is carried, since the threshold governs the filer flag alone'
+  ty2025_printed_typo:
+    reference: 'The TY2025 booklet prints $28,723 for married filing jointly with two or more dependents where the Low Income Tax Table implies $29,723 -- a probable DFA typo. It falls in the per-dependent column that is not carried here, so nothing turns on it'
+  six_filing_statuses:
+    reference: 'Arkansas has six filing statuses, splitting married filing separately into "on the same return" (status 4) and "on different returns" (status 5) and separating surviving spouse. The model carries four federal statuses. Status 4 in particular applies the rate schedule TWICE, once per spouse column, and bars the low-income tables -- see the source packet'

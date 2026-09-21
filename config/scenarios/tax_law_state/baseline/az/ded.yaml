@@ -1,0 +1,72 @@
+---
+# Arizona permits an independent state itemized/standard choice.  Style 2
+# carries the federal post-limitation itemized amount; the Form 140 Schedule A
+# credit-contribution adjustment remains a documented data limitation.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+
+std_single:
+  value:
+    '2017': 5183
+    '2018': 5312
+    '2019': 12200
+    '2020': 12400
+    '2021': 12550
+    '2022': 12950
+    '2023': 13850
+    '2024': 14600
+    '2025': 15750
+  reference: 'Arizona Form 140 booklets 2017-2025, standard deduction table; https://azdor.gov/forms/individual/form-140-arizona-resident-personal-income-tax-booklet'
+std_joint:
+  value:
+    '2017': 10336
+    '2018': 10613
+    '2019': 24400
+    '2020': 24800
+    '2021': 25100
+    '2022': 25900
+    '2023': 27700
+    '2024': 29200
+    '2025': 31500
+  reference: 'Arizona Form 140 booklets 2017-2025, standard deduction table'
+std_head:
+  value:
+    '2017': 10336
+    '2018': 10613
+    '2019': 18350
+    '2020': 18650
+    '2021': 18800
+    '2022': 19400
+    '2023': 20800
+    '2024': 21900
+    '2025': 23625
+  reference: 'Arizona Form 140 booklets 2017-2025, standard deduction table'
+item_allowed:
+  value: 1
+  reference: 'Arizona Form 140 instructions, standard deduction/itemized deduction election, 2017-2025'
+item_coupling:
+  value: 0
+  reference: 'Arizona Form 140 instructions permit Arizona itemization independently of the federal election'
+item_component_style:
+  value: 2
+  reference: 'Arizona Form 140 Schedule A starts from federal itemized deductions; model uses generic federal-itemized carry-through mode'
+salt_addback:
+  value: 0
+  reference: 'Arizona Form 140 Schedule A adjustments; no generic state-income-tax addback is applied in the carry-through mode'
+std_char_share:
+  value:
+    '2017': 0
+    '2019': 0.25
+    '2022': 0.27
+    '2023': 0.31
+    '2024': 0.33
+    '2025': 0.34
+  reference: 'Arizona Form 140 Increase Standard Deduction Worksheet, 2019-2025'
+std_char_floor:
+  value: 0
+  reference: 'Arizona Form 140 Increase Standard Deduction Worksheet, 2019-2025'

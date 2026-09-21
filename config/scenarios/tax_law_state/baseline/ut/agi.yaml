@@ -1,0 +1,30 @@
+---
+# Utah: taxable income = federal AGI (TC-40 line 4) plus TC-40A Part 1
+# additions minus the line-7 state-refund exclusion and TC-40A Part 2
+# subtractions (UC 59-10-114). Federal deductions/exemptions never reduce
+# the base -- they enter only through the taxpayer tax credit
+# (credits.yaml). Modeled modifications are limited to broad, observable
+# interest and refund rules; see the source packet for the omitted list
+# (lump-sum distributions, MSA/my529 addbacks, Native American, railroad,
+# military-nonresident, FDIC, previously-taxed retirement).
+start_point:
+  value: 1
+  reference: 'TC-40 line 4 federal adjusted gross income; 2017-2025 instruction booklets'
+# Documentation-only: Utah conforms on a rolling basis to the IRC via the
+# federal AGI starting point; no fixed-date conformity mechanics required
+documented_not_modeled:
+  conformity:
+    value: rolling
+    reference: 'UC 59-10-103(1)(a) federal taxable income basis definitions; TC-40 line 4'
+add_exempt_int:
+  value: 1
+  reference: 'TC-40A Part 1 code 57, non-Utah municipal bond interest addition (UC 59-10-114(1)(e)); post-1/1/2003 acquisition and reciprocity carve-outs unobserved (approximation)'
+own_state_exempt:
+  value: 1
+  reference: 'UC 59-10-114(1)(e): Utah-issued bonds and reciprocal-state bonds excluded from the addition'
+sub_us_int:
+  value: 1
+  reference: 'TC-40A Part 2 code 71, interest on U.S. government obligations (UC 59-10-114(2)(a),(f))'
+sub_state_ref:
+  value: 1
+  reference: 'TC-40 line 7, state tax refund included on federal return (UC 59-10-114(2)(c)), 2017-2025'

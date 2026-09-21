@@ -1,0 +1,51 @@
+---
+# West Virginia: deductions. **WV ALLOWS NEITHER A STANDARD DEDUCTION NOR AN
+# ITEMIZED DEDUCTION.** This is unusual enough to state twice: there is no
+# standard-deduction line anywhere on the IT-140, and the booklet's "ITEMIZED
+# DEDUCTIONS" paragraph says so explicitly in every year --
+#
+#   TY2017-2022: "The State of West Virginia does not recognize itemized
+#     deductions for personal income tax purposes. Consequently, itemized
+#     deductions claimed on the federal income tax return cannot be carried to
+#     the West Virginia return."
+#   TY2023-2025: "does not recognize MOST itemized deductions ... the only
+#     itemized deductions allowed to be claimed from the federal income tax
+#     return are gambling losses" -- and even that arrives as a Schedule M
+#     DECREASING MODIFICATION, not as a deduction, so item_allowed stays 0 and
+#     the item is documented in agi.yaml.
+#
+# WV taxable income (IT-140 line 7) = line 4 (WV AGI) - line 5 (low-income
+# earned income exclusion) - line 6 (exemptions), floored at zero. Nothing
+# else, and no aged or blind add-on of any kind.
+#
+# The ONE thing this file carries is the $500 allowance for a filer who claims
+# zero exemptions because someone else can claim them. It is an exemption on
+# the form, but no exemption parameter can express a floor for dependent
+# filers (dep_filer_zero zeroes them), whereas std_dependent targets exactly
+# that population. With std_amount 0 the deduction is $500 for dependent
+# filers and $0 for everyone else -- which is the form.
+
+std_amount:
+  value: 0
+  reference: 'There is NO West Virginia standard deduction in any year: the IT-140 runs line 4 (WV AGI) -> line 5 (low-income exclusion) -> line 6 (exemptions) -> line 7 (taxable income) with no deduction line, verified on the 2017, 2019 and 2025 forms; W. Va. Code 11-21-12 / 11-21-16 provide modifications and exemptions only'
+std_dependent:
+  value: 500
+  reference: 'IT-140 line 6 instruction, all years: "If you claimed zero exemptions, enter $500 on this line"; EXEMPTIONS paragraph: "The West Virginia personal exemption allowance is $2,000 per allowable exemption, or $500 if someone else can claim an exemption for you on their return". Encoded here rather than in exempt.yaml because no exemption parameter expresses a dependent-filer floor'
+
+item_allowed:
+  value: 0
+  reference: 'IT-140 booklet "ITEMIZED DEDUCTIONS", every year 2017-2025: WV does not recognize itemized deductions. The TY2023+ gambling-loss allowance is a Schedule M decreasing modification, not an itemized deduction (documented in agi.yaml)'
+item_coupling:
+  value: 0
+  reference: 'n/a for West Virginia (no state itemized deduction exists)'
+salt_addback:
+  value: 0
+  reference: 'n/a for West Virginia: no deduction is taken for state income tax, so there is nothing to add back'
+
+documented_not_modeled:
+  low_income_earned_income_exclusion:
+    value: 10000
+    reference: 'IT-140 line 5 / "WEST VIRGINIA LOW-INCOME EARNED INCOME EXCLUSION WORKSHEET" / W. Va. Code 11-21-10. Mechanics (identical 2017-2025): eligibility is a CLIFF on federal AGI at $10,000 ($5,000 MFS); the exclusion is then the SMALLEST of (a) federal AGI, (b) earned income -- wages, salaries, tips, other employee compensation and net Schedule C earnings, EXCLUDING interest, dividends, pensions, annuities and prison-labor income -- and (c) the $10,000/$5,000 cap. It is NOT a family-size table. Not expressible: no parameter gives a deduction equal to min(federal AGI, earned income, cap) behind an AGI cliff, and the only dependent-filer deduction slot already carries the $500 allowance.
+      MOSTLY INFRAMARGINAL, provably: a non-dependent filer with federal AGI <= $10,000 also has modified federal AGI at or below the family-size-1 federal poverty guideline in EVERY year of the window ($12,060 in 2017 rising to $15,650 in 2025), so the Family Tax Credit already forgives 100% of the tax. It is therefore live only for (i) ZERO-EXEMPTION (dependent) filers, whom the worksheet expressly allows but whom the Family Tax Credit expressly bars, (ii) the rare unit whose increasing modifications lift modified AGI above the guideline while federal AGI stays under $10,000, and (iii) federal AMT payers, who are barred from the family credit. Direction: OVERSTATES WV liability for those units; bound = the whole tax on ($10,000 - $500), i.e. $285 (2017-22), $224 (2023-24), $211 (2025). Both TAXSIM and PE model it -> pre-register a wedge on dependent filers with wages under $10,000'
+  no_aged_or_blind_addon:
+    reference: 'WV has no aged or blind standard-deduction or exemption add-on in any year; the 65+/disabled relief runs entirely through the Schedule M senior citizen modification (agi.yaml)'

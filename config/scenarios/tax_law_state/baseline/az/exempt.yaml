@@ -1,0 +1,36 @@
+---
+# Personal/dependent exemptions ended after TY2018.  The pre-repeal Head of
+# Household amount has special married-filer allocations that cannot be
+# identified in the PUF; the common unmarried-HoH amount is encoded.
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_joint_each
+    '3': personal_single
+    '4': personal_head
+
+personal_single:
+  value:
+    '2017': 2150
+    '2018': 2200
+    '2019': 0
+  reference: 'Arizona Form 140 booklets 2017-2019, Personal Exemption Amounts Adjusted for Inflation'
+personal_joint_each:
+  value:
+    '2017': 2150
+    '2018': 2200
+    '2019': 0
+  reference: 'Arizona Form 140 booklets 2017-2019 ($4,300/$4,400 joint exemption represented as two equal taxpayer amounts)'
+personal_head:
+  value:
+    '2017': 4300
+    '2018': 4400
+    '2019': 0
+  reference: 'Arizona Form 140 booklets 2017-2019 (unmarried Head of Household personal exemption)'
+dep_amount:
+  value:
+    '2017': 2150
+    '2018': 2200
+    '2019': 0
+  reference: 'Arizona Form 140 booklets 2017-2019; A.R.S. 43-1023 repeal effective TY2019'

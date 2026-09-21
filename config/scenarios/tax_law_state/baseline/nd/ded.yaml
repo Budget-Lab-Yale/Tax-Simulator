@@ -1,0 +1,18 @@
+---
+# North Dakota: deductions. None at the ND level -- the federal standard or
+# itemized deduction flows through the federal-taxable-income starting point,
+# and ND does NOT add back state income tax deducted federally (no CO-style
+# addback). ND-1 has no deduction line.
+
+std_amount:
+  value: 0
+  reference: 'ND-1 structure (base = federal taxable income); no ND standard deduction'
+item_allowed:
+  value: 0
+  reference: 'ND-1 structure; no separate ND itemized deduction'
+item_coupling:
+  value: 1
+  reference: 'ND-1 structure (federal deduction embedded in the federal-taxable-income start)'
+salt_addback:
+  value: 0
+  reference: 'N.D.C.C. 57-38-30.3(2) has no state income-tax deduction addback'

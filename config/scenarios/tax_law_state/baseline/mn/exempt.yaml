@@ -1,0 +1,108 @@
+---
+# Minnesota: exemptions. 2017: federal exemptions flow through the
+# federal-taxable-income start (the M1M high-income exemption addback at
+# MN's lower thresholds is NOT modeled -- known-difference, 2017 only).
+# 2018: MN's own $4,150 personal + dependent exemptions (pre-TCJA
+# structure). 2019+: DEPENDENT exemptions only (Minn. Stat. 290.0121),
+# phased out 2% per $2,500 ($1,250 MFS), or fraction, of AGI over the
+# filing-status threshold (gone once the excess tops $122,500/$61,250).
+
+filing_status_mapper:
+  po_thresh:
+    '1': po_thresh_single
+    '2': po_thresh_joint
+    '3': po_thresh_mfs
+    '4': po_thresh_head
+  po_step:
+    '1': po_step_regular
+    '2': po_step_regular
+    '3': po_step_mfs
+    '4': po_step_regular
+
+personal_amount:
+  value:
+    '2017': 0
+    '2018': 4150
+    '2019': 0
+  reference: '2018 Form M1 line 5: 4,150 per filer/spouse (pre-TCJA structure); none 2019+ (290.0121 dependent-only); 2017 federal exemptions embedded in the starting point'
+
+dep_amount:
+  value:
+    '2017': 0
+    '2018': 4150
+    '2019': 4250
+    '2020': 4300
+    '2021': 4350
+    '2022': 4450
+    '2023': 4800
+    '2024': 5050
+    '2025': 5200
+  reference: 'M1 Worksheet for Line 5 per-dependent amounts, 2018-2025 (DOR memos 290.0121 subd. 1-2)'
+
+po_type:
+  value: 1
+  reference: 'M1 Worksheet for Line 5: stepped reduction (2% per step), 2018-2025'
+
+po_share_per_step:
+  value: 0.02
+  reference: 'Minn. Stat. 290.0121 subd. 2: exemption reduced 2% for each $2,500 ($1,250 MFS), or fraction thereof, of excess AGI'
+
+po_step_regular:
+  value: 2500
+  reference: 'Same provision'
+
+po_step_mfs:
+  value: 1250
+  reference: 'Same provision, MFS step'
+
+po_thresh_joint:
+  value:
+    '2017': .inf
+    '2018': 285050
+    '2019': 291950
+    '2020': 296750
+    '2021': 299750
+    '2022': 309050
+    '2023': 330950
+    '2024': 348850
+    '2025': 358550
+  reference: 'M1 Worksheet for Line 5 thresholds, MFJ/QSS'
+
+po_thresh_single:
+  value:
+    '2017': .inf
+    '2018': 190050
+    '2019': 194650
+    '2020': 197850
+    '2021': 199850
+    '2022': 206050
+    '2023': 220650
+    '2024': 232550
+    '2025': 239050
+  reference: 'M1 Worksheet for Line 5 thresholds, single (2024-25 diverge from the deduction-limitation T1 -- the exemption thresholds stayed on the 2019 statutory base)'
+
+po_thresh_head:
+  value:
+    '2017': .inf
+    '2018': 237550
+    '2019': 243300
+    '2020': 247300
+    '2021': 249800
+    '2022': 257550
+    '2023': 275800
+    '2024': 290700
+    '2025': 298800
+  reference: 'M1 Worksheet for Line 5 thresholds, HoH'
+
+po_thresh_mfs:
+  value:
+    '2017': .inf
+    '2018': 142525
+    '2019': 145975
+    '2020': 148375
+    '2021': 149875
+    '2022': 154525
+    '2023': 165475
+    '2024': 174425
+    '2025': 179275
+  reference: 'M1 Worksheet for Line 5 thresholds, MFS'

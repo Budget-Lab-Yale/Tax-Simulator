@@ -1,0 +1,10 @@
+TAXSIM-35, Wisconsin, TY2018, single, wages 400,000.
+
+Expected: the TY2018 published DOR rate schedule.
+TAXSIM's WI 2017 and 2018 schedules use thresholds
+about 3% below the published tables (empirical top-bracket entry
+~320,250 MFJ vs the published 329,810 for 2017), and its 2018 tax
+is byte-identical to 2017 despite different published thresholds.
+Effect: flat overtaxation of ~12.80 for 6.27%-bracket records and
+~143.60 for top-bracket records in both years (~1,190 records/yr in
+our sample). The 2019-2020 vintages are correct.

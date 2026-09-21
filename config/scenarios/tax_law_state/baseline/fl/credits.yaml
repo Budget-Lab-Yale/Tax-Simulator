@@ -1,0 +1,6 @@
+---
+# Florida: no broad individual income tax.
+
+eitc_match:
+  value: 0
+  reference: 'No broad individual income tax or state EITC in v1 scope; Fla. Const. Art. VII, s.5; https://www.leg.state.fl.us/statutes/index.cfm?submenu=3#A7S05'

@@ -1,0 +1,74 @@
+# Cross-model validation: GA
+
+Class: broad | Generated: 2026-08-22 | Verdict: **NEEDS REVIEW**
+
+Acceptance: match@$100 >= 95% in every canonical-window cell
+(2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
+defined (federally aligned records; see README).
+
+## Cell summary
+
+| year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
+|----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
+| 2017|taxsim       | 16848|    6600|   0.5918|    0.8019|         0.8918|          0.9447|          0.2002|          6.9417|   -276.1675|
+| 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 16697|    8892|   0.6003|    0.6817|         0.8410|          0.8834|          0.2057|          2.4785|   -726.5144|
+| 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 16513|    8803|   0.6080|    0.6875|         0.8460|          0.8866|          0.2069|          2.0540|   -873.0800|
+| 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 16529|    8481|   0.6068|    0.6907|         0.8462|          0.8892|          0.1988|          1.9167|   -759.7266|
+| 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  1141|     423|   0.5337|    0.6582|         0.8534|          0.8865|          0.1823|          8.8143|     54.2384|
+| 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  1157|     468|   0.5177|    0.6292|         0.8483|          0.8718|          0.1703|         11.1120|     88.5690|
+| 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  1150|     460|   0.5087|    0.5878|         0.8522|          0.8739|          0.1965|         12.4776|   -326.7671|
+| 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+
+## Mismatch stage diagnosis (TAXSIM |diff| > $15)
+
+| year|fed_aligned |stage           |    n|
+|----:|:-----------|:---------------|----:|
+| 2017|TRUE        |1 state AGI     |  464|
+| 2017|TRUE        |3 deductions    |   21|
+| 2017|TRUE        |6 other credits |  272|
+| 2017|FALSE       |1 state AGI     | 7772|
+| 2017|FALSE       |3 deductions    | 1239|
+| 2017|FALSE       |6 other credits |  420|
+| 2017|FALSE       |7 rate/rounding |  109|
+| 2018|TRUE        |1 state AGI     | 1399|
+| 2018|TRUE        |3 deductions    |  135|
+| 2018|TRUE        |6 other credits |  160|
+| 2018|FALSE       |1 state AGI     | 7311|
+| 2018|FALSE       |3 deductions    |  894|
+| 2018|FALSE       |6 other credits |  195|
+| 2018|FALSE       |7 rate/rounding |  131|
+| 2019|TRUE        |1 state AGI     | 1371|
+| 2019|TRUE        |3 deductions    |  127|
+| 2019|TRUE        |6 other credits |  145|
+| 2019|FALSE       |1 state AGI     | 7400|
+| 2019|FALSE       |3 deductions    |  807|
+| 2019|FALSE       |6 other credits |  233|
+| 2019|FALSE       |7 rate/rounding |  112|
+| 2020|TRUE        |1 state AGI     | 1363|
+| 2020|TRUE        |3 deductions    |   97|
+| 2020|TRUE        |6 other credits |  137|
+| 2020|FALSE       |1 state AGI     | 7468|
+| 2020|FALSE       |3 deductions    |  781|
+| 2020|FALSE       |6 other credits |  230|
+| 2020|FALSE       |7 rate/rounding |  152|
+
+## Known differences applied
+
+|state |model        | year_min| year_max|category         |action   |description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|:-----|:------------|--------:|--------:|:----------------|:--------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|ALL   |taxsim       |     2017|     2024|structural       |annotate |TAXSIM optimizes federal itemization using its own computed state income tax (SALT circularity) and iterates federal-state 3 rounds; our pass is one-way federal-to-state until Phase 7                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|ALL   |taxsim       |     2017|     2024|structural       |annotate |TAXSIM imputes the sales-tax deduction from IRS Pub. 600 regressions; we use as-reported salt_inc_sales                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|ALL   |taxsim       |     2021|     2024|vintage          |annotate |TAXSIM state law 2021+ is inflated ~2020 law, not enacted law; cells in this window are non-canonical (PolicyEngine is the tie-breaker)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|ALL   |taxsim       |     2017|     2024|input-coverage   |annotate |TAXSIM-35 has no tax-exempt interest input, so it can never apply state exempt-interest addbacks (or count exempt_int in the federal EITC investment-income test); records with exempt_int > 0 are outside the clean-subset metrics                                                                                                                                                                                                                                                                                                                                                                                                       |
+|ALL   |taxsim       |     2017|     2024|input-coverage   |annotate |TAXSIM-35 has no state-refund input, so state-mode crosswalk omits state_ref entirely (states subtract their own refunds); TAXSIM federal AGI runs low by state_ref, handled inside the fed_aligned flag                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|ALL   |taxsim       |     2017|     2024|federal-side     |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|GA    |policyengine |     2021|     2021|transfer-netting |exclude  |PE books the HB 1302 one-time surplus tax rebate ($250 single/MFS, $375 HoH, $500 joint, paid 2022 on TY2021 returns) into TAX YEAR 2021 as a NONREFUNDABLE credit (ga_surplus_tax_rebate in the 2021-only non_refundable list, so it is liability-capped via max(0, tax - credits)). Combined with our HB 593 std-deduction vintage fix (anchor moved 2021 -> 2022), the residual clean-mismatch masses (204/329/437 = rebate minus the 46/63 std wedge) are fully attributed. Excluded via predicate on the exported rebate                                                                                                             |
+|ALL   |both         |     2017|     2024|structural       |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding |
+

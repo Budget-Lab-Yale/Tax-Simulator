@@ -1,0 +1,12 @@
+---
+# Colorado: exemptions. None -- the federal deduction structure flows through
+# the federal-taxable-income starting point and CO has no state personal or
+# dependent exemption.
+
+personal_amount:
+  value: 0
+  reference: 'DR 0104 structure; no CO personal exemption'
+
+dep_amount:
+  value: 0
+  reference: 'DR 0104 structure; no CO dependent exemption'

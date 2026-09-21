@@ -1,0 +1,139 @@
+---
+# Delaware: deductions (Form PIT-RES Lines 13-21; Form PIT-RSA from TY2021,
+# Section C of Form 200-01 before that; 30 Del. C. 1108-1109). Two features
+# distinguish DE:
+#   1. Itemization is fully UNCOUPLED in both directions -- "If you claimed a
+#      standard deduction on your federal return, you may still elect to
+#      itemize your deductions on the Delaware return" (verbatim 2017-2025).
+#      item_coupling = 0 takes the larger, which is the taxpayer-optimal
+#      election DE actually permits.
+#   2. 1109 requires the itemized total to be reduced by "the amount thereof
+#      representing income taxes imposed by this State", and PIT-RSA Line 5a
+#      also excludes other-state income taxes that generated the Line 28
+#      credit. Delaware has NO sales tax, so dropping the whole
+#      income-or-sales component is near-exact rather than an approximation.
+# Every dollar amount here is constant 2017-2025 (1108 has not been amended
+# since TY2000).
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_single
+  item_prop_tax_cap:
+    '1': item_prop_tax_cap_regular
+    '2': item_prop_tax_cap_regular
+    '3': item_prop_tax_cap_mfs
+    '4': item_prop_tax_cap_regular
+  pease_thresh:
+    '1': pease_single
+    '2': pease_joint
+    '3': pease_mfs
+    '4': pease_hoh
+
+# Standard deduction (PIT-RES Line 20a). DE filing status 5 (head of
+# household) takes the SINGLE amount, so our filing_status 4 maps to single.
+# Delaware filing status 4 (married filing combined separate) takes $3,250
+# PER SPOUSE -- see combined_sep / combined_sep_std_share in ord.yaml
+std_single:
+  value: 3250
+  reference: '30 Del. C. 1108(a) ("$3,250" for tax periods beginning after December 31, 1999); PIT-RES Line 20a table (filing statuses 1, 3, 4, 5), each 2017-2025 booklet; TY2017 amended instructions Line 2'
+std_joint:
+  value: 6500
+  reference: '30 Del. C. 1108(a) ("$6,500" for spouses filing jointly); PIT-RES Line 20a table (filing status 2), each 2017-2025 booklet'
+
+# Additional standard deduction (PIT-RES Line 21): $2,500 per checked box,
+# one box for age 65+ and one for blind, per person (maximum $5,000 per
+# individual). Allowed ONLY to standard-deduction electors -- which is how
+# st_ded adds these amounts
+std_aged_addl:
+  value: 2500
+  reference: '30 Del. C. 1108(b)(2); PIT-RES Line 21: "Multiply the number of boxes checked on Line 21 by $2,500... (a maximum of $5,000 per individual)"; TY2017 Additional Standard Deduction Worksheet ("x 2500")'
+std_blind_addl:
+  value: 2500
+  reference: '30 Del. C. 1108(b)(1); PIT-RES Line 21 (blind box, $2,500); TY2017 Additional Standard Deduction Worksheet'
+
+# Itemized deductions: uncoupled election, DE income taxes excluded
+item_allowed:
+  value: 1
+  reference: '30 Del. C. 1109; PIT-RES Line 20b / Form PIT-RSA (Section C of Form 200-01 in 2017-2020)'
+item_coupling:
+  value: 0
+  reference: '30 Del. C. 1109(a); PIT-RES Line 20a NOTE, verbatim 2017-2025: "If you claimed a standard deduction on your federal return, you may still elect to itemize your deductions on the Delaware return"'
+item_fed_gate:
+  value: 0
+  reference: '1109 imposes no federal-itemizer gate (contrast MD/NE)'
+salt_addback:
+  value: 1
+  reference: '30 Del. C. 1109(b): itemized deductions are reduced by "the amount thereof representing income taxes imposed by this State"; PIT-RSA Line 5a "DO NOT INCLUDE any Delaware tax paid"'
+item_component_style:
+  value: 1
+  reference: 'Form PIT-RSA rebuilds the deduction from federal components; 2017-2020 Form 200-01 Section C started from federal Schedule A Line 29 and subtracted Delaware income taxes on Lines 50a/50b [documented approximation]'
+item_include_medical:
+  value: 1
+  reference: 'PIT-RSA Lines 1-4 (federal deductible medical and dental expenses; the worksheet multiplies AGI by 7.5%, matching federal law)'
+item_include_mortgage:
+  value: 1
+  reference: 'PIT-RSA Lines 8a-8e (home mortgage interest and points)'
+item_include_investment:
+  value: 1
+  reference: 'PIT-RSA Line 9 (investment interest, federal Form 4952)'
+item_include_charity:
+  value: 1
+  reference: 'PIT-RSA Lines 11-14 (gifts to charity, "subject to the same limitations imposed by federal law")'
+item_include_casualty:
+  value: 1
+  reference: 'PIT-RSA Line 15 (casualty and theft losses "as permitted under federal law")'
+item_include_misc:
+  value: 1
+  reference: 'PIT-RSA Line 16 other itemized deductions "as permitted under federal law" [known-difference: pre-TCJA 2%-floor components are not reconstructed]'
+item_include_other:
+  value: 1
+  reference: 'PIT-RSA Line 16 (other itemized deductions)'
+item_include_prop_tax:
+  value: 1
+  reference: 'PIT-RSA Line 5c (state and local real estate taxes paid)'
+item_include_pers_tax:
+  value: 1
+  reference: 'PIT-RSA Line 5d (state and local personal property taxes paid)'
+item_include_income_sales_tax:
+  value: 0
+  reference: '30 Del. C. 1109(b) excludes Delaware income taxes, and PIT-RSA Line 5a excludes other-state taxes that generated the Line 28 credit; Delaware levies no sales tax, so the residual component is immaterial [documented approximation]'
+item_prop_tax_cap_regular:
+  value:
+    '2017': .inf
+    '2018': 10000
+  reference: 'PIT-RSA Line 5f: "Enter the smaller of Line 5e or $10,000" (the federal TCJA limitation, which PIT-RES Line 13 adopts: "All federal limitations apply"); no cap in TY2017 [known-difference: the form caps the SUM of income/sales, real estate and personal property taxes; we cap real estate only]'
+item_prop_tax_cap_mfs:
+  value:
+    '2017': .inf
+    '2018': 5000
+  reference: 'PIT-RSA Line 5f: "$5,000 if married filing a separate return"'
+
+# Overall limitation: DE adopts the federal limitations, and in TY2017 the DE
+# itemized computation literally began at federal Schedule A Line 29
+# (post-Pease). The federal limitation is suspended 2018+ and DE never
+# deconformed, so pease switches off. Thresholds are the federal TY2017
+# amounts (Rev. Proc. 2016-55)
+pease:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: 'TY2017 Form 200-01 Section C Line 43: "Enter total Itemized Deduction from Schedule A, Federal Form, Line 29" (post-limitation); PIT-RES Line 13: "All federal limitations apply"; the federal overall limitation is suspended 2018-2025 and Delaware did not deconform'
+pease_single:
+  value: 261500
+  reference: 'Federal TY2017 overall-limitation threshold (Rev. Proc. 2016-55), applied through the DE Schedule A Line 29 starting point'
+pease_joint:
+  value: 313800
+  reference: 'Federal TY2017 overall-limitation threshold, MFJ/QSS (Rev. Proc. 2016-55)'
+pease_mfs:
+  value: 156900
+  reference: 'Federal TY2017 overall-limitation threshold, MFS (Rev. Proc. 2016-55)'
+pease_hoh:
+  value: 287650
+  reference: 'Federal TY2017 overall-limitation threshold, HoH (Rev. Proc. 2016-55)'
+
+documented_not_modeled:
+  itemized_additions:
+    reference: 'Foreign taxes actually paid (PIT-RES Line 14), charitable mileage at $0.26/mile (Line 15), and active labor organization dues up to $500 (Line 16) increase the DE itemized deduction; the PIT-CRS land-gift charitable subtraction (Line 18) decreases it. All unobservable in the PUF'

@@ -1,0 +1,64 @@
+---
+# New Mexico rate schedule (NMSA 7-2-7; PIT-1 line 18, computed from the Tax
+# Rate Table). The same rate sequence applies to every filing status; only the
+# bracket thresholds differ, and married-filing-separately has its OWN
+# schedule rather than half the joint one.
+#
+# Three regimes:
+#   2017-2020: four brackets, 1.7 / 3.2 / 4.7 / 4.9%
+#   2021-2024: adds a 5.9% top bracket (Laws 2019 ch.270 s.12, CONTINGENT
+#     effective date -- DFA certified 18 Dec 2020 that FY20 recurring general
+#     fund revenue was less than 5% above FY19, which triggered it for tax
+#     years beginning on or after 1 Jan 2021). PolicyEngine applies this
+#     bracket from 2008 and therefore overstates NM tax by 1.0pp above the
+#     top threshold for TY2017-2020 -- see the packet's PE disagreements.
+#   2025+: six brackets, 1.5 / 3.2 / 4.3 / 4.7 / 4.9 / 5.9% (HB 252 = Laws
+#     2024 ch.67 s.5)
+#
+# Nothing here is indexed: 7-2-7 fixes the brackets in statute, confirmed
+# against the TRD "PERSONAL INCOME TAX RATES" compilation (2005-2025), which
+# reproduces the section verbatim per regime with its enacting laws.
+#
+# Six-element uniform schedules; regimes with fewer brackets repeat the top
+# bracket bound (creating zero-width segments) so the top rate still runs to
+# infinity.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_mfs
+    '4': brackets_joint
+
+rates:
+  value:
+    '2017': [0.017, 0.032, 0.047, 0.049, 0.049, 0.049]
+    '2021': [0.017, 0.032, 0.047, 0.049, 0.059, 0.059]
+    '2025': [0.015, 0.032, 0.043, 0.047, 0.049, 0.059]
+  reference: 'NMSA 7-2-7(A)-(C); TRD "PERSONAL INCOME TAX RATES" statutory compilation (2005-2025); PIT-1 Tax Rate Tables 2017-2025. 2021 top bracket: Laws 2019 ch.270 s.12 with the DFA certification of 18 Dec 2020; 2025 schedule: HB 252 (Laws 2024 ch.67 s.5)'
+
+# Single (7-2-7(C))
+brackets_single:
+  value:
+    '2017': [0, 5500, 11000, 16000, 16000, 16000]
+    '2021': [0, 5500, 11000, 16000, 210000, 210000]
+    '2025': [0, 5500, 16500, 33500, 66500, 210000]
+  reference: 'NMSA 7-2-7(C); PIT-1 Tax Rate Table for single filers, 2017-2025'
+# Married filing jointly, surviving spouse, AND head of household -- 7-2-7(A)
+# and (B) publish the same schedule for all three
+brackets_joint:
+  value:
+    '2017': [0, 8000, 16000, 24000, 24000, 24000]
+    '2021': [0, 8000, 16000, 24000, 315000, 315000]
+    '2025': [0, 8000, 25000, 50000, 100000, 315000]
+  reference: 'NMSA 7-2-7(A) (married filing jointly / surviving spouse) and 7-2-7(B) (head of household), which are statutorily identical; PIT-1 Tax Rate Tables 2017-2025'
+# Married filing separately (7-2-7(D)) -- its own schedule. Note the joint
+# thresholds are NOT twice these in the 2017-2024 regimes (24,000 vs 12,000
+# happens to be, but 8,000 vs 4,000 and the 2025 splits are transcribed
+# directly rather than derived)
+brackets_mfs:
+  value:
+    '2017': [0, 4000, 8000, 12000, 12000, 12000]
+    '2021': [0, 4000, 8000, 12000, 157500, 157500]
+    '2025': [0, 4000, 12500, 25000, 50000, 157500]
+  reference: 'NMSA 7-2-7(D); PIT-1 Tax Rate Table for married filing separately, 2017-2025'

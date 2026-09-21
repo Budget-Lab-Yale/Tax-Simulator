@@ -1,0 +1,10 @@
+---
+# Florida: no broad individual income tax.
+
+std_amount:
+  value: 0
+  reference: 'No broad individual income tax; Fla. Const. Art. VII, s.5; https://www.leg.state.fl.us/statutes/index.cfm?submenu=3#A7S05'
+
+item_allowed:
+  value: 0
+  reference: 'No broad individual income tax; Fla. Const. Art. VII, s.5; https://www.leg.state.fl.us/statutes/index.cfm?submenu=3#A7S05'

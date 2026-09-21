@@ -1,0 +1,90 @@
+---
+# Oregon filing requirement (Form OR-40 instructions, Table 1 "Filing
+# thresholds"; ORS 316.117).
+#
+# The threshold is on GROSS income and is indexed annually. Oregon's published
+# table also raises it by $1,000-$1,200 per age-65-or-blind box checked, and
+# gives qualifying surviving spouse its own column. The amounts below are the
+# under-65 (zero boxes checked) figures for each year, transcribed from every
+# booklet 2017-2025; the aged and blind variants are not encoded because the
+# nonzero-liability trigger already flags any unit that owes Oregon tax.
+#
+# A federal filing obligation is an independent trigger, and so is a dollar of
+# Oregon withholding, though only for claiming a refund.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_mfs
+    '4': req_head
+
+req_type:
+  value: 2
+  reference: 'Form OR-40 instructions Table 1: fixed gross-income thresholds by filing status'
+req_if_fed_filer:
+  value: 1
+  reference: 'Form OR-40 instructions, "In addition, file a return if: You''re required to file a federal return" (every year 2017-2025)'
+
+req_single:
+  value:
+    '2017': 5965
+    '2018': 6075
+    '2019': 6230
+    '2020': 6495
+    '2021': 6590
+    '2022': 6780
+    '2023': 7305
+    '2024': 7710
+    '2025': 7935
+  reference: 'Form OR-40 instructions Table 1, single with zero boxes checked, transcribed from each year''s booklet'
+req_joint:
+  value:
+    '2017': 11925
+    '2018': 12150
+    '2019': 12460
+    '2020': 12990
+    '2021': 13175
+    '2022': 13555
+    '2023': 14605
+    '2024': 15425
+    '2025': 15865
+  reference: 'Same table, married filing jointly with zero boxes checked'
+req_mfs:
+  value:
+    '2017': 5965
+    '2018': 6075
+    '2019': 6230
+    '2020': 6495
+    '2021': 6590
+    '2022': 6780
+    '2023': 7305
+    '2024': 7710
+    '2025': 7935
+  reference: 'Same table, married filing separately with zero boxes checked -- identical to single in every year'
+req_head:
+  value:
+    '2017': 7440
+    '2018': 7590
+    '2019': 7775
+    '2020': 8150
+    '2021': 8265
+    '2022': 8510
+    '2023': 9165
+    '2024': 9665
+    '2025': 9950
+  reference: 'Same table, head of household with zero boxes checked'
+
+documented_not_modeled:
+  aged_and_blind_thresholds:
+    reference: 'Table 1 raises each threshold by $1,000 per box checked for married and separate filers and by $1,200 per box for single and head of household filers, for age 65 or older and for blindness. Not encoded -- the effect is confined to zero-liability filers near the boundary, since any unit with positive Oregon liability is flagged regardless'
+  qualifying_surviving_spouse_column:
+    reference: 'Oregon publishes a separate, higher threshold for qualifying surviving spouse ($8,290 in TY2017 rising to $11,060 in TY2025). The model folds that status into married filing jointly, which carries a lower threshold [very slightly overstates the filer count for surviving spouses]'
+  withholding_trigger:
+    reference: 'A dollar of Oregon withholding also requires a return, but only where the filer wants the refund. Withholding is not a filer-flag input here'
+  dependent_filers:
+    reference: 'A dependent must file above the larger of the dependent floor ($1,050 in TY2017 to $1,350 in TY2025) or earned income plus the add-on, capped at the filing-status standard deduction. Captured by the nonzero-liability trigger'
+  kicker_filing_requirement:
+    reference: 'In a kicker year a taxpayer with prior-year liability must file to claim the credit even when below the threshold. The kicker itself is not modeled -- see credits.yaml'
+  filing_status_conformity:
+    reference: 'Oregon filing status generally follows the federal return. Registered domestic partners are the documented exception: they may file jointly for Oregon while filing separately federally, and the federal tax subtraction then uses the actual federal returns rather than the "as if" ones. RDP status is not a model input'

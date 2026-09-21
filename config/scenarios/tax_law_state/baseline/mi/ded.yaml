@@ -1,0 +1,13 @@
+---
+std_amount:
+  value: 0
+  reference: 'Michigan MI-1040 taxable income equals Michigan AGI less exemptions; no broad standard deduction, 2017-2025'
+item_allowed:
+  value: 0
+  reference: 'Michigan MI-1040 has no broad itemized deduction, 2017-2025'
+item_coupling:
+  value: 0
+  reference: 'n/a for Michigan (no broad itemized deduction)'
+salt_addback:
+  value: 0
+  reference: 'n/a for Michigan (no broad itemized deduction)'

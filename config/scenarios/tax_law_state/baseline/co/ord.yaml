@@ -1,0 +1,27 @@
+---
+# Colorado: tax rates. Flat rate on modified federal taxable income; encoded
+# as the uniform 10-element schedule with zero brackets.
+#
+# Rate history mixes permanent cuts (Prop 116: 4.55% TY2020; Prop 121: 4.40%
+# TY2022) with temporary TABOR-refund reductions (39-22-627: 4.50% in 2019
+# and 2021; SB24-228: 4.25% in 2024). 2025 trigger not met -> 4.40%. 2026
+# encoded at the 4.40% permanent rate; the SB24-228 temporary reduction for
+# TY2026 depends on the FY2025-26 surplus certification (~Sept/Oct 2026) --
+# revisit then.
+
+# Marginal rates
+rates:
+  value:
+    '2017': [0.0463, 0.0463, 0.0463, 0.0463, 0.0463, 0.0463, 0.0463, 0.0463, 0.0463, 0.0463]
+    '2019': [0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045]
+    '2020': [0.0455, 0.0455, 0.0455, 0.0455, 0.0455, 0.0455, 0.0455, 0.0455, 0.0455, 0.0455]
+    '2021': [0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045]
+    '2022': [0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044]
+    '2024': [0.0425, 0.0425, 0.0425, 0.0425, 0.0425, 0.0425, 0.0425, 0.0425, 0.0425, 0.0425]
+    '2025': [0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044, 0.044]
+  reference: 'C.R.S. 39-22-104(1.7) and 39-22-627; DR 0104 booklets 2017-2025 (line 7 / tax table text); SB24-228 signed act; Props 116/121; DOR Individual Income Tax Guide rate table'
+
+# Bracket thresholds (flat tax: all zero)
+brackets:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'Flat-rate structure; C.R.S. 39-22-104'

@@ -1,0 +1,12 @@
+# The Behavioral Health Services Tax is calculated from Form 540 taxable
+# income and is added after nonrefundable credits. It was named the Mental
+# Health Services Tax through 2024; the rate and base are unchanged.
+taxable_income_threshold:
+  value: 1000000
+  reference: 'California Form 540 booklets, line 62 Mental/Behavioral Health Services Tax worksheet, 2017-2025'
+taxable_income_rate:
+  value: 0.01
+  reference: 'California Form 540 booklets, line 62 Mental/Behavioral Health Services Tax worksheet, 2017-2025'
+taxable_income_round:
+  value: 1
+  reference: 'California Form 540 booklets, line 62 instructs taxpayers to compute the tax using whole dollars only'

@@ -1,0 +1,141 @@
+---
+# Nebraska rate schedule (Neb. Rev. Stat. 77-2715.03; Form 1040N line 15, from
+# the Tax Calculation Schedule).
+#
+# Four brackets throughout. The bottom two rates have not moved since 2013;
+# what moves is the TOP rate, under the LB 754 (2023) ramp:
+#   2017-2022  6.84%
+#   2023       6.64%
+#   2024       5.84%
+#   2025       5.20%
+#   2026       4.55%, and this is the first year the THIRD bracket is also cut
+#              (77-2715.03(2)(c)(v), Form 1040N-ES 2026 p.6)
+# The statutory 2027 rate is 3.99% but its thresholds are unpublished, so 2026
+# is the last encoded year and its values carry forward.
+#
+# Thresholds are indexed annually and transcribed per year from the DOR
+# "History of Individual Income Tax Rates by Brackets" (Rev. 2-2026), which
+# covers 2014-2024. TY2025 is not in that chronology and was taken from
+# PolicyEngine, then ARITHMETIC-VERIFIED against three published 2025-booklet
+# worksheet constants ($3,566 single / $3,088 MFJ / $3,276 HoH of tax at
+# $77,760), which reproduce to the dollar only with these thresholds and the
+# 5.20% top rate. Held flat after 2026 -- vector families have no indexation
+# precedent in any encoded state.
+#
+# THE 2017-ONLY ADDITIONAL TAX (77-2715.03(1)(b)) is a graduated-rate-benefit
+# recapture keyed to federal AGI, and the NY supplemental-tax machinery is
+# exactly the right shape for it. The identity confirms it: for a single filer
+# the published maximum is 0.0684 x 29,830 - T(29,830) = 2,040.37 - 1,184.38 =
+# 855.99, to the cent; for MFJ, 0.0684 x 59,660 - T(59,660) = 1,712.01 against
+# a published 1,712.02 (one cent of rounding). The DOR chronology's footnote 12
+# says the schedule "is not applicable for tax years 2018 through 2025", so it
+# is Inf from 2018 with no reactivation -- it keys on the federal personal
+# exemption, which OBBBA permanently repealed, so it should stay inapplicable
+# (an inference, not a cited DOR statement).
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_head
+  recapture_agi_start:
+    '1': recap_start_single
+    '2': recap_start_joint
+    '3': recap_start_mfs
+    '4': recap_start_head
+  recapture_width:
+    '1': recap_width_single
+    '2': recap_width_joint
+    '3': recap_width_mfs
+    '4': recap_width_head
+
+rates:
+  value:
+    '2017': [0.0246, 0.0351, 0.0501, 0.0684]
+    '2023': [0.0246, 0.0351, 0.0501, 0.0664]
+    '2024': [0.0246, 0.0351, 0.0501, 0.0584]
+    '2025': [0.0246, 0.0351, 0.0501, 0.0520]
+    '2026': [0.0246, 0.0351, 0.0455, 0.0455]
+  reference: 'Neb. Rev. Stat. 77-2715.03; DOR Tax Rate Chronologies Table 1 (Rev. 3-2024) and History of Individual Income Tax Rates by Brackets (Rev. 2-2026); Form 1040N Tax Calculation Schedules 2017-2025 and Form 1040N-ES 2026. The top-rate ramp is LB 754 (2023)'
+
+brackets_single:
+  value:
+    '2017': [0, 3090, 18510, 29830]
+    '2018': [0, 3150, 18880, 30420]
+    '2019': [0, 3230, 19330, 31160]
+    '2020': [0, 3290, 19700, 31750]
+    '2021': [0, 3340, 19990, 32210]
+    '2022': [0, 3440, 20590, 33180]
+    '2023': [0, 3700, 22170, 35730]
+    '2024': [0, 3900, 23370, 37670]
+    '2025': [0, 4030, 24120, 38870]
+    '2026': [0, 4130, 24760, 39900]
+  reference: 'DOR History of Individual Income Tax Rates by Brackets (Rev. 2-2026) for 2017-2024; Form 1040N Tax Calculation Schedule each year. Single and married filing separately share this schedule. TY2025 arithmetic-verified against the published $3,566 worksheet constant; TY2026 read from the 1040N-ES text'
+brackets_joint:
+  value:
+    '2017': [0, 6170, 37030, 59660]
+    '2018': [0, 6290, 37770, 60840]
+    '2019': [0, 6440, 38680, 62320]
+    '2020': [0, 6570, 39410, 63500]
+    '2021': [0, 6660, 39990, 64430]
+    '2022': [0, 6860, 41190, 66360]
+    '2023': [0, 7390, 44350, 71460]
+    '2024': [0, 7790, 46760, 75340]
+    '2025': [0, 8040, 48250, 77730]
+    '2026': [0, 8250, 49530, 79800]
+  reference: 'Same sources; married filing jointly and surviving spouse. TY2025 arithmetic-verified against the published $3,088 worksheet constant; TY2026 thresholds are PolicyEngine-sourced from the ES page and should be verified before relying on 2026'
+brackets_head:
+  value:
+    '2017': [0, 5760, 29620, 44230]
+    '2018': [0, 5870, 30210, 45110]
+    '2019': [0, 6020, 30940, 46200]
+    '2020': [0, 6130, 31530, 47080]
+    '2021': [0, 6220, 31990, 47760]
+    '2022': [0, 6410, 32950, 49200]
+    '2023': [0, 6900, 35480, 52980]
+    '2024': [0, 7270, 37400, 55850]
+    '2025': [0, 7510, 38590, 57630]
+    '2026': [0, 7700, 39620, 59160]
+  reference: 'Same sources; head of household. TY2025 arithmetic-verified against the published $3,276 worksheet constant'
+
+recap_start_single:
+  value:
+    '2017': 261500
+    '2018': .inf
+  reference: 'Form 1040N (2017) Additional Tax Rate Schedule, single: the recapture begins at $261,500 of federal AGI. Inf from 2018 per DOR chronology footnote 12'
+recap_start_joint:
+  value:
+    '2017': 313800
+    '2018': .inf
+  reference: 'Form 1040N (2017) Additional Tax Rate Schedule, married filing jointly and surviving spouse'
+recap_start_mfs:
+  value:
+    '2017': 156900
+    '2018': .inf
+  reference: 'Form 1040N (2017) Additional Tax Rate Schedule, married filing separately'
+recap_start_head:
+  value:
+    '2017': 287650
+    '2018': .inf
+  reference: 'Form 1040N (2017) Additional Tax Rate Schedule, head of household'
+recap_width_single:
+  value:
+    '2017': 298300
+    '2018': 50000
+  reference: 'Full recapture is reached at $559,800 of federal AGI, so the phase-in width is 559,800 - 261,500. The published three-segment interior phase-in is LINEARIZED here: both endpoints are exact and the interior deviates by roughly $100-250, TY2017 only. The 2018+ value is the parameter default and is inert (the trigger is Inf)'
+recap_width_joint:
+  value:
+    '2017': 596600
+    '2018': 50000
+  reference: 'Full recapture at $910,400 less the $313,800 start'
+recap_width_mfs:
+  value:
+    '2017': 298300
+    '2018': 50000
+  reference: 'Full recapture at $455,200 less the $156,900 start'
+recap_width_head:
+  value:
+    '2017': 442300
+    '2018': 50000
+  reference: 'Full recapture at $729,950 less the $287,650 start'

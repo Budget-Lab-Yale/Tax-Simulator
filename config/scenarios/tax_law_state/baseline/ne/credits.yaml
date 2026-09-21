@@ -1,0 +1,68 @@
+---
+# Nebraska: credits (Form 1040N lines 20-26; Neb. Rev. Stat. 77-2715.07).
+
+# Per-exemption credit, nonrefundable. Nebraska's answer to a personal
+# exemption is a flat credit per taxpayer, spouse and dependent.
+percap_amount:
+  value:
+    '2017': 132
+    '2018': 134
+    '2019': 137
+    '2020': 140
+    '2021': 142
+    '2022': 146
+    '2023': 157
+    '2024': 166
+    '2025': 171
+    '2026': 176
+  reference: 'Neb. Rev. Stat. 77-2715.07(2)(a); DOR Tax Rate Chronologies Table 1 (Rev. 3-2024) and Form 1040N line 20 instructions each year. Indexed annually'
+percap_refundable:
+  value: 0
+  reference: '77-2715.07(2)(a): the credit "shall not exceed the income tax liability" -- nonrefundable'
+
+# Earned income credit: 10% of the federal credit, refundable, every year
+eitc_match:
+  value: 0.10
+  reference: 'Neb. Rev. Stat. 77-2715.07(2)(e); Form 1040N line 25, ten percent of the federal earned income credit in all years 2017-2025'
+eitc_refundable:
+  value: 1
+  reference: '77-2715.07(2)(e): refundable'
+
+# Child and dependent care credit (77-2715.07(2)(f)) -- TWO REGIMES on one
+# share table:
+#   AGI at or below $29,000: a REFUNDABLE credit computed on Form 2441N as
+#     capped expenses x the federal decimal x a STATE decimal that runs 1.00
+#     at or below $22,000 and steps down 10 percentage points per $1,000 to
+#     0.30 in the $28,000-$29,000 band
+#   AGI above $29,000: a NONREFUNDABLE 25% match of the federal credit
+#
+# The state decimal's eight $1,000 steps do not fit the six-slot share family,
+# so the ramp is encoded as a straight line from 1.00 at $22,000 to 0.30 at
+# $29,000 -- the same line the steps sit on, deviating by at most half a step
+# (0.05 of the decimal) inside the band.
+cdctc_style:
+  value: 1
+  reference: 'Form 2441N; the credit is a share of the federal credit, banded on federal AGI'
+cdctc_share_income_base:
+  value: 1
+  reference: 'Form 2441N keys the state decimal to FEDERAL adjusted gross income'
+cdctc_share_agi_bounds:
+  value: [0, 22000, 29000, .inf, .inf, .inf]
+  reference: 'Form 2441N state-decimal table: 1.00 at or below $22,000, stepping down through the $22,000-$29,000 range, and the 25% nonrefundable match above $29,000. Only three bands are used; the trailing infinities are inert padding for the six-slot family'
+cdctc_share_start:
+  value: [1.0, 1.0, 0.25, 0.25, 0.25, 0.25]
+  reference: 'Value at each band''s lower bound: 1.00 through $22,000, 1.00 at the start of the ramp, and the flat 0.25 match above $29,000 (the top band holds its start value)'
+cdctc_share_end:
+  value: [1.0, 0.30, 0.25, 0.25, 0.25, 0.25]
+  reference: 'Value at each band''s upper bound: the ramp ends at 0.30, which is the state decimal for the $28,000-$29,000 band'
+cdctc_refundable:
+  value: 1
+  reference: 'DECISION D2. The refundability flag is single but Nebraska''s credit is refundable at or below $29,000 and nonrefundable above it. Refundable is the smaller error BY FAR: making it nonrefundable would zero the low-income credit for exactly the population it exists to serve, since the per-exemption credit already drives Nebraska tax to zero up to roughly $30,000-$45,000 of AGI. See documented_not_modeled for the cost of this choice'
+
+documented_not_modeled:
+  cdctc_refundable_base_is_liability_limited:
+    reference: 'DECISION D1. Nebraska''s Form 2441N recomputes the low-income credit from EXPENSES (capped expenses x federal decimal x state decimal), while the share table multiplies the LIABILITY-LIMITED federal credit. At or below $29,000 of AGI federal liability is often zero, so the model returns zero or a fraction of a credit worth up to 100% of 35% of $3,000/$6,000 of expenses [UNDERSTATES Nebraska refunds by up to about $1,050 for one child and $2,100 for two or more. Worked case NE-3 shows a $295.12 gap on a single return]. Not fixable with existing parameters: it needs a pre-limitation federal CDCTC. If the module ever exposes one, NEBRASKA SHOULD BE REVISITED FIRST among all states'
+  cdctc_refundability_above_29000:
+    reference: 'DECISION D2, the cost of the choice made above: the 25% match above $29,000 is made refundable where the form makes it nonrefundable [understates liability by up to roughly $260-$525 for units whose Nebraska tax falls below 25% of the federal credit -- a real population, since the per-exemption credit zeroes Nebraska tax up to roughly $30,000-$45,000 of AGI]. Fixable only with per-band refundability'
+  mfs_credit_ineligibility:
+    reference: 'Married filing separately is barred from the Nebraska EITC and CDCC; the model does not gate on filing status for either [overstates credits for MFS filers]'

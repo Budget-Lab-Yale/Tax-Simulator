@@ -1,0 +1,58 @@
+---
+# Per-child deduction for children qualifying for the federal CTC.  The 2018
+# table is padded with a final zero bracket so the generic seven-column table
+# is stable before and after the 2022 expansion.
+
+filing_status_mapper:
+  agi_bounds:
+    '1': agi_bounds_single
+    '2': agi_bounds_joint
+    '3': agi_bounds_single
+    '4': agi_bounds_head
+  amounts:
+    '1': amounts_single
+    '2': amounts_joint
+    '3': amounts_single
+    '4': amounts_head
+
+style:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'G.S. 105-153.5(a1); North Carolina child deduction instructions, 2018-2025; https://www.ncdor.gov/taxes-forms/individual-income-tax/filing-topics/north-carolina-child-deduction'
+agi_bounds_single:
+  value:
+    '2017': [Inf, Inf, Inf, Inf, Inf, Inf, Inf]
+    '2018': [20000, 30000, 40000, 50000, 60000, Inf, Inf]
+    '2022': [20000, 30000, 40000, 50000, 60000, 70000, Inf]
+  reference: 'G.S. 105-153.5(a1); D-401 child deduction table, 2018-2025 (single/MFS)'
+agi_bounds_joint:
+  value:
+    '2017': [Inf, Inf, Inf, Inf, Inf, Inf, Inf]
+    '2018': [40000, 60000, 80000, 100000, 120000, Inf, Inf]
+    '2022': [40000, 60000, 80000, 100000, 120000, 140000, Inf]
+  reference: 'G.S. 105-153.5(a1); D-401 child deduction table, 2018-2025 (joint/surviving spouse)'
+agi_bounds_head:
+  value:
+    '2017': [Inf, Inf, Inf, Inf, Inf, Inf, Inf]
+    '2018': [30000, 45000, 60000, 75000, 90000, Inf, Inf]
+    '2022': [30000, 45000, 60000, 75000, 90000, 105000, Inf]
+  reference: 'G.S. 105-153.5(a1); D-401 child deduction table, 2018-2025 (Head of Household)'
+amounts_single:
+  value:
+    '2017': [0, 0, 0, 0, 0, 0, 0]
+    '2018': [2500, 2000, 1500, 1000, 500, 0, 0]
+    '2022': [3000, 2500, 2000, 1500, 1000, 500, 0]
+  reference: 'G.S. 105-153.5(a1); D-401 child deduction table, 2018-2025'
+amounts_joint:
+  value:
+    '2017': [0, 0, 0, 0, 0, 0, 0]
+    '2018': [2500, 2000, 1500, 1000, 500, 0, 0]
+    '2022': [3000, 2500, 2000, 1500, 1000, 500, 0]
+  reference: 'G.S. 105-153.5(a1); D-401 child deduction table, 2018-2025'
+amounts_head:
+  value:
+    '2017': [0, 0, 0, 0, 0, 0, 0]
+    '2018': [2500, 2000, 1500, 1000, 500, 0, 0]
+    '2022': [3000, 2500, 2000, 1500, 1000, 500, 0]
+  reference: 'G.S. 105-153.5(a1); D-401 child deduction table, 2018-2025'

@@ -1,0 +1,53 @@
+---
+# Alabama: exemptions (Form 40 lines 13-14; page 2 Part III).
+#
+# The personal exemption is flat and unchanged across the whole window. The
+# dependent exemption is AGI-TIERED with hard cliffs -- a dollar of Alabama
+# AGI over a bound costs the full step for EVERY dependent, so a family with
+# three dependents loses $1,500 of exemptions on one dollar of income.
+#
+# Nothing here is indexed. The only change in nine years is the first
+# dependent tier bound, which Act 2022-292 / 2022-297 moved from $20,000 to
+# $50,000 for TY2022.
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_married
+    '3': personal_single
+    '4': personal_head
+
+# Per TAXPAYER: the calculator doubles it for married filing jointly, so the
+# form's $3,000 joint amount is encoded as $1,500.
+personal_single:
+  value: 1500
+  reference: 'Form 40 filing-status boxes and the line 13 instruction, identical in all nine booklets 2017-2025: "If you check box 1, enter $1,500 on line 13" (single) and box 3 likewise (married filing separate). Not indexed, never changed'
+personal_married:
+  value: 1500
+  reference: 'Form 40 box 2 married filing joint is $3,000 per RETURN, which is exactly twice the single amount, so it is encoded as $1,500 per taxpayer'
+personal_head:
+  value: 3000
+  reference: 'Form 40 box 4 head of family is $3,000 for a single taxpayer -- twice the single figure, not the same as it. Independently confirmed by the filing thresholds, which equal maximum standard deduction plus personal exemption in every year: head of family $7,700 = $4,700 + $3,000 through TY2021, and $8,200 = $5,200 + $3,000 from TY2022'
+
+# Dependent exemption by Alabama AGI. Amounts never changed; only the first
+# bound moved, for TY2022.
+dep_tier_bounds:
+  value:
+    '2017': [20000.0, 100000.0, 999999999999.0]
+    '2022': [50000.0, 100000.0, 999999999999.0]
+  reference: 'Form 40 booklet dependent exemption chart, p.10 of each year, keyed on "Amount on Page 1, Line 10" (Alabama AGI). TY2017-2021 read "0 - 20,000 / 20,001 - 100,000 / Over 100,000"; TY2022-2025 read "0 - 50,000 / 50,001 - 100,000 / Over 100,000" per Acts 2022-292 and 2022-297. The $100,000 bound never moved'
+dep_tier_amounts:
+  value:
+    '2017': [1000.0, 500.0, 300.0]
+  reference: 'Form 40 booklet dependent exemption chart, p.10: $1,000, $500 and $300 per dependent. The three amounts are identical in all nine booklets 2017-2025 -- only the first bound changed'
+dep_tier_income_base:
+  value: 2
+  reference: 'The chart keys on Form 40 page 1 line 10, Alabama adjusted gross income'
+
+documented_not_modeled:
+  dependent_definition:
+    reference: 'An Alabama dependent must receive over 50% of support from the taxpayer AND stand in one of an enumerated set of relationships. Foster children, cousins and friends are excluded by name, there is no multiple-support-agreement route, and there is no age limit or gross-income test -- so an adult relative supported over half qualifies where the federal rules might not. The federal dependent count is used [can err in either direction; the missing age limit tends to understate the Alabama count and the foster-child exclusion to overstate it]'
+  no_aged_or_blind_exemption:
+    reference: 'Alabama grants no additional exemption for age or blindness and applies no phase-out to the personal exemption at any income. Confirmed by the absence of any such line on Form 40 and by the filing-threshold identity above'
+  dependent_filers:
+    reference: 'A dependent or student may claim the full $1,500 personal exemption on their own Alabama return even while claimed as a dependent by someone else (booklet p.5, p.8), and Alabama has no reduced standard deduction for dependent filers. Both follow automatically here, since dep_filer_zero is off and no dependent standard deduction is encoded'

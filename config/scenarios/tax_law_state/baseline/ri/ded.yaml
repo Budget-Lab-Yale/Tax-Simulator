@@ -1,0 +1,111 @@
+---
+# Rhode Island: standard deduction (RI-1040 line 4; R.I.G.L. 44-30-2.6(c)(3)(B)).
+# RI allows NO itemized deduction of any kind -- "Rhode Island does not allow
+# the use of federal itemized deductions" appears on the line 4 instruction in
+# every year 2017-2025 -- so item_allowed stays 0 and no itemized machinery is
+# encoded.
+#
+# The deduction phases out on a STEPPED schedule (Standard Deduction
+# Worksheet): 20% of the deduction is removed for each increment, OR FRACTION
+# THEREOF, by which modified federal AGI (line 3) exceeds the threshold, so the
+# applicable percentage is 0.8 / 0.6 / 0.4 / 0.2 at 1 / 2 / 3 / 4 steps and
+# ZERO once the excess passes 4 increments (the worksheet's "if the result is
+# more than $X, STOP HERE" line, where X = 4 x increment in every year). This
+# uses the generic stepped machinery (st_ded.std_po_step /
+# std_po_share_per_step), which shares its ceiling() rounding with the
+# exemption worksheet -- the two RI worksheets are parameter-identical.
+#
+# Dependent filers keep the FULL standard deduction (only the exemption is
+# zeroed -- see exempt.yaml dep_filer_zero). RI has no aged or blind
+# additional deduction.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_mfs
+    '4': std_head
+
+std_single:
+  value:
+    '2017': 8375
+    '2018': 8525
+    '2019': 8750
+    '2020': 8900
+    '2021': 9050
+    '2022': 9300
+    '2023': 10000
+    '2024': 10550
+    '2025': 10900
+  reference: 'RI Standard Deduction Worksheet / RI-1040 line 4 chart, single, TY2017-2025'
+std_joint:
+  value:
+    '2017': 16750
+    '2018': 17050
+    '2019': 17500
+    '2020': 17800
+    '2021': 18100
+    '2022': 18600
+    '2023': 20050
+    '2024': 21150
+    '2025': 21800
+  reference: 'RI Standard Deduction Worksheet, married filing jointly and qualifying widow(er) (identical amounts), TY2017-2025'
+std_mfs:
+  value:
+    '2017': 8375
+    '2018': 8525
+    '2019': 8750
+    '2020': 8900
+    '2021': 9050
+    '2022': 9300
+    '2023': 10025
+    '2024': 10575
+    '2025': 10900
+  reference: 'RI Standard Deduction Worksheet, married filing separately, TY2017-2025. NOTE: RI rounds the MFS series independently, so MFS EXCEEDS single in TY2023 ($10,025 vs $10,000) and TY2024 ($10,575 vs $10,550) -- both primary-confirmed on the worksheet and the instructions, and PE agrees. This is not a transcription error; do not "fix" it'
+std_head:
+  value:
+    '2017': 12550
+    '2018': 12800
+    '2019': 13100
+    '2020': 13350
+    '2021': 13550
+    '2022': 13950
+    '2023': 15050
+    '2024': 15850
+    '2025': 16350
+  reference: 'RI Standard Deduction Worksheet, head of household, TY2017-2025'
+
+std_po_thresh:
+  value:
+    '2017': 195150
+    '2018': 199000
+    '2019': 203850
+    '2020': 207700
+    '2021': 210750
+    '2022': 217050
+    '2023': 233750
+    '2024': 246450
+    '2025': 254250
+  reference: 'Standard Deduction Worksheet line 4 ("standard deduction phaseout amount"), TY2017-2025; R.I.G.L. 44-30-2.6(c)(3)(B)(III). Same threshold for every filing status, and identical to the exemption phase-out threshold'
+std_po_step:
+  value:
+    '2017': 5550
+    '2018': 5700
+    '2019': 5800
+    '2020': 5950
+    '2021': 6000
+    '2022': 6200
+    '2023': 6700
+    '2024': 7050
+    '2025': 7250
+  reference: 'Standard Deduction Worksheet line 6 divisor ("increase to the next higher whole number"), TY2017-2025; TY2022 also in ADV 2021-53'
+std_po_share_per_step:
+  value: 0.20
+  reference: 'Standard Deduction Worksheet line 7 percentage chart (1 -> 0.8000, 2 -> 0.6000, 3 -> 0.4000, 4 -> 0.2000; zero beyond 4 steps), all years'
+std_po_base:
+  value: 2
+  reference: 'Worksheet line 2 is modified federal AGI (RI-1040 line 3) = state AGI -> st_income_base enum 2 (NOT the enum default of federal AGI: the SS and pension modifications must shrink the phase-out measure)'
+
+item_allowed:
+  value: 0
+  reference: 'RI-1040 line 4 instruction, every year 2017-2025: "Rhode Island does not allow the use of federal itemized deductions"; R.I.G.L. 44-30-2.6(c)(3)(B) provides a standard deduction only'

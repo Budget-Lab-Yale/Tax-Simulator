@@ -1,0 +1,23 @@
+---
+# Massachusetts filing requirement (Form 1 instructions, "Who must file").
+#
+# A flat $8,000 of Massachusetts gross income, for every filing status and
+# every year in the window. Unlike most states Massachusetts does not scale
+# the threshold by status or index it.
+
+req_type:
+  value: 2
+  reference: 'Form 1 instructions: a fixed Massachusetts gross income threshold rather than a federal-filing trigger'
+req_income_thresh:
+  value: 8000
+  reference: 'Form 1 instructions, "Who must file a Massachusetts return": a return is required where Massachusetts gross income exceeds $8,000. Flat across every filing status and every year 2017-2025 -- not scaled by status, not indexed. It coincides with the single-filer No Tax Status threshold in credits.yaml'
+
+documented_not_modeled:
+  filing_statuses:
+    reference: 'Form 1 line 1 offers single, married filing jointly, married filing separately and head of household, plus a nonresident-alien-spouse indicator. There is NO qualifying widow(er) status in Massachusetts, so the model folds that federal status into married filing jointly'
+  mandatory_joint_conformity_2024:
+    reference: '2024 booklet p.3: "For tax years beginning on or after January 1, 2024, married couples must file a joint personal income tax return for any year in which they file a joint federal income tax return, unless an exception applies" (TIR 24-4). The model assigns federally-joint couples to joint state returns throughout, so this change is already satisfied -- and it removes any need for a separate-return election in Massachusetts from TY2024'
+  joint_filing_exemption_oval:
+    reference: 'Form 1 line 1 carries a "joint filing exemption for spouses with Massachusetts gross income under $8,000" oval, separate from No Tax Status. Not modeled'
+  gross_income_basis:
+    reference: 'The test is on Massachusetts GROSS income, before deductions and exemptions, and the exempt items in agi.yaml (Social Security, public contributory pensions) do not count toward it. The calculator applies the threshold to the state income base it computes, which is the closest available measure; any unit with positive liability is flagged as a filer regardless'

@@ -1,0 +1,22 @@
+---
+# Louisiana filing requirement.
+#
+# There is no Louisiana dollar threshold in any year. The requirement is
+# purely derivative of the federal one, which makes this the simplest filing
+# file in the set.
+
+req_type:
+  value: 3
+  reference: 'IT-540 instructions, every year 2017-2025: a Louisiana resident who is required to file a federal return must file a Louisiana return. No state gross-income threshold is printed in any booklet'
+req_income_thresh:
+  value: 0
+  reference: 'n/a -- federal-requirement passthrough'
+req_if_fed_filer:
+  value: 1
+  reference: 'Same instruction: the federal filing requirement is the whole test'
+
+documented_not_modeled:
+  five_filing_statuses:
+    reference: 'Louisiana carries five statuses and requires them to MATCH the federal return, so unlike Arkansas, Mississippi or Montana there is no separate-columns election to model. Qualifying surviving spouse is mapped to married filing jointly, which is where its exemption treatment lands anyway'
+  nonresident_and_part_year:
+    reference: 'IT-540B prorates by the Louisiana share of income. The model runs residents only'

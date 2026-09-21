@@ -1,0 +1,24 @@
+---
+# Maine: filing requirement (1040ME general instructions "Who must file",
+# identical rule 2017-2025). A Maine resident must file if required to file
+# a federal return, EXCEPT that no Maine return is required when there are
+# no income addition modifications and income subject to Maine tax is less
+# than the standard deduction plus the personal exemption (filing anyway to
+# claim refunds). The federal-requirement-plus-liability shape (VT/RI/NM
+# convention); the below-threshold carve-out is documented rather than
+# encoded because the liability branch of st_filer already nets to the
+# same units for practical purposes.
+
+req_type:
+  value: 3
+  reference: '1040ME general instructions "Who must file" (2017 booklet p.3; 2025 general instructions p.3)'
+req_income_thresh:
+  value: 0
+  reference: 'No standalone dollar threshold is published; the carve-out is std deduction + exemption (documented below)'
+req_if_fed_filer:
+  value: 1
+  reference: 'A resident "required to file a federal income tax return" must file a Maine return'
+
+documented_not_modeled:
+  below_deduction_exemption_carveout:
+    reference: 'A federal filer with no Maine addition modifications and income under the Maine standard deduction plus exemption need not file [overstates the ME filer count for low-income federal filers; their liability is zero either way, and refundable-credit claimants file regardless]'

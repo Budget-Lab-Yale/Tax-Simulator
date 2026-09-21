@@ -1,0 +1,17 @@
+---
+# Tennessee repealed the Hall Income Tax effective January 1, 2021. It was a
+# narrow tax on interest from bonds/notes and dividends, not a broad IIT.
+broad_iit:
+  value: 0
+  reference: 'Tennessee Department of Revenue, Hall Income Tax: https://www.tn.gov/revenue/taxes/hall-income-tax.html'
+narrow_iit:
+  value:
+    '2017': 1
+    '2021': 0
+  reference: 'Tennessee DOR: Hall Income Tax fully repealed January 1, 2021'
+ltcg_excise:
+  value: 0
+  reference: 'No Washington-style capital-gains excise tax in TN'
+wftc:
+  value: 0
+  reference: 'No Washington Working Families Tax Credit in TN'

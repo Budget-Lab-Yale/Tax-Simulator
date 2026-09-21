@@ -1,0 +1,125 @@
+---
+# Iowa deductions (IA 1040 Step 5 and Iowa Schedule A; Iowa Code 422.9).
+#
+# Everything in this file ends at TY2023, when the base becomes federal
+# taxable income and the federal deduction is embedded.
+#
+# Through TY2022 Iowa allowed a FULL, UNCAPPED, CASH-BASIS deduction for
+# federal income tax -- and unlike Missouri, Alabama, Oregon or Montana it
+# allowed that deduction to STANDARD-DEDUCTION filers too, not only to
+# itemizers. Its own standard deduction was small ($2,210 single in TY2022)
+# and indexed, and its itemized schedule was computed on Iowa Schedule A
+# rather than the federal one, with the SALT cap expressly disapplied.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_joint
+
+std_single:
+  value:
+    '2017': 2000
+    '2018': 2030
+    '2019': 2080
+    '2020': 2110
+    '2021': 2130
+    '2022': 2210
+    '2023': 0
+  reference: 'IDR 2017 Statistical Report pp.2 and 4 ($2,000, "indexed upward by 1.2 percent") and the IA 1040 Expanded Instructions for TY2018-TY2022, corroborated per status by the IDR annual press releases. Statutory base $1,230 under Iowa Code 422.9(1), indexed by the 422.5(6)/422.4 factor. The married-separate amount is the same per-spouse figure. The TY2023 press release confirms the repeal: "Iowa Code also eliminates the standard deduction effective with Tax Year 2023"'
+std_joint:
+  value:
+    '2017': 4920
+    '2018': 5000
+    '2019': 5120
+    '2020': 5210
+    '2021': 5240
+    '2022': 5450
+    '2023': 0
+  reference: 'Same sources, for joint, head-of-household and qualifying-widow filers. Statutory base $3,030. Note this is MORE than twice the separate amount, which is why the combined-return column amount in ord.yaml is stated outright rather than derived as a share of it'
+
+item_allowed:
+  value:
+    '2017': 1
+    '2023': 0
+  reference: 'Iowa Schedule A, with its own high-income limitation on form IA 104; "the federal Schedule A cannot be used with the Iowa return". Gone from TY2023 with the move to federal taxable income'
+item_coupling:
+  value: 0
+  reference: 'Iowa allowed itemizing EVEN IF the taxpayer took the federal standard deduction, so the state election is independent and takes the larger of the two'
+item_component_style:
+  value: 1
+  reference: 'Components are selected because Iowa strips its own income tax out and leaves the federal SALT cap behind, so neither the federal total nor the default SALT-swap construction matches'
+item_include_medical:
+  value: 1
+  reference: 'Iowa Schedule A line 1, recomputed to exclude health insurance premiums taken above the line on IA 1040 line 18'
+item_include_mortgage:
+  value: 1
+  reference: 'Home mortgage interest, Iowa Schedule A'
+item_include_investment:
+  value: 1
+  reference: 'Investment interest, Iowa Schedule A'
+item_include_charity:
+  value: 1
+  reference: 'Charitable contributions, Iowa Schedule A'
+item_include_casualty:
+  value: 1
+  reference: 'Casualty and theft losses, Iowa Schedule A'
+item_include_misc:
+  value: 1
+  reference: 'Miscellaneous deductions, Iowa Schedule A'
+item_include_other:
+  value: 1
+  reference: 'Other itemized deductions, Iowa Schedule A'
+item_include_prop_tax:
+  value: 1
+  reference: 'Real estate taxes IN FULL. Iowa Code 422.9(2)(l) expressly disapplies the IRC 164(b)(6) $10,000/$5,000 federal cap: it "does not apply in computing taxable income for state tax purposes", so Iowa allows the whole eligible state and local tax. This is why the property component is left uncapped'
+item_include_pers_tax:
+  value: 1
+  reference: 'Personal property taxes, on the same uncapped basis'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'Iowa Code 422.9(2)(a): "Iowa state income tax is not deductible on the Iowa return", so the income-tax component is struck. The general sales tax deduction was allowed only where elected federally in lieu of income taxes and not where the federal standard deduction was taken (422.9(2)(i), for years after 12/31/2018), which the model does not separate'
+
+fed_tax_ded:
+  value:
+    '2017': 1
+    '2023': 0
+  reference: 'Iowa Code 422.9(1) and (2)(b), and IA 1040 Step 7. Repealed from TY2023 by SF 2417 (2018 Acts ch 1161) in the same act that moved the base to federal taxable income'
+fed_tax_ded_cap:
+  value: .inf
+  reference: 'UNCAPPED in every year it existed'
+fed_tax_ded_add_niit:
+  value: 1
+  reference: 'IA 1040 Expanded Instructions TY2021 line 28: the net investment income tax is among the non-deductible federal taxes added back into the deductible base, alongside additional Medicare tax WITHHELD, section 965 installments, excess FICA and the fuel tax credit'
+fed_tax_ded_less_eitc:
+  value: 1
+  reference: 'The Expanded Instructions allow refundable federal credits to reduce the deduction to the extent they extinguish federal tax, taking the EITC first. Since the base is floored at zero, the ordering does not change the total'
+fed_tax_ded_less_ctc_ref:
+  value: 1
+  reference: 'Same rule, the additional child tax credit taken second -- note this differs from Missouri, which does NOT subtract the ACTC'
+fed_tax_ded_less_ed_ref:
+  value: 1
+  reference: 'Same rule, "then others", which reaches the refundable American Opportunity credit'
+fed_tax_ded_less_ptc:
+  value: 1
+  reference: 'Same rule, reaching the net premium tax credit'
+fed_tax_ded_less_excess_ptc:
+  value: 1
+  reference: 'Excess advance premium tax credit repayment is excluded from the deductible base (Expanded Instructions TY2021 line 31), as are self-employment tax, household employment tax and the Schedule 2 line 11 additional Medicare tax'
+
+documented_not_modeled:
+  federal_tax_deduction_is_cash_basis:
+    reference: 'IA 1040 Step 7 deducts federal tax PAID during the year -- withholding, estimated payments and prior-year catch-up payments on line 31 -- and adds back federal refunds RECEIVED on line 27. The model deducts current-year federal liability net of nonrefundable and offsetting refundable credits, which agrees for a filer whose withholding tracks liability and diverges for anyone settling or receiving a large balance. Post-2022, pre-2023 refunds and catch-up payments remain transition items on the return [direction of bias varies year to year and nets out over a filer''s lifetime]'
+  federal_amt_treatment:
+    reference: 'Whether the federal alternative minimum tax counts toward the deductible base is INFERRED from the instructions'' silence rather than stated. The model includes it, following the other federal-deduction states'
+  iowa_qbi_deduction_phase_in:
+    reference: 'A separate Iowa QBI deduction under 422.9(2A) at 25% of the federal amount for TY2019-TY2020, 50% for TY2021 and 75% for TY2022, ending when the federal deduction became embedded in TY2023. Not encoded [understates the pre-2023 deduction for pass-through owners]'
+  iowa_specific_schedule_a_adjustments:
+    reference: 'Iowa Schedule A departs from the federal one in both directions: it ADDS adoption expenses above 3% of net income, the charitable-mileage excess at the state employee rate, up to $5,000 for in-home care of a disabled relative, and the IRC 25 mortgage interest credit offset; it SUBTRACTS contributions to the Iowa education savings plan trust designated for the taxpayer''s own beneficiary, amounts paid from a first-time homebuyer savings account, and contributions for which an Iowa tax credit was claimed; it deducts the Iowa school district and EMS surtaxes; and its medical floor is 7.5% of Iowa-modified federal AGI. None of these is a model input'
+  ia_104_high_income_limitation:
+    reference: 'Iowa kept a high-income limitation on itemized deductions on form IA 104 through TY2022. The form was not retrieved, so its thresholds and rates are unknown and it is not encoded [overstates itemized deductions for high-income filers through TY2022]'
+  standard_deduction_capped_by_remaining_income:
+    reference: 'Iowa Code 422.9(1) provides the standard deduction "shall not exceed the amount remaining after deduction of the federal income tax". The model applies both deductions without that interaction, which binds only where the federal tax deduction alone nearly exhausts net income'
+  ty2021_charitable_addback:
+    reference: 'For TY2021 only, the Iowa standard deduction could not include the additional charitable contributions deduction allowed on federal Form 1040 line 12b. Not encoded [overstates the TY2021 standard deduction by up to $300 or $600 for non-itemizers who gave]'

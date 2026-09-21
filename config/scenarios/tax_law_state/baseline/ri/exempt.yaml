@@ -1,0 +1,78 @@
+---
+# Rhode Island: exemptions (RI-1040 line 6; R.I.G.L. 44-30-2.6(E)). One indexed
+# amount per exemption, where the count is the taxpayer, spouse and each
+# dependent (federal Form 1040 line 6d in TY2017; RI Schedule E line 5 from
+# TY2018, after TCJA suspended the federal exemption count). The amount is per
+# TAXPAYER (x2 for MFJ) plus per dependent.
+#
+# RI has no aged or blind additional exemption.
+#
+# The exemption phases out on the SAME STEPPED schedule as the standard
+# deduction (Exemption Worksheet: identical threshold, increment and 20%
+# chart): applicable percentage 0.8 / 0.6 / 0.4 / 0.2 at 1 / 2 / 3 / 4
+# increments (or fraction thereof) of modified federal AGI over the threshold,
+# and ZERO once the excess passes 4 increments.
+
+personal_amount:
+  value:
+    '2017': 3900
+    '2018': 4000
+    '2019': 4100
+    '2020': 4150
+    '2021': 4250
+    '2022': 4350
+    '2023': 4700
+    '2024': 4950
+    '2025': 5100
+  reference: 'RI-1040 line 6 / Exemption Worksheet line 1 ("Multiply $X by the total number of exemptions"), TY2017-2025; R.I.G.L. 44-30-2.6(E)(1),(3)'
+dep_amount:
+  value:
+    '2017': 3900
+    '2018': 4000
+    '2019': 4100
+    '2020': 4150
+    '2021': 4250
+    '2022': 4350
+    '2023': 4700
+    '2024': 4950
+    '2025': 5100
+  reference: 'The same per-exemption amount applies to each dependent (RI Schedule E line 5 count feeds the single multiplier)'
+
+# Dependent filers get ZERO exemption but keep the full standard deduction
+dep_filer_zero:
+  value: 1
+  reference: 'RI-1040 line 6 NOTE: "If someone else can claim you on their return, your exemption amount is zero"; the standard deduction is NOT reduced for dependent filers'
+
+po_type:
+  value: 1
+  reference: 'Stepped reduction (not a cliff): Exemption Worksheet line 7 percentage chart; R.I.G.L. 44-30-2.6(E)(4)(b)'
+po_thresh:
+  value:
+    '2017': 195150
+    '2018': 199000
+    '2019': 203850
+    '2020': 207700
+    '2021': 210750
+    '2022': 217050
+    '2023': 233750
+    '2024': 246450
+    '2025': 254250
+  reference: 'Exemption Worksheet line 4 ("exemption phaseout amount"), TY2017-2025; identical to the standard-deduction phase-out threshold and identical for all filing statuses'
+po_step:
+  value:
+    '2017': 5550
+    '2018': 5700
+    '2019': 5800
+    '2020': 5950
+    '2021': 6000
+    '2022': 6200
+    '2023': 6700
+    '2024': 7050
+    '2025': 7250
+  reference: 'Exemption Worksheet line 6 divisor, rounded UP to the next whole number, TY2017-2025'
+po_share_per_step:
+  value: 0.20
+  reference: 'Exemption Worksheet line 7 chart: 1 -> 0.8000, 2 -> 0.6000, 3 -> 0.4000, 4 -> 0.2000, zero beyond 4 steps. (The statute reads 2%; the Division of Taxation worksheet governs and has published 20% steps in every year 2017-2025 -- noted so the discrepancy is not rediscovered.)'
+po_agi_base:
+  value: 2
+  reference: 'Exemption Worksheet line 2 is modified federal AGI (RI-1040 line 3) = state AGI -> st_income_base enum 2 (NOT the enum default of federal AGI)'

@@ -1,0 +1,36 @@
+---
+# Personal exemptions ended in TY2024 (except the data-unobservable unborn
+# child exemption).  The married-filing-joint exemption is $7,400 TOTAL
+# (HB 386 of 2012, effective 2013, through the HB 1437 elimination),
+# represented as $3,700 per taxpayer; MFS receives half ($3,700).
+# (Corrected 2026-08-11: had been transcribed as a $3,700 joint TOTAL --
+# $212.75 on every married return at 5.75%, the dominant GA cross-model
+# mismatch. TAXSIM agrees with the corrected value exactly.)
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_joint_each
+    '3': personal_mfs
+    '4': personal_single
+
+personal_single:
+  value:
+    '2017': 2700
+    '2024': 0
+  reference: 'Georgia Form 500 exemption instructions, 2017-2025'
+personal_joint_each:
+  value:
+    '2017': 3700
+    '2024': 0
+  reference: 'Georgia Form 500 exemption instructions, 2017-2025; O.C.G.A. 48-7-26 ($7,400 joint amount per HB 386 of 2012, represented per taxpayer)'
+personal_mfs:
+  value:
+    '2017': 3700
+    '2024': 0
+  reference: 'Georgia Form 500 exemption instructions, 2017-2025'
+dep_amount:
+  value:
+    '2017': 3000
+    '2024': 4000
+  reference: 'Georgia Form 500 dependent exemption instructions, 2017-2025'

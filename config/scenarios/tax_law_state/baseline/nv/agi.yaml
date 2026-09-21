@@ -1,0 +1,7 @@
+---
+# Nevada: no broad individual income tax. Zero-tax stub so states = all
+# includes NV without producing state individual income tax liability.
+
+start_point:
+  value: 1
+  reference: 'No broad individual income tax; Nevada Department of Taxation tax programs; https://tax.nv.gov'

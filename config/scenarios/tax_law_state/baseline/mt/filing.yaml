@@ -1,0 +1,69 @@
+---
+# Montana filing requirement.
+#
+# The two regimes differ in kind, not just in amount. Through TY2023
+# Montana printed its own gross-income chart, and the chart has two
+# regularities that hold exactly in all seven years: the under-65 threshold
+# equals that status's MAXIMUM standard deduction, and each additional 65+
+# or blind exemption adds one personal exemption amount. From TY2024 there
+# is no Montana chart at all -- the requirement is simply the federal one.
+#
+# Only the under-65 column is carried, since the threshold governs the filer
+# flag alone and any unit with positive liability is flagged regardless.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_single
+    '4': req_head
+
+req_type:
+  value: 2
+  reference: 'Booklet "Do you have to file?" chart, TY2017-TY2023: fixed gross-income thresholds by filing status and age'
+req_if_fed_filer:
+  value:
+    '2017': 0
+    '2024': 1
+  reference: 'inst_2024 p.1: "if during the tax year you were a resident ... and you had a requirement to file a federal tax return, then you must file a Montana income tax return." No Montana-specific dollar threshold survives SB 399'
+req_single:
+  value:
+    '2017': 4510
+    '2018': 4580
+    '2019': 4710
+    '2020': 4790
+    '2021': 4830
+    '2022': 5090
+    '2023': 5540
+    '2024': 0
+  reference: 'Booklet filing chart, single and married filing separately, under 65, each year (inst_2017 through inst_2023). Every cell read from the printed chart, not derived -- but note it equals the standard-deduction maximum for the status in all seven years, which is a useful internal check'
+req_joint:
+  value:
+    '2017': 9020
+    '2018': 9160
+    '2019': 9420
+    '2020': 9580
+    '2021': 9660
+    '2022': 10180
+    '2023': 11080
+    '2024': 0
+  reference: 'Same chart, married filing jointly, both under 65'
+req_head:
+  value:
+    '2017': 9020
+    '2018': 9160
+    '2019': 9420
+    '2020': 9580
+    '2021': 9660
+    '2022': 10180
+    '2023': 11080
+    '2024': 0
+  reference: 'Same chart, head of household, under 65 -- the same amounts as joint, matching the standard-deduction grouping'
+
+documented_not_modeled:
+  age_and_blindness_additions:
+    reference: 'Each 65-or-older or blind taxpayer raises the threshold by one personal exemption amount, so a TY2023 joint couple both 65+ files at $17,000 rather than $11,080. Only the under-65 column is carried [flags a small number of elderly units as filers who were not required to file]'
+  unemployment_compensation_excluded_from_the_test:
+    reference: 'The pre-2024 gross-income test is on federal gross income EXCLUDING unemployment compensation, even though Montana taxes that compensation. The model applies the threshold to the ordinary income measure'
+  elderly_credit_filers:
+    reference: 'The Elderly Homeowner/Renter Credit is claimable by filers with no filing requirement at all, so the population claiming it is wider than the population the threshold selects. The credit itself is not modeled (see credits.yaml)'

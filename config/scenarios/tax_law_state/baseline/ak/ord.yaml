@@ -1,0 +1,10 @@
+---
+# Alaska: no broad individual income tax.
+
+rates:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'No broad individual income tax; Alaska Department of Revenue Tax Division tax programs; https://tax.alaska.gov'
+
+brackets:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'No broad individual income tax; Alaska Department of Revenue Tax Division tax programs; https://tax.alaska.gov'

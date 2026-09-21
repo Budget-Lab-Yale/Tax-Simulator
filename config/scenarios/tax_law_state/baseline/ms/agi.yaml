@@ -1,0 +1,72 @@
+---
+# Mississippi: income (Form 80-105 lines 42-65; Form 80-100 instructions).
+#
+# Mississippi does NOT start from federal AGI. It rebuilds income line by
+# line, and federal AGI appears in exactly two places on the whole return -- as
+# the medical-expense floor and as the child care credit's income cliff.
+#
+# THE DEFINING FEATURE: retirement income is FULLY EXEMPT. Social Security,
+# Railroad Retirement, and pensions, IRAs and 401(k) distributions from
+# federal, state AND PRIVATE systems are "exempt in total". And the exemption
+# is mechanical rather than computed -- the instruction is "do not report" the
+# income at all, so it never enters the base and there is nothing to subtract.
+
+start_point:
+  value: 0
+  reference: 'Form 80-105 rebuilds Mississippi income from its own components; there is no federal-AGI line. Federal AGI is used only for the medical-expense floor and the child care credit cliff'
+
+ob_class_floor:
+  value: 0
+  reference: 'Mississippi has no gross-income-class loss ring-fence; losses net across the return'
+
+ob_comp_share:
+  value: 1
+  reference: 'Form 80-105 line 42, wages, salaries and tips'
+ob_int_share:
+  value: 1
+  reference: 'Form 80-105 line 43, interest income. U.S. and Mississippi obligations are exempt and other states municipal interest is TAXABLE -- see documented_not_modeled'
+ob_div_share:
+  value: 1
+  reference: 'Form 80-105 line 44, dividend income'
+ob_bus_share:
+  value: 1
+  reference: 'Form 80-105 lines 48-49, business, farm and pass-through income'
+ob_gains_share:
+  value: 1
+  reference: 'Form 80-105 line 45, capital gains; Mississippi applies no preferential rate'
+ob_st_gains_share:
+  value: 1
+  reference: 'Short-term gains take the same treatment as long-term ones'
+ob_rent_share:
+  value: 1
+  reference: 'Form 80-105 line 49, rents, royalties, partnerships, estates and trusts'
+ob_retirement_share:
+  value: 0
+  reference: 'Form 80-100 line 46, verbatim in every booklet TY2017-TY2025: "Social Security benefits, Railroad Retirement benefits, and retirement income from federal, state, and private retirement systems are exempt in total." The instruction is "do not report" the income, so it never enters the base at all rather than being subtracted out. This is the single largest Mississippi-specific feature'
+ob_ira_share:
+  value: 0
+  reference: 'IRA and 401(k) distributions are covered by the same total exemption'
+ob_ss_share:
+  value: 0
+  reference: 'Social Security benefits are exempt in total, with no provisional-income test and no age test'
+ob_ui_share:
+  value: 1
+  reference: 'Form 80-100 line 47: "Unemployment compensation is taxable for Mississippi income tax purposes" -- unlike several neighbouring states'
+ob_alimony_share:
+  value: 1
+  reference: 'Alimony received is Mississippi income'
+ob_other_share:
+  value: 1
+  reference: 'Form 80-105 line 50, other income'
+
+documented_not_modeled:
+  early_and_excess_distributions:
+    reference: 'The total retirement exemption does NOT reach distributions that are early or excess under the IRC (those triggering federal Form 5329), separation or severance pay, or deferred compensation taken before retirement age or service requirements are met. Those stay taxable and must be reported. The model exempts the whole pension and IRA pool [understates Mississippi tax for early withdrawals and for severance recipients. There is no numeric age test in the booklet -- the condition is functional, tied to the Form 5329 cross-reference]'
+  out_of_state_muni_interest:
+    reference: 'Interest on U.S. and Mississippi obligations is exempt while other states municipal interest is TAXABLE -- and taxable BY CONSTRUCTION, since Mississippi builds income from scratch and has no addback line. Neither share is observable, so taxable interest is carried in full and exempt interest is missed [overstates tax for Treasury and in-state holders, understates it for out-of-state municipal holders]'
+  mississippi_domiciled_stock_gain_exclusion:
+    reference: 'Miss. Code Ann. 27-7-9(f)(10) gives a 100% UNCAPPED exclusion for gains on stock of Mississippi-domiciled corporations and on Mississippi limited partnership and LLC interests held more than one year. The domicile of an asset is not in the microdata and cannot be imputed from survey data [overstates Mississippi tax for holders of in-state business interests; uncapped, so potentially large for individual records]'
+  self_employment_tax_deduction_phase_in:
+    reference: 'Mississippi phased in its deduction for self-employment tax at 17%, 34% and 50% over TY2017-TY2019. The own-base build does not apply federal above-the-line deductions at all, so the phase-in is moot here but the deduction itself is missing [overstates Mississippi income for the self-employed]'
+  own_above_the_line_adjustments:
+    reference: 'Form 80-105 lines 50-65 carry Mississippi own adjustments, including the self-employment items above, the Mississippi Affordable College Savings deduction and others. None is a model input'

@@ -1,0 +1,10 @@
+TAXSIM-35, Delaware, TY2019, single, age 80, no income of any kind.
+
+Expected: DE state AGI = 0. TAXSIM returns v32_state_agi =
+-1,999.99: the 30 Del. C. 1106(b)(3) pension exclusion is granted
+with no pension, IRA, or eligible retirement income to exclude.
+619-642 records/yr in our 2017-2020 samples have TAXSIM state AGI
+below zero where ours is at or above zero. Related: the 2,000
+under-60 exclusion is granted against EARLY IRA distributions
+(sampled ages 32-59), which PIT-RES Line 6 disqualifies ('an early
+distribution from an IRA or pension fund ... does not qualify').

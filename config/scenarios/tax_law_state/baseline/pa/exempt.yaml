@@ -1,0 +1,19 @@
+---
+# Pennsylvania: exemptions. None -- PA has no personal or dependent
+# exemptions in any year (same booklet provision as the deduction ban).
+
+personal_amount:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.9): "PA law does not allow ... deductions for personal exemptions"'
+
+dep_amount:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.9), same provision'
+
+po_thresh:
+  value: .inf
+  reference: 'n/a for Pennsylvania (no exemptions)'
+
+po_type:
+  value: 0
+  reference: 'n/a for Pennsylvania (no exemptions)'

@@ -1,0 +1,156 @@
+---
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_joint
+  item_limit_thresh:
+    '1': item_limit_thresh_single
+    '2': item_limit_thresh_joint
+    '3': item_limit_thresh_single
+    '4': item_limit_thresh_head
+std_single:
+  value:
+    '2017': 4236
+    '2018': 4401
+    '2019': 4537
+    '2020': 4601
+    '2021': 4803
+    '2022': 5202
+    '2023': 5363
+    '2024': 5540
+    '2025': 5706
+  reference: 'California Form 540 booklets, standard deduction table, 2017-2025'
+std_joint:
+  value:
+    '2017': 8472
+    '2018': 8802
+    '2019': 9074
+    '2020': 9202
+    '2021': 9606
+    '2022': 10404
+    '2023': 10726
+    '2024': 11080
+    '2025': 11412
+  reference: 'California Form 540 booklets, standard deduction table, 2017-2025'
+std_dependent_style:
+  value: 1
+  reference: 'California Form 540 booklets, California Standard Deduction Worksheet for Dependents, 2017-2025'
+std_dependent_floor:
+  value:
+    '2017': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1250
+    '2024': 1300
+    '2025': 1350
+  reference: 'California Form 540 booklets, California Standard Deduction Worksheet for Dependents minimum, 2017-2025'
+std_dependent_earned_add:
+  value:
+    '2017': 350
+    '2022': 400
+    '2024': 450
+  reference: 'Federal Form 1040 Standard Deduction Worksheet for Dependents line 2, incorporated by California Form 540 booklets, 2017-2025'
+item_allowed:
+  value: 1
+  reference: 'California Form 540 and Schedule CA (540), standard/itemized deduction election, 2017-2025'
+item_coupling:
+  value: 0
+  reference: 'California Schedule CA (540) computes California itemized deductions independently of federal TCJA limitations'
+item_component_style:
+  value: 1
+  reference: 'California Schedule CA (540), component-based state itemized deductions'
+item_include_medical:
+  value: 1
+  reference: 'California Schedule CA (540), medical deduction component'
+item_include_mortgage:
+  value: 1
+  reference: 'California Schedule CA (540), mortgage-interest deduction component'
+item_include_investment:
+  value: 1
+  reference: 'California Schedule CA (540), investment-interest deduction component'
+item_include_charity:
+  value: 1
+  reference: 'California Schedule CA (540), charitable-contribution deduction component'
+item_include_casualty:
+  value: 1
+  reference: 'California Schedule CA (540), casualty-loss deduction component'
+item_include_misc:
+  value: 1
+  reference: 'California Schedule CA (540), miscellaneous itemized deduction component'
+item_include_other:
+  value: 1
+  reference: 'California Schedule CA (540), other itemized deduction component'
+item_include_prop_tax:
+  value: 1
+  reference: 'California Schedule CA (540), state and local real property tax deduction component'
+item_include_pers_tax:
+  value: 1
+  reference: 'California Schedule CA (540), personal property tax deduction component'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'California Schedule CA (540), Part II line 5a: state/local income and general sales taxes are not deductible'
+item_prop_tax_cap:
+  value: .inf
+  reference: 'California does not adopt the federal SALT cap in its itemized deduction computation'
+item_limit_style:
+  value: 1
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet, 2017-2025'
+item_limit_agi_base:
+  value: 1
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet uses Form 540 line 13 federal AGI'
+item_limit_thresh_single:
+  value:
+    '2017': 178706
+    '2018': 194504
+    '2019': 200534
+    '2020': 203341
+    '2021': 212288
+    '2022': 229908
+    '2023': 237035
+    '2024': 244857
+    '2025': 252203
+  reference: 'California Schedule CA (540), line 29 instructions, itemized-deduction limitation threshold, 2017-2025'
+item_limit_thresh_joint:
+  value:
+    '2017': 357417
+    '2018': 389013
+    '2019': 401072
+    '2020': 406687
+    '2021': 424581
+    '2022': 459821
+    '2023': 474075
+    '2024': 489719
+    '2025': 504411
+  reference: 'California Schedule CA (540), line 29 instructions, itemized-deduction limitation threshold, 2017-2025'
+item_limit_thresh_head:
+  value:
+    '2017': 268065
+    '2018': 291760
+    '2019': 300805
+    '2020': 305016
+    '2021': 318437
+    '2022': 344867
+    '2023': 355558
+    '2024': 367291
+    '2025': 378310
+  reference: 'California Schedule CA (540), line 29 instructions, itemized-deduction limitation threshold, 2017-2025'
+item_limit_rate:
+  value: 0.06
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet line 8, 6 percent of excess AGI'
+item_limit_max_nonprotected_share:
+  value: 0.80
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet line 4, 80 percent of unprotected deductions'
+item_limit_protect_medical:
+  value: 1
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet line 2, federal Schedule A line 4 is protected'
+item_limit_protect_investment:
+  value: 1
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet line 2, federal Schedule A line 9 is protected'
+item_limit_protect_casualty:
+  value: 1
+  reference: 'California Schedule CA (540) Itemized Deductions Worksheet line 2, federal Schedule A line 15 is protected'
+item_limit_protect_other:
+  value: 0
+  reference: 'California protects gambling losses in federal Schedule A line 16, but the current other_item_ded input does not isolate them'

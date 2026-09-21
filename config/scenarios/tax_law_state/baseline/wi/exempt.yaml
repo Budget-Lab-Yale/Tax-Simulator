@@ -1,0 +1,20 @@
+---
+# Wisconsin: $700 personal exemption deduction per taxpayer/spouse/
+# dependent plus $250 per 65+ filer (71.05(23)); unphased, unchanged
+# 2017-2025.
+
+personal_amount:
+  value: 700
+  reference: 'Wis. Stat. 71.05(23); Form 1 exemptions line, all years'
+
+dep_amount:
+  value: 700
+  reference: 'Same provision'
+
+aged_addl:
+  value: 250
+  reference: '71.05(23)(b)2: additional $250 per filer age 65+'
+
+po_thresh:
+  value: .inf
+  reference: 'No phase-out'

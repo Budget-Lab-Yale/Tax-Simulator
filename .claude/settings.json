@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -lc 'cd \"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\" || exit 0; command -v Rscript >/dev/null 2>&1 || module load R/4.4.2-gfbf-2024a >/dev/null 2>&1; command -v Rscript >/dev/null 2>&1 || exit 0; exec Rscript research/tools/check_conventions.R'",
+            "timeout": 120,
+            "statusMessage": "Checking research/ conventions"
+          }
+        ]
+      }
+    ]
+  }
+}

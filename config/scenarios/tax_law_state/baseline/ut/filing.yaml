@@ -1,0 +1,16 @@
+---
+# Utah filing requirement: every resident who must file a federal return
+# must file a TC-40 (2017-2025 booklets, "Who Must File"). No separate Utah
+# income threshold. The "qualified exempt taxpayer" no-tax election (line
+# 21: FAGI at or below the federal standard deduction) is not separately
+# modeled -- the taxpayer tax credit zeroes tax in the standard cases
+# (documented approximation in the source packet).
+req_type:
+  value: 3
+  reference: 'TC-40 instructions "Who Must File", 2017-2025; federal-filer-or-liability proxy'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for federal-filer-or-liability filing proxy'
+req_if_fed_filer:
+  value: 1
+  reference: 'TC-40 instructions: residents required to file a federal return must file, 2017-2025'

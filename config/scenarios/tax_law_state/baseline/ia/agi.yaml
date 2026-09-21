@@ -1,0 +1,60 @@
+---
+# Iowa income base (IA 1040; Iowa Code 422.7).
+#
+# The starting point moves at TY2023. Through TY2022 Iowa built its own "Iowa
+# net income" from federal AGI with its own modifications. From TY2023 it
+# conforms to FEDERAL TAXABLE INCOME under IRC 63, which absorbs the federal
+# standard or itemized deduction, the QBI deduction, the 199A(g) DPAD and the
+# federal NOL all at once -- which is why ded.yaml carries nothing from that
+# year.
+#
+# Retirement is the headline. Through TY2022 a capped exclusion of $6,000 per
+# separate filer and $12,000 per joint couple, for anyone disabled, 55 or
+# older, or a qualifying survivor. From TY2023 the SAME eligibility test with
+# NO CAP AT ALL -- HF 2317 exempts retirement income outright. Social Security
+# is not taxed by Iowa in any year.
+
+start_point:
+  value:
+    '2017': 1
+    '2023': 2
+  reference: 'Iowa Code 422.7 built Iowa net income from federal AGI through TY2022. SF 2417 (2018 Acts ch 1161) sections 108-112 and 114-118 moved the base to federal taxable income under IRC 63 effective 1/1/2023; IA 1040 Expanded Instructions TY2023, "New for 2023", state that Iowa "will no longer allow an Iowa-specific standard or itemized deduction" because the federal deduction is now embedded'
+
+ss_sub_share:
+  value: 1
+  reference: 'IA 1040 Expanded Instructions, Step 4: "Iowa does not tax Social Security benefits". True in every year 2017-2025. Note a "reportable Social Security" figure is still computed on the return, but only because it counts toward the low-income exemption and filing-threshold tests -- it is not taxed'
+
+pension_excl_under65:
+  value:
+    '2017': 6000
+    '2023': 999999999.0
+  reference: 'Iowa Code 422.7(31) (2022 edition and earlier): the exclusion runs to "a maximum of six thousand dollars for a person, other than a husband or wife, who files a separate state income tax return and up to a maximum of twelve thousand dollars for a husband and wife who file a joint state income tax return". Not indexed -- identical text verified in Code editions 2017 through 2022. HF 2317 (2022 Acts ch 1002) section 27, effective 1/1/2023, renumbered it to 422.7(19) and struck the cap entirely: "subtract, to the extent included, THE TOTAL AMOUNT received from a governmental or other pension or retirement plan". The uncapped years carry a large finite sentinel rather than an infinity, which the parser handles as a number'
+pension_excl_65plus:
+  value:
+    '2017': 6000
+    '2023': 999999999.0
+  reference: 'Same caps. The eligibility test is disability, age 55 or older, or qualifying-survivor status -- not 65 -- so the under-65 and 65-plus caps are the same figure and the age gate below does the work'
+pension_excl_min_age:
+  value: 55
+  reference: 'Iowa Code 422.7(31) then (19): "is fifty-five years of age or older". Fifty-five, not the more common sixty-five'
+pension_excl_incl_ira:
+  value: 1
+  reference: 'The statute reaches "defined benefit or defined contribution plans, annuities, individual retirement accounts, plans maintained or contributed to by an employer, or maintained or contributed to by a self-employed person as an employer, and deferred compensation plans or any earnings attributable to the deferred compensation plans" -- IRA distributions are named explicitly'
+
+documented_not_modeled:
+  disability_and_survivor_eligibility:
+    reference: 'The exclusion is also available, at any age, to a disabled taxpayer and to the surviving spouse of someone who would have qualified -- though a survivor who is neither disabled nor 55 or older may exclude only the pension received as a result of the other spouse''s death. Disability and survivor status are not model inputs [understates the exclusion for those filers, materially so from TY2023 when the cap is gone]'
+  per_spouse_cap_allocation:
+    reference: 'Through TY2022 married filers, whether on separate returns or separately on a combined return, shared a COMBINED $12,000 maximum allocated in proportion to each spouse''s retirement pay. The model pools income against the summed cap, which reaches the same total'
+  military_retirement_and_survivor_benefits:
+    reference: 'Iowa Code 422.7(31A) fully excludes military retirement pay and 422.7(31B) fully excludes federal military survivor benefits under 10 U.S.C. 1447 et seq., each stating it applies "in addition to any exclusion provided under subsection 31" -- so pre-2023 a military retiree got the full military exclusion AND the $6,000/$12,000 general one. Military retirement is not separable from pension income in the model [understates the exclusion for military retirees through TY2022; from TY2023 the uncapped general exclusion absorbs it]'
+  railroad_retirement:
+    reference: 'Railroad retirement is excluded regardless of age, unlike the general exclusion. Not separable from pension income'
+  nonqualified_deferred_comp_and_annuities:
+    reference: 'Nonqualified deferred compensation and nonqualified annuities do NOT qualify for the exclusion even though qualified deferred compensation does, and Roth conversions and ESOP distributions do. Neither distinction is observable [overstates the exclusion for filers with nonqualified income]'
+  health_insurance_premium_deduction:
+    reference: 'Through TY2022 Iowa allowed 100% of post-tax health insurance premiums as an ABOVE-THE-LINE adjustment on IA 1040 line 18 -- an election with no federal analogue, taken instead of the Iowa Schedule A medical expense. Premium payments are not a model input [understates the pre-2023 Iowa subtraction]'
+  section_422_7_additions_and_subtractions:
+    reference: 'The full 422.7 addition and subtraction list was not enumerated beyond the retirement items. Anything in it other than the items above is not encoded'
+  pre_2023_nol_carryforwards:
+    reference: 'Iowa NOLs arising before TY2023 continue on form IA 124 and IA 1040 Schedule 1 alongside the federal NOL that replaced them. The model is a cross-section and carries no losses forward'

@@ -1,0 +1,31 @@
+---
+# Maryland: STATE rate schedules (Tax-Gen 10-105(a); Form 502 line 21).
+# Unindexed and unchanged TY2017-TY2024; TY2025 (BRFA HB352) adds 6.25% and
+# 6.50% top brackets. Schedule I = single/MFS/dependent; Schedule II =
+# MFJ/HoH/QSS (MFS is NOT half-joint). The county income tax (line 28) is
+# OUT OF SCOPE (locality phase); liab_st_iit = the state line only.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_sched1
+    '2': brackets_sched2
+    '3': brackets_sched1
+    '4': brackets_sched2
+
+rates:
+  value:
+    '2017': [0.02, 0.03, 0.04, 0.0475, 0.05, 0.0525, 0.055, 0.0575, 0.0575, 0.0575]
+    '2025': [0.02, 0.03, 0.04, 0.0475, 0.05, 0.0525, 0.055, 0.0575, 0.0625, 0.065]
+  reference: 'Tax-Gen 10-105(a); Resident Booklet rate schedules, verified 2017-2025 (tax at 250,000 = 12,760.00 every year 2017-2024); BRFA of 2025 (HB352) 6.25/6.50% brackets (2025 booklet: tax at 500,000 = 27,135.00, at 1,000,000 = 58,385.00)'
+
+brackets_sched1:
+  value:
+    '2017': [0, 1000, 2000, 3000, 100000, 125000, 150000, 250000, 250000, 250000]
+    '2025': [0, 1000, 2000, 3000, 100000, 125000, 150000, 250000, 500000, 1000000]
+  reference: 'Schedule I (single, MFS, dependent taxpayers), Resident Booklets 2017-2025'
+
+brackets_sched2:
+  value:
+    '2017': [0, 1000, 2000, 3000, 150000, 175000, 225000, 300000, 300000, 300000]
+    '2025': [0, 1000, 2000, 3000, 150000, 175000, 225000, 300000, 600000, 1200000]
+  reference: 'Schedule II (MFJ, HoH, qualifying surviving spouse), Resident Booklets 2017-2025'

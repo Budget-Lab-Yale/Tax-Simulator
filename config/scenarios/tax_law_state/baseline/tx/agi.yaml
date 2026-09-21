@@ -1,0 +1,7 @@
+---
+# Texas: no broad individual income tax. Zero-tax stub so states = all
+# includes TX without producing state individual income tax liability.
+
+start_point:
+  value: 1
+  reference: 'Tax on net incomes of natural persons prohibited; Texas Constitution Art. VIII, Sec. 24; https://statutes.capitol.texas.gov/Docs/CN/htm/CN.8.htm#8.24'

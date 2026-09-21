@@ -1,0 +1,46 @@
+---
+# Oregon: adjusted gross income (Form OR-40 lines 7-15; ORS 316.048).
+#
+# Federal AGI start, plus Oregon additions (Schedule OR-ASC), less Oregon
+# subtractions. NOTE what is NOT here: the federal income tax liability
+# subtraction, which the form takes at line 10 among the subtractions, is
+# carried in ded.yaml through the generic fed_tax_ded component. It reaches
+# taxable income by the same route either way (Oregon has no feature keyed on
+# a post-subtraction, pre-deduction income figure), and keeping it with the
+# other two states' federal-tax deductions keeps one component in one place.
+#
+# Conformity: Oregon ties to the IRC as amended, updated by a connection bill
+# each session (ORS 316.012), and its own subtractions sit below the federal
+# AGI start, so rolling (group 0).
+
+start_point:
+  value: 1
+  reference: 'Form OR-40 line 7 "Federal adjusted gross income"; ORS 316.048 defines Oregon taxable income as federal taxable income with Oregon modifications, and the form starts from federal AGI'
+
+ss_full_sub_allages:
+  value: 1
+  reference: 'ORS 316.054; Publication OR-17 2025 p.52: "Oregon doesn''t tax any amount of your Social Security, Railroad Retirement Board, or railroad unemployment benefits." No age test, no income test, no partial inclusion -- the whole federally taxable amount comes out (OR-17 "Social Security benefits" subtraction, p.83)'
+
+sub_us_int:
+  value: 1
+  reference: 'OR-17 2025 "Interest and dividends on U.S. bonds and notes" subtraction (p.77); 31 U.S.C. 3124. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken -- see documented_not_modeled'
+
+sub_state_ref:
+  value: 1
+  reference: 'OR-17 2025 "Oregon income tax refund" subtraction (p.79). Oregon''s own itemized deduction removes state and local income tax (see ded.yaml salt_addback), so a refund of it was never deducted for Oregon purposes and is subtracted back out'
+
+documented_not_modeled:
+  us_obligation_interest_share:
+    reference: 'The subtraction reaches interest and dividends on U.S. bonds and notes, but the U.S.-obligation share of txbl_int is not observable in the PUF, so no amount is actually subtracted [overstates Oregon tax for Treasury holders] -- the Hawaii convention'
+  federal_pension_pre_1991_service:
+    reference: 'OR-17 "Federal pension income" subtraction: the share of a federal pension attributable to service before October 1 1991 is subtractable, computed as months of service before that date over total months of service. Neither the service history nor the federal-vs-private character of a pension is in the PUF [overstates Oregon tax for long-serving federal retirees]'
+  special_oregon_medical_subtraction:
+    reference: 'ORS 316.693, subtraction code 351: an age-based special medical subtraction for filers (or spouses) at or above the qualifying age, on medical and dental expenses not already deducted, with its own AGI floor. The model carries only the federal post-7.5%-floor itemized medical amount, so the Oregon-specific base cannot be rebuilt [overstates Oregon tax for older filers with medical expenses]. Interacts with itemizing -- see ded.yaml'
+  oregon_529_and_able:
+    reference: 'Oregon subtracted contributions to its 529 and ABLE plans, then replaced the 529 subtraction with a credit. Contributions are unobserved in the PUF'
+  out_of_state_muni_interest:
+    reference: 'OR-17 "State and local government bond interest" ADDITION (p.85): interest on other states'' municipal bonds is taxable in Oregon while federal AGI excludes it. exempt_int is available but its own-state share is unobservable, and Oregon''s addition is not encoded here [understates Oregon income for holders of other states'' bonds]'
+  first_time_home_buyer_savings:
+    reference: 'A first-time home buyer savings account subtraction, extended from January 1 2025 to accounts opened for a designated beneficiary (Form OR-HOME). Contributions are unobserved'
+  narrow_subtractions:
+    reference: 'OR-17 carries a long tail of narrow subtractions -- individual development account contributions, foreign income tax, Oregon Lottery winnings, legislative assembly expenses, marijuana and PTE-E business expenses, scholarship awards used for housing, public safety memorial awards, manufactured dwelling park capital gain and closure payments, wildfire civil action legal fees and settlements, U.S. government interest inside IRA or Keogh distributions, and former-RDP benefits. None is a PUF variable'

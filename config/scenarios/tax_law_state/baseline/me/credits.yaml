@@ -1,0 +1,170 @@
+---
+# Maine: credits (Form 1040ME Schedule A; the sales tax fairness credit
+# rides Schedule PTFC/STFC as a dense table in this state's
+# credit_tables.csv under credit_id stfc).
+
+# Maine EITC (36 M.R.S. 5219-S): a match on the federal credit, REFUNDABLE
+# for residents and part-year residents since TY2016 (5219-S(4)) -- 5%
+# (2017-2019), 12% with a 25% no-qualifying-children rate (2020), a flat
+# 20% in 2021 (the ARPA-expanded federal childless year), and 25% / 50%
+# no-qualifying-children from 2022 (P.L. 2021 c. 635 Pt. E)
+eitc_match:
+  value:
+    '2017': 0.05
+    '2020': 0.12
+    '2021': 0.20
+    '2022': 0.25
+  reference: '5219-S; Schedule A EIC worksheets: 2017 booklet p.22 ("multiply line 1 by 5%"), 2019 Schedule A p.2, 2020 general instructions p.2 (12%/25%), 2021 EIC worksheet ("multiply line 1 by 20%"), 2022+ statute sub-1-A and the 2025 general instructions p.9 (25%/50%)'
+eitc_match_by_kids:
+  value:
+    '2017': [.na, .na, .na, .na]
+    '2020': [0.25, 0.12, 0.12, 0.12]
+    '2021': [.na, .na, .na, .na]
+    '2022': [0.50, 0.25, 0.25, 0.25]
+  reference: 'Slots are 0/1/2/3+ federal qualifying children: the no-child rate is 25% in 2020 and 50% from 2022; 2021 is a flat 20% (NA hands those years to the scalar eitc_match)'
+eitc_refundable:
+  value: 1
+  reference: '5219-S(4): refundable for residents and part-year residents since TY2016 (the batch survey''s "nonrefundable through 2019" was wrong)'
+
+# Dependent exemption tax credit (36 M.R.S. 5219-SS; the DETC worksheet):
+# $300 per federal-CTC/ODC dependent from TY2018, nonrefundable through
+# TY2023, REFUNDABLE (residents/PY) and indexed from TY2024. P.L. 2025
+# c. 388 Pt. Q restructures TY2025: $305 per dependent 6+, $610 per child
+# under 6 at year-end, with a much lower phase-out ($20 per $500 of Maine
+# AGI over $100,000/$125,000/$150,000/$75,000). Encoded as the NY-style
+# flat per-child credit (style 2): aggregate stepped reduction, partial
+# steps rounded up
+ctc_style:
+  value:
+    '2017': 0
+    '2018': 2
+  reference: '5219-SS, first applicable TY2018 (the 2017 dependent exemption is inside exempt.yaml)'
+ctc_young_age_limit:
+  value: 5
+  reference: 'The 2025 doubled amount reaches children under 6 at year-end; before 2025 both tiers carry the same amount so the split is inert'
+ctc_max_child_age:
+  value: 23
+  reference: 'Qualifying children AND dependents claimed for the federal CTC or credit for other dependents (1040ME line 13a). Tracked dependent ages run to 23 in the data; older adult dependents are missed [understates the credit for units with elderly dependents]'
+ctc_young_amount:
+  value:
+    '2017': 0
+    '2018': 300
+    '2025': 610
+  reference: '$300 per dependent 2018-2024 (2018 booklet p.22 worksheet; 2024 general instructions p.10); $610 per under-6 child TY2025 (2025 DETC worksheet line 4). Indexed after 2024/2025 -- carried flat pending published values'
+ctc_old_amount:
+  value:
+    '2017': 0
+    '2018': 300
+    '2025': 305
+  reference: '$305 per dependent aged 6+ in TY2025 (2025 DETC worksheet line 2)'
+ctc_po_base:
+  value: 2
+  reference: 'The worksheet subtracts the threshold from Maine adjusted gross income (Form 1040ME line 16; 2025 DETC worksheet line 6, same base 2018-2024)'
+ctc_po_rate:
+  value:
+    '2017': 0.0
+    '2018': 0.0075
+    '2025': 0.04
+  reference: '$7.50 per $1,000 (2018-2024) = 0.0075/dollar; $20 per $500 (2025) = 0.04/dollar'
+ctc_po_step:
+  value:
+    '2017': 1000
+    '2018': 1000
+    '2025': 500
+  reference: 'Worksheet steps: "round up to the next $1,000" (2018-2024), "round the result up to the next $500" (2025)'
+ctc_po_round_up:
+  value: 1
+  reference: 'Both vintages round the excess UP to the next whole step'
+ctc_po_per_child:
+  value: 0
+  reference: 'The reduction applies once to the aggregate credit (worksheet line 11 = line 5 minus line 10), not per child'
+ctc_refundable:
+  value:
+    '2017': 0
+    '2018': 0
+    '2024': 1
+  reference: 'Nonrefundable through TY2023 (Schedule A Section 2; 2023 general instructions p.9); refundable for residents and part-year residents from TY2024 (2024 general instructions pp.2/10)'
+
+filing_status_mapper:
+  ctc_po_thresh:
+    '1': detc_thresh_single
+    '2': detc_thresh_joint
+    '3': detc_thresh_mfs
+    '4': detc_thresh_head
+
+detc_thresh_single:
+  value:
+    '2017': .inf
+    '2018': 200000
+    '2025': 100000
+  reference: 'DETC worksheet: $200,000 for all non-joint statuses 2018-2024; $100,000 single from TY2025 (P.L. 2025 c. 388 Pt. Q; thresholds indexed after 2025, carried flat)'
+detc_thresh_joint:
+  value:
+    '2017': .inf
+    '2018': 400000
+    '2025': 150000
+  reference: '$400,000 MFJ/QSS 2018-2024; $150,000 from TY2025'
+detc_thresh_mfs:
+  value:
+    '2017': .inf
+    '2018': 200000
+    '2025': 75000
+  reference: '$200,000 (non-joint) 2018-2024; $75,000 MFS from TY2025'
+detc_thresh_head:
+  value:
+    '2017': .inf
+    '2018': 200000
+    '2025': 125000
+  reference: '$200,000 (non-joint) 2018-2024; $125,000 HoH from TY2025'
+
+# Child care credit (36 M.R.S. 5218): 25% of the federal child and
+# dependent care credit, refundable up to $500 (remainder nonrefundable),
+# all years. The 50% rate for Step 4 quality-certificate child care is
+# unobservable and documented
+cdctc_match:
+  value: 0.25
+  reference: '5218; Schedule A child care credit worksheet, 2017 booklet pp.22-23 and the 2025 worksheet (line 2a column A x 25%)'
+cdctc_refundable:
+  value: 1
+  reference: '"The child care credit is refundable, up to $500" -- each year''s quick facts (2017 booklet p.2 through the 2025 general instructions p.10)'
+cdctc_ref_cap:
+  value: 500
+  reference: 'The refundable portion is capped at $500 per return; the excess is nonrefundable'
+
+# Sales tax fairness credit (36 M.R.S. 5213-A; Schedule PTFC/STFC lines
+# 17+): a refundable per-return amount keyed by filing status and the
+# count of qualifying children/dependents, with the stepped phase-out
+# ($10 per $500 single, $15 per $750 HoH, $20 per $1,000 MFJ) baked into
+# the dense published tables in credit_tables.csv (credit_id stfc; MFS
+# omitted = ineligible, all years). The 2017 table keys on personal
+# exemptions and is mapped into the same filing-status x dependent space
+stfc_income_base:
+  value: 1
+  reference: 'Schedule PTFC/STFC line 3 "total income" starts from federal total income; encoded as federal AGI plus the add-backs below'
+stfc_add_nontax_ss:
+  value: 1
+  reference: 'Line 1a/2b: ALL Social Security and railroad retirement received (gross, whether taxable or not) counts in total income -- the nontaxable portion is added to the base'
+stfc_add_exempt_int:
+  value: 1
+  reference: 'Total income includes non-taxable interest'
+stfc_refundable:
+  value: 1
+  reference: '5213-A: the credit is refundable, all years'
+
+documented_not_modeled:
+  stfc_loss_and_deduction_addbacks:
+    reference: 'The Schedule PTFC/STFC "total income" concept also adds back net losses (business/capital/rental/farm) and most federal above-the-line deductions (educator, HSA, SE tax, SEP/SIMPLE, SE health, alimony, IRA, student loan interest). These add-backs are not applied [overstates the STFC for units with losses or large above-the-line deductions]'
+  detc_indexation:
+    reference: 'The DETC amount is indexed for tax years after 2024 and its 2025 thresholds after 2025; published values are carried flat pending each year''s worksheet'
+  quality_child_care_50pct:
+    reference: '5218(2): expenses at a Step 4 quality-certificate center earn 50% instead of 25%. Certificate status is unobservable [understates the credit for quality-care users]'
+  adult_dependent_care_credit:
+    reference: '5218-A: a parallel 25% credit for adult day-care/hospice/respite expenses, refundable up to $500. Adult-care expenses are unobservable'
+  property_tax_fairness_credit:
+    reference: '5219-KK: refundable credit on property taxes paid or 15%-of-rent over 4-6% of total income (era-dependent), capped $600-$2,000 ($4,000 senior/disabled-veteran combinations). Property tax paid by non-itemizers and rent are unobservable (imputation plan Tier 1) [understates ME refunds at low income; PolicyEngine models it -- expect a one-sided PE divergence like the WI homestead credit]'
+  eitc_18_to_24_childless_extension:
+    reference: '5219-S(6), TY2020+: Maine extends the childless credit to 18-24-year-olds who would qualify but for the federal age floor, computing a notional federal EITC for them; 5219-S(7) extends eligibility to ITIN filers from 2021. Neither group has a federal EITC on the record to match [understates the ME EITC for both groups]'
+  student_loan_repayment_credit:
+    reference: '5217-E (2022+; educational opportunity credit 5217-D before): refundable up to $2,500 for qualified student-loan payments. Loan payments are unobservable'
+  use_tax_lines:
+    reference: '1040ME lines 30/30a self-assessed use tax -- out of scope'

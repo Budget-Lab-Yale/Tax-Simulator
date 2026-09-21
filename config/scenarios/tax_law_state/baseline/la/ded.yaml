@@ -1,0 +1,94 @@
+---
+# Louisiana deductions (IT-540 lines 8 and 9; La. R.S. 47:293(3), 47:298).
+#
+# There is no state standard deduction here. What Louisiana calls a standard
+# deduction is bundled into the combined personal exemption-standard
+# deduction, which lives in exempt.yaml because it is relieved at the bottom
+# of the rate schedule rather than subtracted from income.
+#
+# Two things do come off income. First, through TY2021, a FULL UNCAPPED
+# DEDUCTION FOR FEDERAL INCOME TAX -- Louisiana was one of a handful of
+# states allowing it without a cap, and it was constitutionally MANDATED by
+# La. Const. Art. VII section 4(A) until the November 2021 amendment made it
+# merely permissive. Act 395 of 2021 then repealed it, effective TY2022, in
+# exchange for the lower rates in ord.yaml.
+#
+# Second, the EXCESS FEDERAL ITEMIZED PERSONAL DEDUCTIONS: the amount by
+# which federal itemized deductions exceed the federal standard deduction.
+# Nearly every secondary summary says Act 395 repealed this along with the
+# federal tax deduction. IT DID NOT. It narrowed the base from all itemized
+# deductions to MEDICAL AND DENTAL ONLY, and that narrowed version is still
+# on the TY2025 return. The change shows up here as the component flags
+# flipping for TY2022, not as the deduction disappearing.
+
+item_allowed:
+  value: 1
+  reference: 'IT-540 lines 8A-8C (8A-8D from TY2022, renumbered 9A-9D for TY2025); R.S. 47:293(3) defines "excess federal itemized personal deductions"'
+item_less_fed_std:
+  value: 1
+  reference: 'The deduction is the EXCESS only: line 8C = max(0, total federal itemized less the federal standard deduction) through TY2021, and line 8D = max(0, federal MEDICAL AND DENTAL less the federal standard deduction) from TY2022. Louisiana points at the federal standard deduction rather than printing its own amounts, so this line inherits federal changes automatically -- including the 2025 federal increase to $15,750 and $31,500'
+item_fed_gate:
+  value: 1
+  reference: 'Line 8A is "total federal itemized deductions", so the deduction is available only to a filer who itemized federally; there is no state standard deduction to elect against, and the excess is simply subtracted where positive'
+item_component_style:
+  value:
+    '2017': 2
+    '2022': 1
+  reference: 'Through TY2021 the base is the federal itemized deduction total as computed -- Schedule A line 29 in 2017, line 17 from 2018 -- so the federal amount is taken whole, SALT cap and all. From TY2022 the base is a single component, so the components are selected instead: line 8A (the total) is still COLLECTED ON THE FORM but plays no part in the arithmetic, which runs off line 8B, Schedule A line 4'
+item_include_medical:
+  value: 1
+  reference: 'From TY2022 this is the only component in the base: IT-540 line 8B, "federal itemized deduction for medical and dental", Schedule A line 4'
+item_include_mortgage:
+  value: 0
+  reference: 'Excluded from TY2022 by Act 395''s narrowing. Through TY2021 it reaches the base inside the federal total under component style 2, so the flag is inert in those years'
+item_include_investment:
+  value: 0
+  reference: 'Same treatment'
+item_include_charity:
+  value: 0
+  reference: 'Same treatment'
+item_include_casualty:
+  value: 0
+  reference: 'Same treatment'
+item_include_misc:
+  value: 0
+  reference: 'Same treatment'
+item_include_other:
+  value: 0
+  reference: 'Same treatment'
+item_include_prop_tax:
+  value: 0
+  reference: 'Same treatment'
+item_include_pers_tax:
+  value: 0
+  reference: 'Same treatment'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'Same treatment. Note Louisiana never needed a state-income-tax addback here: through TY2021 the federal total went in whole, and from TY2022 only medical survives'
+
+fed_tax_ded:
+  value:
+    '2017': 1
+    '2022': 0
+  reference: 'IT-540 line 9, "federal income tax deduction", and its worksheet. Constitutionally MANDATED by La. Const. Art. VII section 4(A) until Amendment No. 2 of November 13, 2021 made it permissive; actually repealed by Acts 2021 No. 395 section 2, which struck R.S. 47:298, 47:293(4) and 47:293(9)(a)(ii), effective January 1, 2022. First tax year without it is TY2022'
+fed_tax_ded_add_niit:
+  value: 1
+  reference: 'Worksheet line 2 adds the net investment income tax from Form 8960 line 17 explicitly'
+fed_tax_ded_less_excess_ptc:
+  value: 1
+  reference: 'Worksheet line 4b subtracts the excess advance premium tax credit repayment from Form 8962 line 29, and line 6 floors the result at zero: "if amount is negative, enter a zero"'
+fed_tax_ded_cap:
+  value: .inf
+  reference: 'UNCAPPED in every year it existed. Louisiana was one of only a handful of states allowing a full deduction for federal income tax paid'
+
+documented_not_modeled:
+  form_4972_lump_sum_tax:
+    reference: 'Worksheet line 4a also subtracts the tax on lump-sum distributions from Form 4972 line 30. Lump-sum distribution elections are not a model input [overstates the federal tax deduction for the few filers making that election through TY2021]'
+  self_employment_tax_excluded:
+    reference: 'The federal line the worksheet starts from -- 1040 line 56 in 2017, line 13/14/22 in the later layouts -- is total tax after NONREFUNDABLE credits and before the Schedule 2 Part II other taxes, so self-employment and household-employment taxes are OUT while the alternative minimum tax is IN. The model''s deductible base matches that construction, but the federal AMT treatment is inferred from the worksheet''s silence rather than stated'
+  foreign_tax_credit_addback_option:
+    reference: 'For TY2017-TY2019 only, a filer could INCREASE the federal income tax deduction by the federal foreign tax credit in lieu of claiming Louisiana''s Credit for Certain Federal Tax Credits, flagged by box 1 on line 9. The option ended with that credit''s December 31, 2019 sunset. Not encoded [understates the deduction for filers who elected it]'
+  post_2021_deduction_is_near_dead:
+    reference: 'From TY2022 the deduction bites only when a filer''s MEDICAL deduction alone exceeds the whole federal standard deduction. It is encoded for completeness; near-zero take-up is expected, and that is the correct answer rather than a limitation'
+  school_expense_deductions:
+    reference: 'Louisiana runs its education relief as DEDUCTIONS rather than credits: Schedule E codes 17E-19E, capped at $5,000 per dependant through TY2023 and $6,000 from TY2024 (Act 423 of 2023), covering tuition, fees, uniforms and supplies. The R.S. 47:297(D) education CREDIT was sunset by Act 375 of 2017 and is unavailable from TY2017. Private school tuition and school supply spending are not model inputs [understates deductions for families with children in private or home schooling]'

@@ -1,0 +1,15 @@
+---
+# Idaho: exemptions. None at the state level -- TY2017 federal personal
+# exemptions (with PEP) flow through the federal-taxable-income starting
+# point ("Your Idaho exemption amount should be the same as your federal
+# exemption amount", 2017 Form 40 line 18), and there is no Idaho exemption
+# from 2018 (TCJA conformity; the $205 CTC in credits.yaml is the partial
+# replacement).
+
+personal_amount:
+  value: 0
+  reference: 'Form 40 structure: 2017 federal exemptions embedded in the federal-taxable-income start; none 2018+ (TCJA conformity)'
+
+dep_amount:
+  value: 0
+  reference: 'Form 40 structure, same basis'

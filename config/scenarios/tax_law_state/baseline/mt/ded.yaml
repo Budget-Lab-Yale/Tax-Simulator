@@ -1,0 +1,171 @@
+---
+# Montana deductions (Form 2; MCA 15-30-2131, 15-30-2132).
+#
+# TWO ENTIRELY DIFFERENT DEDUCTIONS, either side of TY2024.
+#
+# Through TY2023 the Montana standard deduction is a PERCENTAGE of Montana
+# adjusted gross income -- 20%, bounded below by a floor and above by a cap,
+# both indexed. The filing-status grouping is unusual and easy to get
+# backwards: single and married filing separately share the low bounds, and
+# married filing jointly AND HEAD OF HOUSEHOLD share bounds exactly twice as
+# large.
+#
+# Montana also had its own itemized schedule, and the single most important
+# thing about it is that the FEDERAL INCOME TAX DEDUCTION lived inside it.
+# A filer taking the Montana percentage standard deduction got no federal
+# tax deduction at all, which is why so many Montana filers itemized for
+# state purposes while taking the federal standard deduction -- and why the
+# state election must be computed independently rather than inherited from
+# the federal one.
+#
+# From TY2024 both disappear. SB 399 (2021) replaced the whole apparatus
+# with the FEDERAL standard deduction, or federal itemized deductions with
+# state income taxes removed but not below the federal standard deduction.
+# That floor is what the best-of election below reproduces.
+
+filing_status_mapper:
+  std_pct_min:
+    '1': std_floor_single
+    '2': std_floor_joint
+    '3': std_floor_single
+    '4': std_floor_joint
+  std_pct_max:
+    '1': std_cap_single
+    '2': std_cap_joint
+    '3': std_cap_single
+    '4': std_cap_joint
+  fed_tax_ded_cap:
+    '1': fed_ded_cap_single
+    '2': fed_ded_cap_joint
+    '3': fed_ded_cap_single
+    '4': fed_ded_cap_single
+
+# --- Standard deduction, through TY2023 -----------------------------------
+std_pct_rate:
+  value:
+    '2017': 0.20
+    '2024': 0.0
+  reference: 'Standard Deduction Worksheet, Form 2 p.7: "Multiply the amount on line 1 [Montana adjusted gross income] by 20% (0.20)". The 20% rate is invariant across TY2017-TY2023; only the dollar bounds move. Zeroed from TY2024, when the federal standard deduction takes over'
+std_cap_single:
+  value:
+    '2017': 4510
+    '2018': 4580
+    '2019': 4710
+    '2020': 4790
+    '2021': 4830
+    '2022': 5090
+    '2023': 5540
+    '2024': 0
+  reference: 'Rate sheets 2017-2021 p.1 and the Form 2 p.7 worksheet line 3 for 2022-2023. Independently cross-checked against the prior-year figures printed in the "Recovery of Federal Income Tax Deducted" worksheets on Form 2 p.4 of the 2022 and 2023 booklets, which agree exactly'
+std_cap_joint:
+  value:
+    '2017': 9020
+    '2018': 9160
+    '2019': 9420
+    '2020': 9580
+    '2021': 9660
+    '2022': 10180
+    '2023': 11080
+    '2024': 0
+  reference: 'Same sources, worksheet line 3 second clause: "If you are married filing jointly OR HEAD OF HOUSEHOLD, enter $11,080" (TY2023). Exactly twice the single figure in every year, and head of household takes the doubled amount -- the opposite grouping from the federal tax deduction cap below'
+std_floor_single:
+  value:
+    '2017': 2000
+    '2018': 2030
+    '2019': 2090
+    '2020': 2130
+    '2021': 2140
+    '2022': 2260
+    '2023': 2460
+    '2024': 0
+  reference: 'Same sources, worksheet line 5. The floor binds whenever 20% of Montana AGI falls below it, so it is the operative deduction for low-income filers'
+std_floor_joint:
+  value:
+    '2017': 4000
+    '2018': 4060
+    '2019': 4180
+    '2020': 4260
+    '2021': 4280
+    '2022': 4520
+    '2023': 4920
+    '2024': 0
+  reference: 'Same sources, worksheet line 5 second clause. Twice the single floor, joint and head of household'
+
+# --- Standard deduction, TY2024+ ------------------------------------------
+std_equals_federal:
+  value:
+    '2017': 0
+    '2024': 1
+  reference: 'Form 2 (2024) line 2, "Federal standard deduction or adjusted federal itemized deductions", with the instruction "If you took the standard deduction on your Form 1040, enter the amount from your Form 1040, line 12. Also use the standard deduction for your filing status if you did not have a federal filing requirement" (inst_2024 p.7)'
+
+# --- Itemized deductions --------------------------------------------------
+item_allowed:
+  value: 1
+  reference: 'Montana ran its own Itemized Deductions Schedule through TY2023 (Form 2 p.7) and allows adjusted federal itemized deductions from TY2024 (Form 2 line 2)'
+item_component_style:
+  value: 1
+  reference: 'Components are selected rather than inherited, because in BOTH regimes the state income tax deduction is stripped out -- pre-2024 by the schedule''s own construction, and from TY2024 by Worksheet A, "Adjusted Federal Itemized Deductions": total federal itemized less the state income tax on federal Schedule A'
+item_include_medical:
+  value: 1
+  reference: 'Montana itemized schedule medical lines pre-2024; part of the federal total from TY2024'
+item_include_mortgage:
+  value: 1
+  reference: 'Home mortgage interest, both regimes'
+item_include_investment:
+  value: 1
+  reference: 'Investment interest, both regimes'
+item_include_charity:
+  value: 1
+  reference: 'Charitable contributions, both regimes'
+item_include_casualty:
+  value: 1
+  reference: 'Casualty and theft losses, both regimes'
+item_include_misc:
+  value: 1
+  reference: 'Miscellaneous deductions, both regimes'
+item_include_other:
+  value: 1
+  reference: 'Other itemized deductions, both regimes'
+item_include_prop_tax:
+  value: 1
+  reference: 'Real estate taxes. Left UNCAPPED: pre-2024 Montana''s own schedule had no SALT cap, and from TY2024 Worksheet A removes the state INCOME tax from the federal total, so for the ordinary case where property plus income taxes fall under the federal cap the result is exactly the uncapped property tax'
+item_include_pers_tax:
+  value: 1
+  reference: 'Personal property taxes, on the same reasoning'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'The whole point of both regimes. Pre-2024 Montana''s schedule deducted FEDERAL income tax rather than state; from TY2024, inst_2024 p.7: "If you itemized your deductions, you must remove any state income taxes taken as an itemized deduction only to the extent that it does not reduce your deduction below your federal standard deduction"'
+
+# --- Federal income tax deduction, through TY2023 -------------------------
+fed_tax_ded:
+  value:
+    '2017': 1
+    '2024': 0
+  reference: 'Itemized Deductions Schedule line 4 (line 7 in the TY2017 layout), Form 2 p.7. Repealed from TY2024 not by a free-standing clause but structurally: SB 399 eliminated the Montana itemized schedule the deduction lived on, which is why the TY2024 booklet''s "repealed deductions" list does not name it'
+fed_tax_ded_in_itemized:
+  value: 1
+  reference: 'inst_2017 and every later booklet place it on the Itemized Deductions Schedule, so a filer taking the Montana percentage standard deduction gets NONE of it. This is the feature that makes Montana''s state itemize-versus-standard election diverge sharply from the federal one'
+fed_ded_cap_single:
+  value:
+    '2017': 5000
+    '2024': 0
+  reference: 'Form 2 p.7: "not more than $5,000 if you are single, head of household, or married filing separately". Identical in every booklet TY2017-TY2023 -- never indexed. Note HEAD OF HOUSEHOLD takes the $5,000, grouped with single and separate filers, which is the reverse of the standard-deduction grouping above'
+fed_ded_cap_joint:
+  value:
+    '2017': 10000
+    '2024': 0
+  reference: 'Same line: "or $10,000 if you are married filing jointly"'
+
+documented_not_modeled:
+  federal_tax_deduction_is_cash_basis:
+    reference: 'Montana''s deduction is federal income tax PAID during the year -- withholding, estimated payments, prior-year balances due and back-year taxes (sub-lines 4a-4d) -- not the liability for the year. The model deducts current-year federal liability net of nonrefundable credits. The two agree for a filer whose withholding tracks liability and diverge for anyone settling a large prior-year balance or receiving a large refund [direction of bias varies year to year and nets out over a filer''s lifetime]'
+  recovery_of_federal_tax_deducted:
+    reference: 'A refund of previously deducted federal income tax is a Montana ADDITION, computed on a full tax-benefit-rule worksheet (Form 2 p.4) that needs the PRIOR year''s Montana taxable income and standard deduction as inputs. Encoding it would give the pre-2024 Montana calculation a one-year lag dependency that the cross-sectional model has no way to carry [understates Montana income for filers who itemized and were refunded]'
+  per_spouse_federal_tax_deduction_cap:
+    reference: 'Under filing status 2a each spouse has their own $5,000 ceiling, for an effective $10,000 -- the same as joint -- but allocated by whose tax it was rather than freely. Part of the status 2a gap recorded in agi.yaml'
+  household_and_dependent_care_deduction:
+    reference: 'Montana had no child and dependent care CREDIT in this period. It had an itemized DEDUCTION for household and dependent care service expenses (Form 2441-M, MCA 15-30-2131(1)(c)), on Itemized Deductions Schedule line 14, repealed with that schedule from TY2024. Among married filers only status 2a could claim it [understates the pre-2024 deduction for filers with care expenses]'
+  ty2017_pease_limitation:
+    reference: 'TY2017 alone applied a Pease-style limitation to Montana itemized deductions [overstates TY2017 itemized deductions for high-income filers]'
+  ty2024_salt_cap_interaction:
+    reference: 'From TY2024 Worksheet A starts from the SALT-CAPPED federal itemized total and then removes the state income tax within it. The encoding above starts from uncapped property and personal property taxes, which agrees exactly whenever property plus income taxes fall under the federal cap and overstates the deduction for the minority of filers whose property taxes alone exceed it. The $40,000 cap from TY2025 makes that group very small'

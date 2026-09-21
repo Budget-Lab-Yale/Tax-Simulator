@@ -1,0 +1,79 @@
+---
+# New Mexico: credits (PIT-1 lines 24-26, PIT-RC).
+#
+# Two are encoded: the Working Families Tax Credit (a refundable share of the
+# federal EITC) and the child income tax credit (refundable, per qualifying
+# child, on a SEVEN-band AGI table). The Low Income Comprehensive Tax Rebate,
+# the largest omission in this state, is documented in agi.yaml -- its base is
+# modified GROSS income, which is not observable.
+
+# Working Families Tax Credit (NMSA 7-2-18.15): a share of the federal EITC,
+# refundable in every year.
+eitc_match:
+  value:
+    '2017': 0.10
+    '2019': 0.17
+    '2021': 0.20
+    '2023': 0.25
+  reference: 'NMSA 7-2-18.15; PIT-1 instructions "Working Families Tax Credit" 2018-2025 (10% through 2018, 17% 2019-2020 per Laws 2019 ch.270 s.16, 20% 2021-2022 per Laws 2021 ch.63, 25% 2023+ per HB 547 Laws 2023 ch.211 s.10). TY2017 = 10% is BRACKETED, not directly sourced: the mirror has no TY2017 instruction booklet, and the 2016 and 2018 booklets both say 10% with no intervening amendment to 7-2-18.15'
+eitc_refundable:
+  value: 1
+  reference: 'NMSA 7-2-18.15(C): the excess over liability "shall be refunded"'
+
+# Child income tax credit (NMSA 7-2-18.34, TY2023+, refundable). SEVEN
+# published AGI bands, which is why the calculator's tier selector was
+# generalized from three (2026-08-13) -- encoding only the top three would
+# have left filers above $75,000 of AGI at zero instead of $25-$106 per child,
+# roughly 15-20% of the credit's cost.
+#
+# The BANDS are fixed in statute; only the AMOUNTS are indexed (7-2-18.34(D)),
+# and they are transcribed from the published tables through TY2025. They are
+# flat after 2025 here because vector-family indexation has no precedent in
+# any encoded state -- 2026+ needs each year's PIT-RC table
+# [understates the credit in out-years by the cumulative adjustment, ~2%/yr
+# on a $25-$637 per-child amount].
+ctc_style:
+  value:
+    '2017': 0
+    '2023': 2
+  reference: 'NMSA 7-2-18.34 (Laws 2023 ch.211 s.11), first payable TY2023. Style 2 = flat per-child amount selected by AGI band'
+ctc_refundable:
+  value: 1
+  reference: 'NMSA 7-2-18.34(C): the excess "shall be refunded to the taxpayer"'
+ctc_max_child_age:
+  value: 23
+  reference: 'NMSA 7-2-18.34(F) defines a qualifying child by reference to IRC 152(c) -- under 19, or a student under 24. Age 23 proxies the student test (the IN precedent); 19-23 dependents in the PUF are student-dominated by the federal qualifying-child rules. If the harness shows a positive child-credit wedge for families with 19-23-year-old dependents, drop to 18'
+
+ctc_tier1_bound:
+  value: 25000
+  reference: 'NMSA 7-2-18.34(A) band 1 ("not over $25,000"); PIT-RC child income tax credit table 2023-2025'
+ctc_tier2_bound:
+  value: 50000
+  reference: 'Band 2, $25,001-$50,000'
+ctc_tier3_bound:
+  value: 75000
+  reference: 'Band 3, $50,001-$75,000. PolicyEngine sets this threshold at 75,001, a $1 artifact'
+ctc_tier4_bound:
+  value: 100000
+  reference: 'Band 4, $75,001-$100,000'
+ctc_tier5_bound:
+  value: 200000
+  reference: 'Band 5, $100,001-$200,000'
+ctc_tier6_bound:
+  value: 350000
+  reference: 'Band 6, $200,001-$350,000'
+ctc_tier7_bound:
+  value: .inf
+  reference: 'Band 7 is "over $350,000" -- an UNBOUNDED top band, so the credit never ceases with income. The final Inf is what tells the tier selector this state has no eligibility ceiling (unlike Colorado, which must drop to zero above its last bound)'
+
+ctc_tier_amounts:
+  value:
+    '2017': [0, 0, 0, 0, 0, 0, 0]
+    '2023': [600, 400, 200, 100, 75, 50, 25]
+    '2024': [622, 414, 207, 103, 77, 51, 25]
+    '2025': [637, 424, 212, 106, 79, 53, 26]
+  reference: 'NMSA 7-2-18.34(A) statutory amounts (TY2023) and the indexed amounts in the PIT-RC child income tax credit tables for TY2024 and TY2025'
+
+documented_not_modeled:
+  child_credit_mfs_halving:
+    reference: 'NMSA 7-2-18.34(E): married taxpayers filing separately may each claim only half the credit. No per-status scaling exists on the tier amounts, and MFS returns with dependents are rare [overstates the credit for MFS filers with children by half]'

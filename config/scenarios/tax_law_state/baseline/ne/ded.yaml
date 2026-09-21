@@ -1,0 +1,129 @@
+---
+# Nebraska: deductions (Form 1040N lines 6-8).
+#
+# Nebraska has its own standard deduction. It tracked the federal amounts in
+# TY2017; LB 1090 (2018) DECOUPLED it and gave it a separate index, which is why
+# the 2018+ figures sit above the federal ones in some years and below in
+# others. The aged/blind add-on is PER BOX and, unlike the federal structure,
+# is LARGER for single and head-of-household filers than for married ones.
+#
+# Itemizing is gated on the federal election: only a federal itemizer may
+# itemize in Nebraska, and that filer then takes the GREATER of the Nebraska
+# standard deduction and federal itemized deductions less state and local
+# INCOME taxes. That is the item_fed_gate best-of election (the MD precedent).
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  std_aged_addl:
+    '1': std_addl_unmarried
+    '2': std_addl_married
+    '3': std_addl_married
+    '4': std_addl_unmarried
+  std_blind_addl:
+    '1': std_addl_unmarried
+    '2': std_addl_married
+    '3': std_addl_married
+    '4': std_addl_unmarried
+
+std_single:
+  value:
+    '2017': 6350
+    '2018': 6750
+    '2019': 6900
+    '2020': 7000
+    '2021': 7100
+    '2022': 7350
+    '2023': 7900
+    '2024': 8350
+    '2025': 8600
+  reference: 'Neb. Rev. Stat. 77-2716.01; Form 1040N line 6 instructions each year. TY2017 equals the federal amount; LB 1090 (2018) decoupled Nebraska''s deduction and indexed it separately. Married filing separately takes the single amount'
+std_joint:
+  value:
+    '2017': 12700
+    '2018': 13500
+    '2019': 13800
+    '2020': 14000
+    '2021': 14200
+    '2022': 14700
+    '2023': 15800
+    '2024': 16700
+    '2025': 17200
+  reference: 'Same source; married filing jointly and surviving spouse'
+std_head:
+  value:
+    '2017': 9350
+    '2018': 9900
+    '2019': 10100
+    '2020': 10300
+    '2021': 10450
+    '2022': 10750
+    '2023': 11600
+    '2024': 12250
+    '2025': 12600
+  reference: 'Same source; head of household'
+
+# Per-box aged/blind addition. Note the UNMARRIED amount is the larger one,
+# the opposite of the federal ordering
+std_addl_unmarried:
+  value:
+    '2017': 1550
+    '2018': 1600
+    '2020': 1650
+    '2022': 1700
+    '2023': 1850
+    '2024': 1950
+    '2025': 2000
+  reference: 'Form 1040N line 6 instructions, additional standard deduction per box for single and head-of-household filers, 2017-2025'
+std_addl_married:
+  value:
+    '2017': 1250
+    '2018': 1300
+    '2020': 1350
+    '2022': 1400
+    '2023': 1500
+    '2024': 1600
+    '2025': 1650
+  reference: 'Form 1040N line 6 instructions, per box for married filers (jointly, separately, and surviving spouse)'
+
+# Dependent filers follow the federal min/max worksheet. The federal floor and
+# earned-income addition are transcribed per year rather than referenced, so
+# they do not silently drift if the federal std.yaml is revised -- the packet
+# flags that drift risk explicitly
+std_dependent_style:
+  value: 1
+  reference: 'Form 1040N line 6 instructions: a filer claimed as a dependent on another return uses the federal dependent standard deduction worksheet'
+std_dependent_floor:
+  value:
+    '2017': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1250
+    '2024': 1300
+    '2025': 1350
+  reference: 'The federal IRC 63(c)(5)(A) minimum for the corresponding year, which the Form 1040N worksheet reproduces. Transcribed rather than referenced so it cannot drift from a revision to the federal std.yaml'
+std_dependent_earned_add:
+  value:
+    '2017': 350
+    '2022': 400
+    '2024': 450
+  reference: 'The federal IRC 63(c)(5)(B) earned-income addition for the corresponding year'
+
+item_allowed:
+  value: 1
+  reference: 'Form 1040N line 7 "Nebraska itemized deductions"; Neb. Rev. Stat. 77-2716.01(2)'
+item_fed_gate:
+  value: 1
+  reference: '77-2716.01(2): only a taxpayer who itemized on the federal return may itemize in Nebraska, and that taxpayer then takes the GREATER of the Nebraska standard deduction and the federal itemized total less state and local income taxes -- a best-of election gated on the federal choice'
+salt_addback:
+  value: 1
+  reference: 'Form 1040N Schedule A worksheet: state and local income taxes are removed from the federal itemized total'
+
+documented_not_modeled:
+  salt_cap_allocation:
+    reference: 'Where the federal SALT deduction is capped, the Nebraska worksheet''s removal of the income-tax component is ambiguous about which component the cap bound. The model assumes income taxes fill the cap first (the Maryland precedent) [understates the Nebraska itemized deduction, overstating tax, for capped itemizers whose property taxes are large]'
+  sales_tax_electors:
+    reference: 'A filer who elected the federal sales-tax deduction enters zero on the Nebraska income-tax line, keeping the whole SALT amount. The federal election is not observable separately, so these filers are treated as income-tax electors [understates their Nebraska itemized deduction]'

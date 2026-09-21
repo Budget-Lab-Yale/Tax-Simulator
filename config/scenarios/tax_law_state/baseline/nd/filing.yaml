@@ -1,0 +1,15 @@
+---
+# North Dakota: filing requirement (N.D.C.C. 57-38-31(1); ND-1 booklet "Who
+# Must File"). A resident must file if required to file a federal return OR if
+# they have income derived from ND sources.
+
+# 3 = federal filing requirement or any state liability/source income
+req_type:
+  value: 3
+  reference: 'N.D.C.C. 57-38-31(1); ND-1 booklet "Who Must File"'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for ND'
+req_if_fed_filer:
+  value: 1
+  reference: 'N.D.C.C. 57-38-31(1) ("required ... to file a federal income tax return")'
