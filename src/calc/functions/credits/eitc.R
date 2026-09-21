@@ -62,6 +62,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'eitc.ei_prior_yr',   # (int) whether prior year earned income can be elected
     'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns
     'eitc.parent_precert', # (int) whether parents are required to pre-certify their eligibility
+    'r.eitc_precert', # (dbl) random number for the pre-certification check
     'ei_prior_yr'          # (dbl) prior year earned income (aggregate)
   )
   
@@ -133,8 +134,15 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       eitc           = if_else(eitc.ei_prior_yr == 1, pmax(eitc, eitc_prior), eitc),
       
       # Adjust for pre-certification changes
+      # Use the record's OWN draw, as cdctc.R and agi.R do with
+      # r.cdctc_takeup and r.bus_loss. This reached into
+      # globals$random_numbers$r.eitc_precert -- the whole precomputed vector,
+      # recycled against whatever frame calc_eitc was handed. That is right
+      # only when the frame is the full record set in file order; on any
+      # subset it silently misaligns the draw, and where the record set is
+      # built per year it errors outright (found 2026-09-13).
       eitc     = if_else(eitc.parent_precert & n_dep_eitc > 0,
-                         if_else(globals$random_numbers$r.eitc_precert < 0.031, 0, eitc), 
+                         if_else(r.eitc_precert < 0.031, 0, eitc),
                          eitc)
       
     ) %>% 
