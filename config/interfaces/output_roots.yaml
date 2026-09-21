@@ -1,3 +1,6 @@
 ---
-local: /nfs/roberts/scratch/pi_nrs36/jar335
+# Shared production root. Every user writes and reads here.
 production: /nfs/roberts/project/pi_nrs36/shared
+
+# There is deliberately no `local:` key. The local output root is per-user, so
+# it is read from TAXSIM_LOCAL_ROOT in ~/.Renviron -- see src/misc/config_parser.R.

@@ -84,7 +84,19 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
   output_root   = file.path(output_roots$production, 'model_data', output_branch)
   if (local == 1) {
-    output_root = file.path(output_roots$local, 'model_data', output_branch)
+
+    # The local root is per-user, so it is read from the environment rather than
+    # from this tracked config. A username committed here silently writes one
+    # user's run into another user's scratch, and the run still exits 0 -- hit
+    # 2026-09-21, where a two-branch A/B appeared to produce no output at all
+    # because the two branches carried different committed usernames.
+    local_root = Sys.getenv('TAXSIM_LOCAL_ROOT')
+    if (local_root == '') {
+      stop('parse_globals(): local = 1 but TAXSIM_LOCAL_ROOT is unset. Set it ',
+           'in ~/.Renviron, e.g.\n  TAXSIM_LOCAL_ROOT=/nfs/roberts/scratch/',
+           '<group>/<your-netid>', call. = FALSE)
+    }
+    output_root = file.path(local_root, 'model_data', output_branch)
   }
   dir.create(output_root, recursive = T, showWarnings = F)
   

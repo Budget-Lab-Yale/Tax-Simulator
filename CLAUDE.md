@@ -21,7 +21,7 @@ Tax-Simulator/
 ├── config/
 │   ├── interfaces/
 │   │   ├── interface_versions.yaml  # Dependent model versions
-│   │   └── output_roots.yaml        # Output path configuration
+│   │   └── output_roots.yaml        # Shared production root (local root: $TAXSIM_LOCAL_ROOT)
 │   ├── runscripts/                  # Simulation configuration CSV files
 │   └── scenarios/
 │       ├── behavior/                # Behavioral feedback modules (.R files)
