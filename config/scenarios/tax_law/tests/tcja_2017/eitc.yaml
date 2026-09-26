@@ -108,7 +108,7 @@ po_thresh_0:
     '2014': 5280
     '2021': 11610
     '2022': 5280
-  i_measure: 
+  i_measure: default
   i_base_year:
     '2014': 1995
     '2021': 2020
