@@ -172,23 +172,34 @@ parse_param = function(raw_input, name, years, indexes) {
   raw_input$indexation_defaults  = NULL
   raw_input$filing_status_mapper = NULL
   
-  # Parse subparameters and bind together
-  subparams = raw_input %>% 
+  # Parse subparameters, bind together, and apply indexation rules
+  indexed = raw_input %>%
     parse_subparams(indexation_defaults, years, indexes) %>% 
-    bind_rows() %>% 
-    
-    # Apply indexation rules, keeping only final values in wide format
+    bind_rows() %>%
     pivot_wider(names_from  = variable, 
-                values_from = value) %>% 
-    apply_indexation() %>% 
+                values_from = value) %>%
+    apply_indexation()
+
+  # Keep only final values in wide format
+  subparams = indexed %>%
     select(subparameter, year, element, value) %>% 
     pivot_wider(names_from  = subparameter, 
-                values_from = value) %>% 
+                values_from = value) %>%
     arrange(year, element) 
-  
+
+  # Mapper expressions can also reference each subparameter's indexed value
+  # before rounding, as {name}__unrounded, for amounts the statute rounds only
+  # after combining (e.g. the EITC joint phase-out threshold, IRC 32(j)(2)(A))
+  unrounded = indexed %>%
+    mutate(subparameter = paste0(subparameter, '__unrounded')) %>%
+    select(subparameter, year, element, value = value_unrounded) %>%
+    pivot_wider(names_from  = subparameter, 
+                values_from = value)
+
   # Map subparameters to filing status
   unmapped_vars = get_unmapped_subparams(raw_input, filing_status_mapper)
   subparams %>%
+    left_join(unrounded, by = c('year', 'element')) %>%
     agg_by_filing_status(filing_status_mapper) %>% 
     
     # Join unmapped vars
@@ -427,9 +438,10 @@ apply_indexation = function(df) {
   #   - df (df) : dataframe with BaseValue column, plus, optionally, i_index, 
   #               i_direction, and i_increment
   #
-  # Returns: dataframe with Value column (df).
+  # Returns: dataframe with Value column, plus the indexed value before
+  #          rounding in value_unrounded (df).
   #----------------------------------------------------------------------------
-  
+
   if ('i_index' %in% colnames(df)) {
     df %>% 
       mutate(
@@ -439,11 +451,15 @@ apply_indexation = function(df) {
           i_direction ==  1  ~ ceiling(base_value * i_index / i_increment) * i_increment,
           i_direction ==  0  ~ round(base_value   * i_index / i_increment) * i_increment, 
           T                  ~ -1
-        )) %>%
+        ),
+        value_unrounded = if_else(is.na(i_direction) | is.na(i_index),
+                                  base_value,
+                                  base_value * i_index)) %>%
       return()
-  } else { 
+  } else {
     df %>% 
-      mutate(value = base_value) %>%
+      mutate(value           = base_value,
+             value_unrounded = base_value) %>%
       return()
   }
 }
@@ -567,11 +583,13 @@ get_unmapped_subparams = function(raw_input, filing_status_mapper) {
     return(names(raw_input))
   }
   
-  # Get symbols used in mapper expressions
+  # Get symbols used in mapper expressions, reading {name}__unrounded as a use
+  # of {name}
   symbols = filing_status_mapper %>% 
     unlist() %>% 
-    str_split(' ') %>% 
+    map(~ all.names(parse_expr(as.character(.x)))) %>%
     unlist() %>% 
+    str_remove('__unrounded$') %>%
     unique()
   
   # Select subparameter names that do not show up in expression symbols

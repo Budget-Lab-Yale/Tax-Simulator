@@ -7,24 +7,26 @@ indexation_defaults:
   i_increment: 10
 
 filing_status_mapper:
+  # Joint phase-out thresholds are rounded once, after the $5,000 add-on is
+  # added (IRC 32(j)(2)(A)), so the two indexed amounts combine unrounded
   po_thresh_0:
     '1': po_thresh_0
-    '2': po_thresh_0 + po_thresh_marriage_adj
+    '2': round((po_thresh_0__unrounded + po_thresh_marriage_adj__unrounded) / 10) * 10
     '3': po_thresh_0
     '4': po_thresh_0
   po_thresh_1:
     '1': po_thresh_1
-    '2': po_thresh_1 + po_thresh_marriage_adj
+    '2': round((po_thresh_1__unrounded + po_thresh_marriage_adj__unrounded) / 10) * 10
     '3': po_thresh_1
     '4': po_thresh_1
   po_thresh_2:
     '1': po_thresh_2
-    '2': po_thresh_2 + po_thresh_marriage_adj
+    '2': round((po_thresh_2__unrounded + po_thresh_marriage_adj__unrounded) / 10) * 10
     '3': po_thresh_2
     '4': po_thresh_2
   po_thresh_3:
     '1': po_thresh_3
-    '2': po_thresh_3 + po_thresh_marriage_adj
+    '2': round((po_thresh_3__unrounded + po_thresh_marriage_adj__unrounded) / 10) * 10
     '3': po_thresh_3
     '4': po_thresh_3
 
