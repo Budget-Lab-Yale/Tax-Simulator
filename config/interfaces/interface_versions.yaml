@@ -53,3 +53,16 @@ Estate-Tax-Distribution:
   version: 1
   default_vintage: '2025092512'
   default_id: baseline
+
+# The per-year state split of each record's national weight, published by
+# Tax-Data's src/main_state_weights.R (Tax-Data research/state_weights/notes/
+# phase4_state_weights_interface.md). Read by build_state_weights(method =
+# 'interface'); only rows with `states` pin it (parse_globals drops it for
+# federal-only rows, so no federal run depends on it). The default is the
+# Phase 4 dry run -- PROVISIONAL weights (arm B, 2022-2023 fitted, 2024-2025
+# carried); replace with the production vintage at Phase 4 P6.
+State-Weights:
+  type: model_data
+  version: 1
+  default_vintage: 'dryrun_B_2022_2023'
+  default_id: baseline

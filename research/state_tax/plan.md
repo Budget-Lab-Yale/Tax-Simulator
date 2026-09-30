@@ -56,10 +56,14 @@ Puerto Rico and Other Areas separately, so both are carried: 51 modeled + 2 buck
 = 53 jurisdictions). Long beats wide because
 downstream joins in the per-state loop are `filter(state == st) %>% left_join(by='id')`.
 
-**Construction:** two methods are prototyped and compared head-to-head in Phase 1 —
-**Approach A** (classical calibration, below) and **Approach B** (differentiable /
-ML reweighting). Both honor `Σ_st w_{i,st} = w_i` and emit the identical file format,
-so they are swappable behind `build_state_weights(method = c("calibration","gradient"))`.
+**Construction (moved to Tax-Data 2026-09-11; read here since 2026-09-29):** the
+weights are fit and published by Tax-Data (`src/main_state_weights.R`, the
+`State-Weights` interface, one `state_weights_{year}.csv.gz` per year 2017-2097 with
+later years carrying the last fit year's shares) and READ by
+`build_state_weights(method = "interface")`, which checks coverage and
+`Σ_st w_{i,st} = w_i` before filtering to the requested states. The methods below
+were the Phase 1 prototypes; the production fit is Tax-Data's S39 chain
+(`research/state_weights/plan.md` there).
 Approach B and the A/B comparison harness are specified in
 `research/archive/state_weights_ml_alternative_2026-07-08_superseded.md`. Approach A (the baseline):
 1. Ingest SOI Historic Table 2 CSVs (latest published year, currently ~2022):

@@ -152,6 +152,17 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
   }
   
+  # State weights are a dependency of STATE mode only: a federal-only row must
+  # not pin -- or require the existence of -- a State-Weights vintage. Blank
+  # the pin on rows without `states`; the dependencies table and the interface
+  # paths below then carry no State-Weights row for them.
+  if ('dep.State-Weights.vintage' %in% colnames(runscript)) {
+    federal_only = if ('states' %in% colnames(runscript)) is.na(runscript$states) else
+                   rep(TRUE, nrow(runscript))
+    runscript$`dep.State-Weights.vintage`[federal_only] = NA
+    runscript$`dep.State-Weights.ID`[federal_only]      = NA
+  }
+
   # Add nonspecified excess growth scenario
   if (!('excess_growth' %in% colnames(runscript))) {
     runscript$excess_growth = 0
@@ -185,6 +196,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
                  names_to     = c('interface', 'series')) %>% 
     pivot_wider(names_from  = series, 
                 values_from = value) %>% 
+    filter(!is.na(vintage)) %>%                    # State-Weights on federal-only rows
     left_join(read_yaml('./config/interfaces/interface_versions.yaml') %>% 
                 map(~ .$version) %>% 
                 as_tibble() %>% 
@@ -219,6 +231,11 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     }
   }
   
+  # A State-Weights vintage must have been fit on the Tax-Data vintage the row
+  # reads (its own dependencies.csv says which): otherwise ids mostly match,
+  # the join mostly succeeds, and the split is silently wrong
+  validate_state_weights_pins(dependencies, interface_paths)
+
   # Confirm that user has supplied valid multicore argument
   if (!(multicore %in% c('none', 'scenario', 'year'))) {
     stop("Invalid argument for 'multicore' runtime parameter")
@@ -398,6 +415,15 @@ get_scenario_info = function(id) {
     state_tax_law_id = runscript_items$state_tax_law
   }
 
+  # State weights source: 'interface' (default) reads the pinned State-Weights
+  # vintage; 'placeholder' keeps the uniform 1/53 split, for A/B reproduction
+  # of pre-interface runs only
+  state_weights_method = 'interface'
+  if (!is.null(runscript_items$state_weights_method) &&
+      !is.na(runscript_items$state_weights_method)) {
+    state_weights_method = runscript_items$state_weights_method
+  }
+
   # State detail output: off by default; when on, one compact per-year
   # liability matrix at detail/state/{year}.csv (plan §5.3)
   state_detail = 0
@@ -421,6 +447,7 @@ get_scenario_info = function(id) {
               excess_growth_all_rev    = excess_growth_all_rev,
               states                   = states,
               state_tax_law_id         = state_tax_law_id,
+              state_weights_method     = state_weights_method,
               state_detail             = state_detail))
 }
 
@@ -501,6 +528,22 @@ validate_runscript_states = function(runscript) {
       stop("Scenario '", cf$ID[i], "' requests states (",
            paste(setdiff(cf_states, bl_states), collapse = ' '),
            ") that the baseline row does not include")
+    }
+  }
+
+  # State weights are a BASELINE product, frozen across scenarios (Tax-Data
+  # S30): a counterfactual carrying different weights would score geography
+  # movement as policy. Every state-mode row uses the baseline row's vintage.
+  if ('dep.State-Weights.vintage' %in% colnames(runscript)) {
+    for (i in 1:nrow(cf)) {
+      same = identical(cf$`dep.State-Weights.vintage`[i], bl$`dep.State-Weights.vintage`[1]) &&
+             identical(cf$`dep.State-Weights.ID`[i],      bl$`dep.State-Weights.ID`[1])
+      if (!same) {
+        stop("Scenario '", cf$ID[i], "' pins State-Weights ",
+             cf$`dep.State-Weights.vintage`[i], "/", cf$`dep.State-Weights.ID`[i],
+             " but the baseline row pins ", bl$`dep.State-Weights.vintage`[1], "/",
+             bl$`dep.State-Weights.ID`[1], "; state weights are frozen across scenarios")
+      }
     }
   }
   return(invisible(TRUE))

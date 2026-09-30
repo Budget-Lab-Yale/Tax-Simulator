@@ -41,8 +41,9 @@ vintage 2026091119), and a Tax-Simulator baseline run consumed that output.
 **What this repo still owes.** `build_state_weights()` has only its
 `placeholder` method — every jurisdiction gets 1/53 of the national weight, so
 state levels are not estimates. When the Phase 1 fit lands in Tax-Data it
-publishes `state_weights_{year}.csv`, and this dispatcher gains a method that
-READS that file from the pinned interface. It does not regain a fitting engine.
+publishes `state_weights_{year}.csv.gz` (it does, since 2026-09-29: `src/main_state_weights.R`
+there, the `State-Weights` interface), and this dispatcher READS it
+(`build_state_weights(method = 'interface')`, Tax-Data Phase 4 P5).
 
 Not moved: `research/state_tax/`, `research/source_packets/`,
 `research/STATUS.md`, `research/raw/`, `research/releases/` — state law, which

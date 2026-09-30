@@ -400,10 +400,12 @@ for both external models are drafted in
 
 **Blocking state results being publishable:**
 
-- [ ] **Wire the decided weights into production** (`build_split_weights(
-  method="gradient")` with the chosen hyperparameters; per-year
-  `state_weights_{year}.csv` writer; flip the tracker's `blocked_weights`
-  aggregate column). Until then every state total is a placeholder.
+- [x] **Wire the decided weights into production** -- the writer is Tax-Data's
+  `src/main_state_weights.R` (the `State-Weights` interface, every year
+  2017-2097) and `build_state_weights(method = "interface")` reads it
+  (2026-09-29). Still open: the production vintage itself (Tax-Data Phase 4 P6,
+  after the national-weights decision); until then the default vintage is a
+  provisional dry run and the tracker's `blocked_weights` column stays.
 - [ ] **Weights are fit on 2022 only.** The 2017–2024 panel needs per-year
   fits (HT2 exists for all years) and a policy for projected years — the
   amortized multi-year approach in the alternatives memo is the candidate.

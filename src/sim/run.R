@@ -432,10 +432,12 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       state_tax_law, indexes, state_conformity_groups
     )
     state_weights = build_state_weights(
-      tax_units = tax_units,
-      year      = year,
-      method    = 'placeholder',   # PLACEHOLDER until the Phase 1 bake-off lands
-      states    = scenario_info$states
+      tax_units  = tax_units,
+      year       = year,
+      method     = scenario_info$state_weights_method,
+      states     = scenario_info$states,
+      root       = scenario_info$interface_paths$`State-Weights`,
+      pct_sample = globals$pct_sample
     )
   }
 
