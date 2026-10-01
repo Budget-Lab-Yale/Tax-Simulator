@@ -43,6 +43,7 @@ ST_SPLIT_HALVE = c(
   'kg_pref', 'txbl_kg', 'other_gains', 'sole_prop', 'part_active',
   'part_passive', 'part_scorp', 'scorp', 'rent', 'farm', 'sch_e',
   'part', 'part_active_loss', 'part_passive_loss', 'net_rent', 'rent_loss',
+  'net_estate',
   'txbl_ira_dist', 'txbl_pens_dist', 'gross_ss', 'txbl_ss', 'ui',
   'alimony', 'other_inc', 'state_ref',
   # Above-the-line and below-the-line federal amounts

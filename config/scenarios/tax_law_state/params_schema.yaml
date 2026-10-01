@@ -171,6 +171,7 @@ scalars:
   st_agi.ob_ui_share: 0
   st_agi.ob_alimony_share: 0
   st_agi.ob_other_share: 0
+  st_agi.ob_estate_share: 0   # estate and trust income as its own floored own-base class (NJ)
 
   # ded.yaml
   # Adopt the federal standard deduction by reference (MO RSMo 143.131.2):

@@ -67,6 +67,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'kg_lt',          # (dbl)  long-term capital gains
     'kg_st',          # (dbl)  short-term capital gains
     'net_rent',       # (dbl)  net rental income or loss (rent - rent_loss)
+    'net_estate',     # (dbl)  net estate and trust income (estate - estate_loss)
     'part_passive',   # (dbl)  passive partnership income (gross; losses in part_passive_loss)
     'part_passive_loss', # (dbl) passive partnership losses (positive magnitude)
     'other_gains',    # (dbl)  other gains or losses (Form 4797)
@@ -96,6 +97,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_ui_share',           # (dbl) own-base share: unemployment benefits
     'st_agi.ob_alimony_share',      # (dbl) own-base share: alimony received
     'st_agi.ob_other_share',        # (dbl) own-base share: other income
+    'st_agi.ob_estate_share',        # (dbl) own-base share: estate and trust income (own floored class)
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -312,7 +314,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_ss_share         * txbl_ss) +
     ob_floor(st_agi.ob_ui_share         * ui) +
     ob_floor(st_agi.ob_alimony_share    * alimony) +
-    ob_floor(st_agi.ob_other_share      * other_inc)
+    ob_floor(st_agi.ob_other_share      * other_inc) +
+    ob_floor(st_agi.ob_estate_share     * net_estate)
   )
 
   # Starting point, computed ahead of the mutate as well because the

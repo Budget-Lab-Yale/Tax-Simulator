@@ -4089,6 +4089,15 @@ test_state_calc = function() {
            expect = list(st_agi = 71000),
            label = 'NJ-1b within-category netting before the floor')
 
+  # NJ-1b2: estate and trust income is New Jersey gross income (NK-1 total on
+  # the Other line). Wages 60,000 + 15,000 of net trust income -> 75,000; it
+  # is not offset by a negative other-income amount (a federal NOL)
+  run_case('NJ', 2024,
+           list(agi = 70000, wages1 = 60000, ei1 = 60000, net_estate = 15000,
+                other_inc = -5000),
+           expect = list(st_agi = 75000),
+           label = 'NJ-1b2 estate and trust income, own floored class')
+
   # NJ-1c/1d/1e: no tax at or below the filing threshold (N.J.S.A. 54A:2-4):
   # single $9,500 and joint $19,000 owe nothing (without the floor the single
   # case would owe 1.4% x 8,500 = 119); single $12,000 is over the $10,000
@@ -5492,6 +5501,7 @@ st_test_unit = function(overrides = list()) {
     txbl_kg = 0, kg_pref = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
     part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
     part = 0, part_active_loss = 0, part_passive_loss = 0, net_rent = 0, rent_loss = 0,
+    net_estate = 0,
     # federal childless EITC parameters (TY2022), for the state age-band credit
     eitc.pi_rate_0 = 0.0765, eitc.pi_end_0 = 7320, eitc.po_rate_0 = 0.0765,
     eitc.po_thresh_0 = 9160, eitc.min_age = 25, eitc.max_age = 64, eitc.inv_inc_limit = 10300,

@@ -65,6 +65,10 @@ ob_other_share:
   value: 1
   reference: 'NJ-1040 line 25 "Other" income, and line 23 net gambling winnings (New Jersey Lottery winnings of $10,000 or less are exempt)'
 
+ob_estate_share:
+  value: 1
+  reference: 'NJ-1040 instructions, Income From Estates and Trusts: "If you are a beneficiary who received income from an estate or trust, include the Total Distribution from Schedule NJK-1, Form NJ-1041 on this line" (the Other income line; line 26 in TY2025). Encoded as its own floored class: New Jersey allows no loss carryforward and no cross-category offset, so netting it against negative other income (federal NOL deductions) would be wrong'
+
 #-----------------------------------------------------------------------
 # Pension/retirement exclusion (NJ-1040 line 28a).
 #
