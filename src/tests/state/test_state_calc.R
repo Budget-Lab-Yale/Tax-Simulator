@@ -1567,9 +1567,20 @@ test_state_calc = function() {
   # -20,000 (floored); rents +5,000; capital loss -3,000 (floored).
   # Base = 65,000 x 3.07% = 1,995.50
   run_case('PA', 2024,
-           list(wages1 = 60000, sole_prop = -20000, rent = 5000, kg_lt = -3000),
+           list(wages1 = 60000, sole_prop = -20000, rent = 5000, net_rent = 5000,
+                kg_lt = -3000),
            expect = list(st_agi = 65000, liab_st_iit = 65000 * 0.0307),
            label = 'PA-2 no cross-class loss offset')
+
+  # PA-2b: a partnership's losses net against its own income first. Wages
+  # 50,000; partnership income 20,000 and losses 25,000 (net -5,000), so the
+  # business class floors at zero and the base is 50,000. The gross field
+  # alone used to add 20,000
+  run_case('PA', 2024,
+           list(wages1 = 50000, part_active = 20000, part_active_loss = 25000,
+                part = -5000),
+           expect = list(st_agi = 50000, liab_st_iit = 50000 * 0.0307),
+           label = 'PA-2b partnership losses net within the class')
 
   # PA-3: 2024 MFJ retirees. Pensions 40,000, taxable SS 20,000, UI 5,000 all
   # PA-exempt; wages 10,000 -> base 10,000, tax 307. Eligibility income
@@ -1782,6 +1793,19 @@ test_state_calc = function() {
            expect = list(st_earned_credit = 1650, liab_st_iit = -1650),
            label = 'MN-7 WFC triangular schedule')
 
+  # MN-7b/7c: the childless WFC age band. A childless filer must not have
+  # attained 65 (IRC 32 through TY2018; 290.0671 subd. 1(a)(1) from 2019):
+  # at 70 the credit is zero; at 60, 2.1% x 5,000 = 105 (below the 136
+  # maximum and the 8,530 phase-out start)
+  run_case('MN', 2018,
+           list(agi = 5000, age1 = 70, wages1 = 5000, ei1 = 5000),
+           expect = list(st_earned_credit = 0),
+           label = 'MN-7b childless WFC barred at 65+')
+  run_case('MN', 2018,
+           list(agi = 5000, age1 = 60, wages1 = 5000, ei1 = 5000),
+           expect = list(st_earned_credit = 105),
+           label = 'MN-7c childless WFC inside the age band')
+
   # MN-8: 2024 M1CWFC: MFJ, 2 kids under 18, earned = AGI = 50,000:
   # 2 x 1,750 + 4% x 9,220 = 3,868.80, less 12% x (50,000 - 36,880) =
   # 1,574.40 -> 2,294.40 refundable. Taxable = 50,000 - 29,150 - 10,100
@@ -1793,6 +1817,33 @@ test_state_calc = function() {
            expect = list(st_ctc = 2294.4,
                          liab_st_iit = 10750 * 0.0535 - 2294.4),
            label = 'MN-8 M1CWFC combined credit')
+
+  # MN-8b: from TY2023 a separate filer with a qualifying child qualifies
+  # for M1CWFC under the separated-spouse exception (2024 M1CWFC
+  # instructions; living apart assumed). One child aged 8, earned = AGI =
+  # 10,000: 1,750 + 4% x 9,220 = 2,118.80, below the 31,090 threshold
+  run_case('MN', 2024,
+           list(agi = 10000, filing_status = 3, n_dep = 1, n_dep_ctc = 1,
+                dep_age1 = 8, wages1 = 10000, ei1 = 10000),
+           expect = list(st_ctc = 2118.8),
+           label = 'MN-8b M1CWFC separate filer with a qualifying child')
+
+  # MN-8c: a childless separate filer stays ineligible for M1CWFC (the
+  # exception requires a qualifying child), so even the 4% earned-income
+  # part is zero
+  run_case('MN', 2024,
+           list(agi = 10000, filing_status = 3, wages1 = 10000, ei1 = 10000),
+           expect = list(st_ctc = 0),
+           label = 'MN-8c M1CWFC childless separate filer barred')
+
+  # MN-8d: through TY2022 Minnesota reads the IRC as of December 31, 2018
+  # (290.01 subd. 31; 290.0111 adopts only ARPA sec. 9042), so the pre-ARPA
+  # 32(d) bar holds: a separate filer with two children gets no WFC
+  run_case('MN', 2022,
+           list(agi = 15000, filing_status = 3, wages1 = 15000, ei1 = 15000,
+                n_dep = 2, n_dep_eitc = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_earned_credit = 0),
+           label = 'MN-8d WFC separate filer barred through TY2022')
 
   # MN-9: 2022 marriage credit: MFJ earned 60,000/40,000, AGI 100,000.
   # Taxable 74,200; share1 = 40,000 - 12,900 = 27,100 (single tax
@@ -4024,6 +4075,32 @@ test_state_calc = function() {
                          st_txbl_inc = 59000, liab_st_iit = 1767.25),
            label = 'NJ-1 2024 single, personal exemption only')
 
+  # NJ-1b: losses net WITHIN a category before the category is floored.
+  # Wages 60,000; long-term gains 10,000 with a 4,000 short-term loss (one
+  # "net gains from disposition of property" category: 6,000); a partnership
+  # with 10,000 of income and 15,000 of losses (net -5,000, floored to 0);
+  # rents 8,000 less 3,000 of rental losses (5,000). Gross income 71,000.
+  # Before 2026-10-01 the gross PUF fields were used and short-term losses
+  # were floored apart, giving 88,000
+  run_case('NJ', 2024,
+           list(agi = 66000, wages1 = 60000, ei1 = 60000, kg_lt = 10000,
+                kg_st = -4000, part_active = 10000, part_active_loss = 15000,
+                part = -5000, rent = 8000, rent_loss = 3000, net_rent = 5000),
+           expect = list(st_agi = 71000),
+           label = 'NJ-1b within-category netting before the floor')
+
+  # NJ-1c/1d/1e: no tax at or below the filing threshold (N.J.S.A. 54A:2-4):
+  # single $9,500 and joint $19,000 owe nothing (without the floor the single
+  # case would owe 1.4% x 8,500 = 119); single $12,000 is over the $10,000
+  # threshold and owes 1.4% x 11,000 = 154
+  run_case('NJ', 2024, list(agi = 9500, wages1 = 9500, ei1 = 9500),
+           expect = list(liab_st_iit = 0), label = 'NJ-1c single under the threshold')
+  run_case('NJ', 2024,
+           list(agi = 19000, filing_status = 2, age2 = 40, wages1 = 19000, ei1 = 19000),
+           expect = list(liab_st_iit = 0), label = 'NJ-1d joint under the threshold')
+  run_case('NJ', 2024, list(agi = 12000, wages1 = 12000, ei1 = 12000),
+           expect = list(liab_st_iit = 154), label = 'NJ-1e single over the threshold')
+
   # NJ-2: the property tax deduction, which for a homeowner is the property
   # tax actually paid. Same unit with 8,000 of property tax: taxable income
   # 51,000, tax 1,325.25
@@ -5224,6 +5301,10 @@ test_state_calc = function() {
     CT = 200,   # Table A exemption steps + Table D stepped recapture
                 #   ($122.50/segment observed, pinned by CT-8)
     VA = 320,   # no-tax-below cliff (full tax owed at the VAGI threshold)
+    NJ = 150,   # no-tax-below cliff (N.J.S.A. 54A:2-4): at the single
+                #   $10,000 threshold the full tax on gross income less the
+                #   $1,000 exemption falls due at once, 1.4% x 9,500 = 133.
+                #   Pinned by NJ-1c/1e
     RI = 225,   # stepped std-deduction AND exemption phase-out (R.I.G.L.
                 #   44-30-2.6: 20% of each per increment of modified AGI over
                 #   one shared threshold, so both drop together at every
@@ -5367,6 +5448,7 @@ st_test_unit = function(overrides = list()) {
     txbl_int = 0, div_ord = 0, div_pref = 0, kg_lt = 0, kg_st = 0,
     txbl_kg = 0, kg_pref = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
     part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
+    part = 0, part_active_loss = 0, part_passive_loss = 0, net_rent = 0, rent_loss = 0,
     alimony = 0, other_inc = 0,
     sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,

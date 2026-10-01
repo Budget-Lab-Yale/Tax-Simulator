@@ -67,11 +67,15 @@ earned_credit_age_min:
   value:
     '2017': 25
     '2019': 21
-  reference: '290.0671: childless age window 25-64 (2017-18, federal-EIC-coupled), expanded to 21-64 from 2019; the 64 upper limit is unmodeled [known-difference]'
+  reference: '290.0671 subd. 1(a): childless filers must be federal-EIC-eligible, so 25-64 in TY2017-18 (IRC 32(c)(1)(A)(ii)(II)); from TY2019 "attained the age of 21, but not attained age 65" (Laws 2017 1Sp ch. 1 art. 1 s. 20, effective for taxable years beginning after December 31, 2018). Upper bound in earned_credit_age_max'
+
+earned_credit_age_max:
+  value: 64
+  reference: 'Childless WFC filers must not have attained age 65 by year end: through IRC 32(c)(1)(A)(ii)(II) in TY2017-18 and 290.0671 subd. 1(a)(1) from TY2019 ("not attained age 65 before the close of the taxable year"). Added 2026-09-30; it had been unmodeled, paying a small WFC to childless filers aged 65+ (TAXSIM triage: 95 of 100 childless 2018 records where we paid and TAXSIM did not)'
 
 earned_credit_mfs_eligible:
   value: 0
-  reference: 'M1WFC: MFS ineligible (federal EIC rule)'
+  reference: 'Minn. Stat. 290.0671 subd. 1(a): eligibility follows IRC 32, where "Internal Revenue Code" means the Code as amended through December 31, 2018 for TY2017-2022 (290.01 subd. 31, 2021 and 2022 editions); 290.0111 subd. 5 adopts only ARPA sec. 9042, not sec. 9623, so the pre-ARPA 32(d) bar on separate filers applies through TY2022. From TY2023 the WFC is part of M1CWFC (cwfc_mfs_eligible)'
 
 earned_credit_phasein_rate:
   value:
@@ -233,6 +237,12 @@ cwfc_po_thresh_mfj:
     '2024': 36880
     '2025': 37910
   reference: 'M1CWFC phase-out thresholds, MFJ'
+
+cwfc_mfs_eligible:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'From TY2023, Minn. Stat. 290.01 subd. 31 (2023) conforms to the IRC as amended through May 1, 2023, so the IRC 32(d)(2) separated-spouse rule (ARPA sec. 9623) applies through 290.0671 subd. 1(a) and 290.0661 subd. 2. 2024 Schedule M1CWFC instructions, "Exception for Those Who are Married and Filing Separately": at least one qualifying child (Schedule M1DQC) who lived with the filer over half the year, and not sharing a principal abode with the spouse for the last six months or legally separated. The child test is applied in st_credits_child.R; the living-apart condition is unobserved and assumed met'
 
 cwfc_po_thresh_other:
   value:

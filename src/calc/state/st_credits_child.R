@@ -42,7 +42,8 @@ st_credits_child_req_vars = c(
   'st_credits.cwfc_wfc_earned_cap',
   'st_credits.cwfc_po_rate',
   'st_credits.cwfc_po_rate_older_only',
-  'st_credits.cwfc_po_thresh'
+  'st_credits.cwfc_po_thresh',
+  'st_credits.cwfc_mfs_eligible'
 )
 
 
@@ -268,7 +269,10 @@ st_credits_child = function(tax_unit, st_eitc) {
   # student/disabled status unobserved), less ONE joint phase-out of
   # po_rate (po_rate_older_only when no under-18 children) on the greater
   # of earned income or AGI over the threshold. Refundable via
-  # ctc_refundable; MFS and dependent filers ineligible
+  # ctc_refundable. Dependent filers are ineligible; separate filers too,
+  # unless cwfc_mfs_eligible = 1 and they have a qualifying child (the IRC
+  # 32(d)(2) separated-spouse rule, living-apart condition assumed met). The
+  # child test uses this credit's own age-based counts, not n_dep_eitc
   cwfc = rep(0, n)
   if (any(tax_unit$st_credits.cwfc_style == 1)) {
     n_cwfc_young = st_n_dep_in(tax_unit, 0, tax_unit$st_credits.cwfc_ctc_max_age)
@@ -295,7 +299,9 @@ st_credits_child = function(tax_unit, st_eitc) {
                            tax_unit$st_credits.cwfc_po_rate)
     cwfc = if_else(
       tax_unit$st_credits.cwfc_style == 1 & tax_unit$dep_status != 1 &
-        tax_unit$filing_status != 3,
+        (tax_unit$filing_status != 3 |
+           (tax_unit$st_credits.cwfc_mfs_eligible == 1 &
+              n_cwfc_young + n_cwfc_older > 0)),
       pmax(0, cwfc_base - cwfc_po_rate *
                 pmax(0, pmax(cwfc_earned, agi) -
                         tax_unit$st_credits.cwfc_po_thresh)),

@@ -673,6 +673,7 @@ scalars:
   st_credits.cwfc_po_rate: 0
   st_credits.cwfc_po_rate_older_only: 0
   st_credits.cwfc_po_thresh: .inf
+  st_credits.cwfc_mfs_eligible: 0      # 1 = separate filers with a qualifying child allowed (IRC 32(d)(2) rule)
   # Two-earner marriage credit (MN M1MA): joint-schedule tax less the two
   # spouses' single-schedule tax on imputed shares (lesser earner = own
   # earned income less the share offset), subject to eligibility floors

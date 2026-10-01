@@ -55,7 +55,9 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'blind1',         # (bool) whether primary filer is blind
     'blind2',         # (bool) whether secondary filer is blind
     'sole_prop',      # (dbl)  sole proprietorship income or loss
-    'part_active',    # (dbl)  active partnership income or loss
+    'part_active',    # (dbl)  active partnership income (gross; losses in part_active_loss)
+    'part_active_loss',  # (dbl) active partnership losses (positive magnitude)
+    'part',           # (dbl)  net partnership income or loss (utils.R: income - losses - s179)
     'scorp',          # (dbl)  S-corporation income or loss
     'farm',           # (dbl)  farm income or loss
     'txbl_int',       # (dbl)  taxable interest income
@@ -64,8 +66,9 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'div_pref',       # (dbl)  qualified dividends
     'kg_lt',          # (dbl)  long-term capital gains
     'kg_st',          # (dbl)  short-term capital gains
-    'rent',           # (dbl)  rental income or loss
-    'part_passive',   # (dbl)  passive partnership income or loss
+    'net_rent',       # (dbl)  net rental income or loss (rent - rent_loss)
+    'part_passive',   # (dbl)  passive partnership income (gross; losses in part_passive_loss)
+    'part_passive_loss', # (dbl) passive partnership losses (positive magnitude)
     'other_gains',    # (dbl)  other gains or losses (Form 4797)
     'alimony',        # (dbl)  alimony received
     'other_inc',      # (dbl)  other taxable income
@@ -286,7 +289,13 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # one class never offsets income in another (and never carries forward).
   # Within-class netting happens at the unit level, a documented
   # approximation of the per-taxpayer/per-activity form rules (spousal and
-  # cross-activity netting inside a class are unobserved in the PUF)
+  # cross-activity netting inside a class are unobserved in the PUF).
+  # Partnership and rental income enter NET of their losses: the PUF fields
+  # part_active/part_passive/rent are gross positive amounts with the losses
+  # held separately, so using them alone counted losses as zero (2026-10-01,
+  # NJ triage). Short- and long-term gains are one class on the NJ-1040 and
+  # PA-40, so they are floored together (a no-op where ob_class_floor = 0;
+  # Massachusetts taxes short-term gains at its own rate in calc_st_tax)
   ob_floor = function(x) {
     if_else(tax_unit$st_agi.ob_class_floor == 1, pmax(0, x), x)
   }
@@ -294,11 +303,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_comp_share       * (wages1 + wages2)) +
     ob_floor(st_agi.ob_int_share        * txbl_int) +
     ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
-    ob_floor(st_agi.ob_bus_share        * (sole_prop + part_active +
-                                           part_passive + scorp + farm)) +
-    ob_floor(st_agi.ob_gains_share      * (kg_lt + other_gains)) +
-    ob_floor(st_agi.ob_st_gains_share   * kg_st) +
-    ob_floor(st_agi.ob_rent_share       * rent) +
+    ob_floor(st_agi.ob_bus_share        * (sole_prop + part + scorp + farm)) +
+    ob_floor(st_agi.ob_gains_share      * (kg_lt + other_gains) +
+             st_agi.ob_st_gains_share   * kg_st) +
+    ob_floor(st_agi.ob_rent_share       * net_rent) +
     ob_floor(st_agi.ob_retirement_share * txbl_pens_dist) +
     ob_floor(st_agi.ob_ira_share        * txbl_ira_dist) +
     ob_floor(st_agi.ob_ss_share         * txbl_ss) +
@@ -370,8 +378,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     # business, partnership and S corporation -- and excludes interest,
     # dividends, property dispositions, rents, gambling and alimony.
     orie_earned = pmax(0, tax_unit$wages1) + pmax(0, tax_unit$wages2) +
-                  tax_unit$sole_prop + tax_unit$part_active +
-                  tax_unit$part_passive + tax_unit$scorp + tax_unit$farm
+                  tax_unit$sole_prop + tax_unit$part + tax_unit$scorp +
+                  tax_unit$farm
     orie_ceiling = pmin(st_band_value(st_start_v, pt_ub, pt_cap),
                         st_band_value(st_start_v, pt_ub, pt_shr) * st_start_v)
     pens_tier_v = pens_tier_v + if_else(
@@ -583,9 +591,11 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # retirement-type unearned income. Jointly held non-wage income is split
       # equally because ownership is not observed in the PUF.
       st_retir_n = 1 + (filing_status == 2),
-      st_retir_other_earned = sole_prop + part_active + scorp + farm,
+      st_retir_other_earned = sole_prop + (part_active - part_active_loss) +
+                              scorp + farm,
       st_retir_unearned = txbl_int + div_ord + div_pref + kg_lt + kg_st +
-                          rent + part_passive + txbl_pens_dist + txbl_ira_dist +
+                          net_rent + (part_passive - part_passive_loss) +
+                          txbl_pens_dist + txbl_ira_dist +
                           other_inc,
       st_retir_cap1 = if_else(age1 >= st_agi.retirement_excl_min_age,
                                if_else(age1 >= 65,
@@ -737,7 +747,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # income proxied by Schedule C/F and pass-through components; rental
       # income and >=20%-owner compensation reclassification are unobserved
       # (documented known-differences)
-      st_bus_inc  = pmax(0, sole_prop + part_active + part_passive + scorp + farm),
+      st_bus_inc  = pmax(0, sole_prop + part + scorp + farm),
       st_bid      = st_agi.bus_carveout * pmin(st_bus_inc, st_agi.bus_ded_cap),
       st_bus_excess = st_agi.bus_carveout *
                       pmax(0, st_bus_inc - st_agi.bus_ded_cap),

@@ -44,7 +44,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'kg_lt',              # (dbl)  long-term capital gains
     'kg_st',              # (dbl)  short-term capital gains
     'other_gains',        # (dbl)  other gains (Form 4797)
-    'rent',               # (dbl)  rental/royalty income
+    'net_rent',           # (dbl)  net rental/royalty income (rent - rent_loss)
     'st_agi',             # (dbl)  state income base
     'st_exempt',          # (dbl)  state exemption allowance
     'st_txbl_inc',        # (dbl)  state taxable income
@@ -125,7 +125,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
       # detail and the agricultural-land carve-out are unobserved;
       # known-difference)
       st_nii = txbl_int + div_ord + div_pref +
-               pmax(0, kg_lt + kg_st + other_gains) + pmax(0, rent),
+               pmax(0, kg_lt + kg_st + other_gains) + pmax(0, net_rent),
       st_inv_income_tax = st_surtax.inv_income_rate *
         pmax(0, st_nii - st_surtax.inv_income_thresh),
 
