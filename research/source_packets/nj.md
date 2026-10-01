@@ -203,6 +203,20 @@ Third pass (same day), three of ours, each from the TY2018-2025 booklets:
 After the third pass: TAXSIM 0.942 / 0.923 / 0.927 / 0.907, PolicyEngine 0.958 /
 0.968 / 0.971 / 0.946 / 0.941. PolicyEngine 2021-2023 clear 95%.
 
+Fourth pass (same day):
+
+- **Ours: estate and trust income was missing.** The booklet puts the NJK-1 total
+  on the Other income line; it entered no own-base category. Now its own floored
+  class (`st_agi.ob_estate_share`, default 0, NJ 1), so a disallowed NOL cannot
+  offset it. Test NJ-1b2. On the misses where we were below TAXSIM, the shortfall
+  equalled estate income one-for-one.
+- **T27 (TAXSIM):** the pension exclusion starts at 65 (the form says 62) and tests
+  the $100,000 cliff on federal AGI (the form tests line 27, NJ total income, which
+  excludes Social Security). Confirmed in the TY2017 and TY2019 booklets.
+
+After the fourth pass: TAXSIM 0.952 / 0.934 / 0.940 / 0.921, PolicyEngine 0.958 /
+0.968 / 0.971 / 0.946 / 0.941. Four of nine cells clear 95%.
+
 Open, with evidence:
 
 - **Net operating loss carryforwards.** Tax-Data carries them as negative

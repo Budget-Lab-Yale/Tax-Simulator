@@ -199,6 +199,24 @@ qualifying person or $1,000 for two or more (NJ-1040 Worksheet J). TAXSIM-35 ret
 on every New Jersey record in 2018–2020. Effect: TAXSIM overstates New Jersey tax for working families with care
 expenses, by up to $1,000. (Coverage note, like T4/T5.)
 
+### T27. New Jersey pension exclusion: age 65 instead of 62, and the $100,000 cliff tested on federal AGI
+
+New Jersey's pension exclusion (NJ-1040 line 27a in TY2017, line 28a later) is open to filers "62 or older" (or
+disabled) whose "income on line 27", New Jersey total income, which excludes Social Security, is $100,000 or less
+(TY2017-2020 cliff; TY2017 and TY2019 booklets). TAXSIM-35 uses age 65 and tests federal AGI. Probe (2026-10-01),
+2019 single:
+
+| case | federal AGI | v32 | form |
+|---|---|---|---|
+| age 61, $25,000 pension | 25,000 | 25,000 | 25,000 |
+| age 62, $25,000 pension | 25,000 | **25,000** | 0 (excluded) |
+| age 64, $25,000 pension | 25,000 | **25,000** | 0 |
+| age 65, $25,000 pension | 25,000 | 0 | 0 |
+| age 66, $70,000 pension + $40,000 Social Security | 104,000 | **70,000** | 70,000 less the exclusion |
+
+Effect: TAXSIM overstates New Jersey tax for retirees aged 62-64, and for older retirees whose Social Security pushes
+federal AGI over $100,000 while New Jersey income stays under it.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
