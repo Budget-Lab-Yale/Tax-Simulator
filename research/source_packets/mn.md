@@ -2,7 +2,8 @@
 
 State: `MN`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-11` (TAXSIM triage: clean, 11 exact probe cases;
+Last updated: `2026-09-30` (separate-filer rule for WFC and M1CWFC resolved;
+previous: `2026-08-11` TAXSIM triage: clean, 11 exact probe cases;
 
 > **Status note (as of 2026-08-11), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -79,6 +80,45 @@ credit (2022); NIIT + flat-80% limitation (2024); dependent-care cap
   phase-out is the GENERAL 12%, not 9% — 2024 form line 13 gives 9% only
   to older-child-only units; we had applied 9% to childless units.
   Fixed in st_credits_child.R; test MN-12.)*
+- **Separate filers (married filing separately), resolved 2026-09-30.**
+  Minn. Stat. 290.0671 subd. 1(a) makes the WFC follow IRC 32 eligibility, and
+  290.0661 subd. 2 makes M1CWFC follow 290.0671. Which IRC applies is set by
+  290.01 subd. 31: the Code as amended through **December 31, 2018** in the
+  2021 and 2022 editions, with 290.0111 subd. 5 adopting only ARPA **sec. 9042**
+  (the unemployment exclusion), not sec. 9623. So the pre-ARPA 32(d) bar holds
+  through TY2022 and separate filers get no WFC. From TY2023 the Code as
+  amended through **May 1, 2023** applies, so the IRC 32(d)(2)
+  separated-spouse rule reaches M1CWFC. The 2024 Schedule M1CWFC instructions
+  ("Exception for Those Who are Married and Filing Separately") confirm it: at
+  least one qualifying child on Schedule M1DQC who lived with the filer for
+  over half the year, and not sharing a principal abode with the spouse for
+  the last six months or legally separated; the form carries a checkbox.
+  Before this fix M1CWFC hardcoded separate filers as ineligible. Now
+  `st_credits.cwfc_mfs_eligible` = 1 from 2023; the child test uses the
+  credit's own age-based child counts (not `n_dep_eitc`, which Tax-Data zeroes
+  for every separate filer), and the living-apart condition is unobserved and
+  assumed met. Tests MN-8b/8c/8d. The 2023 M1CWFC instructions were not
+  retrieved (the DOR URL pattern for 2023 404s); 2023 rests on the statute.
+- **Cross-model triage, 2026-09-30/10-01: the TAXSIM gap was four TAXSIM bugs and
+  one of ours.** The 2026-08-11 note put the residual in itemizers. On the
+  current board they are almost all excluded by crosswalk-exposure rows; what
+  remained was:
+  - **T20** (TAXSIM): 2019-2020 heads of household get the single standard
+    deduction ($12,200 / $12,400 against $18,350 / $18,650; 290.0123 subd. 1).
+  - **T21** (TAXSIM): 2019-2020, no high-income limitation on the standard
+    deduction (290.0123 subd. 5, new in Laws 2019 ch. 6).
+  - **T22** (TAXSIM): 2017-2020, non-joint families with two or more children
+    are phased out of the WFC from the one-child threshold (290.0671 subd. 1:
+    base $21,190 vs $25,130).
+  - **T23** (TAXSIM): 2019-2020, the childless WFC paid at age 65+.
+  - **Ours, fixed:** the childless WFC had no upper age (`earned_credit_age_max`
+    now 64; tests MN-7b/7c). Confirmed in passing that the age-21 floor starts
+    in TY2019, not 2018 (Laws 2017 1Sp ch. 1 art. 1 s. 20: "effective for
+    taxable years beginning after December 31, 2018").
+  - PolicyEngine 2023-2025: separate filers with a child get M1CWFC from us and
+    not from PolicyEngine (an unobservable living-apart condition; excluded on
+    the records where we pay more than $100).
+  Probe scripts: `research/state_tax/scripts/mn_*.R`. Issues doc: T20-T23.
 - **Marriage credit:** lesser earner's share uses earned income only (the
   M1MA lines 1-5 pension/SS elements unobserved); the printed lookup
   table's midpoint rounding ignored.

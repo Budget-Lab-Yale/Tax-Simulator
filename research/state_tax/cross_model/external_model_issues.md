@@ -101,6 +101,63 @@ exempt-interest addbacks and the federal EITC investment-income test can
 never fire), and no state-refund input (state own-refund subtractions
 cannot be represented).
 
+### T20. Minnesota 2019–2020: head-of-household filers get the single standard deduction
+
+Minnesota adopted the federal standard deduction amounts from tax year 2019 (M1 booklet, Standard Deduction
+Table): $18,350 for head of household in 2019 and $18,650 in 2020. TAXSIM-35 gives Minnesota heads of household
+the **single** amount instead, $12,200 and $12,400. One-observation probe (2026-09-30): `mstat` single,
+one dependent aged 8, $40,000 of wages, Minnesota:
+
+| year | federal deduction implied by v18 | v34 (Minnesota standard deduction) | Minnesota form |
+|---|---|---|---|
+| 2018 | 18,000 | 9,550 | 9,550 |
+| 2019 | 18,350 | **12,200** | 18,350 |
+| 2020 | 18,650 | **12,400** | 18,650 |
+
+TAXSIM infers head of household federally from the same input, so this is the Minnesota schedule picking up
+the single column. It is Minnesota-specific: Arizona, Maine and DC also give heads of household the federal
+amount in 2019, and TAXSIM matches them. Effect: TAXSIM overstates Minnesota tax by $329–$490 for every head
+of household in 2019–2020; in our sample those records match at 0.28–0.31, against 0.74 in 2017–2018.
+Excluded in the harness (`known_differences.csv`, MN taxsim 2019–2020, `filing_status == 4`).
+
+### T21. Minnesota 2019–2020: the high-income limitation is not applied to the standard deduction
+
+From tax year 2019 Minnesota reduces the standard deduction, as well as itemized deductions, by 3% of AGI above
+a threshold ($194,650 in 2019, $197,850 in 2020; half for married filing separately), by at most 80% of the
+deduction (Minn. Stat. 290.0123 subd. 1: the amount "is reduced in accordance with subdivision 5"; subd. 5 new
+in Laws 2019 ch. 6 art. 1 s. 17; the Line 4 worksheet in each booklet). TAXSIM-35 gives the full deduction.
+One-observation probe (2026-09-30): joint filer, $600,000 of wages, Minnesota: v36 = $575,600 in 2019 and
+$575,200 in 2020, exactly AGI minus the full $24,400 / $24,800. The form reduces the deduction by 80%, to
+$4,880 / $4,960. Effect: TAXSIM understates Minnesota tax for high-income standard-deduction takers by up to
+~$1,900. In our sample those records match at 0.03–0.06. Excluded where the missing reduction exceeds $100.
+
+### T22. Minnesota Working Family Credit: two-or-more-child non-joint filers phased out from the one-child threshold
+
+Minn. Stat. 290.0671 subd. 1 (2017 and 2018 editions) sets separate phase-out starts by number of children: a base
+$21,190 for one qualifying child and $25,130 for two or more, indexed under subd. 7 ($22,230 and $26,360 in 2018).
+TAXSIM-35 phases out single and head-of-household filers with two or more children from the one-child threshold.
+Sweep (2026-09-30), 2018, head of household, two children, earned income = AGI:
+
+| earned | form | TAXSIM v39 |
+|---|---|---|
+| 22,000 | 2,104.00 | 2,104.00 |
+| 24,000 | 2,104.00 | 1,912.48 |
+| 28,000 | 1,926.55 | 1,479.68 |
+| 34,000 | 1,277.35 | 830.48 |
+
+From $28,000 the shortfall is constant at $446.87 = 10.82% × ($26,360 − $22,230). The same holds in 2017 ($438.21), 2019
+($444.15) and 2020; joint filers are right in every year. Effect: TAXSIM understates the credit, and so overstates
+Minnesota tax, by up to ~$448 for non-joint families with two or more children in the phase-out range.
+
+### T23. Minnesota 2019–2020: the childless Working Family Credit paid at age 65 and over
+
+From tax year 2019 Minnesota extends the childless Working Family Credit to filers who have "attained the age of 21,
+but not attained age 65 before the close of the taxable year" (Minn. Stat. 290.0671 subd. 1(a)(1), as amended by
+Laws 2017 1Sp ch. 1 art. 1 s. 20, effective for tax years after December 31, 2018). TAXSIM-35 pays it to childless
+filers aged 65 and over in 2019–2020 (77 and 76 records in our samples, median $108), where the federal EITC is zero
+on every one. In 2017–2018 TAXSIM ties the credit to federal eligibility and is right. Effect: TAXSIM understates
+Minnesota tax for low-earning childless seniors by up to the childless maximum ($279 / $284).
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under

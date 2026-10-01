@@ -140,3 +140,42 @@ NJ-7 the Child Tax Credit tier; NJ-8 the earned income credit at 40%.
 
 - HT2 targets once weights land; the New Jersey Division of Taxation publishes
   statistics of income for a revenue-agency benchmark.
+
+## Cross-model triage, 2026-10-01
+
+Two causes found and fixed, both ours:
+
+- **Losses were not netted within a category.** The own-base build used the
+  PUF's gross positive fields (`part_active`, `part_passive`, `rent`), whose
+  losses sit in separate fields, and floored short-term gains apart from
+  long-term ones. The NJ-1040 nets within a category (net gains from the
+  disposition of property is one category; partnership and rental income are
+  net). Fixed model-wide in `st_agi.R` for all six own-base states; tests NJ-1b
+  and PA-2b. NJ cells +2 to +3pp.
+- **No tax at or below the filing threshold** (N.J.S.A. 54A:2-4: New Jersey gross
+  income, line 29, at or below $10,000 single/separate or $20,000 otherwise) was
+  missing. This was the "decile 3" pocket: we charged ~$220-250 just under
+  $20,000. Encoded with the VA-style `st_filing.no_tax_below_thresh`; tests
+  NJ-1c/1d/1e. TAXSIM cells +5 to +8pp, PolicyEngine +4 to +13pp. The statute
+  text was not retrieved directly; TAXSIM and PolicyEngine both apply the rule,
+  and the booklet's "Do You Have to File" page confirms its effect.
+
+Result: TAXSIM 0.916 / 0.846 / 0.849 / 0.826 (2017-2020), PolicyEngine 0.818 /
+0.924 / 0.928 / 0.911 / 0.924 (2021-2025).
+
+Open, with evidence:
+
+- **Net operating loss carryforwards.** Tax-Data carries them as negative
+  `other_inc`; New Jersey allows no carryforwards, so our flooring of the other
+  category is right, but neither outside model has an NOL input. Records with an
+  NOL of $2,000 or more match at 0.68-0.72 in TAXSIM against 0.85-0.95 for the
+  rest; about 70% still match, so no clean exclusion predicate yet. Also, 17% of
+  sampled records carry such a loss, which looks high (a Tax-Data question).
+- **Business categories lumped.** `ob_bus_share` pools net business profits,
+  partnership and S corporation income (NJ-1040 lines 18, 21, 22), which the form
+  keeps separate. This nets more than New Jersey allows (understates).
+- **Estate and trust income** enters no own-base category (understates).
+- **Alimony paid** is listed as not separable, but the federal calculation now
+  carries `alimony_exp` (0.1% of misses).
+- **TAXSIM's state AGI sits below ours** on ~17% of misses (median ~$4,400, AGI
+  ~$200k, not pensions). Unexplained.
