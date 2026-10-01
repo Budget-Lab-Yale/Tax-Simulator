@@ -3,7 +3,7 @@ title: "Potential issues in TAXSIM-35 and PolicyEngine US"
 role: evidence
 workstream: state_tax
 status: current
-updated: 2026-08-23
+updated: 2026-09-30
 sot: research/state_tax/state_parameter_rollout.csv
 supersedes: []
 superseded_by: null
@@ -103,6 +103,10 @@ cannot be represented).
 
 ## PolicyEngine US
 
+> The 2026-09-30 status notes below cite reproductions and drafts under
+> `bug_reports/policyengine/`. That folder is deliberately **not committed**
+> until the upstream items are sent (JI, 2026-09-30); it lives on the cluster copy.
+
 ### P1. Colorado: TABOR refunds netted into `state_income_tax`
 
 `co_income_tax` nets `co_sales_tax_refund` (the TABOR refund claimed on
@@ -135,6 +139,8 @@ when the user supplies a complete income specification — an off switch or
 prominent documentation would help users doing controlled comparisons.
 
 ### P4. Ohio Business Income Deduction not modeled
+
+> **Status 2026-09-30:** still absent in policyengine-us 2.18.2 (the $100,000 self-employment case owes $2,147.89; the deduction gives 0). Already tracked upstream as open issue #4056; our evidence is drafted as a comment there (`bug_reports/policyengine/drafts/comments_9630_4056.md`), not a new issue.
 
 Same gap as T5 on the PolicyEngine side, verified in `policyengine-us`
 1.775.7 package source: no IT BUS variable or parameter exists under
@@ -398,6 +404,8 @@ whole class.
 ### P6. California CalEITC paid to married-filing-separately filers
 unconditionally
 
+> **Status 2026-09-30:** still present in 2.18.2, and wider than recorded here. PolicyEngine's FEDERAL EITC has the same gap: from 2021 `eitc.eligibility.separate_filer` admits every separate filer, so a childless one is paid $600 in 2023, though IRC 32(d)(2) requires a qualifying child. The CalEITC also pays separate filers in 2020, when FTB 3514 barred them ("Is your filing status married filing separately? Yes, stop here"). A fix for both is drafted as a PR on a local branch (`bug_reports/policyengine/drafts/pr_mfs_eitc.md`); not yet opened. Note the same rule exposes an OUR-SIDE gap: our federal `eitc.mfs_eligible` is 0 in every year, so from 2021 we deny separate filers who do have a qualifying child.
+
 FTB 3514 bars MFS filers from the CalEITC (and through its qualifying-child
 requirement, the YCTC) unless they meet the ARPA-style conditions adopted
 from TY2021: a qualifying child who lived with the filer for more than half
@@ -433,6 +441,8 @@ records the gap reached five figures.
 ### P8. California CalEITC: the FTB 3514 earned-vs-AGI second lookup is
 skipped
 
+> **Status 2026-09-30: FIXED UPSTREAM** in PolicyEngine/policyengine-us#9363 (merged 2026-09-01). 2.18.2 pays $390.62 on the documented case (form: $390). Nothing to file; our exclusion stays until the harness moves off the 1.775.7 pin.
+
 FTB 3514 (Step 6 / Worksheet instructions) requires that when federal AGI
 is at or above the safe-harbor threshold, the CalEITC is the SMALLER of
 the table amount at California earned income and the table amount at
@@ -448,6 +458,8 @@ Effect: PolicyEngine's CA liability runs LOW by $100–400 on low-income
 records whose AGI exceeds earned income above the safe harbor.
 
 ### P9. State per-dependent benefits denied for dependents aged 18 and over
+
+> **CORRECTION 2026-09-30: this is not twelve state bugs, and most of it was our harness.** The age-18 cliff comes from PolicyEngine's head/spouse inference, not from any state rule. `is_tax_unit_spouse` makes the oldest non-head adult (18+) the spouse, ignoring marital units and a supplied filing status, and `is_tax_unit_dependent` is simply "not head and not spouse". So an 18+ child stops being a dependent, losing the federal $500 other-dependents credit and every state per-dependent benefit. Our PE driver never supplied `is_tax_unit_dependent`, which is what exposed us to it. With the flag supplied (driver fixed 2026-09-30), Illinois tax is identical at dependent ages 17/18/19/23, and in the harness records with a dependent aged 18+ match at the same rate as the rest of their state (e.g. 2023 SC 0.842 vs 0.855, GA 0.912 vs 0.927). Reproduced on 1.775.7 and 2.18.2 (`bug_reports/policyengine/dependency_default_probe.py`). Upstream, PolicyEngine's own open PR #9630 addresses the flagged-dependent case; our evidence for the unflagged case is drafted as a comment there. The per-state analysis below is kept as the record of how the finding was first read; the state tables are correct measurements of the wrong mechanism.
 
 **The broadest PolicyEngine finding so far, and the one most worth
 reporting.** PolicyEngine 1.775.7 appears to gate state per-dependent
@@ -653,6 +665,8 @@ Colorado is a federal-taxable-income-start state, so this lands directly and
 undiluted in state liability.
 
 ### P10. Hawaii: the state's OWN income tax deducted on the Hawaii return, and the Worksheet A-2 disallowance not applied
+
+> **Status 2026-09-30: FIXED UPSTREAM** in PolicyEngine/policyengine-us#9597 (merged 2026-09-28). 2.18.2 returns `hi_salt_deduction` = 0 on the documented case and an exactly 11% marginal rate at $600,000. Nothing to file; our exclusion stays until the harness moves off the 1.775.7 pin.
 
 **The largest PolicyEngine finding in this set by revenue effect**, because it
 understates Hawaii's top marginal rate by 0.88 points for every high-income

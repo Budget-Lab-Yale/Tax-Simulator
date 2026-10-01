@@ -3,13 +3,54 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-09-12
+updated: 2026-09-30
 sot: self
 supersedes: []
 superseded_by: null
 ---
 
 # State income tax workstream — status
+
+## 2026-09-30: the comparison runs on the refit records, filers only
+
+**What changed in the cross-model comparison** (Tax-Simulator vs TAXSIM-35 for
+2017–2020 and PolicyEngine US for 2021–2025, records within $100):
+
+- **It now reads Tax-Data vintage `2026092720_filer_refit_v2`.** That's the
+  population after the non-filer rebuild and the national refit of filer weights
+  (Tax-Data S40), and the vintage the provisional state weights were fit on. The
+  old pin, `2026070814`, can no longer run 2021+: it predates Tax-Data S25, so its
+  synthetic top-tail records carry ids up to ~2.02 billion, outside the
+  `[1, 1e7]` space that the id-keyed random draws (S23, `src/misc/rng.R`) are
+  defined over, and the draw stops rather than silently shifting.
+- **It samples filers only.** On the refit records, constructed non-filers took
+  the AGI ≤ 0 share of the comparison sample from 15% to 35%. That inflated match
+  rates where both models return zero and failed states whose low-income credits
+  TAXSIM pays to them (NM, VT).
+- **The window runs through 2025.** Encoded law stops at 2025; 2026 is a later,
+  separate update (JI, 2026-09-30).
+- **A weighted scoreboard** (`results/summary_weighted.csv`) uses the provisional
+  state weights for 2022–2025. The unweighted cells stay the acceptance metric.
+- **Three harness bugs fixed.** The federal pre-pass bound every payroll column
+  twice; it had been hidden since 2026-08-18 behind cached results. The
+  PolicyEngine driver never said who the dependents were, so PolicyEngine's
+  head/spouse inference made 18+ children the spouse. That was the entire "P9"
+  dependent-age finding: 10 known-difference rows are retired, and MS/MA stay as
+  open annotations. TABOR refunds are now exported, so Colorado gets a narrow 2025
+  row in place of a whole-state exclusion.
+
+**Result:** 16 jurisdictions clear 95% in every 2017–2024 cell (NC newly; VA
+drops one PolicyEngine cell to 0.949). The board is `cross_model/results/summary.csv`;
+the August 23 board is kept locally as `cache/summary_2026_08_23.csv`.
+
+**One law fix:** the federal EITC now allows married-filing-separately filers with a
+qualifying child from 2021 (IRC 32(d)(2)), and the CalEITC follows FTB 3514. It
+moves no result yet, because Tax-Data's EITC-qualifying-child count is zero for
+every separate filer (985 of 4,305 sampled 2023 separate filers have dependents).
+That is a Tax-Data input question.
+
+**Next:** Minnesota (EITC separate-filer rule, then the remaining itemizer gap),
+then New Jersey (the high-income own-base gradient, `cross_model/results/reports/nj_triage_2026_08_24.md`).
 
 **As of 2026-08-24** (branch `state-tax`). Current counts: **ALL 51
 jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
