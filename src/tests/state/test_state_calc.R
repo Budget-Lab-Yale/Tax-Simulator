@@ -4101,6 +4101,49 @@ test_state_calc = function() {
   run_case('NJ', 2024, list(agi = 12000, wages1 = 12000, ei1 = 12000),
            expect = list(liab_st_iit = 154), label = 'NJ-1e single over the threshold')
 
+  # NJ-1f..1i: NJEITC for childless filers outside the federal age band
+  # (NJ-1040 line 58). 2022: a flat 40% of the federal childless maximum,
+  # 0.4 x 0.0765 x 7,320 = 224, for an 18+ filer who meets every federal test
+  # but age. A federally eligible filer gets the ordinary 40% match; a young
+  # filer past the federal childless phase-out gets nothing
+  run_case('NJ', 2022, list(agi = 8000, age1 = 22, wages1 = 8000, ei1 = 8000),
+           expect = list(st_eitc = 224), label = 'NJ-1f childless age 22')
+  run_case('NJ', 2022, list(agi = 8000, age1 = 70, wages1 = 8000, ei1 = 8000),
+           expect = list(st_eitc = 224), label = 'NJ-1g childless age 70 (no maximum age)')
+  run_case('NJ', 2022, list(agi = 8000, age1 = 30, wages1 = 8000, ei1 = 8000, eitc = 300),
+           expect = list(st_eitc = 120), label = 'NJ-1h federally eligible: 40% match')
+  run_case('NJ', 2022, list(agi = 30000, age1 = 22, wages1 = 30000, ei1 = 30000),
+           expect = list(st_eitc = 0), label = 'NJ-1i past the federal childless phase-out')
+
+  # NJ-1j/1k: the NJ child tax credit bars separate filers (line 65). 2024,
+  # one child aged 3, taxable income under $30,000: $1,000 for a head of
+  # household, nothing for a separate filer
+  run_case('NJ', 2024,
+           list(agi = 20000, filing_status = 3, wages1 = 20000, ei1 = 20000, n_dep = 1, dep_age1 = 3),
+           expect = list(st_ctc = 0), label = 'NJ-1j CTC separate filer barred')
+  run_case('NJ', 2024,
+           list(agi = 20000, filing_status = 4, wages1 = 20000, ei1 = 20000, n_dep = 1, dep_age1 = 3),
+           expect = list(st_ctc = 1000), label = 'NJ-1k CTC head of household')
+
+  # NJ-1l/1m/1n: the care credit, a stepped share of the FEDERAL credit on NJ
+  # taxable income (Worksheet J). 2019, one child aged 4, AGI 26,000: taxable
+  # 26,000 - 1,000 - 1,500 = 23,500 (40% band), federal credit 600 -> 240.
+  # 2019, taxable under 20,000 (50%), federal credit 1,050 -> 525, capped at
+  # $500 for one qualifying person. 2022 (cap removed), taxable ~69,500 (30%),
+  # federal credit 1,000 -> 300
+  run_case('NJ', 2019,
+           list(agi = 26000, filing_status = 4, wages1 = 26000, ei1 = 26000,
+                n_dep = 1, dep_age1 = 4, cdctc_nonref = 600),
+           expect = list(st_cdctc = 240), label = 'NJ-1l care credit 40% band')
+  run_case('NJ', 2019,
+           list(agi = 19000, filing_status = 4, wages1 = 19000, ei1 = 19000,
+                n_dep = 1, dep_age1 = 4, cdctc_nonref = 1050),
+           expect = list(st_cdctc = 500), label = 'NJ-1m care credit $500 cap (TY2018-20)')
+  run_case('NJ', 2022,
+           list(agi = 72000, filing_status = 4, wages1 = 72000, ei1 = 72000,
+                n_dep = 1, dep_age1 = 4, cdctc_nonref = 1000),
+           expect = list(st_cdctc = 300), label = 'NJ-1n care credit 30% band, no cap')
+
   # NJ-2: the property tax deduction, which for a homeowner is the property
   # tax actually paid. Same unit with 8,000 of property tax: taxable income
   # 51,000, tax 1,325.25
@@ -5449,6 +5492,9 @@ st_test_unit = function(overrides = list()) {
     txbl_kg = 0, kg_pref = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
     part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
     part = 0, part_active_loss = 0, part_passive_loss = 0, net_rent = 0, rent_loss = 0,
+    # federal childless EITC parameters (TY2022), for the state age-band credit
+    eitc.pi_rate_0 = 0.0765, eitc.pi_end_0 = 7320, eitc.po_rate_0 = 0.0765,
+    eitc.po_thresh_0 = 9160, eitc.min_age = 25, eitc.max_age = 64, eitc.inv_inc_limit = 10300,
     alimony = 0, other_inc = 0,
     sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,

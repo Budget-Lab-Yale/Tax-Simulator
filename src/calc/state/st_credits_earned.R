@@ -47,7 +47,13 @@ st_credits_earned_req_vars = c(
   'st_credits.forgive_add_exempt_int',
   'st_credits.forgive_add_alimony',
   'st_credits.eitc_childless_match',
-  'st_credits.eitc_childless_cap'
+  'st_credits.eitc_childless_cap',
+  'st_credits.eitc_ageband_style',
+  'st_credits.eitc_ageband_min_age',
+  'st_credits.eitc_ageband_max_age',
+  'st_credits.eitc_ageband_share',
+  'eitc.pi_rate_0', 'eitc.pi_end_0', 'eitc.po_rate_0', 'eitc.po_thresh_0',
+  'eitc.min_age', 'eitc.max_age', 'eitc.inv_inc_limit'
 )
 
 
@@ -287,6 +293,41 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     st_eitc
   )
   st_eitc_ref_share = if_else(childless_gate, 1, st_eitc_ref_share)
+
+  # Flat credit for childless filers outside the FEDERAL age band but inside
+  # the state's (NJ-1040 line 58: "at least 18 ... met all federal EIC
+  # requirements except the age requirement"; 21-24 in TY2020). The amount is
+  # a share of the federal childless maximum ($260 = 40% of $649 in 2025). The
+  # other federal tests are applied by recomputing the federal childless
+  # credit with the age test dropped: it must be positive, and investment
+  # income must be within the federal limit
+  ageband_in = function(age, lo, hi) !is.na(age) & age >= lo & age <= hi
+  ageband_ei = pmax(0, tax_unit$ei1) +
+               if_else(tax_unit$filing_status == 2, pmax(0, tax_unit$ei2), 0)
+  ageband_fed_credit = pmax(0,
+    tax_unit$eitc.pi_rate_0 * pmin(ageband_ei, tax_unit$eitc.pi_end_0) -
+    tax_unit$eitc.po_rate_0 * pmax(0, pmax(ageband_ei, tax_unit$agi) -
+                                     tax_unit$eitc.po_thresh_0))
+  ageband_state_age = ageband_in(tax_unit$age1, tax_unit$st_credits.eitc_ageband_min_age,
+                                 tax_unit$st_credits.eitc_ageband_max_age) |
+    (tax_unit$filing_status == 2 &
+       ageband_in(tax_unit$age2, tax_unit$st_credits.eitc_ageband_min_age,
+                  tax_unit$st_credits.eitc_ageband_max_age))
+  ageband_fed_age = ageband_in(tax_unit$age1, tax_unit$eitc.min_age, tax_unit$eitc.max_age) |
+    (tax_unit$filing_status == 2 &
+       ageband_in(tax_unit$age2, tax_unit$eitc.min_age, tax_unit$eitc.max_age))
+  ageband_gate = tax_unit$st_credits.eitc_ageband_style == 1 &
+    coalesce(tax_unit$n_dep_eitc, 0L) == 0 & tax_unit$eitc <= 0 &
+    tax_unit$dep_status != 1 & tax_unit$filing_status != 3 &
+    ageband_state_age & !ageband_fed_age & ageband_fed_credit > 0 &
+    earned_credit_inv_inc <= tax_unit$eitc.inv_inc_limit
+  st_eitc = if_else(
+    ageband_gate,
+    round(tax_unit$st_credits.eitc_ageband_share *
+            tax_unit$eitc.pi_rate_0 * tax_unit$eitc.pi_end_0),
+    st_eitc
+  )
+  st_eitc_ref_share = if_else(ageband_gate, 1, st_eitc_ref_share)
 
   # Credit for low-income individuals (VA Schedule ADJ Lines 10-17): a
   # flat amount per personal + dependent exemption (65+/blind add-ons

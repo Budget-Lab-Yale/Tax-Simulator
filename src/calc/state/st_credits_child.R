@@ -43,7 +43,8 @@ st_credits_child_req_vars = c(
   'st_credits.cwfc_po_rate',
   'st_credits.cwfc_po_rate_older_only',
   'st_credits.cwfc_po_thresh',
-  'st_credits.cwfc_mfs_eligible'
+  'st_credits.cwfc_mfs_eligible',
+  'st_credits.ctc_mfs_eligible'
 )
 
 
@@ -243,6 +244,10 @@ st_credits_child = function(tax_unit, st_eitc) {
       as.numeric(tier_amounts) * n_u6,
     TRUE ~ 0
   )
+  # Separate filers barred where the state says so (NJ-1040 line 65: "If your
+  # filing status is married filing separately, you are not eligible")
+  ctc_co = if_else(tax_unit$filing_status == 3 &
+                     tax_unit$st_credits.ctc_mfs_eligible == 0, 0, ctc_co)
 
   # CO Family Affordability credit: per-child amounts with a linear
   # phase-out between fatc_po_start and fatc_po_zero

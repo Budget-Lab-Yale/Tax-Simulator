@@ -513,6 +513,7 @@ scalars:
   # the excess DOWN, so 0 keeps that
   st_credits.ctc_po_round_up: 0
   st_credits.ctc_refundable: 1   # UT CTC is nonrefundable
+  st_credits.ctc_mfs_eligible: 1   # 0 = separate filers barred from the tiered CTC (NJ-1040 line 65)
   st_credits.ctc_pct_of_eitc: 0
   st_credits.ctc_max_age: 16
   st_credits.cdctc_match: 0
@@ -618,6 +619,12 @@ scalars:
   st_credits.earned_credit_round: 0
   st_credits.earned_credit_refundable: 0
   st_credits.earned_credit_mfs_eligible: 0
+  # Flat state EITC for childless filers outside the FEDERAL age band but inside the state's
+  # (NJ-1040 line 58): share x the federal childless maximum, when every other federal test passes
+  st_credits.eitc_ageband_style: 0
+  st_credits.eitc_ageband_min_age: 0
+  st_credits.eitc_ageband_max_age: .inf
+  st_credits.eitc_ageband_share: 0
   st_credits.young_child_credit_style: 0
   st_credits.young_child_credit_amount: 0
   st_credits.young_child_credit_max_age: -1

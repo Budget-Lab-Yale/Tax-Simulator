@@ -56,11 +56,69 @@ ctc_refundable:
   value: 1
   reference: 'The New Jersey Child Tax Credit is refundable, and is claimed in the payments and credits block'
 
+ctc_mfs_eligible:
+  value: 0
+  reference: 'NJ-1040 line 65 instructions (2022-2025 booklets): "If your filing status is married filing separately, you are not eligible for this credit." The credit itself starts in TY2022'
+
+eitc_ageband_style:
+  value:
+    '2017': 0
+    '2020': 1
+  reference: 'NJ-1040 line 58: a childless filer outside the FEDERAL EIC age band who meets every other federal EIC requirement gets a flat NJEITC. TY2020 booklet: "If you were age 21 to 24 ... enter $215". TY2021+ booklets: "If you were at least 18 years old, you may be eligible for an NJEITC even if you did not meet the age requirement for a federal EIC. The maximum age limit has been eliminated." TY2021 booklet summary of new law: the credit for these filers "is calculated based on the federal maximum credit for taxpayers with no qualifying child"'
+eitc_ageband_min_age:
+  value:
+    '2017': 0
+    '2020': 21
+    '2021': 18
+  reference: 'TY2020 booklet line 58: age 21 to 24; TY2021-2025 booklets: at least 18 on the last day of the tax year'
+eitc_ageband_max_age:
+  value:
+    '2017': .inf
+    '2020': 24
+    '2021': .inf
+  reference: 'TY2020: age 24 (the band below the federal minimum of 25). From TY2021 "the maximum age limit has been eliminated", so childless filers 65 and over also qualify'
+eitc_ageband_share:
+  value: 0.4
+  reference: 'The flat amount is 40% of the federal maximum credit for a filer with no qualifying child, matching every booklet: $215 (2020, 40% x 538), $601 (2021, 40% x 1,502 under ARPA), $224 (2022, x 560), $240 (2023, x 600), $253 (2024, x 632), $260 (2025, x 649)'
+
+cdctc_style:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'NJ-1040 child and dependent care credit (line 44 in TY2018; Worksheet J from TY2019): a percentage of the FEDERAL credit, stepped by New Jersey taxable income. Introduced TY2018'
+cdctc_share_income_base:
+  value: 9
+  reference: 'The bands test New Jersey taxable income (line 42 / line 40 in TY2018), the same base as the child tax credit'
+cdctc_share_agi_bounds:
+  value:
+    '2017': [0, 20000.01, 30000.01, 40000.01, 50000.01, 60000.01]
+    '2021': [0, 30000.01, 60000.01, 90000.01, 120000.01, 150000.01]
+  reference: 'Band lower bounds (a cent above each printed line, because the form bands are "X or less" while the table is closed below). TY2018-2020 booklets: $20,000 or less 50%, over $20,000 to $30,000 40%, to $40,000 30%, to $50,000 20%, to $60,000 10%, over $60,000 not eligible (TY2018 text: "taxable income ... of $60,000 or less"; the TY2019 and TY2020 Worksheet J tables are identical). TY2021-2025 booklets: $30,000 or less 50%, to $60,000 40%, to $90,000 30%, to $120,000 20%, to $150,000 10%, over $150,000 not eligible'
+cdctc_share_start:
+  value: [0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
+  reference: 'Flat share within each band (start = end): 50/40/30/20/10% and zero above the ceiling, every year'
+cdctc_share_end:
+  value: [0.5, 0.4, 0.3, 0.2, 0.1, 0.0]
+  reference: 'Same as cdctc_share_start: the NJ bands are steps, not slides'
+cdctc_cap_thresh:
+  value:
+    '2017': .inf
+    '2018': -1000000000
+    '2021': .inf
+  reference: 'TY2018-2020 Worksheet J lines 5-6: the credit may not exceed $500 for one qualifying person or $1,000 for two or more, at every income (a finite floor because the cap applies only above a finite threshold). From TY2021 the dollar cap was removed'
+cdctc_cap_amount:
+  value: 500
+  reference: 'TY2018-2020 Worksheet J line 6: $500 per qualifying person, up to two ($1,000)'
+cdctc_cap_po_rate:
+  value: 0
+  reference: 'No phase-out of the cap'
+cdctc_refundable:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'Nonrefundable TY2018-2020; refundable from TY2021 (the restructure that also raised the ceiling to $150,000 and dropped the cap)'
+
 documented_not_modeled:
-  child_and_dependent_care_credit:
-    reference: 'THE TOP NEW JERSEY FOLLOW-UP. NJ-1040 line 57 gives a percentage of the FEDERAL child and dependent care credit, tiered on New Jersey taxable income. Introduced TY2018 at 50%/40%/30%/20%/10% across $20k/$30k/$40k/$50k/$60k of taxable income, nonrefundable, and capped in dollars at $500 for one qualifying person or $1,000 for two or more (Worksheet J lines 5-7). Restructured for TY2021: the income ceiling rose to $150,000, the dollar cap was removed, and the credit became REFUNDABLE. Not encoded because the calculator has no banded percentage-of-the-federal-credit mechanism -- the existing care machinery interpolates a share of EXPENSES rather than stepping a share of the federal credit [understates credits for working families with care expenses, by up to $1,000 before TY2021 and by more after]'
-  eitc_childless_minimum_age_and_floor:
-    reference: 'New Jersey extends its earned income credit to childless filers below the federal minimum age -- 21 and over from TY2020, 18 and over from TY2021 -- and pays those filers a FLAT minimum amount where the percentage match would be smaller ($215 in TY2020, $601 in TY2021, $224 in TY2022, $240, $253 and $260 thereafter). Both features sit outside the plain percentage match encoded above [understates the credit for young childless workers, who receive nothing here when the federal credit is zero because of the federal age floor]'
   eitc_mfs_rule:
     reference: 'The credit is barred to married filing separately in TY2018-TY2021, and from TY2023 a conditional rule allows it where the filer has a qualifying child and lived apart for the last six months. TY2022 is genuinely undocumented in the booklet. Not gated here; a separate filer rarely holds a federal credit to match'
   property_tax_credit:
