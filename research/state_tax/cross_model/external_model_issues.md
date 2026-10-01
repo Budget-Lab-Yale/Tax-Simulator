@@ -158,6 +158,39 @@ filers aged 65 and over in 2019–2020 (77 and 76 records in our samples, median
 on every one. In 2017–2018 TAXSIM ties the credit to federal eligibility and is right. Effect: TAXSIM understates
 Minnesota tax for low-earning childless seniors by up to the childless maximum ($279 / $284).
 
+### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
+
+TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
+carries: alimony and separate maintenance received (NJ-1040 line 24) and other income (line 25). Probe (2026-10-01),
+2019, single, $60,000 of wages:
+
+| input | federal AGI | v32 (state AGI) |
+|---|---|---|
+| wages only | 60,000 | 60,000 |
+| + $1,900 `nonprop`, NJ | 61,900 | **60,000** |
+| + $1,900 `nonprop`, NY (control) | 61,900 | 61,900 |
+| + $1,900 `otherprop`, NJ | 61,900 | 61,900 |
+
+On our New Jersey misses the state-AGI gap equals the record's positive other income to the dollar. Effect: TAXSIM
+understates New Jersey tax by that income times the marginal rate (1.4–10.75%).
+
+### T25. New Jersey: net capital losses reduce state income
+
+New Jersey's "net gains or net income from the disposition of property" is a single category floored at zero; a net
+loss offsets nothing else. TAXSIM-35 reduces New Jersey state AGI by the net capital loss less the federal $3,000.
+Probe (2026-10-01), 2019 single, $60,000 of wages:
+
+| capital gains input | federal AGI | v32 | New Jersey law |
+|---|---|---|---|
+| none | 60,000 | 60,000 | 60,000 |
+| long-term −50,000 | 57,000 | **13,000** | 60,000 |
+| long-term −50,000, short-term +10,000 | 57,000 | **23,000** | 60,000 |
+| long-term +20,000, short-term −30,000 | 57,000 | **53,000** | 60,000 |
+| long-term −50,000, **Pennsylvania** (control) | 57,000 | 60,000 | 60,000 |
+
+TAXSIM floors Pennsylvania's equivalent class correctly. Effect: TAXSIM understates New Jersey tax for anyone with a
+net capital loss above $3,000, without limit; on our largest misses its New Jersey AGI reaches −$24 million.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
@@ -795,6 +828,22 @@ SC). Those cells are DROPPED rather than passed. And in Montana the exclusion
 moved the cell DOWN (0.300 -> 0.287), so its 2021 residual is dominated by
 something else we have not yet identified -- the rebate divergence is real, but
 it is not Montana's main 2021 problem.
+
+### P11. New Jersey child tax credit paid before it existed (2020–2021)
+
+New Jersey's child tax credit (N.J.S.A. 54A:4-17.1; NJ-1040 line 65) begins in tax year 2022. PolicyEngine's
+parameters for it (`gov.states.nj.tax.income.credits.ctc.amount`, `.age_limit`) start at 2022-01-01, and the first
+value is applied to earlier years. Probe (2026-10-01), head of household, $20,000 of wages, one child:
+
+| year | child aged 3: `nj_ctc` | child aged 10 |
+|---|---|---|
+| 2020 | **500** | 0 |
+| 2021 | **500** | 0 |
+| 2022 | 500 | 0 |
+
+Reproduced on 1.775.7 and 2.18.2. Effect: PolicyEngine's 2021 New Jersey liability is low by $100–$500 per child
+under 6. In our 2021 cell this was most of the residual (0.818 → 0.942 once excluded). A fix is a zero value
+from an earlier date (or an `in_effect` gate) on the CTC parameters.
 
 ## Corroboration worth passing along
 

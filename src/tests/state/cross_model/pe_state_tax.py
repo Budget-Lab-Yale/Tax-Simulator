@@ -103,6 +103,10 @@ OUTPUT_VARS = {
     # (x2 joint), so the 2025 KD row keys on this column clearing the $100
     # match tolerance instead of excluding the state
     "pe_co_sales_tax_refund": ["co_sales_tax_refund"],
+    # NJ child tax credit: the credit begins TY2022 but policyengine-us
+    # 1.775.7 pays it in 2020-2021 too (P11; the parameters start
+    # 2022-01-01); the 2021 KD row keys on this column
+    "pe_nj_ctc": ["nj_ctc"],
     "pe_ga_surplus_rebate": ["ga_surplus_tax_rebate"],
     "pe_az_families_rebate": ["az_families_tax_rebate"],
     # WI nets the homestead credit (rent/property-tax based, one-sided for

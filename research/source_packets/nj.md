@@ -163,6 +163,21 @@ Two causes found and fixed, both ours:
 Result: TAXSIM 0.916 / 0.846 / 0.849 / 0.826 (2017-2020), PolicyEngine 0.818 /
 0.924 / 0.928 / 0.911 / 0.924 (2021-2025).
 
+Second pass (same day), all three external-model bugs, probe-verified:
+
+- **T24 (TAXSIM):** `nonprop` (other income and alimony received) dropped from NJ
+  state AGI. On the misses the AGI gap equalled positive `other_inc` to the dollar.
+- **T25 (TAXSIM):** net capital losses (less the federal $3,000) reduce NJ state
+  AGI, though the property-disposition category is floored at zero; the source of
+  the very negative TAXSIM NJ AGIs. Pennsylvania's equivalent is right.
+- **P11 (PolicyEngine):** the NJ child tax credit paid in 2020-2021, before the
+  TY2022 start (parameters begin 2022-01-01); still present in 2.18.2.
+
+After both passes: TAXSIM 0.942 / 0.923 / 0.927 / 0.908 (2017-2020), PolicyEngine
+0.942 / 0.924 / 0.928 / 0.911 / 0.924 (2021-2025). The NOL records match far
+better than they looked because TAXSIM drops negative `nonprop` too (T24), which
+mimics our floor.
+
 Open, with evidence:
 
 - **Net operating loss carryforwards.** Tax-Data carries them as negative

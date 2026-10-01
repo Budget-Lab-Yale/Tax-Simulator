@@ -890,6 +890,9 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # taxpayer tax credit from the federal deduction less state income tax, so
     # the same unstripped SALT lands in a credit base instead of a deduction
     # and the st_itemizing-keyed predicate never sees it
+    # kg_st/kg_lt are the raw capital gains: TAXSIM's New Jersey calculation
+    # lets a net capital loss beyond the federal $3,000 cap reduce state
+    # income (T25), and the exclusion predicate needs the loss itself
     # xw_unstripped_salt rides to TAXSIM inside otheritem, where no state
     # calculation can identify it as SALT to strip or cap; xw_unhanded_item
     # (investment interest + Schedule A "other") has no TAXSIM input at all.
@@ -919,7 +922,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
-                         itemizing, n_dep_ge18, care_exp,
+                         itemizing, n_dep_ge18, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item),
                 by = 'id')
