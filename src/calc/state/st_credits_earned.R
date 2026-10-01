@@ -117,7 +117,10 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # earned-income credit, mirroring the federal EITC (eitc.R) and the state
   # exempt/household/WFTC credits; ei1/ei2 are never dependent-zeroed upstream.
   # MFS filers are barred unless the state opts them in (earned_credit_mfs_
-  # eligible == 1), mirroring the federal EITC's MFS treatment.
+  # eligible == 1), and even then need a qualifying child: the IRC 32(d)(2)
+  # separated-spouse rule the federal EITC applies from 2021 (eitc.R), which
+  # conforming states adopt (FTB 3514). Its living-apart condition is
+  # unobserved and assumed met.
   # Disqualifying investment income, mirroring the federal EITC composition
   # (eitc.R) -- states with their own ceiling (FTB 3514) set the limit;
   # default .inf imposes no state-side test
@@ -126,7 +129,8 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     pmax(0, tax_unit$sch_e - tax_unit$part_scorp)
   earned_credit_eligible = tax_unit$dep_status != 1 &
     (tax_unit$filing_status != 3 |
-       tax_unit$st_credits.earned_credit_mfs_eligible == 1) &
+       (tax_unit$st_credits.earned_credit_mfs_eligible == 1 &
+          tax_unit$n_dep_eitc > 0)) &
     earned_income > 0 &
     earned_income < tax_unit$st_credits.earned_credit_earned_limit &
     agi < tax_unit$st_credits.earned_credit_agi_limit &

@@ -150,6 +150,12 @@ min_age:
 max_age:
   value: 64
 
-# Whether credit is available for married filing separately returns   
+# Whether credit is available for married filing separately returns. From
+# 2021, IRC 32(d)(2) (ARPA sec. 9623) allows it only to a separate filer
+# with a qualifying child who lived with them over half the year and who
+# lived apart from the spouse for the last 6 months or is legally
+# separated; eitc.R requires the child and assumes the living-apart test
 mfs_eligible:
-  value: 0
+  value:
+    '2014': 0
+    '2021': 1

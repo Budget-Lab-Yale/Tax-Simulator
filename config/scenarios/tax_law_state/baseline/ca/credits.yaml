@@ -187,8 +187,10 @@ earned_credit_refundable:
   value: 1
   reference: 'California FTB 3514, refundable California EITC, 2025'
 earned_credit_mfs_eligible:
-  value: 0
-  reference: 'CalEITC follows federal EITC filing-status rules; married-filing-separately barred, matching the federal model (eitc.yaml mfs_eligible = 0)'
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'FTB 3514 instructions: through TY2020 married filing separately is barred outright (2020 instructions, Step 1: "Is your filing status married filing separately? Yes, stop here, you cannot take the credit"); from TY2021 the special rule for separated spouses applies, conforming to ARPA sec. 9623 (2021 instructions, Step 1 note; 2023 booklet, Special Rule for Separated Spouses/RDPs): a qualifying child who lived with the filer over half the year, and living apart from the spouse for the last 6 months or a written separation agreement/decree. The qualifying-child condition is applied in st_credits_earned.R; the living-apart condition is unobserved and assumed met'
 earned_credit_agi_safe_harbor:
   value:
     '2017': [3446, 5175, 7265, 7265]

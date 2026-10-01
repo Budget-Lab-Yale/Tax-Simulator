@@ -26,6 +26,7 @@ test_tax_law = function() {
 
   test_unrounded_mapper()
   test_eitc_childless_threshold_indexed()
+  test_eitc_mfs_separated_spouse_rule()
   message('test_tax_law: ALL TESTS PASSED')
   invisible(TRUE)
 }
@@ -142,5 +143,63 @@ test_eitc_childless_threshold_indexed = function() {
   }
 
   message('test_eitc_childless_threshold_indexed: PASSED')
+  invisible(TRUE)
+}
+
+
+
+test_eitc_mfs_separated_spouse_rule = function() {
+
+  #----------------------------------------------------------------------------
+  # Regression test for the married-filing-separately EITC. mfs_eligible was 0
+  # in every year, denying separate filers the credit even after IRC 32(d)(2)
+  # (ARPA sec. 9623) allowed it from 2021 to one with a qualifying child who
+  # lived with them over half the year and lived apart from the spouse (the
+  # living-apart test is unobserved and assumed met). In every current-law
+  # configuration a separate filer must get: nothing in 2020, nothing in 2023
+  # without a qualifying child, and in 2023 with one the same credit as a
+  # head of household with the same income.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  tax_law_ids = c('baseline', 'baseline_2024', 'baseline_2024_tcja_ext',
+                  'tests/baseline_2017', 'tests/tcja_2017',
+                  'tests/booker_ctc_tcja_ext')
+
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'),
+                             year   = 1970:2040) %>%
+    mutate(growth = 0.02)
+
+  # $8,000 of wages: inside every schedule's phase-in or plateau, so any
+  # eligible unit gets a positive credit
+  cases = tribble(
+    ~year, ~filing_status, ~n_dep_eitc, ~should_get,
+    2020,  3,              1,           'zero',
+    2023,  3,              0,           'zero',
+    2023,  3,              1,           'hoh_amount',
+    2023,  4,              1,           'hoh_amount'
+  )
+
+  for (tax_law_id in tax_law_ids) {
+    law = build_tax_law_from_id(tax_law_id, years = c(2020, 2023),
+                                indexes = test_indexes)
+    result = cases %>%
+      mutate(dep_status = 0, age1 = 40, ei1 = 8000, agi = 8000) %>%
+      left_join(law, by = c('year', 'filing_status')) %>%
+      mutate(eitc = calc_eitc(., fill_missings = T)$eitc)
+
+    hoh = result$eitc[result$filing_status == 4]
+    ok = result %>%
+      mutate(pass = if_else(should_get == 'zero', eitc == 0,
+                            abs(eitc - hoh) < 0.01 & eitc > 0))
+    if (!all(ok$pass)) {
+      stop('MFS EITC separated-spouse rule fails in ', tax_law_id, ': ',
+           paste(sprintf('%d/fs%d/kids%d -> %.2f', ok$year, ok$filing_status,
+                         ok$n_dep_eitc, ok$eitc)[!ok$pass], collapse = '; '))
+    }
+  }
+
+  message('test_eitc_mfs_separated_spouse_rule: PASSED')
   invisible(TRUE)
 }

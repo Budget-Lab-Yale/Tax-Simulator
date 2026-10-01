@@ -698,11 +698,30 @@ test_state_calc = function() {
                          liab_st_individual_net = 65.5),
            label = 'CA-8b dependent filer excluded from CalEITC')
 
-  # CA-8c: a married-filing-separately filer is barred from the refundable
-  # CalEITC (earned_credit_mfs_eligible = 0), mirroring the federal EITC.
+  # CA-8c: a married-filing-separately filer WITHOUT a qualifying child is
+  # barred from the refundable CalEITC in every year: the separated-spouse
+  # rule (FTB 3514, TY2021+) requires a qualifying child.
   run_case('CA', 2025, list(filing_status = 3, agi = 10000, ei1 = 3000),
            expect = list(st_earned_credit = 0),
-           label = 'CA-8c MFS filer barred from CalEITC')
+           label = 'CA-8c childless MFS filer barred from CalEITC')
+
+  # CA-8d: from TY2021 a separate filer WITH a qualifying child qualifies
+  # under the separated-spouse rule (living apart assumed). The FTB 3514
+  # table does not vary by filing status, so the credit equals CA-4's
+  # single-filer amount on the same income: $1,162.
+  run_case('CA', 2025,
+           list(filing_status = 3, agi = 10000, ei1 = 7000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 8),
+           expect = list(st_earned_credit = 1162),
+           label = 'CA-8d MFS filer with a qualifying child, TY2025')
+
+  # CA-8e: through TY2020 FTB 3514 bars separate filers outright ("Is your
+  # filing status married filing separately? Yes, stop here"), child or not.
+  run_case('CA', 2020,
+           list(filing_status = 3, agi = 10000, ei1 = 7000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 8),
+           expect = list(st_earned_credit = 0),
+           label = 'CA-8e MFS filer barred from CalEITC, TY2020')
 
   # CA-9: the Schedule CA limitation protects $20,000 medical, $10,000
   # investment interest, and $5,000 casualty deductions. The reduction is

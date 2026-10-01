@@ -81,8 +81,12 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       ),
       ei = (ei1 * qual1) + if_else(filing_status == 2, ei2 * qual2, 0),
 
-      # Potentially deny eligibility based on dependent and filing status
-      ei = ei * (!dep_status & (eitc.mfs_eligible == 1 | filing_status != 3)),
+      # Potentially deny eligibility based on dependent and filing status. A
+      # separate filer qualifies only where the law allows it AND they have a
+      # qualifying child: IRC 32(d)(2), from 2021. Its living-apart or
+      # legal-separation condition is unobserved and assumed met
+      ei = ei * (!dep_status &
+                 (filing_status != 3 | (eitc.mfs_eligible == 1 & n_dep_eitc > 0))),
       
       # Potentially deny eligibility based on investment income
       inv_inc = txbl_int + 
