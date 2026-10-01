@@ -1,2 +1,2 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2017:2024,,,
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,states,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.State-Weights.vintage,dep.State-Weights.ID
+baseline,baseline,,2017:2025,,,,all,2026092720_filer_refit_v2,baseline,dryrun_B_2022_2023,baseline

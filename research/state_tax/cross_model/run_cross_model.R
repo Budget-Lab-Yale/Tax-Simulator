@@ -8,10 +8,15 @@
 #   Rscript research/state_tax/cross_model/run_cross_model.R \
 #     --states IL --years 2019 --models taxsim [--n 20000] [--n-pe 1500] \
 #     [--chunk-size 10000] [--force-prepare] \
-#     [--pe-python /path/to/venv/bin/python]
+#     [--pe-python /path/to/venv/bin/python] [--runscript tests/cross_model]
 #
 #   --states ALL expands to every state with a baseline config
 #   --years accepts "2017:2020" or "2019 2020"
+#   --runscript picks the baseline runscript (default tests/cross_model). A
+#     runscript that sets `states` and pins State-Weights (the default does)
+#     also writes summary_weighted.csv for the years its weight files cover.
+#     The federal pre-pass cache does not record the Tax-Data vintage that
+#     built it: after changing the runscript's pin, pass --force-prepare
 #
 # Canonical year split is enforced downstream: TAXSIM covers <= 2020,
 # PolicyEngine covers >= 2021 (design of record, plan Phase 5).
@@ -95,8 +100,8 @@ out_dir     = get_arg('--out',   file.path(records_dir, 'results'))
 cache_dir   = get_arg('--cache', file.path(records_dir, 'cache'))
 
 stopifnot(all(models %in% c('taxsim', 'policyengine')))
-if (any(years < 2017 | years > 2024)) {
-  stop('Validation window is 2017-2024 (historical microdata years)')
+if (any(years < 2017 | years > 2025)) {
+  stop('Validation window is 2017-2025 (state law is encoded through TY2025)')
 }
 
 
@@ -105,8 +110,9 @@ if (any(years < 2017 | years > 2024)) {
 #--------------
 
 # Baseline-only runscript covering the validation window; local output root
+runscript_name = get_arg('--runscript', 'tests/cross_model')
 globals = parse_globals(
-  runscript_name   = 'tests/cross_model',
+  runscript_name   = runscript_name,
   scenario_id      = NULL,
   local            = 1,
   vintage          = NULL,
@@ -120,7 +126,8 @@ globals = parse_globals(
 # Run
 #-----
 
-message('Cross-model validation: ', paste(states, collapse = ' '),
+message('Cross-model validation (', runscript_name, '): ',
+        paste(states, collapse = ' '),
         ' | years ', paste(years, collapse = ' '),
         ' | models ', paste(models, collapse = ' '))
 

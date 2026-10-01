@@ -112,11 +112,13 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
     calc_kg_cpi_ratio(indexes, year) %>%
 
     # Federal calculation (baseline: no employer-side payroll adjustment).
-    # Payroll variables are kept because the state calculator reads the
-    # employee payroll and self-employment tax (MO adds both to its itemized
-    # base); they do not enter any federal result compared here
+    # The state calculator reads the employee payroll and self-employment tax
+    # (MO adds both to its itemized base). do_taxes() already binds them from
+    # vars_payroll, so vars_1040 must exclude them as run_one_year() does:
+    # listing them in both binds every payroll column twice and the pre-pass
+    # fails ("object 'liab_pr_er' not found")
     do_taxes(baseline_pr_er = NULL,
-             vars_1040      = fed_calc_vars(incl_payroll = T),
+             vars_1040      = fed_calc_vars(incl_payroll = F),
              vars_payroll   = return_vars$calc_pr)
 
   out = list(tax_units = tax_units, indexes = indexes)
@@ -139,15 +141,25 @@ cross_model_sample = function(tax_units_calc, n = 20000, seed = 76) {
   #   - n (int)             : target sample size
   #   - seed (int)          : RNG seed (default mirrors globals$random_seed)
   #
-  # Returns: tibble of sampled records with stratum labels (df)
+  # Returns: tibble of sampled records with stratum labels and stratum_pop,
+  #          the stratum's eligible-record count (for design weights) (df)
   #----------------------------------------------------------------------------
 
   set.seed(seed)
 
   # Dependent filers excluded in v1: TAXSIM mstat-8 semantics (dependent
-  # standard deduction, kiddie tax) differ enough to swamp state signal
+  # standard deduction, kiddie tax) differ enough to swamp state signal.
+  # Non-filers excluded too (JI, 2026-09-30): the rebuilt non-filer records
+  # took the AGI <= 0 share of the sample from 15% to 35%, inflating match
+  # rates where both models return zero and failing states whose low-income
+  # credits TAXSIM pays to them (NM, VT). `filer` after do_taxes() also counts
+  # records switched into filing by the rebate or fully-refundable CTC rules
+  # (43% of 2021 records), so those are dropped as well
   eligible = tax_units_calc %>%
-    filter(dep_status == 0)
+    filter(dep_status == 0,
+           filer == 1,
+           become_filer_ctc == 0,
+           become_filer_rebate == 0)
 
   pos_breaks = eligible %>%
     filter(agi > 0) %>%
@@ -177,7 +189,8 @@ cross_model_sample = function(tax_units_calc, n = 20000, seed = 76) {
     group_split(stratum) %>%
     map(~ slice_sample(.x, n = .x$n_take[1])) %>%
     bind_rows() %>%
-    select(-n_stratum, -n_take) %>%
+    rename(stratum_pop = n_stratum) %>%
+    select(-n_take) %>%
     return()
 }
 
@@ -552,6 +565,57 @@ cross_model_compare = function(ours, theirs, model, known_diffs = NULL,
 }
 
 
+cross_model_weighted_cells = function(records, frame, state_wts,
+                                      tolerance = 100) {
+
+  #----------------------------------------------------------------------------
+  # Population-weighted versions of the cell metrics. The unweighted cells
+  # stay the acceptance metric (they validate law encoding); these say how
+  # much of each state's actual population, and of its liability, the
+  # agreement covers. Each compared record stands for
+  #   (stratum_pop / records drawn from its stratum) x its state weight,
+  # a design weight that undoes the stratified draw times the record's
+  # State-Weights split for that state.
+  #
+  # Parameters:
+  #   - records (df)   : cross_model_compare()$records for one model-year
+  #   - frame (df)     : the sample that model actually ran (id, stratum,
+  #                      stratum_pop) -- the PE leg runs a nested subset
+  #   - state_wts (df) : build_state_weights() output (id, state, weight)
+  #   - tolerance (dbl): dollar tolerance for the match rate
+  #
+  # Returns: per state-year tibble: w_units (estimated non-dependent units),
+  #          w_share_clean, wmatch_100, wmatch_100_clean, and liab_ratio /
+  #          liab_ratio_clean (weighted our / external liability) (df)
+  #----------------------------------------------------------------------------
+
+  design = frame %>%
+    group_by(stratum) %>%
+    mutate(design_wt = stratum_pop / n()) %>%
+    ungroup() %>%
+    select(id, design_wt)
+
+  records %>%
+    filter(!excluded) %>%
+    inner_join(design, by = 'id') %>%
+    inner_join(state_wts, by = c('id', 'state')) %>%
+    mutate(pop_wt = design_wt * weight,
+           hit    = abs_diff <= tolerance) %>%
+    group_by(model, state, year) %>%
+    summarise(
+      n                = n(),
+      w_units          = sum(pop_wt),
+      w_share_clean    = sum(pop_wt[fed_aligned]) / sum(pop_wt),
+      wmatch_100       = weighted.mean(hit, pop_wt),
+      wmatch_100_clean = weighted.mean(hit[fed_aligned], pop_wt[fed_aligned]),
+      liab_ratio       = sum(pop_wt * our_liab) / sum(pop_wt * ext_liab),
+      liab_ratio_clean = sum((pop_wt * our_liab)[fed_aligned]) /
+                         sum((pop_wt * ext_liab)[fed_aligned]),
+      .groups = 'drop'
+    )
+}
+
+
 cross_model_stage_diagnosis = function(records) {
 
   #----------------------------------------------------------------------------
@@ -744,7 +808,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
   #
   # Parameters:
   #   - states (str[])   : 2-letter codes, upper case
-  #   - years (int[])    : tax years (2017-2024)
+  #   - years (int[])    : tax years (2017-2025)
   #   - models (str[])   : subset of c('taxsim', 'policyengine')
   #   - n (int)          : TAXSIM sample size per year
   #   - n_pe (int)       : PolicyEngine sample size per year (nested subset)
@@ -755,13 +819,20 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
   #   - force_prepare (bool) : recompute federal pre-pass caches
   #
   # Returns: tibble of all cell summaries (df); writes summary.csv and
-  #          per-record raw files as a side effect
+  #          per-record raw files as a side effect, plus summary_weighted.csv
+  #          when the runscript pins State-Weights (see
+  #          cross_model_weighted_cells())
   #----------------------------------------------------------------------------
 
   dir.create(file.path(out_dir, 'raw'), recursive = T, showWarnings = F)
   known_diffs = cross_model_load_known_diffs(cross_model_known_diffs_path())
 
+  # State-Weights root: present only when the runscript sets `states` and pins
+  # a vintage (parse_globals() blanks the pin on federal-only rows)
+  sw_root = get_scenario_info('baseline')$interface_paths$`State-Weights`
+
   all_cells = list()
+  weighted_cells = list()
 
   for (yr in years) {
 
@@ -856,6 +927,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     for (model in yr_models) {
 
       if (model == 'taxsim') {
+        frame = sampled
         theirs = cross_model_taxsim_leg(sampled, states, yr, state_law,
                                         chunk_size = chunk_size) %>%
           rename(ext_liab = siitax)
@@ -864,6 +936,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
           group_by(stratum) %>%
           slice_head(n = ceiling(n_pe / n_distinct(sampled$stratum))) %>%
           ungroup()
+        frame = pe_sampled
         theirs = cross_model_pe_leg(pe_sampled, states, yr,
                                     venv_python = venv_python,
                                     cache_dir   = cache_dir) %>%
@@ -898,7 +971,30 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
       }
 
       all_cells[[paste(model, yr)]] = comp$cells
+
+      # Weighted cells wherever the pinned vintage has this year's file.
+      # Pre-2022 records cannot borrow a later year's split: only ~55% of
+      # 2017-2021 ids reappear in 2022
+      if (!is.null(sw_root) &&
+          file.exists(file.path(sw_root, paste0('state_weights_', yr, '.csv.gz')))) {
+        state_wts = build_state_weights(frame %>% select(id, weight), yr,
+                                        method = 'interface',
+                                        states = states, root = sw_root)
+        weighted_cells[[paste(model, yr)]] =
+          cross_model_weighted_cells(comp$records, frame, state_wts)
+      }
     }
+  }
+
+  if (length(weighted_cells) > 0) {
+    weighted = bind_rows(weighted_cells)
+    weighted_path = file.path(out_dir, 'summary_weighted.csv')
+    if (file.exists(weighted_path)) {
+      weighted = read_csv(weighted_path, show_col_types = F) %>%
+        anti_join(weighted, by = c('model', 'state', 'year')) %>%
+        bind_rows(weighted)
+    }
+    write_csv(weighted %>% arrange(state, year, model), weighted_path)
   }
 
   cells = bind_rows(all_cells) %>%

@@ -98,6 +98,11 @@ OUTPUT_VARS = {
     # (KD exclude predicates key on these columns being positive).
     "pe_ny_inflation_refund": ["ny_inflation_refund_credit"],
     "pe_va_rebate": ["va_rebate"],
+    # CO TABOR sales-tax refund, netted into state_income_tax. Whole-window
+    # exclusion through 2024 (tiers $153-$1,600); the 2025 tiers are $19-$59
+    # (x2 joint), so the 2025 KD row keys on this column clearing the $100
+    # match tolerance instead of excluding the state
+    "pe_co_sales_tax_refund": ["co_sales_tax_refund"],
     "pe_ga_surplus_rebate": ["ga_surplus_tax_rebate"],
     "pe_az_families_rebate": ["az_families_tax_rebate"],
     # WI nets the homestead credit (rent/property-tax based, one-sided for
@@ -194,7 +199,15 @@ def build_situation(rows, year):
             ages.append(ages[-1] if ages else 10)
         for k, age in enumerate(ages[:n_dep]):
             child = f"c{rid}_{k}"
-            situation["people"][child] = {"age": {yr: max(0, age)}}
+            # Dependency is an INPUT: the record says who is claimed. Left to
+            # its formula, PolicyEngine 1.775.7 counts no one aged 18+ as a
+            # dependent (no qualifying-child-under-19/24 or qualifying-relative
+            # path), which silently removed every such dependent's federal
+            # $500 credit and every state per-dependent benefit -- the whole
+            # of what was filed as P9 (verified 2026-09-30: IL tax identical
+            # at dependent ages 17/18/19/23 once the flag is supplied)
+            situation["people"][child] = {"age": {yr: max(0, age)},
+                                          "is_tax_unit_dependent": {yr: True}}
             members.append(child)
 
         # Person-level money inputs

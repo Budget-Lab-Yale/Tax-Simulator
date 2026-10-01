@@ -66,6 +66,11 @@ config/interfaces/output_roots.yaml
 # Cross-model validation harness: caches and per-record raw output
 research/state_tax/cross_model/cache/
 research/state_tax/cross_model/results/raw/
+# Working copies kept from the 2026-09-30 vintage switch (old-vintage caches,
+# the superseded with-non-filers run)
+research/state_tax/cross_model/cache_sw/
+# Upstream PolicyEngine reports and drafts: local until sent (JI, 2026-09-30)
+research/state_tax/cross_model/bug_reports/policyengine/
 
 # taxsim_bug_reports.do writes its Stata working files to the working
 # directory, and the protocol says to run it from the repo root. The
