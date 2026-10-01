@@ -233,10 +233,15 @@ taxsim_crosswalk = function(tax_units, state = 'No state',
         trad_contr_ira - pmin(tuition_ded, agi.tuition_ded_limit) -
         pmin(dpad, agi.dpad_limit) - sl_int_ded,
 
-      # TAXSIM requires nonprop >= 0; fold any negative remainder into
-      # otherprop (accepts negatives; both feed AGI identically)
-      otherprop = otherprop + pmin(0, nonprop),
-      nonprop   = pmax(0, nonprop),
+      # A negative nonprop (a federal NOL deduction in other_inc, or
+      # above-the-line deductions exceeding it) is passed as is. It used to be
+      # folded into otherprop on the belief that TAXSIM requires nonprop >= 0;
+      # it does not (2026-10-01 probe: nonprop -20,000 on $60,000 of wages gives
+      # federal AGI 40,000). Both feed federal AGI identically, but STATE
+      # calculations treat them differently: folded into otherprop, the NOL
+      # netted against Schedule E rent and other property income inside
+      # TAXSIM's New Jersey category and floored it away -- the source of most
+      # remaining NJ TAXSIM misses on NOL records
       
       # Feenberg's medical deduction allocation (https://taxsim.nber.org/taxsim-calc9/medical_deduction.html)
       med_pref    = pmin(med_item_ded, pmax(0, agi) * 0.025),

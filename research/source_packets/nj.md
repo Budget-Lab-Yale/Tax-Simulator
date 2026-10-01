@@ -217,6 +217,14 @@ Fourth pass (same day):
 After the fourth pass: TAXSIM 0.952 / 0.934 / 0.940 / 0.921, PolicyEngine 0.958 /
 0.968 / 0.971 / 0.946 / 0.941. Four of nine cells clear 95%.
 
+Harness fix (same day): **the TAXSIM crosswalk folded a negative `nonprop` (a
+federal NOL deduction) into `otherprop`**, on the belief that TAXSIM rejects
+negative `nonprop`. It does not (probe: -$20,000 gives the right federal AGI). Folded
+into `otherprop`, the NOL netted against rent and other Schedule E income inside
+TAXSIM's New Jersey category and floored it away, which was most of the remaining
+NJ TAXSIM misses. Passed as is (`src/tests/test_taxsim.R`), NJ TAXSIM went to 0.969
+/ 0.968 / 0.969 / 0.946; six of nine NJ cells now clear 95%.
+
 Open, with evidence:
 
 - **Net operating loss carryforwards.** Tax-Data carries them as negative

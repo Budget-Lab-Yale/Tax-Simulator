@@ -207,3 +207,23 @@ phase-out bases. Untraced — left open rather than guessed at.
   missing from `results/raw/`.
 - Federal pre-pass caches: `cache/fed_calc_{year}.rds` (sample seed 76,
   dependent filers excluded — TAXSIM mstat-8 semantics differ).
+
+## Crosswalk: negative `nonprop` is passed as is (2026-10-01)
+
+The TAXSIM crosswalk used to fold a negative `nonprop` (a federal NOL deduction in
+`other_inc`, or above-the-line deductions exceeding it) into `otherprop`, believing
+TAXSIM requires `nonprop >= 0`. A probe shows it does not: `nonprop` = -20,000 on
+$60,000 of wages gives federal AGI 40,000. Federal results are identical either way,
+but state calculations treat the two inputs differently, and the fold created false
+state divergences. Removing it moved 24 TAXSIM cells up by more than a point (PA +10 to
++12, NJ +2 to +3, NY and VT about +3) and 8 down. The downs are where the fold had
+produced agreement by accident, and each is an open state question, not a regression:
+
+- **Arkansas (-3.3 to -3.9pp):** TAXSIM ignores a negative `nonprop` in AR state AGI
+  (probe: AR AGI 60,000 with federal AGI 40,000). We let the NOL reduce AR income.
+  Arkansas has an NOL provision; whether the federal NOL is the right proxy needs
+  the AR rule.
+- **Maine (-2.4 / -2.7pp, 2017-2018):** the difference is the sales tax fairness
+  credit, paid by us to NOL records. Its "income" (36 M.R.S. 5213-A(1)(B)) is federal
+  AGI plus listed losses and adjustments; the NOL deduction is in neither list, so
+  whether it is added back is unresolved from the statute.
