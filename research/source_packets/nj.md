@@ -225,6 +225,15 @@ TAXSIM's New Jersey category and floored it away, which was most of the remainin
 NJ TAXSIM misses. Passed as is (`src/tests/test_taxsim.R`), NJ TAXSIM went to 0.969
 / 0.968 / 0.969 / 0.946; six of nine NJ cells now clear 95%.
 
+Final pass (same day): **T28 (TAXSIM)**, the 2019 rate schedule applied in 2020 (the
+10.75% bracket still from $5,000,000 instead of the TY2020 $1,000,000), and a
+PolicyEngine assumption row for separate filers with care expenses (federal IRC
+21(e)(4) living-apart condition: assumed met by us, not by PolicyEngine).
+
+**NJ cross-model CLOSED for 2017-2024:** TAXSIM 0.969 / 0.968 / 0.969 / 0.975,
+PolicyEngine 0.968 / 0.972 / 0.975 / 0.955. 2025 (0.941, 7 misses on 119 records)
+sits outside the canonical window and is still under review.
+
 Open, with evidence:
 
 - **Net operating loss carryforwards.** Tax-Data carries them as negative

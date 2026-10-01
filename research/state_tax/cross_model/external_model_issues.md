@@ -217,6 +217,14 @@ disabled) whose "income on line 27", New Jersey total income, which excludes Soc
 Effect: TAXSIM overstates New Jersey tax for retirees aged 62-64, and for older retirees whose Social Security pushes
 federal AGI over $100,000 while New Jersey income stays under it.
 
+### T28. New Jersey 2020: the 10.75% bracket still starts at $5 million
+
+P.L. 2020, c. 95 (the 2020 "millionaires tax") moved New Jersey's 10.75% bracket floor from $5,000,000 down to
+$1,000,000 for tax year 2020 (NJ-1040 Tax Rate Schedules, Tables A and B, TY2020 booklet). TAXSIM-35 uses the 2019
+schedule for 2020. Probe (2026-10-01), single, $2,000,000 of wages (NJ taxable income $1,999,000): `siitax` =
+164,184.05 in both 2019 and 2020; the TY2020 schedule gives $17,782 more. Effect: TAXSIM understates 2020 New Jersey
+tax by 1.78% of taxable income between $1 million and $5 million.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under

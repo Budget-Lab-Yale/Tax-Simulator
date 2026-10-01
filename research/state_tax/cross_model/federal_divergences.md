@@ -227,3 +227,15 @@ produced agreement by accident, and each is an open state question, not a regres
   credit, paid by us to NOL records. Its "income" (36 M.R.S. 5213-A(1)(B)) is federal
   AGI plus listed losses and adjustments; the NOL deduction is in neither list, so
   whether it is added back is unresolved from the statute.
+
+## Federal care credit for separate filers (2026-10-01)
+
+`cdctc.R` has no married-filing-separately bar. Under IRC 21(e)(2) the credit is
+allowed to a married filer only on a joint return, unless 21(e)(4) treats them as
+unmarried: they lived apart from the spouse for the last six months while maintaining
+the qualifying person's home. A separate filer who claims care expenses already has a
+qualifying person, so paying them amounts to assuming the living-apart test is met,
+the same assumption `eitc.R` makes for separate filers from 2021. PolicyEngine assumes
+the opposite. Excluded on the New Jersey PolicyEngine leg where the state credit
+(a share of the federal one) exceeds $100.
+
