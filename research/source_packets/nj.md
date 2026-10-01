@@ -178,6 +178,31 @@ After both passes: TAXSIM 0.942 / 0.923 / 0.927 / 0.908 (2017-2020), PolicyEngin
 better than they looked because TAXSIM drops negative `nonprop` too (T24), which
 mimics our floor.
 
+Third pass (same day), three of ours, each from the TY2018-2025 booklets:
+
+- **Child tax credit paid to separate filers.** Line 65: "If your filing status is
+  married filing separately, you are not eligible." New generic
+  `st_credits.ctc_mfs_eligible` (default 1), NJ 0. Tests NJ-1j/1k.
+- **The NJEITC for childless filers outside the federal age band.** Line 58: ages
+  21-24 in TY2020; from TY2021 "at least 18 ... The maximum age limit has been
+  eliminated", for a filer meeting every federal EIC test except age. The amount is
+  flat, 40% of the federal childless maximum ($215, $601, $224, $240, $253, $260).
+  New generic `st_credits.eitc_ageband_*` component (age band, share of the federal
+  childless maximum; the other federal tests applied by recomputing the federal
+  childless credit without the age test). Tests NJ-1f..1i. The earlier note that
+  this was a *minimum* where the percentage match was smaller was wrong: the
+  booklet pays the flat amount outright.
+- **The child and dependent care credit,** formerly the top follow-up. Worksheet J:
+  a stepped share of the FEDERAL credit on NJ taxable income. TY2018-2020: 50/40/30/
+  20/10% across $20k-$60k, capped at $500 / $1,000, nonrefundable. TY2021+: 50% down
+  to 10% across $30k-$150k, no cap, refundable. Built on the existing NY share-table
+  style with flat bands. Tests NJ-1l/1m/1n.
+- **T26 (TAXSIM):** v38 is zero on every NJ record in 2018-2020, so TAXSIM does not
+  model the care credit; excluded where ours exceeds $100.
+
+After the third pass: TAXSIM 0.942 / 0.923 / 0.927 / 0.907, PolicyEngine 0.958 /
+0.968 / 0.971 / 0.946 / 0.941. PolicyEngine 2021-2023 clear 95%.
+
 Open, with evidence:
 
 - **Net operating loss carryforwards.** Tax-Data carries them as negative

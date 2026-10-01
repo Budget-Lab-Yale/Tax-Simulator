@@ -191,6 +191,14 @@ Probe (2026-10-01), 2019 single, $60,000 of wages:
 TAXSIM floors Pennsylvania's equivalent class correctly. Effect: TAXSIM understates New Jersey tax for anyone with a
 net capital loss above $3,000, without limit; on our largest misses its New Jersey AGI reaches −$24 million.
 
+### T26. New Jersey child and dependent care credit not modeled (2018–2020)
+
+New Jersey introduced a child and dependent care credit for tax year 2018: a share of the federal credit stepped by
+New Jersey taxable income (50% at $20,000 or less down to 10% at $60,000, none above), capped at $500 for one
+qualifying person or $1,000 for two or more (NJ-1040 Worksheet J). TAXSIM-35 returns `v38_state_child_care_credit` = 0
+on every New Jersey record in 2018–2020. Effect: TAXSIM overstates New Jersey tax for working families with care
+expenses, by up to $1,000. (Coverage note, like T4/T5.)
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
