@@ -75,6 +75,11 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'other_gains',    # (dbl)  other gains or losses (Form 4797)
     'alimony',        # (dbl)  alimony received
     'other_inc',      # (dbl)  other taxable income
+    'trad_contr_ira', # (dbl)  federal IRA deduction
+    'keogh_contr',    # (dbl)  federal Keogh/SEP deduction
+    'early_penalty',  # (dbl)  federal penalty on early withdrawal of savings
+    'alimony_exp',    # (dbl)  alimony paid
+    'se_health',      # (dbl)  federal self-employed health insurance deduction
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
     'char_cash',      # (dbl)  cash charitable contributions
     'char_noncash',   # (dbl)  non-cash charitable contributions
@@ -102,6 +107,12 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_estate_share',        # (dbl) own-base share: estate and trust income (own floored class)
     'st_agi.ob_cap_loss_limit',      # (dbl) own-base net capital loss limit, halved for MFS (Inf = none)
     'st_agi.ob_passthru_as_federal', # (int) 1 = partnership/S-corp income as allowed federally (part_scorp)
+    'st_agi.ob_adj_ira',             # (int) own base subtracts the federal IRA deduction
+    'st_agi.ob_adj_keogh',           # (int) ... the Keogh/SEP deduction
+    'st_agi.ob_adj_penalty',         # (int) ... the early-withdrawal penalty
+    'st_agi.ob_adj_alimony',         # (int) ... alimony paid (all of it, not gated on the TCJA divorce date)
+    'st_agi.ob_adj_se_health',       # (int) ... the self-employed health insurance deduction
+    'st_agi.ob_adj_hsa',             # (int) ... the HSA deduction
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -336,7 +347,14 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_ui_share         * ui) +
     ob_floor(st_agi.ob_alimony_share    * alimony) +
     ob_floor(st_agi.ob_other_share      * other_inc) +
-    ob_floor(st_agi.ob_estate_share     * net_estate)
+    ob_floor(st_agi.ob_estate_share     * net_estate) -
+    # A state's OWN adjustments to income, where they repeat a federal
+    # above-the-line item the own base would otherwise never apply (AL Form
+    # 40 page 2 Part II: IRA, Keogh/SEP, early-withdrawal penalty, alimony
+    # paid, self-employed health insurance, HSA; 2026-10-02 AL triage)
+    (st_agi.ob_adj_ira * trad_contr_ira + st_agi.ob_adj_keogh * keogh_contr +
+     st_agi.ob_adj_penalty * early_penalty + st_agi.ob_adj_alimony * alimony_exp +
+     st_agi.ob_adj_se_health * se_health + st_agi.ob_adj_hsa * hsa_contr)
   )
 
   # Starting point, computed ahead of the mutate as well because the

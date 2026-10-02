@@ -175,6 +175,14 @@ scalars:
   st_agi.ob_alimony_share: 0
   st_agi.ob_other_share: 0
   st_agi.ob_estate_share: 0   # estate and trust income as its own floored own-base class (NJ)
+  # Own-base states' adjustments that repeat a federal above-the-line item
+  # (AL Form 40 Part II); 1 = subtract the federal amount
+  st_agi.ob_adj_ira: 0
+  st_agi.ob_adj_keogh: 0
+  st_agi.ob_adj_penalty: 0
+  st_agi.ob_adj_alimony: 0
+  st_agi.ob_adj_se_health: 0
+  st_agi.ob_adj_hsa: 0
   st_agi.ob_passthru_as_federal: 0   # 1 = own-base partnership/S-corp income as allowed on the federal return (part_scorp; AR line 19)
   st_agi.ob_cap_loss_limit: .inf   # net capital loss the own base may carry, halved for MFS (AR/MS federal $3,000); .inf = whole loss (AL)
 
@@ -285,6 +293,7 @@ scalars:
   # Employee payroll and self-employment taxes added to the state itemized
   # base (MO-A Part 2 lines 2-7)
   st_ded.item_add_payroll: 0
+  st_ded.item_payroll_add_med: 0   # 1 = the payroll add-on includes the Additional Medicare Tax (AL)
   # Per-person deduction of the filer's own payroll and government-retirement
   # contributions (MA Form 1 lines 11a/11b, $2,000 each spouse)
   st_ded.payroll_ded_cap: {default: 0, units: per_person}

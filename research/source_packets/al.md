@@ -134,11 +134,11 @@ Last updated: `2026-08-18`
   Schedule W-2 state wage figure. Effective and sunset dates, scope, and any cap
   are all unverified. Must be resolved from the Schedule W-2 instructions or the
   act text before Alabama TY2024+ wage results are relied on.
-- **The age-65 $6,000 retirement exclusion is encoded per person on an
-  unverified reading.** The amount, the age and the TY2023 effective year are
-  confirmed from the TY2023 booklet's What's New. Whether the $6,000 is per
-  person or per return, which distribution types qualify, and whether any income
-  test applies live in the Schedule RS instructions, which were not retrieved.
+- **The age-65 $6,000 retirement exclusion: per person, verified 2026-10-02.**
+  The TY2023 Schedule RS instructions (lines 10-11, Parts II and III) give the
+  primary taxpayer and the spouse each "an exclusion of retirement income up to
+  $6,000, not to exceed the amount taxable to Alabama", if that person is 65 or
+  older and receives taxable retirement income (IRAs included). No income test.
 - **Separate Alabama returns are not modeled.** Alabama's rate ladder is
   perfectly split-neutral (joint brackets are exactly twice single ones), so the
   schedule gives no separate-filing advantage. But the standard deduction slide
@@ -151,8 +151,10 @@ Last updated: `2026-08-18`
   retirement election (roadmap item R2.6); Alabama joins that queue. Overstates
   Alabama tax for uneven-income married couples.
 - Gross capital gains and losses: Alabama allows the entire loss in the year it
-  occurs with no cap and no carryforward, while the model carries the federally
-  capped net.
+  occurs with no cap. The microdata gain fields are uncapped and
+  `ob_cap_loss_limit` stays at its no-limit default, so the model already
+  allows the entire realized loss (corrected 2026-10-02; this note used to say
+  the federally capped net was carried).
 - Alabama public employees' retirement contributions are deferred federally but
   not in Alabama; the difference is invisible on a federal record.
 - The 4% medical floor, the severance exclusion, Alabama's own above-the-line
@@ -160,6 +162,28 @@ Last updated: `2026-08-18`
   credits are all documented in the yaml files.
 
 ## Cross-model validation notes
+
+- 2026-10-02 triage (refit vintage, filers only). Start: TAXSIM 2017-20 0.882 /
+  0.883 / 0.891 / 0.883, PolicyEngine 2021-25 0.854 / 0.806 / 0.815 / 0.805 /
+  0.829. Our-side fixes:
+  - Own adjustments that repeat a federal item (Form 40 page 2 Part II: IRA,
+    Keogh/SEP, early-withdrawal penalty, alimony paid, self-employed health
+    insurance, HSA) are now subtracted: new generic `st_agi.ob_adj_*`. The own
+    base never applied any adjustment
+  - Out-of-state bond interest added back (Schedule B instructions: only US and
+    Alabama obligations are exempt); US-obligation interest subtracted
+  - Schedule A payroll taxes: the model counted the employee half of
+    self-employment tax twice (`liab_pr_ee` already holds it; fix shared with
+    MO and MA), and now includes the Additional Medicare Tax withheld
+    (`item_payroll_add_med`)
+- External: **T31** (TAXSIM counts the NIIT twice in the federal tax deduction);
+  the federal foreign tax credit, which neither external model takes, so their
+  deduction (federal tax after credits, 1040 line 22) is larger; municipal
+  interest rows for both models.
+- Not done, deliberately: separate Alabama returns via the split election. On
+  separate returns from a joint federal return the federal tax deduction is
+  apportioned between spouses, while the split halves federal tax, which is
+  wrong for exactly the uneven couples who would elect.
 
 - TAXSIM years to compare: 2017-2020; PolicyEngine 2021-2024
 - Expected mismatch reasons: the unmodeled defined-benefit exclusion will

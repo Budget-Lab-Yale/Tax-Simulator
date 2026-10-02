@@ -56,6 +56,8 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'excess_ptc',         # (dbl)  excess advance premium tax credit repayment
     'rebate',             # (dbl)  recovery rebate / economic stimulus entitlement
     'liab_pr_ee',         # (dbl)  employee share of payroll taxes (MO itemized add-on)
+    'liab_seca_er',       # (dbl)  "employer" half of SECA (liab_pr_ee already holds the employee half)
+    'liab_add_med',       # (dbl)  Additional Medicare Tax
     'liab_seca',          # (dbl)  self-employment tax (MO itemized add-on)
 
     # Retirement exemption inputs (states taking it as a deduction, not an
@@ -180,6 +182,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_hh_member_age_limit', # (int) maximum dependent age for the flat alternative (MA 11)
     'st_ded.care_ded_mfs_ineligible', # (int) both care deductions barred to married filing separately (MA)
     'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
+    'st_ded.item_payroll_add_med',   # (int) ... including the Additional Medicare Tax (AL: withheld as Medicare tax)
     'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
     'st_ded.prop_tax_ded_cap',       # (dbl) capped property tax deduction (NJ $10,000 then $15,000)
     'st_ded.retire_exempt_ss',       # (int) taxable Social Security exempt as a DEDUCTION (MO)
@@ -442,9 +445,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # on the form at the year's OASDI maximum, which liab_pr_ee already
       # respects -- plus Medicare tax, railroad retirement Tier I/II, and
       # self-employment tax, entered per spouse). Railroad retirement
-      # contributions are not modeled separately and fall in with wage FICA
+      # contributions are not modeled separately and fall in with wage FICA.
+      # liab_pr_ee already holds the EMPLOYEE half of self-employment tax, so
+      # the whole of it is liab_pr_ee + liab_seca_er; adding liab_seca (both
+      # halves) counted the employee half twice (fixed 2026-10-02, AL triage)
       st_item_base = st_item_base +
-                     st_ded.item_add_payroll * (liab_pr_ee + liab_seca) *
+                     st_ded.item_add_payroll *
+                       (liab_pr_ee + liab_seca_er +
+                        st_ded.item_payroll_add_med * liab_add_med) *
                      (st_ded.item_allowed == 1) +
                      st_ded.fed_tax_ded_in_itemized * st_fed_tax_ded *
                      (st_ded.item_allowed == 1),
@@ -634,7 +642,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # municipal retirement contributions are not a model input, so only the
       # payroll-tax component is reached [understates the deduction for public
       # employees, who often hit the cap on contributions alone]
-      payroll_ded_base = pmax(0, liab_pr_ee) + pmax(0, liab_seca),
+      payroll_ded_base = pmax(0, liab_pr_ee) + pmax(0, liab_seca_er),
       payroll_ei_total = pmax(0, ei1) + pmax(0, ei2),
       payroll_share1   = if_else(payroll_ei_total > 0,
                                  pmax(0, ei1) / payroll_ei_total, 1),

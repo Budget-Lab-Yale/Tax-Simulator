@@ -915,6 +915,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # investment interest, casualty, misc, "other", and personal property
     # tax are all invisible to PE (absolute values: negative "other" shrinks
     # our base relative to PE's just as surely)
+    # liab_niit is the federal net investment income tax: TAXSIM's Alabama
+    # federal tax deduction counts it twice (T31). ftc is the federal foreign
+    # tax credit, which neither external model takes as an input, so a state
+    # deducting federal tax after credits (AL) sees it and they do not
     # xw_pe_passthru_misc is what the PE crosswalk sends as pass-through,
     # estate and miscellaneous income (net ordinary losses included, see
     # cross_model_pe_leg). PolicyEngine's Arkansas gross income omits all
@@ -942,7 +946,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          itemizing, n_dep_ge18, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
-                         xw_pe_unhanded_item, xw_pe_passthru_misc),
+                         xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc),
                 by = 'id')
 
     for (model in yr_models) {

@@ -4696,6 +4696,25 @@ run_case('AR', 2024,
   # with federal tax 4,300: the standard deduction floor is $2,000 (it did
   # not rise to $2,500 until TY2022), so TI = 50,000 - 2,000 - 4,300 - 1,500
   # = 42,200 and tax = 10 + 100 + 5% x 39,200 = 2,070.00
+  # AL-ADJ1: own adjustments that repeat a federal item (Form 40 Part II).
+  # 2024 single, $50,000 of wages, a $3,000 IRA deduction and $1,000 of HSA
+  # contributions: Alabama income is 46,000
+  run_case('AL', 2024, list(agi = 46000, wages1 = 50000, ei1 = 50000, trad_contr_ira = 3000, hsa_contr = 1000),
+           expect = list(st_agi = 46000), label = 'AL-ADJ1 IRA and HSA adjustments')
+  # AL-PR1/PR2: payroll taxes on Schedule A line 6. A sole proprietor with
+  # $50,000 of profit and $7,650 of self-employment tax (liab_pr_ee carries
+  # the employee half, 3,825): the itemized payroll add-on is the 7,650 paid,
+  # not 11,475. A $300,000 earner: FICA withheld 10,453 Social Security +
+  # 4,350 Medicare + 900 Additional Medicare (0.9% over $200,000) = 15,703
+  run_case('AL', 2024, list(agi = 46175, sole_prop = 50000, ei1 = 46175, liab_pr_ee = 3825, liab_seca = 7650, liab_seca_er = 3825),
+           expect = list(st_item_ded = 7650), label = 'AL-PR1 self-employment tax counted once')
+  run_case('AL', 2024, list(agi = 300000, wages1 = 300000, ei1 = 300000, liab_pr_ee = 14803, liab_add_med = 900),
+           expect = list(st_item_ded = 15703), label = 'AL-PR2 Additional Medicare withheld')
+  # AL-MI1: $10,000 of federally exempt interest on $50,000 of wages; the
+  # assumed out-of-state 25% is Alabama income, so 52,500
+  run_case('AL', 2024, list(agi = 50000, wages1 = 50000, ei1 = 50000, exempt_int = 10000),
+           expect = list(st_agi = 52500), label = 'AL-MI1 out-of-state bond interest added back')
+
   run_case('AL', 2019,
            list(agi = 50000, wages1 = 50000, ei1 = 50000, liab_bc = 4300),
            expect = list(st_std_ded = 2000, liab_st_iit = 2070.00),
@@ -5621,7 +5640,8 @@ st_test_unit = function(overrides = list()) {
     eitc.pi_rate_0 = 0.0765, eitc.pi_end_0 = 7320, eitc.po_rate_0 = 0.0765,
     eitc.po_thresh_0 = 9160, eitc.min_age = 25, eitc.max_age = 64, eitc.inv_inc_limit = 10300,
     alimony = 0, other_inc = 0,
-    sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
+    sch_e = 0, part_scorp = 0, trad_contr_ira = 0, keogh_contr = 0, early_penalty = 0,
+    alimony_exp = 0, se_health = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
     txbl_ira_dist = 0, ot_ded = 0, hsa_contr = 0,
     char_cash = 0, char_noncash = 0,
@@ -5633,7 +5653,7 @@ st_test_unit = function(overrides = list()) {
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
     cdctc_ref = 0, care_exp = 0, ui = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
-    liab_pr_ee = 0, liab_seca = 0, liab_niit = 0, excess_ptc = 0,
+    liab_pr_ee = 0, liab_seca = 0, liab_seca_er = 0, liab_add_med = 0, liab_niit = 0, excess_ptc = 0,
     rebate = 0
   )
   for (v in names(overrides)) {

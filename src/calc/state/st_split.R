@@ -46,6 +46,7 @@ ST_SPLIT_HALVE = c(
   'net_estate',
   'txbl_ira_dist', 'txbl_pens_dist', 'gross_ss', 'txbl_ss', 'ui',
   'alimony', 'other_inc', 'state_ref',
+  'trad_contr_ira', 'keogh_contr', 'early_penalty', 'alimony_exp', 'se_health',
   # Above-the-line and below-the-line federal amounts
   'hsa_contr', 'ot_ded', 'std_ded', 'char_cash', 'char_noncash', 'care_exp',
   # Itemized deductions, as claimed and as-if. Halved rather than prorated by

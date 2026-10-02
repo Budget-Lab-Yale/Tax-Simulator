@@ -24,6 +24,33 @@ start_point:
 ob_class_floor:
   value: 0
   reference: 'Form 40 Schedule D instructions: "Under Alabama law the entire gain is taxable, and the entire loss is deductible in the year in which it occurs". Alabama has no gross-income-class loss ring-fence of the Pennsylvania kind'
+add_exempt_int:
+  value: 1
+  reference: 'Form 40 booklet, Schedule B interest instructions (TY2023): "All interest you received in 2023 is taxable for Alabama purposes except interest on obligations of the United States or its possessions, and interest on obligations of the State of Alabama or any county, municipality, or other political subdivision of Alabama", so interest on other states'' bonds, federally exempt, is Alabama income. The own base never carried it (2026-10-02 AL triage)'
+own_state_exempt:
+  value: 1
+  reference: 'Same instruction: Alabama and its subdivisions'' bonds are exempt; the in-state share of exempt interest is unobserved (OWN_STATE_MUNI_SHARE)'
+sub_us_int:
+  value: 1
+  reference: 'Same instruction: interest on United States obligations is exempt (approximated by US_OBLIGATION_INT_SHARE of taxable interest)'
+ob_adj_ira:
+  value: 1
+  reference: 'Form 40 page 2 Part II (TY2019 and TY2023 forms), line 1a/1b: your and your spouse''s IRA deduction'
+ob_adj_keogh:
+  value: 1
+  reference: 'Form 40 page 2 Part II (TY2019 and TY2023 forms), line 2: payments to a Keogh retirement plan and self-employment SEP deduction'
+ob_adj_penalty:
+  value: 1
+  reference: 'Form 40 page 2 Part II (TY2019 and TY2023 forms), line 3: penalty on early withdrawal of savings'
+ob_adj_alimony:
+  value: 1
+  reference: 'Form 40 page 2 Part II (TY2019 and TY2023 forms), line 4: alimony paid (Alabama did not adopt the TCJA repeal, so the payment is deductible whatever the divorce date)'
+ob_adj_se_health:
+  value: 1
+  reference: 'Form 40 page 2 Part II (TY2019 and TY2023 forms), line 7: self-employed health insurance deduction'
+ob_adj_hsa:
+  value: 1
+  reference: 'Form 40 page 2 Part II (TY2019 and TY2023 forms), line 12: contributions to a health savings account'
 ob_passthru_as_federal:
   value: 0
   reference: 'Form 40 Schedule E instructions: "Alabama law has no provision similar to current federal law which limits the deduction of passive trade or business activity losses", so partnership and S-corporation losses enter net of everything rather than as allowed federally (losses are limited to basis, which the microdata does not carry)'
@@ -97,6 +124,6 @@ documented_not_modeled:
   severance_exclusion:
     reference: 'Up to $50,000 of severance, termination or supplemental-income-plan pay received on administrative downsizing is exempt (TY2020 forward; $25,000 for TY2019 and prior). NOTE the TY2020 booklet still prints $25,000 -- the increase was enacted after it went to press, and the TY2021 booklet corrects the record retroactively ("$50,000 for Tax Years 2020 and forward and $25,000 for Tax Years 2019 and prior"). Severance is not separately identified in the microdata; it sits inside wages'
   own_above_the_line_adjustments:
-    reference: 'Alabama''s page 2 Part II adjustments differ from the federal set: it HAS an Alabama 529/PACT deduction ($5,000, $10,000 joint), an ABLE deduction ($5,000), adoption expenses, wind/flood retrofit (lesser of 50% or $3,000), catastrophe savings deposits, a small-employer health insurance deduction, a first-time home buyer savings account deduction and a firefighter cancer-premium deduction -- and it has NO student loan interest deduction, NO educator expense deduction and NO deduction for half of self-employment tax. The Alabama-specific items are unobserved contribution- and status-based amounts; the missing federal ones are not subtracted because the own-base build never applied them'
+    reference: 'Alabama''s page 2 Part II adjustments differ from the federal set. Six repeat a federal item and are encoded above (ob_adj_*). The rest are Alabama-only and unobserved: the Alabama 529/PACT deduction ($5,000, $10,000 joint), ABLE ($5,000), adoption expenses, wind/flood retrofit (lesser of 50% or $3,000), catastrophe savings deposits, the small-employer health insurance deduction, the first-time home buyer savings account and the firefighter cancer-premium deduction, plus moving expenses (no federal counterpart after 2017). Alabama has NO student loan interest, educator expense or half-of-self-employment-tax adjustment, so those federal items correctly stay out [the unobserved Alabama-only items overstate Alabama income for claimants]'
   narrower_dependent_definition:
     reference: 'An Alabama dependent must be a listed relative receiving over 50% support, with no multiple-support agreement and no foster children or cousins, but with no age limit and no gross-income test. The federal dependent count is used [can err in either direction]'

@@ -242,6 +242,15 @@ the same amount in `otherprop` gives 40,000; with $60,000 of wages and `nonprop`
 federal AGI is 40,000. Effect: TAXSIM understates Arkansas tax for filers with other income or alimony and
 overstates it for filers with an NOL.
 
+### T31. Alabama federal income tax deduction counts the NIIT twice
+
+Alabama deducts federal income tax (Form 40 line 12). The worksheet starts from 1040 tax after nonrefundable credits
+and, on line 2, adds the net investment income tax from Form 8960, because the NIIT is not in that figure. TAXSIM's
+`fiitax` already includes the NIIT, and TAXSIM adds it again. Probe (2026-10-02), 2019 single, no wages: with
+$500,000 of long-term gain the deduction implied by v32 - v34 - v33 - v36 is 92,726 against `fiitax` 81,326, a
+difference of 11,400 = 3.8% x $300,000; with $2,000,000 it is 509,166 against 440,766 (68,400). Effect: TAXSIM
+understates Alabama tax by about 5% of the NIIT.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under

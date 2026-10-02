@@ -190,6 +190,9 @@ item_include_prop_tax:
 item_include_pers_tax:
   value: 1
   reference: 'Schedule A "Taxes You CAN Deduct": personal property taxes'
+item_payroll_add_med:
+  value: 1
+  reference: 'Schedule A line 6: "the FICA tax (Social Security and Medicare) withheld on your income by your employer". The 0.9% Additional Medicare Tax is withheld by the employer as Medicare tax (W-2 box 6) on wages over $200,000, so it is part of the Medicare tax withheld'
 item_add_payroll:
   value: 1
   reference: 'Schedule A lines 6-7 "Taxes You CAN Deduct": "You can deduct the FICA tax (Social Security and Medicare) withheld on your income by your employer", plus federal self-employment tax and Tier 1 railroad retirement tax. Verified present in all nine booklets 2017-2025. This is what pushes many Alabama filers to itemize despite taking the federal standard deduction'
