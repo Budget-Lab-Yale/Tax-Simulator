@@ -3476,6 +3476,16 @@ test_state_calc = function() {
   run_case('AR', 2019,
            list(agi = 100000, filing_status = 2, age2 = 45, wages1 = 100000, ei1 = 100000),
            expect = list(liab_st_iit = 5562.76), label = 'AR-ST3 one earner keeps the joint computation')
+  # AR-ST4: credits come off the COMBINED column tax (AR1000F line 30). 2022,
+  # wages 40,000 and 3,000. Split tax 1,220.52 (4.9% x 37,730 - 628.25, and
+  # nothing on the second column's 730); credits 418 (each column $29
+  # personal and $150 Inflationary Relief, plus the second column's $60
+  # Qualified Individuals credit). Pooled: 1,220.52 - 418 = 802.52, beating
+  # the joint 898.29. Floored column by column the second column's $239
+  # would be lost (1,041.52) and the joint return would win
+  run_case('AR', 2022,
+           list(agi = 43000, filing_status = 2, age2 = 40, wages1 = 40000, wages2 = 3000, ei1 = 40000, ei2 = 3000),
+           expect = list(liab_st_iit = 802.52), label = 'AR-ST4 split columns pool their credits')
 
   # AR-CL1: AR-ST1's unit with $53,000 of wages and a $20,000 short-term
   # capital loss. The loss is limited to $3,000 (AR1000F line 13), so income
@@ -3488,6 +3498,28 @@ test_state_calc = function() {
   # E as reported federally, so Arkansas income stays 50,000
   run_case('AR', 2019, list(agi = 50000, wages1 = 50000, ei1 = 50000, scorp = -100000, part_scorp = 0),
            expect = list(st_agi = 50000, liab_st_iit = 2041.55), label = 'AR-PT1 pass-through loss as allowed federally')
+
+  # AR-MI1: the same unit with $10,000 of federally exempt interest. Arkansas
+  # taxes other states' bonds; the assumed out-of-state 25% (1 -
+  # OWN_STATE_MUNI_SHARE) is added back, so Arkansas income is 52,500
+  run_case('AR', 2019, list(agi = 50000, wages1 = 50000, ei1 = 50000, exempt_int = 10000),
+           expect = list(st_agi = 52500), label = 'AR-MI1 out-of-state bond interest added back')
+
+  # AR-CC1/CC2: TY2021 child care credit on the pre-ARPA federal credit.
+  # Head of household, $60,000 of federal AGI, one child, $5,000 of
+  # expenses: the pre-ARPA rate is at its 20% floor on $3,000, so 20% x 600
+  # = 120 (a single earner, so the status 4 split election stays out of
+  # it). Head of
+  # household at $20,000: 35% less 3 points ($5,000 over $15,000 is three
+  # $2,000 steps or fractions) = 32%, x $3,000 x 20% = 192
+  run_case('AR', 2021,
+           list(agi = 60000, filing_status = 4, wages1 = 60000, ei1 = 60000,
+                n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 5000),
+           expect = list(st_cdctc = 120), label = 'AR-CC1 TY2021 pre-ARPA care credit, rate floor')
+  run_case('AR', 2021,
+           list(agi = 20000, filing_status = 4, wages1 = 20000, ei1 = 20000,
+                n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 5000),
+           expect = list(st_cdctc = 192), label = 'AR-CC2 TY2021 pre-ARPA care credit, on the slide')
 
   # AR-CG1/CG2: 2024 single, long-term gain only. AR1000D line 7b caps the
   # gain at $10,000,000 and line 8 taxes half of it: a $12,000,000 gain gives

@@ -923,6 +923,24 @@ The TY2024 booklet's table pays $0 through $24,176 and $92 on $24,177-24,200. In
 against PolicyEngine's for TY2021-2025: 1,128 of 1,129 rows agree, this is the only difference. Under the $100
 tolerance; no exclusion row.
 
+### P15. Arkansas taxes 2021 unemployment benefits (fixed upstream)
+
+Act 154 of 2021 exempted unemployment compensation from Arkansas income for calendar years 2020 and 2021.
+policyengine-us 1.775.7 lists `unemployment_compensation` in `gov.states.ar.tax.income.gross_income.sources` from
+2021-01-01. Fixed on upstream main by #9615 (2026-09-26), which gives TY2020-2021 their own source list without
+it. Nothing to send; the exclusion row retires when the pinned version moves past the fix. (Separately, the 2021
+Tax-Data records carrying it include implausible unemployment amounts of $100,000-$200,000, 14 of 371 aligned
+Arkansas records above $50,000 -- a Tax-Data input question, not a PolicyEngine one.)
+
+### P16. Montana dependent exemption limited to qualifying children
+
+`mt_dependent_exemptions_person` multiplies the exemption by `is_qualifying_child_dependent` (IRC 152(c)), so a
+qualifying relative under 152(d) -- an adult child past the age tests, a parent -- gets none. MCA 15-30-2114 and
+the Form 2 instructions (TY2023 p.9: "each dependant counts as one exemption") make no such distinction. Found
+2026-10-02: once our driver stopped letting PolicyEngine read adult dependents as spouses, Montana 2022-23 tax for
+single and separate filers with an adult dependent rose by one exemption (about $183). Effect: PolicyEngine
+overstates Montana tax through TY2023 for filers claiming adult dependents.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

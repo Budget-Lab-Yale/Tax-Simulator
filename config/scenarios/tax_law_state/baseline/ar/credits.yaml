@@ -31,8 +31,42 @@ exempt_credit_blind:
   reference: 'Line 7A allows an additional credit for blindness, and another for deafness, on the same terms. Only the blindness box is modeled -- deafness is not a model input'
 
 cdctc_match:
-  value: 0.20
-  reference: 'Form AR2441: the Arkansas child care credit is 20% of the federal child and dependent care credit in all nine years. From TY2021 Arkansas computes it on a PRE-ARPA recomputation of the federal credit rather than the credit as claimed -- see documented_not_modeled'
+  value:
+    '2017': 0.20
+    '2021': 0.0
+    '2022': 0.20
+  reference: 'Form AR2441: the Arkansas child care credit is 20% of the federal child and dependent care credit. For TY2021 Arkansas did not adopt the ARPA expansion, so the credit is 20% of the federal credit RECOMPUTED under pre-ARPA rules, encoded below as an own-rate credit (cdctc_style 2). From TY2022 the federal credit is back on those rules and 20% of it as claimed is the same thing'
+cdctc_style:
+  value:
+    '2017': 0
+    '2021': 2
+    '2022': 0
+  reference: 'TY2021 only: 20% x the pre-ARPA federal credit, i.e. a rate of 20% x 35% = 7% falling 20% x 1 point = 0.2 point per $2,000 (or fraction) of federal AGI over $15,000 to a floor of 20% x 20% = 4%, on expenses capped at $3,000 / $6,000 and at the lower-earning spouse''s earned income (IRC 21 as in force for 2020)'
+cdctc_rate_max:
+  value: 0.07
+  reference: '20% x the pre-ARPA 35% maximum applicable percentage'
+cdctc_rate_floor:
+  value: 0.04
+  reference: '20% x the pre-ARPA 20% minimum applicable percentage'
+cdctc_rate_po_start:
+  value: 15000
+  reference: 'Pre-ARPA IRC 21(a)(2): the percentage falls above $15,000 of AGI'
+cdctc_rate_po_step:
+  value: 2000
+  reference: 'One point per $2,000 or fraction thereof'
+cdctc_rate_po_per_1k:
+  value: 0.002
+  reference: 'Read as the per-step decrement (20% x 1 point) because a step is encoded'
+cdctc_rate_income_base:
+  value: 1
+  reference: 'The pre-ARPA recomputation slides on federal AGI'
+cdctc_expense_ei_limit:
+  value: 1
+  reference: 'IRC 21(d): expenses limited to the lower-earning spouse''s earned income'
+cdctc_expense_caps:
+  value:
+    '2017': [3000.0, 6000.0, 6000.0, 6000.0, 6000.0]
+  reference: 'Pre-ARPA IRC 21(c): $3,000 for one qualifying person, $6,000 for two or more'
 cdctc_refundable:
   value: 0
   reference: 'The Arkansas child care credit is nonrefundable'
@@ -94,8 +128,6 @@ stepcred2_joint_mode:
 documented_not_modeled:
   deaf_and_head_of_household_credits:
     reference: 'Line 7A grants an additional personal credit for deafness, and another where the filing status is head of household or surviving spouse. Deafness is not a model input, and the head-of-household add-on has no place in the per-taxpayer/aged/blind/dependent structure the machinery carries [understates credits by $29 per affected return]'
-  cdctc_arpa_decoupling:
-    reference: 'From TY2021 Arkansas recomputes the federal child and dependent care credit under PRE-ARPA rules on Form AR2441 and takes 20% of that, rather than 20% of the enlarged federal credit actually claimed. The model matches the federal credit as computed [overstates the Arkansas credit for TY2021, when the federal credit was temporarily much larger]'
   developmental_disabilities_credit:
     reference: 'Ark. Code Ann. 26-51-503 grants a $500 credit per child with developmental disabilities in all years. Disability status is not a model input'
   certificated_credits:

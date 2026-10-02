@@ -16,6 +16,7 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_rate_po_step',
   'st_credits.cdctc_expense_ei_limit',
   'st_credits.cdctc_share_income_base',
+  'st_credits.cdctc_rate_income_base',    # (int) st_income_base enum for the style-2 rate slide (default 2, state AGI)
   'st_credits.cdctc_cap_amount',
   'st_credits.cdctc_cap_thresh',
   'st_credits.cdctc_cap_po_rate',
@@ -66,15 +67,18 @@ st_credits_care = function(tax_unit) {
 
   # Own-rate slide: continuous per-$1,000 (NY) or, where a step is encoded,
   # a stepped reduction of cdctc_rate_po_per_1k per step or fraction thereof
-  # (HI Schedule X: 0.01 per $5,000 band of Hawaii AGI over $25,000)
+  # (HI Schedule X: 0.01 per $5,000 band of Hawaii AGI over $25,000). The
+  # slide runs on state AGI by default; AR TY2021 runs it on federal AGI
+  # because the credit it shares is a recomputed federal one
+  cdctc_rate_income = st_income_base(tax_unit, tax_unit$st_credits.cdctc_rate_income_base)
   cdctc_rate_red = if_else(
     is.finite(tax_unit$st_credits.cdctc_rate_po_step),
-    st_step_reduction(tax_unit$st_agi,
+    st_step_reduction(cdctc_rate_income,
                       tax_unit$st_credits.cdctc_rate_po_start,
                       tax_unit$st_credits.cdctc_rate_po_step,
                       tax_unit$st_credits.cdctc_rate_po_per_1k),
     tax_unit$st_credits.cdctc_rate_po_per_1k *
-      pmax(0, tax_unit$st_agi -
+      pmax(0, cdctc_rate_income -
               tax_unit$st_credits.cdctc_rate_po_start) / 1000
   )
   cdctc_rate2 = pmax(tax_unit$st_credits.cdctc_rate_floor,

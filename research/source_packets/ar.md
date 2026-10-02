@@ -51,6 +51,11 @@ Last updated: `2026-08-18`
   `part + scorp`, which net every loss (a -$3.55M S-corporation loss federal AGI
   ignores had driven one record's Arkansas income to -$3.3M). Mississippi's
   line 41 reads the same way; Alabama has no passive-loss limit and keeps 0
+- Encoded 2026-10-02: `add_exempt_int` 1 with `own_state_exempt` 1, and
+  `sub_us_int` 1. Arkansas exempts interest only on US obligations and on
+  Arkansas and its subdivisions (booklet exempt income item 7), so other
+  states' bond interest is Arkansas income; the own base had never carried
+  it. The in-state share is the model-wide 75% assumption
 - Known approximations: the IRA branch's 59-and-a-half test; military
   retirement
 
@@ -64,7 +69,11 @@ is encoded in `ord.yaml` as `split_election` 1 with `split_item_by_agi_share`
 1: each spouse column takes the schedule and a full single standard deduction,
 and itemized deductions are pooled then prorated by each spouse's share of AGI
 rounded to whole percent (Form AR3 lines 30-33). The model takes the lower of
-the joint and the split liability.
+the joint and the split liability. `split_credits_pooled` 1 (2026-10-02): the
+two column taxes are added on line 30 BEFORE the credits come off, so one
+column's unused credits offset the other's tax; summing floored column
+liabilities had lost them, enough to make the joint return wrongly win for
+retired couples (AR-ST4).
 
 ### `exempt.yaml`
 
@@ -82,6 +91,13 @@ the joint and the split liability.
   ($60 per spouse up to $24,300 / $25,000 / $25,800 / $26,500 for TY2022-25,
   less $5 per $100 over, looked up per spouse and so doubled for joint
   filers). Both nonrefundable, through the generic `st_step_credit`
+- Encoded 2026-10-02: the TY2021 child care credit on the PRE-ARPA federal
+  credit (Arkansas did not adopt the 2021 expansion): an own-rate credit
+  (`cdctc_style` 2) of 20% x the pre-ARPA rate, i.e. 7% sliding 0.2 point per
+  $2,000 of federal AGI over $15,000 to 4%, on expenses capped at $3,000 /
+  $6,000 and at the lower earner's income. New generic parameter
+  `cdctc_rate_income_base` lets the slide run on federal AGI. TY2017-20 and
+  TY2022+ stay 20% of the federal credit as claimed (AR-CC1, AR-CC2)
 
 ### `filing.yaml`
 
@@ -98,7 +114,7 @@ AR-SC4 the two stepped credits at plateau, mid-ramp, zero and joint; AR-ST1 to
 AR-ST3 the filing status 4 split with AGI-share itemized proration. AR-4 and
 AR-6 now include the qualified-individuals credit. AR-CL1 the $3,000 capital
 loss limit; AR-CG1 and AR-CG2 the $10,000,000 gain tier either side; AR-PT1 a
-federally disallowed pass-through loss; AR-LT1
+federally disallowed pass-through loss; AR-MI1 out-of-state bond interest; AR-LT1
 to AR-LT5 the low income tables (zero band, in-table, above the ceiling, head
 of household with two dependents, exempt income counted toward the ceiling).
 
@@ -146,8 +162,6 @@ of household with two dependents, exempt income counted toward the ceiling).
   pay and military retirement disqualifications.
 - The deaf and head-of-household additional personal credits, and the $500
   developmental disabilities credit, are not model inputs.
-- From TY2021 the child care credit runs on a pre-ARPA recomputation of the
-  federal credit rather than the credit as claimed.
 
 ## Cross-model validation notes
 
@@ -201,6 +215,29 @@ of household with two dependents, exempt income counted toward the ceiling).
   federal IRC 21(e)(4) living-apart assumption, as for NJ) and the crosswalk
   deduction class (PolicyEngine never sees medical, miscellaneous or casualty
   deductions, which Arkansas still allows).
+- Same day, two more PolicyEngine-window findings. **P15** (fixed upstream in
+  #9615): 1.775.7 taxes 2021 unemployment benefits, which Act 154 of 2021
+  exempted for 2020-21; excluding them took PE 2021 from 0.856 to 0.941.
+  And a **harness** fault, not a PolicyEngine rule: PolicyEngine infers head
+  and spouse by age, ignoring the dependent flag, so an adult dependent of a
+  single or separate filer became a "spouse" and the Inflationary Relief
+  credit (paid per head or spouse) came out at $300 instead of $150. The
+  driver now sets `is_tax_unit_head` / `is_tax_unit_spouse` on every person.
+- Further rows 2026-10-02: municipal interest for both models (TAXSIM has no
+  exempt-interest input; PolicyEngine taxes all of it where we assume 75% is
+  in-state); the TAXSIM head-of-household derivation class (as for UT, DC,
+  CA), which matters in Arkansas only through the low income tables; and the
+  tables' total-income test, which counts exempt Social Security and which
+  neither external model applies (`st_alt_table_blocked`, a new diagnostic
+  output, marks the units it refuses).
+- **Open decision (2026-10-02): who owns unobserved income in the status-4
+  split.** The split halves non-wage income between the columns (the
+  ST_SPLIT_HALVE convention). With credits now pooled the split wins more
+  often, and couples where it wins match worse in both external models
+  (TAXSIM 0.83, one-earner couples 0.70-0.77; PolicyEngine, which gives all
+  of it to the head, 0.22-0.79), taking PE 2023 from 0.948 to 0.926. The
+  pooling is the form; the halving is an assumption. `st_split_used` marks
+  the couples. Not excluded pending a decision on the convention.
 - Low income tables: TAXSIM's low-income misses (our tax higher, under
   $20,000 of income, mostly heads of household) were the tables; encoded.
 

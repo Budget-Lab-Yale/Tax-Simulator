@@ -6,7 +6,7 @@
 
 # Set return variables for function
 return_vars$calc_st_tax = c('st_tax_pre_credit')
-return_vars$calc_st_alt_table = c('st_alt_table_used')
+return_vars$calc_st_alt_table = c('st_alt_table_used', 'st_alt_table_blocked')
 
 
 calc_st_tax = function(tax_unit, fill_missings = F) {
@@ -415,10 +415,14 @@ calc_st_alt_table = function(tax_unit, credit_tables = NULL) {
   #   - credit_tables (df) : dense schedules (low_income_tax_table[_max])
   #
   # Returns: tax_unit with st_tax_pre_credit and st_txbl_inc replaced where
-  #          the table is taken, plus st_alt_table_used (df).
+  #          the table is taken, plus st_alt_table_used and
+  #          st_alt_table_blocked (cheaper table refused only by the
+  #          total-income test, which neither TAXSIM nor PolicyEngine
+  #          applies) (df).
   #----------------------------------------------------------------------------
 
-  tax_unit$st_alt_table_used = FALSE
+  tax_unit$st_alt_table_used    = FALSE
+  tax_unit$st_alt_table_blocked = FALSE
   electing = tax_unit$st_ord.alt_table_election == 1
   if (!any(electing)) {
     return(tax_unit)
@@ -434,13 +438,15 @@ calc_st_alt_table = function(tax_unit, credit_tables = NULL) {
                                         'low_income_tax_table_max',
                                         tax_unit$filing_status)
 
-  use = electing & table_max > 0 & table_total <= table_max &
-        table_tax < tax_unit$st_tax_pre_credit
+  cheaper = electing & table_max > 0 & table_agi <= table_max &
+            table_tax < tax_unit$st_tax_pre_credit
+  use = cheaper & table_total <= table_max
   tax_unit %>%
     mutate(
       st_tax_pre_credit = if_else(use, table_tax, st_tax_pre_credit),
       st_txbl_inc       = if_else(use, table_agi, st_txbl_inc),
-      st_alt_table_used = use
+      st_alt_table_used    = use,
+      st_alt_table_blocked = cheaper & !use
     ) %>%
     return()
 }

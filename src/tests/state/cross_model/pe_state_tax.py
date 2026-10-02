@@ -193,12 +193,25 @@ def build_situation(rows, year):
         joint = int(float(row["joint"])) == 1
         primary = f"p{rid}"
         members = [primary]
-        situation["people"][primary] = {"age": {yr: max(0, int(float(row["page"])))}}
+        # Head and spouse are INPUTS, set on every person. Left to its
+        # formula, PolicyEngine 1.775.7 picks them by age among the unit's
+        # members without regard to is_tax_unit_dependent, so an adult
+        # dependent became the "spouse" of a single filer (or the head of a
+        # separate filer) and drew per-head-or-spouse benefits -- AR's
+        # Inflationary Relief credit paid twice (2026-10-02, AR triage; the
+        # same inference behind what was filed as P9). Every person gets both
+        # flags because a partially supplied input vector falls back to the
+        # default for the rest (see the filing_status note below)
+        situation["people"][primary] = {"age": {yr: max(0, int(float(row["page"])))},
+                                        "is_tax_unit_head": {yr: True},
+                                        "is_tax_unit_spouse": {yr: False}}
 
         if joint:
             spouse = f"s{rid}"
             sage = int(float(row["sage"]))
-            situation["people"][spouse] = {"age": {yr: max(18, sage)}}
+            situation["people"][spouse] = {"age": {yr: max(18, sage)},
+                                           "is_tax_unit_head": {yr: False},
+                                           "is_tax_unit_spouse": {yr: True}}
             members.append(spouse)
 
         dep_ages = [a for a in str(row["dep_ages"]).split(";") if a != ""]
@@ -216,7 +229,9 @@ def build_situation(rows, year):
             # of what was filed as P9 (verified 2026-09-30: IL tax identical
             # at dependent ages 17/18/19/23 once the flag is supplied)
             situation["people"][child] = {"age": {yr: max(0, age)},
-                                          "is_tax_unit_dependent": {yr: True}}
+                                          "is_tax_unit_dependent": {yr: True},
+                                          "is_tax_unit_head": {yr: False},
+                                          "is_tax_unit_spouse": {yr: False}}
             members.append(child)
 
         # Person-level money inputs

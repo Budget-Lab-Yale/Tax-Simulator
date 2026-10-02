@@ -217,10 +217,19 @@ st_split_election = function(tax_units, joint, credit_tables = NULL,
   col1 = st_pipeline(st_split_spouse_unit(sub, 1, law_mfs), credit_tables)
   col2 = st_pipeline(st_split_spouse_unit(sub, 2, law_mfs), credit_tables)
 
-  wins = coalesce(
-    (col1$liab_st_iit + col2$liab_st_iit) < joint$liab_st_iit[electing],
-    FALSE
-  )
+  # Where the return pools the columns BEFORE credits (AR1000F line 30 adds
+  # the two column taxes and the credits come off the total), a column whose
+  # credits exceed its own tax hands the excess to the other. Summing column
+  # liabilities would floor each at zero and lose it (2026-10-02 AR triage:
+  # a retired couple's $476 of credits against a small second column)
+  col_net  = pmax(0, col1$st_tax_pre_credit - col1$st_credits_nonref) +
+             pmax(0, col2$st_tax_pre_credit - col2$st_credits_nonref)
+  pool_net = pmax(0, col1$st_tax_pre_credit + col2$st_tax_pre_credit -
+                     col1$st_credits_nonref - col2$st_credits_nonref)
+  pool_adj = if_else(sub$st_ord.split_credits_pooled == 1, pool_net - col_net, 0)
+  split_liab = col1$liab_st_iit + col2$liab_st_iit + pool_adj
+
+  wins = coalesce(split_liab < joint$liab_st_iit[electing], FALSE)
   rows = electing[wins]
   if (length(rows) == 0) {
     return(joint)
@@ -229,6 +238,10 @@ st_split_election = function(tax_units, joint, credit_tables = NULL,
   for (v in names(joint)[map_lgl(joint, is.double)]) {
     joint[[v]][rows] = (col1[[v]] + col2[[v]])[wins]
   }
+  for (v in intersect(c('liab_st_iit', 'liab_st_individual_net'), names(joint))) {
+    joint[[v]][rows] = joint[[v]][rows] + pool_adj[wins]
+  }
+  joint$st_split_used[rows] = TRUE
 
   return(joint)
 }

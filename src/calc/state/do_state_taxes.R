@@ -39,6 +39,10 @@ do_state_taxes = function(tax_units, credit_tables = NULL, law_mfs = NULL) {
   tax_units %<>% ensure_st_params()
 
   joint = st_pipeline(tax_units, credit_tables)
+  # Diagnostic: TRUE where the married-separate election won. Who owns
+  # non-wage income is unobserved and the split halves it, so cross-model
+  # predicates need to see which couples the convention moved
+  joint$st_split_used = FALSE
 
   # Married-separate election, opt-in per state and computed only where any
   # row of the slice declares it. Strictly a no-op otherwise: a state that

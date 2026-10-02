@@ -36,6 +36,15 @@ ob_gains_share:
 ob_st_gains_share:
   value: 1
   reference: 'Short-term capital gains are 100% taxable in Arkansas -- the exclusion reaches only net LONG-TERM gain'
+add_exempt_int:
+  value: 1
+  reference: 'AR1000F instructions, exempt income item 7 (TY2022 booklet): only interest "from direct United States obligations, its possessions, the State of Arkansas, or any political subdivision of the State of Arkansas is exempt", so interest on other states'' bonds, federally exempt, is Arkansas income. The own base never carried it (2026-10-02 AR triage: PolicyEngine taxes it; a record with $59,771 of exempt interest)'
+own_state_exempt:
+  value: 1
+  reference: 'Same item: interest on Arkansas and its political subdivisions is exempt; the in-state share of exempt interest is unobserved and approximated by OWN_STATE_MUNI_SHARE'
+sub_us_int:
+  value: 1
+  reference: 'Same item: interest on direct United States obligations is exempt (subtraction approximated by US_OBLIGATION_INT_SHARE of taxable interest)'
 ob_passthru_as_federal:
   value: 1
   reference: 'AR1000F line 19 instructions (TY2019 and TY2022 booklets): income "from partnerships, fiduciaries, small business corporations, etc., enter the amounts as reported on your federal Schedule E", i.e. after the federal passive-activity and at-risk limits'

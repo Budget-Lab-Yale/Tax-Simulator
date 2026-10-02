@@ -84,6 +84,9 @@ documented_not_modeled:
 split_election:
   value: 1
   reference: 'AR1000F instructions (TY2019 and TY2022), Box 4 / Method A: "If you and your spouse had separate incomes, you might save money by figuring your tax separately ... List your income separately under Column A ... Column B ... Figure your tax separately and then add your taxes together." The result is a combined refund or tax due. Approximations: unobserved non-wage income is halved between the columns; dependents ride with the first column; and the rule that both spouses itemize if one does is not enforced (each column chooses)'
+split_credits_pooled:
+  value: 1
+  reference: 'AR1000F instructions (TY2022), Tax Computation: "LINE 30. Add Lines 29(A) and 29(B) and enter the total", and the personal and other nonrefundable credits are then taken against that combined tax, so a column whose credits exceed its own tax is not floored at zero on its own'
 split_item_by_agi_share:
   value: 1
   reference: 'Form AR3, lines 30-33 (TY2019 booklet): "If you are married filing separately, Status 4 or 5, you must prorate your itemized deductions between spouses", the share being each spouse''s AGI (AR1000F line 25) over the total, rounded to the nearest whole percent'

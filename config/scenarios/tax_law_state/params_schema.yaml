@@ -389,6 +389,7 @@ scalars:
   # each spouse's own income (MT status 2a, AL separate returns,
   # AR status 4, MS combined returns)
   st_ord.split_election: 0
+  st_ord.split_credits_pooled: 0   # 1 = split columns are added BEFORE nonrefundable credits (AR1000F line 30), so one column's unused credits offset the other's tax
   st_ord.split_item_by_agi_share: 0   # 1 = split columns prorate itemized deductions by AGI share (AR AR3 lines 30-33), else halve
   # 1 = an elective whole-income tax table replaces the schedule AND the
   # deduction when it is cheaper (AR Low Income Tax Tables; credit_tables.csv
@@ -565,6 +566,7 @@ scalars:
   # 0/1: cap style-2 expenses at each spouse's earned income (the federal
   # 2441 rule, which HI Schedule X carries; NY 2026 is encoded without it)
   st_credits.cdctc_expense_ei_limit: 0
+  st_credits.cdctc_rate_income_base: 2   # st_income_base enum for the style-2 rate slide (AR TY2021: 1, federal AGI)
   st_credits.prop_tax_credit_rate: 0
   st_credits.prop_tax_credit_rate_cap: .inf   # cap on the rate-style credit (WI $300)
   st_credits.credit_agi_limit: .inf
