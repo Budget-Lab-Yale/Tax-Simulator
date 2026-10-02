@@ -52,8 +52,8 @@ ST_SPLIT_HALVE = c(
   # income share: Montana's rule is that a deduction "attributable to one
   # spouse must be claimed by that spouse", which is unobservable, so an even
   # division is as defensible as any. Arkansas status 4 differs -- it pools
-  # itemized deductions and prorates them by AGI share -- so wiring AR will
-  # need that as a per-state option
+  # itemized deductions and prorates them by AGI share, which
+  # st_ord.split_item_by_agi_share applies after the halving
   'item_ded', 'item_ded_potential', 'item_ded_ex_limits_potential',
   'med_item_ded_potential', 'mort_int_item_ded_potential',
   'inv_int_item_ded_potential', 'casualty_item_ded_potential',
@@ -131,6 +131,22 @@ st_split_spouse_unit = function(tax_unit, spouse, law_mfs) {
 
   for (v in intersect(ST_SPLIT_HALVE, names(col))) {
     col[[v]] = col[[v]] / 2
+  }
+
+  # Itemized deductions prorated by each column's share of AGI instead of
+  # halved, where the state says so (AR Form AR3 lines 30-33: "you must
+  # prorate your itemized deductions between spouses", the share being each
+  # spouse's AGI over the total, rounded to the nearest whole percent). The
+  # column's wage-anchored AGI stands in for the state's per-spouse AGI line
+  if (any(tax_unit$st_ord.split_item_by_agi_share == 1)) {
+    share = if_else(tax_unit$agi > 0,
+                    pmin(1, pmax(0, round(100 * col$agi / tax_unit$agi) / 100)),
+                    0.5)
+    item_vars = grep('item_ded|^salt_', intersect(ST_SPLIT_HALVE, names(col)), value = TRUE)
+    for (v in item_vars) {
+      col[[v]] = if_else(tax_unit$st_ord.split_item_by_agi_share == 1,
+                         tax_unit[[v]] * share, col[[v]])
+    }
   }
 
   col$filing_status = 3L

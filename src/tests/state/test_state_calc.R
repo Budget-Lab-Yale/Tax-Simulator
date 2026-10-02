@@ -3367,6 +3367,13 @@ test_state_calc = function() {
            expect = list(st_agi = 40000, st_exempt = 6000, st_ded = 2300,
                          st_txbl_inc = 31700, liab_st_iit = 1019.90),
            label = 'MS-1 2024 single, $10,000 zero bracket at 4.7%')
+  # MS-1b: the same unit with $43,000 of wages and a $20,000 short-term
+  # capital loss. Mississippi follows the federal $3,000 loss limit (Form
+  # 80-105 line 40), so income is 40,000 and the tax is MS-1's 1,019.90
+  run_case('MS', 2024,
+           list(agi = 40000, wages1 = 43000, ei1 = 43000, kg_st = -20000),
+           expect = list(st_agi = 40000, liab_st_iit = 1019.90),
+           label = 'MS-1b capital loss limited to $3,000')
 
   # MS-2a / MS-2b: the zero bracket grew from nothing into the 3% band rather
   # than the 3% RATE being cut, which is what the phase-out actually was. The
@@ -3455,7 +3462,51 @@ test_state_calc = function() {
   # AR-1: 2024 single, wages 52,410. The standard deduction is 2,410 (indexed
   # from 2,200 since TY2022), so net taxable income is 50,000. Tax = 592.44 +
   # 3.9% x 24,300 = 1,540.14, less the $29 personal credit = 1,511.14
-  run_case('AR', 2024,
+    # AR-ST1..ST3: filing status 4, separately on the same return (st_split.R),
+  # 2019. A single $50,000 earner owes 2,041.55; a couple earning $50,000 each
+  # owes twice that in two columns, 4,083.10, against more on the joint
+  # schedule; a one-earner couple keeps the joint computation (the second
+  # column would waste its standard deduction), 5,562.76. TAXSIM-35 gives the
+  # same three figures (2026-10-01 probe)
+  run_case('AR', 2019, list(agi = 50000, wages1 = 50000, ei1 = 50000),
+           expect = list(liab_st_iit = 2041.55), label = 'AR-ST1 single $50,000')
+  run_case('AR', 2019,
+           list(agi = 100000, filing_status = 2, age2 = 45, wages1 = 50000, wages2 = 50000, ei1 = 50000, ei2 = 50000),
+           expect = list(liab_st_iit = 4083.10), label = 'AR-ST2 two earners take the split')
+  run_case('AR', 2019,
+           list(agi = 100000, filing_status = 2, age2 = 45, wages1 = 100000, ei1 = 100000),
+           expect = list(liab_st_iit = 5562.76), label = 'AR-ST3 one earner keeps the joint computation')
+
+  # AR-CL1: AR-ST1's unit with $53,000 of wages and a $20,000 short-term
+  # capital loss. The loss is limited to $3,000 (AR1000F line 13), so income
+  # is 50,000 and the tax is AR-ST1's 2,041.55
+  run_case('AR', 2019, list(agi = 50000, wages1 = 53000, ei1 = 53000, kg_st = -20000),
+           expect = list(st_agi = 50000, liab_st_iit = 2041.55), label = 'AR-CL1 capital loss limited to $3,000')
+
+  # AR-CG1/CG2: 2024 single, long-term gain only. AR1000D line 7b caps the
+  # gain at $10,000,000 and line 8 taxes half of it: a $12,000,000 gain gives
+  # Arkansas income of 5,000,000; an $8,000,000 gain stays on the 50% tier
+  run_case('AR', 2024, list(agi = 12000000, kg_lt = 12000000),
+           expect = list(st_agi = 5000000), label = 'AR-CG1 gain above $10,000,000 exempt')
+  run_case('AR', 2024, list(agi = 8000000, kg_lt = 8000000),
+           expect = list(st_agi = 4000000), label = 'AR-CG2 gain below $10,000,000 half taxed')
+
+  # AR-SC1..SC4: stepped flat credits on net taxable income (AR1000TC lines
+  # 6-7), 2022, standard deduction $2,270 single / $4,540 joint. Inflationary
+  # Relief: single, taxable ~52,700 -> $150; joint, taxable ~100,460 -> $300;
+  # single, wages 89,770 -> taxable 87,500, one step above $87,000 -> $140.
+  # Qualified Individuals: single, wages 26,620 -> taxable 24,350, one step
+  # above $24,300 -> $55, plus the $150 relief credit = $205
+  run_case('AR', 2022, list(agi = 55000, wages1 = 55000, ei1 = 55000),
+           expect = list(st_step_credit = 150), label = 'AR-SC1 inflationary relief single')
+  run_case('AR', 2022, list(agi = 105000, filing_status = 2, age2 = 40, wages1 = 105000, ei1 = 105000),
+           expect = list(st_step_credit = 300), label = 'AR-SC2 inflationary relief joint')
+  run_case('AR', 2022, list(agi = 89770, wages1 = 89770, ei1 = 89770),
+           expect = list(st_step_credit = 140), label = 'AR-SC3 one step above the threshold')
+  run_case('AR', 2022, list(agi = 26620, wages1 = 26620, ei1 = 26620),
+           expect = list(st_step_credit = 205), label = 'AR-SC4 qualified individuals + relief')
+
+run_case('AR', 2024,
            list(agi = 52410, wages1 = 52410, ei1 = 52410),
            expect = list(st_agi = 52410, st_ded = 2410, st_txbl_inc = 50000,
                          st_exempt_credit = 29, liab_st_iit = 1511.14),
@@ -3491,12 +3542,16 @@ test_state_calc = function() {
   # exemption applies at ANY age on the employer-plan branch. 2024 single aged
   # 70 with 20,000 of wages, 15,000 of pension and 12,000 of taxable Social
   # Security: the base is 20,000 + 15,000 - 6,000 = 29,000, taxable income
-  # 26,590, tax 627.15, less the personal AND age-65 credits (2 x 29) = 569.15
+  # 26,590, tax 627.15, less the personal AND age-65 credits (2 x 29) = 569.15,
+  # less the Additional Tax Credit for Qualified Individuals (encoded
+  # 2026-10-01): 26,590 is 790 over the $25,800 threshold, eight $100 steps,
+  # 60 - 8 x 5 = 20 -> 549.15
   run_case('AR', 2024,
            list(agi = 47000, age1 = 70, wages1 = 20000, ei1 = 20000,
                 txbl_pens_dist = 15000, txbl_ss = 12000, gross_ss = 14000),
            expect = list(st_agi = 29000, st_txbl_inc = 26590,
-                         st_exempt_credit = 58, liab_st_iit = 569.15),
+                         st_exempt_credit = 58, st_step_credit = 20,
+                         liab_st_iit = 549.15),
            label = 'AR-4 2024 Social Security exempt, $6,000 retirement exemption')
 
   # AR-5: above the recapture tail the published final adjustment governs.
@@ -3510,11 +3565,13 @@ test_state_calc = function() {
 
   # AR-6: Arkansas has NO state earned income credit -- a verified negative
   # rather than an unfound one. The same unit that would collect a match in a
-  # neighbouring state collects nothing here.
+  # neighbouring state collects nothing here. (Taxable 17,590 is under the
+  # $25,800 Qualified Individuals threshold, so that credit's $60 maximum
+  # applies, encoded 2026-10-01.)
   run_case('AR', 2024,
            list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
-           expect = list(st_txbl_inc = 17590, st_eitc = 0,
-                         liab_st_iit = 316.69 - 29),
+           expect = list(st_txbl_inc = 17590, st_eitc = 0, st_step_credit = 60,
+                         liab_st_iit = 316.69 - 29 - 60),
            label = 'AR-6 2024 no state earned income credit')
 
   # AR-7: the child care credit is 20% of the federal credit, nonrefundable.

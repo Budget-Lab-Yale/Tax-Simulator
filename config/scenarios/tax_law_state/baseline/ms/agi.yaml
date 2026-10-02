@@ -37,6 +37,9 @@ ob_gains_share:
 ob_st_gains_share:
   value: 1
   reference: 'Short-term gains take the same treatment as long-term ones'
+ob_cap_loss_limit:
+  value: 3000
+  reference: 'Form 80-100 instructions (TY2022), Form 80-105 line 40: "Mississippi generally follows IRS rules concerning computation of capital gains and losses. Capital loss deductions are subject to the same limitations as federal"'
 ob_rent_share:
   value: 1
   reference: 'Form 80-105 line 49, rents, royalties, partnerships, estates and trusts'

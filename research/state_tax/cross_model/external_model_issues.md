@@ -225,6 +225,14 @@ schedule for 2020. Probe (2026-10-01), single, $2,000,000 of wages (NJ taxable i
 164,184.05 in both 2019 and 2020; the TY2020 schedule gives $17,782 more. Effect: TAXSIM understates 2020 New Jersey
 tax by 1.78% of taxable income between $1 million and $5 million.
 
+### T29. Arkansas $6,000 retirement exemption applied only at 65 and over
+
+Arkansas exempts the first $6,000 of retirement benefits per taxpayer (Ark. Code Ann. 26-51-307). For employer-related
+plans there is no age test (AR1000F instructions: "The recipient does not have to be retired"); traditional IRA
+distributions qualify from age 59 1/2. TAXSIM-35 applies the exemption only at 65 and over. Probe (2026-10-01), 2019
+single, $20,000 of wages and $20,000 of pension: v32 = 40,000 at ages 59, 60, 62 and 64, and 34,000 at 65 and 66.
+Effect: TAXSIM overstates Arkansas tax for retirees under 65 by up to $6,000 x the rate per taxpayer.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
@@ -878,6 +886,25 @@ value is applied to earlier years. Probe (2026-10-01), head of household, $20,00
 Reproduced on 1.775.7 and 2.18.2. Effect: PolicyEngine's 2021 New Jersey liability is low by $100–$500 per child
 under 6. In our 2021 cell this was most of the residual (0.818 → 0.942 once excluded). A fix is a zero value
 from an earlier date (or an `in_effect` gate) on the CTC parameters.
+
+### P12. Arkansas 2023 Inflationary Relief credit paid at $50 instead of $150
+
+The DFA Inflationary Relief Income-Tax Credit worksheet for TY2023 pays $150 ($300 joint) up to $89,600 ($179,200)
+of net income, then steps down $10 per $1,000 ($20 per $2,000) to zero at $103,600 ($207,200), the same maximum as
+TY2022. policyengine-us 1.775.7 sets `gov.states.ar.tax.income.credits.inflationary_relief.max_amount` to $50 ($100
+joint) from 2023-01-01, and leaves the joint `reduction.start` at the TY2022 $174,000 where the TY2023 table
+starts its step-down at $179,200 (the single-filer start was updated to $89,600). Effect: PolicyEngine's 2023 Arkansas liability is high by $100 / $200 for most filers under
+the threshold; in our 2023 cell these are the most common gaps (126 of 186 misses).
+
+### P13. Arkansas gross income omits partnership, S-corporation, estate and other income
+
+`gov.states.ar.tax.income.gross_income.sources` (individual and joint) maps AR1000F line 19 to `rental_income`
+only. Line 19 is "rents, royalties, partnerships, estates and trusts", and line 22 (Form AR-OI) carries other
+income and the net operating loss carryforward subtraction. None of `partnership_s_corp_income`, estate income or
+`miscellaneous_income` enters Arkansas income. Probe (2026-10-01, policyengine-us 1.775.7, 2024 single, $100,000 of
+wages): `ar_agi_indiv` is 100,000 with partnership/S-corp income of +50,000, -50,000 and -2,000 while federal AGI is
+150,000 / 50,000 / 98,000, and `ar_income_tax` is 3,689.61 in every case. Upstream main (40ce0012a5, 2026-09-30) has
+the same source list. Effect: Arkansas tax wrong in both directions for every filer with pass-through income or loss.
 
 ## Corroboration worth passing along
 

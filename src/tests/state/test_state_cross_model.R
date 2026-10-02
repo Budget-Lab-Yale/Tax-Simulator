@@ -679,8 +679,19 @@ cross_model_load_known_diffs = function(path) {
       action = character(), source = character()
     ))
   }
-  read_csv(path, show_col_types = F) %>%
-    return()
+  kd = read_csv(path, show_col_types = F)
+
+  # Parse every predicate now: a malformed one (an unquoted comma truncates
+  # it) otherwise surfaces only when a run reaches its state, after the
+  # whole simulation
+  if ('predicate' %in% names(kd)) {
+    for (i in which(!is.na(kd$predicate) & nzchar(kd$predicate))) {
+      tryCatch(parse(text = kd$predicate[i]), error = function(e)
+        stop(sprintf('known_differences.csv row %d (%s %s): predicate does not parse: %s',
+                     i, kd$state[i], kd$model[i], conditionMessage(e))))
+    }
+  }
+  return(kd)
 }
 
 
@@ -904,6 +915,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # investment interest, casualty, misc, "other", and personal property
     # tax are all invisible to PE (absolute values: negative "other" shrinks
     # our base relative to PE's just as surely)
+    # xw_pe_passthru_misc is what the PE crosswalk sends as pass-through,
+    # estate and miscellaneous income (net ordinary losses included, see
+    # cross_model_pe_leg). PolicyEngine's Arkansas gross income omits all
+    # three (P13), so the exclusion predicate needs the amount
     ours = ours %>%
       left_join(sampled %>%
                   mutate(n_dep_ge18 = (!is.na(dep_age1) & dep_age1 >= 18) +
@@ -917,14 +932,17 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                            abs(inv_int_item_ded_potential) +
                            abs(casualty_item_ded_potential) +
                            abs(misc_item_ded_potential) +
-                           abs(other_item_ded_potential) + salt_pers) %>%
+                           abs(other_item_ded_potential) + salt_pers,
+                         xw_pe_passthru_misc = part_scorp - part_se +
+                                               estate - estate_loss +
+                                               other_inc + other_gains) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          itemizing, n_dep_ge18, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
-                         xw_pe_unhanded_item),
+                         xw_pe_unhanded_item, xw_pe_passthru_misc),
                 by = 'id')
 
     for (model in yr_models) {
@@ -942,7 +960,11 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
         frame = pe_sampled
         theirs = cross_model_pe_leg(pe_sampled, states, yr,
                                     venv_python = venv_python,
-                                    cache_dir   = cache_dir) %>%
+                                    # the run's own directory, not the shared
+                                    # federal cache: two runs at once (one
+                                    # state each) overwrote each other's PE
+                                    # i/o there on 2026-10-01
+                                    cache_dir   = file.path(out_dir, 'raw')) %>%
           rename(ext_liab = pe_state_income_tax)
       }
 

@@ -98,6 +98,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_alimony_share',      # (dbl) own-base share: alimony received
     'st_agi.ob_other_share',        # (dbl) own-base share: other income
     'st_agi.ob_estate_share',        # (dbl) own-base share: estate and trust income (own floored class)
+    'st_agi.ob_cap_loss_limit',      # (dbl) own-base net capital loss limit, halved for MFS (Inf = none)
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -157,6 +158,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
     'st_agi.cap_gains_excl_flat',   # (dbl) flat-dollar alternative, greater-of (VT $5,000)
     'st_agi.cap_gains_excl_txbl_share', # (dbl) ceiling as a share of federal taxable income (VT 0.40; Inf = none)
+    'st_agi.cap_gains_full_excl_above', # (dbl) gain above this excluded in full (AR $10,000,000; Inf = none)
     'st_agi.div_excl_share',        # (dbl) share of qualified dividends excluded
     'st_agi.age_ded_amount',        # (dbl) per-person aged deduction (VA-style)
     'st_agi.age_ded_min_age',       # (dbl) minimum age for the aged deduction
@@ -301,13 +303,21 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   ob_floor = function(x) {
     if_else(tax_unit$st_agi.ob_class_floor == 1, pmax(0, x), x)
   }
+  # The PUF gain fields are uncapped, so a state that follows the federal
+  # IRC 1211(b) limit (AR, MS) needs it applied here; federal AGI already
+  # carries it, which is why AGI-start states need nothing (2026-10-01, AR
+  # triage: a $1M realized loss was wiping out wages)
+  ob_cap_loss = function(x) {
+    limit = tax_unit$st_agi.ob_cap_loss_limit / (1 + (tax_unit$filing_status == 3))
+    pmax(x, -limit)
+  }
   st_own_base_v = with(tax_unit,
     ob_floor(st_agi.ob_comp_share       * (wages1 + wages2)) +
     ob_floor(st_agi.ob_int_share        * txbl_int) +
     ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
     ob_floor(st_agi.ob_bus_share        * (sole_prop + part + scorp + farm)) +
-    ob_floor(st_agi.ob_gains_share      * (kg_lt + other_gains) +
-             st_agi.ob_st_gains_share   * kg_st) +
+    ob_floor(ob_cap_loss(st_agi.ob_gains_share    * (kg_lt + other_gains) +
+                         st_agi.ob_st_gains_share * kg_st)) +
     ob_floor(st_agi.ob_rent_share       * net_rent) +
     ob_floor(st_agi.ob_retirement_share * txbl_pens_dist) +
     ob_floor(st_agi.ob_ira_share        * txbl_ira_dist) +
@@ -730,10 +740,14 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # Both extras default off -- flat 0 and ceiling Inf -- so share-only
       # states (ND/SC/WI) are unaffected
       # (the ceiling is guarded on is.finite: the default Inf share times a
-      # zero taxable income would otherwise be NaN, not Inf)
+      # zero taxable income would otherwise be NaN, not Inf). Gain above
+      # cap_gains_full_excl_above is excluded outright (AR1000D line 7b caps
+      # the gain taxed at 50% at $10,000,000); the default Inf leaves one tier
+      st_cap_gain_tier1 = pmin(st_cap_gain_base, st_agi.cap_gains_full_excl_above),
       st_sub_capgain_uncapped =
-        pmax(st_agi.cap_gains_excl_share * st_cap_gain_base,
-             pmin(st_agi.cap_gains_excl_flat, st_cap_gain_base)) +
+        pmax(st_agi.cap_gains_excl_share * st_cap_gain_tier1,
+             pmin(st_agi.cap_gains_excl_flat, st_cap_gain_tier1)) +
+        (st_cap_gain_base - st_cap_gain_tier1) +
         st_agi.div_excl_share * pmax(0, div_pref),
       st_sub_capgain = if_else(
         is.finite(st_agi.cap_gains_excl_txbl_share),

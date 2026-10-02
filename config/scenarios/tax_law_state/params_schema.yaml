@@ -130,6 +130,9 @@ scalars:
   # Ceiling on the whole gain/dividend exclusion, as a share of FEDERAL
   # taxable income (VT IN-153 Part III line 20: 40%); .inf = no ceiling
   st_agi.cap_gains_excl_txbl_share: .inf
+  # Gain above this is excluded in full rather than by the share (AR1000D
+  # lines 7a-8: $10,000,000); .inf = no second tier
+  st_agi.cap_gains_full_excl_above: .inf
   st_agi.div_excl_share: 0
   st_agi.ss_taxable_gross_cap_share: .inf
   st_agi.pension_sub_share: 0
@@ -172,6 +175,7 @@ scalars:
   st_agi.ob_alimony_share: 0
   st_agi.ob_other_share: 0
   st_agi.ob_estate_share: 0   # estate and trust income as its own floored own-base class (NJ)
+  st_agi.ob_cap_loss_limit: .inf   # net capital loss the own base may carry, halved for MFS (AR/MS federal $3,000); .inf = whole loss (AL)
 
   # ded.yaml
   # Adopt the federal standard deduction by reference (MO RSMo 143.131.2):
@@ -384,6 +388,7 @@ scalars:
   # each spouse's own income (MT status 2a, AL separate returns,
   # AR status 4, MS combined returns)
   st_ord.split_election: 0
+  st_ord.split_item_by_agi_share: 0   # 1 = split columns prorate itemized deductions by AGI share (AR AR3 lines 30-33), else halve
   st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
   # Per-column standard deduction stated outright, for a state whose
   # married-separate amount is not a clean fraction of its joint one
@@ -439,6 +444,17 @@ scalars:
   st_credits.lic_aged_min_age: .inf
   # Nonrefundable credit as a share of net capital gain (MT 2% through TY2023)
   st_credits.kg_credit_rate: 0
+  # Stepped flat credits on state taxable income (AR): see st_credits.R
+  st_credits.stepcred1_amount: 0
+  st_credits.stepcred1_thresh: 0
+  st_credits.stepcred1_step: 1
+  st_credits.stepcred1_reduction: 0
+  st_credits.stepcred1_joint_mode: 1
+  st_credits.stepcred2_amount: 0
+  st_credits.stepcred2_thresh: 0
+  st_credits.stepcred2_step: 1
+  st_credits.stepcred2_reduction: 0
+  st_credits.stepcred2_joint_mode: 1
   st_credits.eitc_match: 0
   # Higher match where a dependent is under a stated age (OR 12% vs 9% for a
   # dependent younger than 3), as against the child-COUNT-keyed

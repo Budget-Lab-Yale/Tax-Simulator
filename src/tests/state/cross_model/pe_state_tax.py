@@ -107,6 +107,9 @@ OUTPUT_VARS = {
     # 1.775.7 pays it in 2020-2021 too (P11; the parameters start
     # 2022-01-01); the 2021 KD row keys on this column
     "pe_nj_ctc": ["nj_ctc"],
+    # AR Inflationary Relief credit: policyengine-us 1.775.7 pays $50/$100 in
+    # TY2023 where the DFA table pays $150/$300 (P12); the 2023 KD row keys on it
+    "pe_ar_inflation_relief": ["ar_inflation_relief_credit"],
     "pe_ga_surplus_rebate": ["ga_surplus_tax_rebate"],
     "pe_az_families_rebate": ["az_families_tax_rebate"],
     # WI nets the homestead credit (rent/property-tax based, one-sided for
@@ -290,6 +293,13 @@ def main():
         k: resolve(v, required=False)[0] for k, v in OUTPUT_VARS.items()
         if k != "pe_state_income_tax"
     }
+    # An extra that resolves to nothing is written as zeros, which silently
+    # disables any known-difference predicate keyed on it (a misnamed AR
+    # relief export did exactly that on 2026-10-01) -- say so in the log
+    missing = [k for k, v in extra_vars.items() if not v]
+    if missing:
+        print(f"pe_state_tax: WARNING no policyengine-us {PE_VERSION} variable "
+              f"for {missing}; writing zeros", file=sys.stderr, flush=True)
     liab_var = resolve(OUTPUT_VARS["pe_state_income_tax"])[0]
     # Entity of each extra, so PERSON-level variables are summed to the tax unit
     # instead of being read by tax-unit position. Indexing a person-indexed

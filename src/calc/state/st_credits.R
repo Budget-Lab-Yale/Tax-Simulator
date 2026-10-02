@@ -7,7 +7,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_dep_credit', 'st_cdctc', 'st_family_credit',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
                                 'st_pct_credit', 'st_cli', 'st_ded_credit',
-                                'st_lic', 'st_kg_credit',
+                                'st_lic', 'st_kg_credit', 'st_step_credit',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
@@ -161,6 +161,16 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.lic_thresh_aged',      # (dbl) higher threshold where either filer meets the age test (IA)
     'st_credits.lic_aged_min_age',     # (dbl) that age test (IA 65)
     'st_credits.kg_credit_rate',       # (dbl) nonrefundable credit as a share of net capital gain (MT 0.02)
+    'st_credits.stepcred1_amount',      # (dbl) stepped flat credit 1: maximum per return (AR)
+    'st_credits.stepcred1_thresh',      # (dbl) state taxable income up to which the maximum applies
+    'st_credits.stepcred1_step',        # (dbl) income step above the threshold
+    'st_credits.stepcred1_reduction',   # (dbl) reduction per step (or part of a step)
+    'st_credits.stepcred1_joint_mode',  # (int) 1 = joint table (all four doubled); 2 = single table at joint income, doubled
+    'st_credits.stepcred2_amount',      # (dbl) stepped flat credit 2: maximum per return (AR)
+    'st_credits.stepcred2_thresh',      # (dbl) state taxable income up to which the maximum applies
+    'st_credits.stepcred2_step',        # (dbl) income step above the threshold
+    'st_credits.stepcred2_reduction',   # (dbl) reduction per step (or part of a step)
+    'st_credits.stepcred2_joint_mode',  # (int) 1 = joint table (all four doubled); 2 = single table at joint income, doubled
     'st_credits.jfc_cap',
     'st_credits.jfc_min_each_income',
     'st_credits.jfc_income_base',
@@ -412,6 +422,24 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   st_kg_credit = tax_unit$st_credits.kg_credit_rate *
                  pmax(0, tax_unit$kg_lt + tax_unit$kg_st)
 
+  # Stepped flat credits (AR Inflationary Relief TY2022-23; AR Additional Tax
+  # Credit for Qualified Individuals TY2022+): a maximum up to a threshold of
+  # state net taxable income (AR1000F line 28), reduced by a fixed amount for
+  # each step, or part of a step, above it, to zero. Joint returns either use
+  # their own table with every figure doubled (mode 1) or read the single
+  # table at joint income and double the result (mode 2). Nonrefundable
+  stepcred = function(i) {
+    p = function(x) tax_unit[[paste0('st_credits.stepcred', i, '_', x)]]
+    joint = tax_unit$filing_status == 2
+    scale = if_else(joint & p('joint_mode') == 1, 2, 1)
+    v = pmax(0, scale * p('amount') - scale * p('reduction') *
+                  ceiling(pmax(0, tax_unit$st_txbl_inc - scale * p('thresh')) /
+                          (scale * p('step'))))
+    v = if_else(joint & p('joint_mode') == 2, 2 * v, v)
+    if_else(p('amount') > 0, v, 0)
+  }
+  st_step_credit = stepcred(1) + stepcred(2)
+
   tibble(
     st_hh_credit     = hh$st_hh_credit,
     st_eitc          = st_eitc,
@@ -438,6 +466,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_stfc           = hh$st_stfc,
     st_lic            = st_lic,
     st_kg_credit      = st_kg_credit,
+    st_step_credit    = st_step_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -445,7 +474,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         senior$st_retire_credit + senior$st_senior_credit +
                         st_jfc + earn$st_forgive_credit + st_marriage_credit +
                         st_twoearner_credit + st_item_credit +
-                        st_char_credit + st_lic + st_kg_credit +
+                        st_char_credit + st_lic + st_kg_credit + st_step_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         hh$st_stfc *
