@@ -47,6 +47,14 @@ brackets_married:
     '2017': [0.0, 1000.0, 6000.0]
   reference: 'Ala. Code 40-18-5(a); Form 40 booklets 2017-2025 p.30. Reconciliation at $100,000: 2% x 1,000 + 4% x 5,000 + 5% x 94,000 = $4,920, against the worksheet''s $4,918'
 
+# Separate Alabama returns from a joint federal return: a couple may file
+# separately in Alabama and keep the cheaper result (st_split.R)
+split_election:
+  value: 1
+  reference: 'Form 40 filing status 3 (married filing separate) is open to a couple who file jointly federally (booklet: "If a married couple elects to file a joint federal return and separate Alabama returns ..."). The schedule is split-neutral, but the standard deduction slide and the dependent exemption tiers key on each spouse''s own Alabama AGI, so an uneven couple can gain. Approximations: unobserved non-wage income halved between the columns; dependents ride with the first column; each column itemizes or not on its own'
+split_fed_tax_by_agi_share:
+  value: 1
+  reference: 'Form 40 booklet line 12 (TY2023, identical all nine years): on separate Alabama returns from a joint federal return "the federal income tax liability must be determined by a ratio of each spouse''s federal adjusted gross income to total joint federal adjusted gross income"'
 documented_not_modeled:
   tax_table_midpoint_rounding:
     reference: 'Alabama publishes a midpoint tax table for taxable income up to $100,000: the tax for a $100 band is computed at the band midpoint, so a filer at the bottom of a band pays about $2.50 more than the statutory schedule and one at the top about $2.50 less. The statutory schedule is encoded [differences of a few dollars per return below $100,000, averaging to roughly zero across a population]'

@@ -233,8 +233,6 @@ documented_not_modeled:
     reference: 'From TY2025 the worksheet adds a line subtracting the federal refundable adoption credit (1040 line 30), the only structural change to the worksheet since 2018. Not a model variable'
   ty2021_act_2022_37_recomputation:
     reference: 'For TY2021 ONLY, the worksheet gained a Part II under Act 2022-37: the federal deduction is recomputed as if the child tax credit, earned income credit and child and dependent care credit had stayed at their December 31 2020 levels, and the taxpayer takes the GREATER of the actual-law and pre-ARPA figures. Not modeled -- it requires a full 2020-law federal recomputation on 2021 data [understates the deduction, so overstates Alabama tax, for TY2021 filers whose ARPA credits were large; concentrated among families with children]'
-  joint_federal_separate_alabama_apportionment:
-    reference: 'A couple filing jointly for federal purposes but separately in Alabama apportions the joint federal tax deduction by each spouse''s share of joint federal AGI (booklet p.8, identical wording all nine years). The model treats federally-joint couples as filing jointly in Alabama, so the apportionment never arises -- see the separate-return election note in the source packet'
   itemized_election_and_split:
     reference: 'Spouses filing separately must use the SAME method (standard or itemized) unless they lived apart all year, and neither may claim expenses the other paid. Not modeled, since separate Alabama returns are not modeled'
   casualty_floor_condition:

@@ -398,6 +398,7 @@ scalars:
   # each spouse's own income (MT status 2a, AL separate returns,
   # AR status 4, MS combined returns)
   st_ord.split_election: 0
+  st_ord.split_fed_tax_by_agi_share: 0   # 1 = split columns apportion federal tax by federal AGI share instead of halving it (AL)
   st_ord.split_credits_pooled: 0   # 1 = split columns are added BEFORE nonrefundable credits (AR1000F line 30), so one column's unused credits offset the other's tax
   st_ord.split_item_by_agi_share: 0   # 1 = split columns prorate itemized deductions by AGI share (AR AR3 lines 30-33), else halve
   # 1 = an elective whole-income tax table replaces the schedule AND the

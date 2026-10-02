@@ -43,6 +43,7 @@ do_state_taxes = function(tax_units, credit_tables = NULL, law_mfs = NULL) {
   # non-wage income is unobserved and the split halves it, so cross-model
   # predicates need to see which couples the convention moved
   joint$st_split_used = FALSE
+  joint$st_split_gain = 0   # joint liability less the split liability, where the split wins
 
   # Married-separate election, opt-in per state and computed only where any
   # row of the slice declares it. Strictly a no-op otherwise: a state that

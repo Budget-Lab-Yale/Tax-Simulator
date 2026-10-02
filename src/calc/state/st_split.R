@@ -150,6 +150,22 @@ st_split_spouse_unit = function(tax_unit, spouse, law_mfs) {
     }
   }
 
+  # Federal tax apportioned by each column's share of federal AGI instead of
+  # halved, where the state says so (AL Form 40 instructions, line 12: on
+  # separate Alabama returns from a joint federal return "the federal income
+  # tax liability must be determined by a ratio of each spouse's federal
+  # adjusted gross income to total joint federal adjusted gross income").
+  # The column's wage-anchored AGI stands in for each spouse's federal AGI
+  if (any(tax_unit$st_ord.split_fed_tax_by_agi_share == 1)) {
+    share = if_else(tax_unit$agi > 0, pmin(1, pmax(0, col$agi / tax_unit$agi)), 0.5)
+    fed_tax_vars = intersect(c('liab_bc', 'nonref', 'liab_niit', 'excess_ptc', 'eitc',
+                               'ctc_ref', 'ed_ref', 'net_ptc'), names(col))
+    for (v in fed_tax_vars) {
+      col[[v]] = if_else(tax_unit$st_ord.split_fed_tax_by_agi_share == 1,
+                         tax_unit[[v]] * share, col[[v]])
+    }
+  }
+
   col$filing_status = 3L
   col$wages1 = own_wages
   col$ei1    = own_ei
@@ -236,13 +252,15 @@ st_split_election = function(tax_units, joint, credit_tables = NULL,
     return(joint)
   }
 
-  for (v in names(joint)[map_lgl(joint, is.double)]) {
+  joint_liab = joint$liab_st_iit[rows]
+  for (v in setdiff(names(joint)[map_lgl(joint, is.double)], 'st_split_gain')) {
     joint[[v]][rows] = (col1[[v]] + col2[[v]])[wins]
   }
   for (v in intersect(c('liab_st_iit', 'liab_st_individual_net'), names(joint))) {
     joint[[v]][rows] = joint[[v]][rows] + pool_adj[wins]
   }
   joint$st_split_used[rows] = TRUE
+  joint$st_split_gain[rows] = joint_liab - joint$liab_st_iit[rows]
 
   return(joint)
 }

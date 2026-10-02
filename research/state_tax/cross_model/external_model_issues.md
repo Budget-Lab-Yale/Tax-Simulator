@@ -950,6 +950,15 @@ the Form 2 instructions (TY2023 p.9: "each dependant counts as one exemption") m
 single and separate filers with an adult dependent rose by one exemption (about $183). Effect: PolicyEngine
 overstates Montana tax through TY2023 for filers claiming adult dependents.
 
+### P17. Alabama AGI omits miscellaneous income
+
+Alabama taxes other income (Form 40 page 2 Part I). In policyengine-us 1.775.7 `al_agi` does not include
+`miscellaneous_income`, while the federal tax deduction does reflect the federal tax on it. Probe (2026-10-02),
+2024 single, $60,000 of wages: adding $20,000 of miscellaneous income raises federal AGI to 80,000 and
+`al_federal_income_tax_deduction` from 5,216 to 9,441, leaves `al_agi` at 60,000, and lowers `al_income_tax` from
+2,395 to 2,183. (Partnership/S-corporation income is included correctly.) Effect: Alabama tax understated, by
+more than the omitted income alone, for filers with other income.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

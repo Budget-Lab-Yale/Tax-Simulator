@@ -4701,6 +4701,18 @@ run_case('AR', 2024,
   # contributions: Alabama income is 46,000
   run_case('AL', 2024, list(agi = 46000, wages1 = 50000, ei1 = 50000, trad_contr_ira = 3000, hsa_contr = 1000),
            expect = list(st_agi = 46000), label = 'AL-ADJ1 IRA and HSA adjustments')
+  # AL-SP1: separate Alabama returns from a joint federal return (split
+  # election, federal tax apportioned by AGI share). 2024, wages 45,000 and
+  # 10,000, two dependents, federal tax 4,400. Joint: 55,000 - 5,000 std -
+  # 4,400 - (3,000 + 2 x 500) = 41,600 -> 2,000. Separate: column 1 takes
+  # 45/55 of the federal tax (3,600) and $1,000 per dependent (own AGI at
+  # most $50,000): 45,000 - 2,500 - 3,600 - 3,500 = 35,400 -> 1,730; column
+  # 2: 10,000 - 4,250 - 800 - 1,500 = 3,450 -> 132.50. Total 1,862.50
+  run_case('AL', 2024,
+           list(agi = 55000, filing_status = 2, age2 = 40, wages1 = 45000, wages2 = 10000, ei1 = 45000, ei2 = 10000,
+                liab_bc = 4400, n_dep = 2, n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 7),
+           expect = list(liab_st_iit = 1862.50), label = 'AL-SP1 separate returns apportion the federal tax')
+
   # AL-PR1/PR2: payroll taxes on Schedule A line 6. A sole proprietor with
   # $50,000 of profit and $7,650 of self-employment tax (liab_pr_ee carries
   # the employee half, 3,825): the itemized payroll add-on is the 7,650 paid,
@@ -4744,19 +4756,24 @@ run_case('AR', 2024,
   #   at 100,000: TI = 100,000 - 5,000 - 8,000 - 3,000 - 1,000 = 83,000 ->
   #               20 + 200 + 5% x 77,000 = 4,070.00
   #   at 100,001: TI = 83,401 -> 20 + 200 + 5% x 77,401 = 4,090.05
+  # Both pin the JOINT return (split election off): with separate returns
+  # the couple escapes the cliff, since spouse 1's own AGI of 60,001 keeps
+  # the $500 tier -- the reason the election exists (AL-SP1)
   run_case('AL', 2024,
            list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
                 wages2 = 40000, ei1 = 60000, ei2 = 40000, n_dep = 2,
                 dep_age1 = 6, dep_age2 = 10, liab_bc = 8000),
            expect = list(st_exempt = 4000, liab_st_iit = 4070.00),
-           label = 'AL-5a 2024 dependent exemption at the $100,000 bound')
+           label = 'AL-5a 2024 dependent exemption at the $100,000 bound',
+           law_overrides = list(st_ord.split_election = 0))
 
   run_case('AL', 2024,
            list(agi = 100001, filing_status = 2, age2 = 40, wages1 = 60001,
                 wages2 = 40000, ei1 = 60001, ei2 = 40000, n_dep = 2,
                 dep_age1 = 6, dep_age2 = 10, liab_bc = 8000),
            expect = list(st_exempt = 3600, liab_st_iit = 4090.05),
-           label = 'AL-5b 2024 one dollar past it')
+           label = 'AL-5b 2024 one dollar past it',
+           law_overrides = list(st_ord.split_election = 0))
 
   # AL-6a / AL-6b: claiming the federal earned income credit RAISES Alabama
   # tax, because it comes off the deductible federal tax. 2024 single with

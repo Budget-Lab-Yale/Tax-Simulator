@@ -915,6 +915,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # investment interest, casualty, misc, "other", and personal property
     # tax are all invisible to PE (absolute values: negative "other" shrinks
     # our base relative to PE's just as surely)
+    # xw_fed_only_atl: federal above-the-line deductions the crosswalk can
+    # only hand TAXSIM inside nonprop (educator expenses, student loan
+    # interest, tuition), so a state that does not allow them (AL) cannot be
+    # matched: TAXSIM sees a smaller nonprop, not a deduction
     # liab_niit is the federal net investment income tax: TAXSIM's Alabama
     # federal tax deduction counts it twice (T31). ftc is the federal foreign
     # tax credit, which neither external model takes as an input, so a state
@@ -937,6 +941,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                            abs(casualty_item_ded_potential) +
                            abs(misc_item_ded_potential) +
                            abs(other_item_ded_potential) + salt_pers,
+                         xw_fed_only_atl = ed_exp + sl_int_ded + tuition_ded,
                          xw_pe_passthru_misc = part_scorp - part_se +
                                                estate - estate_loss +
                                                other_inc + other_gains) %>%
@@ -946,7 +951,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          itemizing, n_dep_ge18, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
-                         xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc),
+                         xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
+                         xw_fed_only_atl, other_gains),
                 by = 'id')
 
     for (model in yr_models) {

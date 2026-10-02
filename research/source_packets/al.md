@@ -139,7 +139,8 @@ Last updated: `2026-08-18`
   primary taxpayer and the spouse each "an exclusion of retirement income up to
   $6,000, not to exceed the amount taxable to Alabama", if that person is 65 or
   older and receives taxable retirement income (IRAs included). No income test.
-- **Separate Alabama returns are not modeled.** Alabama's rate ladder is
+- **Separate Alabama returns (modeled from 2026-10-02, see the validation
+  notes).** Alabama's rate ladder is
   perfectly split-neutral (joint brackets are exactly twice single ones), so the
   schedule gives no separate-filing advantage. But the standard deduction slide
   and the dependent exemption cliffs both key on each spouse's OWN Alabama AGI,
@@ -180,10 +181,22 @@ Last updated: `2026-08-18`
   the federal foreign tax credit, which neither external model takes, so their
   deduction (federal tax after credits, 1040 line 22) is larger; municipal
   interest rows for both models.
-- Not done, deliberately: separate Alabama returns via the split election. On
-  separate returns from a joint federal return the federal tax deduction is
-  apportioned between spouses, while the split halves federal tax, which is
-  wrong for exactly the uneven couples who would elect.
+- Separate Alabama returns now modeled (`split_election` 1) with the federal
+  tax deduction apportioned by each spouse's share of federal AGI, as the
+  booklet requires (new generic `st_ord.split_fed_tax_by_agi_share`; the
+  split otherwise halves federal tax). AL-SP1 pins a couple that gains; AL-5a
+  and AL-5b now pin the joint-return dependent cliff, which separate returns
+  let a couple escape.
+- TAXSIM rows added for the head-of-household derivation class and for
+  federal-only adjustments (student loan interest, tuition, educator expenses:
+  Alabama allows none, the crosswalk can only net them into nonprop).
+- **P17**: PolicyEngine leaves miscellaneous income out of Alabama AGI while
+  still deducting the federal tax on it.
+- Neither external model offers the separate-return election (TAXSIM probe:
+  joint computation only), so couples whose election saves more than $100
+  (`st_split_gain`) are excluded as a structural difference.
+- **Closed 2026-10-02.** Final cells: TAXSIM 2017-20 0.963 / 0.961 / 0.969 /
+  0.964; PolicyEngine 2021-25 0.958 / 0.955 / 0.959 / 0.951 / 0.952.
 
 - TAXSIM years to compare: 2017-2020; PolicyEngine 2021-2024
 - Expected mismatch reasons: the unmodeled defined-benefit exclusion will
