@@ -86,6 +86,9 @@ st_pipeline = function(tax_units, credit_tables = NULL) {
     # Tax before credits (rate schedule + recapture)
     bind_cols(calc_st_tax(.)) %>%
 
+    # Elective whole-income table replacing schedule and deduction (AR)
+    calc_st_alt_table(credit_tables = credit_tables) %>%
+
     # Credits
     bind_cols(calc_st_credits(., credit_tables = credit_tables)) %>%
 

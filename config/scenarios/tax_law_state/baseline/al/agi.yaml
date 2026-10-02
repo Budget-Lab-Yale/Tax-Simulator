@@ -24,6 +24,9 @@ start_point:
 ob_class_floor:
   value: 0
   reference: 'Form 40 Schedule D instructions: "Under Alabama law the entire gain is taxable, and the entire loss is deductible in the year in which it occurs". Alabama has no gross-income-class loss ring-fence of the Pennsylvania kind'
+ob_passthru_as_federal:
+  value: 0
+  reference: 'Form 40 Schedule E instructions: "Alabama law has no provision similar to current federal law which limits the deduction of passive trade or business activity losses", so partnership and S-corporation losses enter net of everything rather than as allowed federally (losses are limited to basis, which the microdata does not carry)'
 
 ob_comp_share:
   value: 1

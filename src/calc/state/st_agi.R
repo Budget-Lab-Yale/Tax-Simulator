@@ -5,7 +5,8 @@
 # Set return variables for function
 return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_excl',
                             'st_agi', 'st_age_package_taken',
-                            'st_age_package_forgone', 'st_bid', 'st_bus_excess')
+                            'st_age_package_forgone', 'st_bid', 'st_bus_excess',
+                            'st_sub_pens', 'st_sub_capgain')
 
 
 calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
@@ -59,6 +60,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'part_active_loss',  # (dbl) active partnership losses (positive magnitude)
     'part',           # (dbl)  net partnership income or loss (utils.R: income - losses - s179)
     'scorp',          # (dbl)  S-corporation income or loss
+    'part_scorp',     # (dbl)  partnership + S-corp income as allowed federally (Schedule E, after passive/at-risk limits)
     'farm',           # (dbl)  farm income or loss
     'txbl_int',       # (dbl)  taxable interest income
     'hsa_contr',      # (dbl)  deductible HSA contributions (federal above-the-line)
@@ -99,6 +101,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_other_share',        # (dbl) own-base share: other income
     'st_agi.ob_estate_share',        # (dbl) own-base share: estate and trust income (own floored class)
     'st_agi.ob_cap_loss_limit',      # (dbl) own-base net capital loss limit, halved for MFS (Inf = none)
+    'st_agi.ob_passthru_as_federal', # (int) 1 = partnership/S-corp income as allowed federally (part_scorp)
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -303,6 +306,13 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   ob_floor = function(x) {
     if_else(tax_unit$st_agi.ob_class_floor == 1, pmax(0, x), x)
   }
+  # ob_passthru_as_federal: part and scorp net EVERY loss, but the federal
+  # return allows a passive or at-risk-limited loss only up to Form 8582 /
+  # 6198, and part_scorp is that allowed figure (federal AGI uses it). A
+  # state whose form takes Schedule E as reported federally (AR1000F line
+  # 19) needs part_scorp; NJ and PA build the category themselves
+  # (2026-10-01 AR triage: a -$3.55M S-corporation loss federal AGI ignores
+  # was driving Arkansas income to -$3.3M)
   # The PUF gain fields are uncapped, so a state that follows the federal
   # IRC 1211(b) limit (AR, MS) needs it applied here; federal AGI already
   # carries it, which is why AGI-start states need nothing (2026-10-01, AR
@@ -315,7 +325,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_comp_share       * (wages1 + wages2)) +
     ob_floor(st_agi.ob_int_share        * txbl_int) +
     ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
-    ob_floor(st_agi.ob_bus_share        * (sole_prop + part + scorp + farm)) +
+    ob_floor(st_agi.ob_bus_share        * (sole_prop + farm +
+             if_else(st_agi.ob_passthru_as_federal == 1, part_scorp, part + scorp))) +
     ob_floor(ob_cap_loss(st_agi.ob_gains_share    * (kg_lt + other_gains) +
                          st_agi.ob_st_gains_share * kg_st)) +
     ob_floor(st_agi.ob_rent_share       * net_rent) +

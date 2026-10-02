@@ -77,6 +77,8 @@ PRIMARY_VARS = {
     "charitable_noncash": ["charitable_non_cash_donations"],
     "childcare_expenses": ["tax_unit_childcare_expenses", "childcare_expenses"],
 }
+# Tax-unit-level person inputs split evenly between spouses on a joint record
+EVEN_SPLIT_COLS = {"pension_income"}
 # PE's generic state_income_tax INCLUDES local piggyback taxes for some
 # states. For MD, with no county input, PE defaults the county to
 # first-in-state (Allegany, ~3%), silently adding a county tax to every
@@ -229,6 +231,16 @@ def build_situation(rows, year):
             var, entity = resolve(candidates)
             val = float(row[col])
             if entity == "person":
+                # Pension and IRA income is held at tax-unit level, so who
+                # owns it is unobserved. Our state calculator pools it against
+                # both spouses' per-person exclusions, as TAXSIM does (probe
+                # 2026-10-02: AR joint 70/70, $20,000 pension -> both $6,000
+                # exemptions); handing it all to the head gave PolicyEngine one
+                # exclusion per couple. Split evenly to mirror the pooling
+                if joint and col in EVEN_SPLIT_COLS:
+                    situation["people"][primary].setdefault(var, {})[yr] = val / 2
+                    situation["people"][spouse].setdefault(var, {})[yr] = val / 2
+                    continue
                 situation["people"][primary].setdefault(var, {})[yr] = val
             else:
                 group_values.setdefault(entity, {})[var] = {yr: val}

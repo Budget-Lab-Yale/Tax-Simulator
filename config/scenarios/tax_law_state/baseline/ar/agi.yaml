@@ -36,6 +36,9 @@ ob_gains_share:
 ob_st_gains_share:
   value: 1
   reference: 'Short-term capital gains are 100% taxable in Arkansas -- the exclusion reaches only net LONG-TERM gain'
+ob_passthru_as_federal:
+  value: 1
+  reference: 'AR1000F line 19 instructions (TY2019 and TY2022 booklets): income "from partnerships, fiduciaries, small business corporations, etc., enter the amounts as reported on your federal Schedule E", i.e. after the federal passive-activity and at-risk limits'
 ob_cap_loss_limit:
   value: 3000
   reference: 'AR1000F line 13 instructions (TY2022 booklet): a net capital loss is "limited to $3,000 ($1,500 per taxpayer for filing Status 4 or 5)", the federal IRC 1211(b) limit'
@@ -86,8 +89,6 @@ pension_excl_incl_ira:
   reference: 'IRA distributions qualify, subject to the 59-and-a-half test noted above'
 
 documented_not_modeled:
-  low_income_tax_tables:
-    reference: 'See ord.yaml. Arkansas five Low Income Tax Tables are a taxpayer ELECTION used instead of the schedule and instead of any deduction, and they zero out tax below their thresholds. Not modeled, and the largest Arkansas known difference [overstates tax for low-income filers]'
   ira_age_test:
     reference: 'The $6,000 exemption applies to employer-plan distributions at any age but to IRA distributions only from age 59 and a half. The machinery carries one minimum age for both branches and it is set to zero, so a young IRA recipient receives the exemption here [understates Arkansas tax for early IRA withdrawals -- a small population, since early withdrawals are rare and usually small]'
   military_retirement_exemption:

@@ -225,8 +225,10 @@ produced agreement by accident, and each is an open state question, not a regres
   instructions, TY2022: "Net operating loss (NOL) from an earlier year to carry forward
   ... enter as a subtraction from income. Attach form AR1000-NOL" (carrybacks not
   allowed). Our treatment stands, with the federal NOL as the proxy for the Arkansas
-  one (they differ where Arkansas income differs, e.g. the 50% gain exclusion). Keyed
-  in known_differences.csv for both external models.
+  one (they differ where Arkansas income differs, e.g. the 50% gain exclusion). TAXSIM
+  ignores positive nonprop too, so this is TAXSIM bug T30 (external_model_issues.md);
+  PolicyEngine omits other income from Arkansas income (P13). Both keyed in
+  known_differences.csv.
 - **Maine (-2.4 / -2.7pp, 2017-2018):** the difference is the sales tax fairness
   credit, paid by us to NOL records. Its "income" (36 M.R.S. 5213-A(1)(B)) is federal
   AGI plus listed losses and adjustments; the NOL deduction is in neither list, so

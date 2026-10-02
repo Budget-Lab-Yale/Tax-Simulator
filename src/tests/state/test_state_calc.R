@@ -3483,6 +3483,12 @@ test_state_calc = function() {
   run_case('AR', 2019, list(agi = 50000, wages1 = 53000, ei1 = 53000, kg_st = -20000),
            expect = list(st_agi = 50000, liab_st_iit = 2041.55), label = 'AR-CL1 capital loss limited to $3,000')
 
+  # AR-PT1: the same unit with a $100,000 S-corporation loss the federal
+  # return disallows (passive, part_scorp 0). AR1000F line 19 takes Schedule
+  # E as reported federally, so Arkansas income stays 50,000
+  run_case('AR', 2019, list(agi = 50000, wages1 = 50000, ei1 = 50000, scorp = -100000, part_scorp = 0),
+           expect = list(st_agi = 50000, liab_st_iit = 2041.55), label = 'AR-PT1 pass-through loss as allowed federally')
+
   # AR-CG1/CG2: 2024 single, long-term gain only. AR1000D line 7b caps the
   # gain at $10,000,000 and line 8 taxes half of it: a $12,000,000 gain gives
   # Arkansas income of 5,000,000; an $8,000,000 gain stays on the 50% tier
@@ -3490,6 +3496,26 @@ test_state_calc = function() {
            expect = list(st_agi = 5000000), label = 'AR-CG1 gain above $10,000,000 exempt')
   run_case('AR', 2024, list(agi = 8000000, kg_lt = 8000000),
            expect = list(st_agi = 4000000), label = 'AR-CG2 gain below $10,000,000 half taxed')
+
+  # AR-LT1..LT5: the Low Income Tax Tables (calc_st_alt_table), TY2019
+  # booklet. Single: zero through $12,492; $12,901-13,000 pays $60, less the
+  # $26 personal credit = 34; $15,000 is above the single table's $14,900
+  # ceiling and stays on the schedule (12,800 taxable, 201.03 - 26). Head of
+  # household with two dependents: $23,001-23,100 pays $316, less three $26
+  # credits = 238. LT5: $13,000 of wages with $5,000 of exempt Social
+  # Security fails the "total income from all sources" test
+  run_case('AR', 2019, list(agi = 12400, wages1 = 12400, ei1 = 12400),
+           expect = list(st_tax_pre_credit = 0, st_alt_table_used = 1), label = 'AR-LT1 zero band')
+  run_case('AR', 2019, list(agi = 13000, wages1 = 13000, ei1 = 13000),
+           expect = list(st_tax_pre_credit = 60, liab_st_iit = 34), label = 'AR-LT2 single in the table')
+  run_case('AR', 2019, list(agi = 15000, wages1 = 15000, ei1 = 15000),
+           expect = list(st_alt_table_used = 0, liab_st_iit = 175.03), label = 'AR-LT3 above the ceiling')
+  run_case('AR', 2019,
+           list(agi = 23050, wages1 = 23050, ei1 = 23050, filing_status = 4, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 6),
+           expect = list(st_tax_pre_credit = 316, liab_st_iit = 238), label = 'AR-LT4 head of household, two dependents')
+  run_case('AR', 2019, list(agi = 13000, wages1 = 13000, ei1 = 13000, gross_ss = 5000),
+           expect = list(st_alt_table_used = 0), label = 'AR-LT5 exempt income counts toward the ceiling')
 
   # AR-SC1..SC4: stepped flat credits on net taxable income (AR1000TC lines
   # 6-7), 2022, standard deduction $2,270 single / $4,540 joint. Inflationary

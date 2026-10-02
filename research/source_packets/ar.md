@@ -44,6 +44,13 @@ Last updated: `2026-08-18`
   this a large realized loss wiped out wages in Arkansas income;
   `cap_gains_full_excl_above` $10,000,000, AR1000D line 7b (gain above it is
   exempt outright, not half-taxed; Ark. Code Ann. 26-51-815)
+- Encoded 2026-10-02: `ob_passthru_as_federal` 1. AR1000F line 19 takes
+  partnership, S-corporation and fiduciary income "as reported on your
+  federal Schedule E", i.e. after the federal passive-activity and at-risk
+  limits, so the own base uses the federally allowed `part_scorp` rather than
+  `part + scorp`, which net every loss (a -$3.55M S-corporation loss federal AGI
+  ignores had driven one record's Arkansas income to -$3.3M). Mississippi's
+  line 41 reads the same way; Alabama has no passive-loss limit and keeps 0
 - Known approximations: the IRA branch's 59-and-a-half test; military
   retirement
 
@@ -90,7 +97,10 @@ credit; AR-7 the child care credit at 20% of federal. 2026-10-01: AR-SC1 to
 AR-SC4 the two stepped credits at plateau, mid-ramp, zero and joint; AR-ST1 to
 AR-ST3 the filing status 4 split with AGI-share itemized proration. AR-4 and
 AR-6 now include the qualified-individuals credit. AR-CL1 the $3,000 capital
-loss limit; AR-CG1 and AR-CG2 the $10,000,000 gain tier either side.
+loss limit; AR-CG1 and AR-CG2 the $10,000,000 gain tier either side; AR-PT1 a
+federally disallowed pass-through loss; AR-LT1
+to AR-LT5 the low income tables (zero band, in-table, above the ceiling, head
+of household with two dependents, exempt income counted toward the ceiling).
 
 ## Research findings worth flagging
 
@@ -119,13 +129,21 @@ loss limit; AR-CG1 and AR-CG2 the $10,000,000 gain tier either side.
 
 ## Known differences
 
-- **The Low Income Tax Tables are not modeled, and this is the largest
-  Arkansas gap.** Five dense tables, used INSTEAD of the schedule and INSTEAD
-  of any deduction, zeroing tax below their thresholds — and the booklet makes
-  it an explicit taxpayer election, so modelling it means computing both paths
-  and taking the better. That is the generic minimum-liability election pass
-  already queued for the Wisconsin Act 15 election and Alabama separate
-  returns. Arkansas is the third state waiting on it.
+- **The Low Income Tax Tables are encoded (2026-10-01)** as an elective
+  whole-income table (`st_ord.alt_table_election`, `calc_st_alt_table` in
+  st_tax.R): looked up on Arkansas AGI with the retirement exemption added
+  back (a filer may elect out of it to qualify), taken when cheaper than the
+  schedule, and only where total income including exempt Social Security and
+  the excluded half of gains is within the table. All 45 tables (five a year,
+  TY2017-2025) are in credit_tables.csv, extracted from the booklets'
+  word coordinates by research/state_tax/scripts/ar_lit_extract.py, every
+  table checked to start at zero and chain without a gap. Against
+  policyengine-us's own transcription for TY2021-2025 they agree on 1,128 of
+  1,129 rows; the exception is a PolicyEngine typo (TY2024 head of household
+  with two or more dependents starts at $24,200, the booklet at $24,177, a $92
+  row, under tolerance). The TY2017 booklet misprints one lower bound
+  (21,900 for 21,901), repaired by the extractor. Not modeled: the military
+  pay and military retirement disqualifications.
 - The deaf and head-of-household additional personal credits, and the $500
   developmental disabilities credit, are not model inputs.
 - From TY2021 the child care credit runs on a pre-ARPA recomputation of the
@@ -168,9 +186,23 @@ loss limit; AR-CG1 and AR-CG2 the $10,000,000 gain tier either side.
   the new harness covariate `xw_pe_passthru_misc`.
 - **Net operating loss: resolved.** Arkansas allows the carryforward as a
   subtraction on line 22 (Form AR-OI, "Attach form AR1000-NOL"; carrybacks not
-  allowed), so our treatment stands with the federal NOL as the proxy. TAXSIM
-  ignores it; keyed as an external-model-scope row.
-- Still open: the low-income tables election (above).
+  allowed), so our treatment stands with the federal NOL as the proxy.
+- **T30**: TAXSIM ignores `nonprop` in Arkansas AGI in both directions, so it
+  drops other income and alimony as well as the NOL (probe: +$10,000 of
+  nonprop leaves AR AGI unchanged; the same in otherprop adds $10,000). Keyed
+  on the tax effect (amount x marginal rate > $100), which took the TAXSIM
+  cells from about 0.93 to 0.94-0.955.
+- PolicyEngine window, 2026-10-02 (per-record PolicyEngine reruns of the
+  missed records): the crosswalk gave all pension income to the head, so
+  PolicyEngine allowed one $6,000 exemption per couple where we and TAXSIM
+  pool the pension against both. The PolicyEngine driver now splits pension
+  income evenly between spouses (harness-wide; who owns a pension is
+  unobserved). Two rows added: separate filers with care expenses (the
+  federal IRC 21(e)(4) living-apart assumption, as for NJ) and the crosswalk
+  deduction class (PolicyEngine never sees medical, miscellaneous or casualty
+  deductions, which Arkansas still allows).
+- Low income tables: TAXSIM's low-income misses (our tax higher, under
+  $20,000 of income, mostly heads of household) were the tables; encoded.
 
 ## Aggregate validation notes
 

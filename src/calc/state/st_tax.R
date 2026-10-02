@@ -6,6 +6,7 @@
 
 # Set return variables for function
 return_vars$calc_st_tax = c('st_tax_pre_credit')
+return_vars$calc_st_alt_table = c('st_alt_table_used')
 
 
 calc_st_tax = function(tax_unit, fill_missings = F) {
@@ -380,5 +381,66 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       )
     ) %>%
     select(all_of(return_vars$calc_st_tax)) %>%
+    return()
+}
+
+
+
+calc_st_alt_table = function(tax_unit, credit_tables = NULL) {
+
+  #----------------------------------------------------------------------------
+  # The ALTERNATIVE TAX TABLE election: a published whole-income table used
+  # INSTEAD of the rate schedule and INSTEAD of any deduction, taken when it
+  # gives less tax. Arkansas's five Low Income Tax Tables are the case
+  # (AR1000F line 26-29 instructions): looked up on Arkansas AGI by filing
+  # status and dependents (0-1 or 2+), joint filers only among married
+  # couples, and zero below an indexed threshold (Ark. Code Ann. 26-51-301).
+  #
+  # A filer who takes the employer-pension or IRA exemption does not
+  # qualify, but "may elect NOT TO USE the exclusion" -- so the table is
+  # looked up on AGI with that exemption added back. Qualification is on
+  # "total income from all sources (regardless of whether the income is
+  # taxable to Arkansas)": the add-back plus exempt Social Security and the
+  # excluded half of long-term gains is tested against the table's ceiling.
+  # Military pay and military retirement exemptions also disqualify but are
+  # not model inputs. Where the table is used, net taxable income equals AGI
+  # (line 27 is zero), which the Inflationary Relief worksheet reads.
+  #
+  # Unlike the split election this is a different computation, not a split
+  # unit, so it runs on whatever unit it is given: the per-spouse columns of
+  # st_split.R are filing status 3, which has no table and never elects.
+  #
+  # Parameters:
+  #   - tax_unit (df)      : tibble after calc_st_tax
+  #   - credit_tables (df) : dense schedules (low_income_tax_table[_max])
+  #
+  # Returns: tax_unit with st_tax_pre_credit and st_txbl_inc replaced where
+  #          the table is taken, plus st_alt_table_used (df).
+  #----------------------------------------------------------------------------
+
+  tax_unit$st_alt_table_used = FALSE
+  electing = tax_unit$st_ord.alt_table_election == 1
+  if (!any(electing)) {
+    return(tax_unit)
+  }
+
+  table_key   = if_else(tax_unit$n_dep >= 2, 2L, 0L)
+  table_agi   = round(tax_unit$st_agi + tax_unit$st_sub_pens)
+  table_total = table_agi + tax_unit$gross_ss + tax_unit$st_sub_capgain
+  table_tax = lookup_state_credit_table(table_agi, table_key, credit_tables,
+                                        'low_income_tax_table',
+                                        tax_unit$filing_status)
+  table_max = lookup_state_credit_table(table_agi, table_key, credit_tables,
+                                        'low_income_tax_table_max',
+                                        tax_unit$filing_status)
+
+  use = electing & table_max > 0 & table_total <= table_max &
+        table_tax < tax_unit$st_tax_pre_credit
+  tax_unit %>%
+    mutate(
+      st_tax_pre_credit = if_else(use, table_tax, st_tax_pre_credit),
+      st_txbl_inc       = if_else(use, table_agi, st_txbl_inc),
+      st_alt_table_used = use
+    ) %>%
     return()
 }

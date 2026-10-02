@@ -233,6 +233,15 @@ distributions qualify from age 59 1/2. TAXSIM-35 applies the exemption only at 6
 single, $20,000 of wages and $20,000 of pension: v32 = 40,000 at ages 59, 60, 62 and 64, and 34,000 at 65 and 66.
 Effect: TAXSIM overstates Arkansas tax for retirees under 65 by up to $6,000 x the rate per taxpayer.
 
+### T30. Arkansas AGI ignores nonprop entirely
+
+TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
+(AR1000F line 22, Form AR-OI) and alimony received (line 19), and allows a net operating loss carryforward as a
+line 22 subtraction. Probe (2026-10-01), 2019 single, $30,000 of wages: v32 = 30,000 with `nonprop` +10,000, where
+the same amount in `otherprop` gives 40,000; with $60,000 of wages and `nonprop` -20,000, v32 = 60,000 while
+federal AGI is 40,000. Effect: TAXSIM understates Arkansas tax for filers with other income or alimony and
+overstates it for filers with an NOL.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
@@ -905,6 +914,14 @@ income and the net operating loss carryforward subtraction. None of `partnership
 wages): `ar_agi_indiv` is 100,000 with partnership/S-corp income of +50,000, -50,000 and -2,000 while federal AGI is
 150,000 / 50,000 / 98,000, and `ar_income_tax` is 3,689.61 in every case. Upstream main (40ce0012a5, 2026-09-30) has
 the same source list. Effect: Arkansas tax wrong in both directions for every filer with pass-through income or loss.
+
+### P14. Arkansas TY2024 low income table, head of household with two or more dependents, skips a row (minor)
+
+The TY2024 booklet's table pays $0 through $24,176 and $92 on $24,177-24,200. In
+`low_income_tax_tables/head_of_household/two_or_more_dependents.yaml` the first two 2024 thresholds are both
+24,200, so the $92 row disappears and those filers owe nothing. Found by checking our extraction of all 45 tables
+against PolicyEngine's for TY2021-2025: 1,128 of 1,129 rows agree, this is the only difference. Under the $100
+tolerance; no exclusion row.
 
 ## Corroboration worth passing along
 
