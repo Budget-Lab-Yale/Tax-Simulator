@@ -11,6 +11,11 @@ filing_status_mapper:
     '2': std_married
     '3': std_single
     '4': std_head
+  item_salt_cap:
+    '1': salt_cap_single
+    '2': salt_cap_single
+    '3': salt_cap_mfs
+    '4': salt_cap_single
 
 std_single:
   value: 2300
@@ -21,6 +26,21 @@ std_married:
 std_head:
   value: 3400
   reference: 'Same table: $3,400 for head of family'
+
+# Mississippi Schedule A takes the federal amounts and keeps the federal
+# limit on deductible taxes (after removing state income tax)
+salt_cap_single:
+  value:
+    '2017': .inf
+    '2018': 10000
+    '2025': 40000
+  reference: 'Form 80-100 instructions (TY2022), Schedule A line 3 taxes: "Note: Per the Tax Cuts and Jobs Act, there is a $10,000 limitation ($5,000 if married filing separately) on this deduction". TY2025 follows the OBBBA federal $40,000 limit on the reading that Mississippi keeps adopting the federal Schedule A figure; the OBBBA income-based reduction of the limit is not modeled'
+salt_cap_mfs:
+  value:
+    '2017': .inf
+    '2018': 5000
+    '2025': 20000
+  reference: 'Same note: $5,000 for married filing separately (half the federal limit)'
 
 item_allowed:
   value: 1

@@ -17,13 +17,17 @@ cdctc_match:
     '2017': 0.0
     '2023': 0.25
   reference: 'Mississippi had NO child care credit before TY2023 -- the pre-2023 "Business Child/Dependent Care Credit" is an EMPLOYER credit, and the TY2017 booklet warns in bold that it is not the federal one. From TY2023 the credit is 25% of the federal child and dependent care credit, subject to a hard federal-AGI cliff at $50,000 with no carryover'
+cdctc_cap_thresh:
+  value: 50000
+  reference: 'Form 80-100 instructions (TY2023 p.20; the same in TY2024-25), Miss. Code Ann. 27-7-22.39 (HB 1671): the child and dependent care credit is denied outright above $50,000 of FEDERAL AGI -- a hard cliff, not a phase-out. Encoded through the generic income cap with a zero cap amount'
+cdctc_cap_amount:
+  value: 0
+  reference: 'Zero above the threshold: the cliff'
 cdctc_refundable:
   value: 0
   reference: 'Nonrefundable, like every other Mississippi credit'
 
 documented_not_modeled:
-  child_care_credit_income_cliff:
-    reference: 'The TY2023+ child care credit is denied outright above $50,000 of FEDERAL AGI -- a hard cliff, not a phase-out, and one of only two places federal AGI appears on the Mississippi return. The cliff is not gated here [overstates the credit for filers above $50,000 of federal AGI with care expenses]'
   adoption_credit:
     reference: 'The Mississippi adoption credit runs $2,500 (TY2017), $5,000 (TY2018-TY2022), then from TY2023 $5,000 for an out-of-state adoption and $10,000 for a Mississippi one, with a five-year carryforward. Adoption is not a model input'
   pregnancy_resource_credit:

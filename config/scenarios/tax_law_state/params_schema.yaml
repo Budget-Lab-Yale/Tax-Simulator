@@ -183,6 +183,7 @@ scalars:
   st_agi.ob_adj_alimony: 0
   st_agi.ob_adj_se_health: 0
   st_agi.ob_adj_hsa: 0
+  st_agi.ob_adj_seca: 0
   st_agi.ob_passthru_as_federal: 0   # 1 = own-base partnership/S-corp income as allowed on the federal return (part_scorp; AR line 19)
   st_agi.ob_cap_loss_limit: .inf   # net capital loss the own base may carry, halved for MFS (AR/MS federal $3,000); .inf = whole loss (AL)
 
@@ -221,6 +222,7 @@ scalars:
   st_ded.item_include_pers_tax: 0
   st_ded.item_include_income_sales_tax: 0
   st_ded.item_prop_tax_cap: .inf
+  st_ded.item_salt_cap: .inf   # cap on the deductible taxes in the default state itemized base (MS $10,000 / $5,000 MFS)
   st_ded.pease: 0
   st_ded.pease_thresh: .inf
   st_ded.pease_thresh2: .inf   # second tier start (MN 2023+)
@@ -398,6 +400,7 @@ scalars:
   # each spouse's own income (MT status 2a, AL separate returns,
   # AR status 4, MS combined returns)
   st_ord.split_election: 0
+  st_ord.combined_pool: 0   # 1 = joint return taxed in two columns on the single schedule, deductions allocated freely (MS combined return)
   st_ord.split_fed_tax_by_agi_share: 0   # 1 = split columns apportion federal tax by federal AGI share instead of halving it (AL)
   st_ord.split_credits_pooled: 0   # 1 = split columns are added BEFORE nonrefundable credits (AR1000F line 30), so one column's unused credits offset the other's tax
   st_ord.split_item_by_agi_share: 0   # 1 = split columns prorate itemized deductions by AGI share (AR AR3 lines 30-33), else halve

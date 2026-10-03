@@ -959,6 +959,21 @@ Alabama taxes other income (Form 40 page 2 Part I). In policyengine-us 1.775.7 `
 2,395 to 2,183. (Partnership/S-corporation income is included correctly.) Effect: Alabama tax understated, by
 more than the omitted income alone, for filers with other income.
 
+### P18. Mississippi AGI omits miscellaneous income
+
+The P17 pattern in Mississippi. Probe (2026-10-02, policyengine-us 1.775.7), 2024 single, $60,000 of wages: adding
+$20,000 of `miscellaneous_income` raises federal AGI to 80,000 but leaves `ms_agi` at 60,000 and `ms_income_tax` at
+1,960; the same amount as partnership or rental income raises both. Mississippi taxes other income (Schedule N).
+
+### P19. Mississippi: `state_income_tax` omits the child and dependent care credit
+
+In policyengine-us 1.775.7 the generic `state_income_tax` for a Mississippi filer does not net the TY2023+
+child and dependent care credit (25% of the federal credit, federal AGI up to $50,000) that `ms_income_tax`
+does. Probe (2026-10-02), four TY2023 records: `state_income_tax` 159 / 108 / 216 / 1,113 against `ms_income_tax`
+0 / 0 / 96 / 963, the gap being `ms_cdcc` each time. Our harness now reads `ms_income_tax` for Mississippi (as it
+reads `md_income_tax` for Maryland). Anything built on `state_income_tax` overstates Mississippi tax for these
+filers.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

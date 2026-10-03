@@ -80,6 +80,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'early_penalty',  # (dbl)  federal penalty on early withdrawal of savings
     'alimony_exp',    # (dbl)  alimony paid
     'se_health',      # (dbl)  federal self-employed health insurance deduction
+    'liab_seca_er',   # (dbl)  half of self-employment tax (the federal deduction)
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
     'char_cash',      # (dbl)  cash charitable contributions
     'char_noncash',   # (dbl)  non-cash charitable contributions
@@ -113,6 +114,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_adj_alimony',         # (int) ... alimony paid (all of it, not gated on the TCJA divorce date)
     'st_agi.ob_adj_se_health',       # (int) ... the self-employed health insurance deduction
     'st_agi.ob_adj_hsa',             # (int) ... the HSA deduction
+    'st_agi.ob_adj_seca',            # (int) ... half of self-employment tax (MS line 61)
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -354,7 +356,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     # paid, self-employed health insurance, HSA; 2026-10-02 AL triage)
     (st_agi.ob_adj_ira * trad_contr_ira + st_agi.ob_adj_keogh * keogh_contr +
      st_agi.ob_adj_penalty * early_penalty + st_agi.ob_adj_alimony * alimony_exp +
-     st_agi.ob_adj_se_health * se_health + st_agi.ob_adj_hsa * hsa_contr)
+     st_agi.ob_adj_se_health * se_health + st_agi.ob_adj_hsa * hsa_contr +
+     st_agi.ob_adj_seca * liab_seca_er)
   )
 
   # Starting point, computed ahead of the mutate as well because the

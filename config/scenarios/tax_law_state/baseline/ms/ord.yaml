@@ -45,3 +45,6 @@ documented_not_modeled:
     reference: 'Mississippi casino winnings carry a 3% final withholding, are EXCLUDED from Mississippi income entirely, and the withholding is NOT creditable against the income tax. So a gambler pays 3% and the amount never touches this schedule. Gambling winnings are not separable in the model [overstates Mississippi income tax for filers with casino winnings, while missing the 3% they actually paid]'
   trigger_contingent_rates_2031:
     reference: 'HB 1 (2025) provides for further reductions below 3% from TY2031, of 0.2, 0.25 or 0.3 percentage points per qualifying year, conditioned on the reserve fund being fully funded and revenue exceeding appropriations. Enacted rates only are encoded'
+combined_pool:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), filing status: a combined return reports each spouse''s income in its own column, and "The standard deduction ($4,600) and the authorized exemption ($12,000) may be divided between the spouses in any manner they choose when filing a combined return"; "If only one spouse has income, this income may not be split". Each column takes the single schedule, so a two-earner couple uses two zero brackets. The model allocates the pooled deductions to minimize tax (even out the columns), on columns of own wages plus half of unobserved non-wage income'

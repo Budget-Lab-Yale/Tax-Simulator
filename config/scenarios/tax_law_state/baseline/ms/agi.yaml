@@ -24,7 +24,7 @@ ob_comp_share:
   reference: 'Form 80-105 line 42, wages, salaries and tips'
 ob_int_share:
   value: 1
-  reference: 'Form 80-105 line 43, interest income. U.S. and Mississippi obligations are exempt and other states municipal interest is TAXABLE -- see documented_not_modeled'
+  reference: 'Form 80-105 line 43, interest income. U.S. and Mississippi obligations are exempt and other states municipal interest is TAXABLE -- encoded below (add_exempt_int)'
 ob_div_share:
   value: 1
   reference: 'Form 80-105 line 44, dividend income'
@@ -37,6 +37,33 @@ ob_gains_share:
 ob_st_gains_share:
   value: 1
   reference: 'Short-term gains take the same treatment as long-term ones'
+ob_adj_ira:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 50, payments to an IRA'
+ob_adj_keogh:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 51, payments to self-employed SEP, SIMPLE and qualified plans'
+ob_adj_penalty:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 52, interest penalty on early withdrawal of savings'
+ob_adj_se_health:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 58, self-employed health insurance'
+ob_adj_hsa:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 59, health savings account deductions'
+ob_adj_seca:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 61: "an amount equal to fifty percent (50%) of the federal self-employment taxes imposed"'
+add_exempt_int:
+  value: 1
+  reference: 'Form 80-100 instructions (TY2022), line 43 interest income: "Interest income from obligations of the U.S. Government, the State of Mississippi and subdivisions thereof is exempt. Interest on obligations of other countries, states, cities, or political subdivisions outside of Mississippi is taxable". The own base never carried federally exempt interest (2026-10-02 MS triage)'
+own_state_exempt:
+  value: 1
+  reference: 'Same instruction: Mississippi and its subdivisions'' bonds are exempt; the in-state share is unobserved (OWN_STATE_MUNI_SHARE)'
+sub_us_int:
+  value: 1
+  reference: 'Same instruction: U.S. Government obligations are exempt (approximated by US_OBLIGATION_INT_SHARE of taxable interest)'
 ob_passthru_as_federal:
   value: 1
   reference: 'Form 80-100 instructions (TY2022), Form 80-105 line 41: "Enter the income or loss from activities reported on Federal Schedule E on this line", i.e. after the federal passive-activity and at-risk limits'
@@ -66,10 +93,12 @@ ob_other_share:
   reference: 'Form 80-105 line 50, other income'
 
 documented_not_modeled:
+  alimony_paid:
+    reference: 'Line 53: alimony paid is deductible "to the extent allowable for federal income tax purposes", which depends on the divorce date; the state calculator does not see it, so the adjustment is not applied [overstates Mississippi income for payers under pre-2019 decrees]'
+  moving_expenses:
+    reference: 'Line 54 moving expenses "to the extent allowable" federally: since TY2018 only active-duty military moves, not a model input'
   early_and_excess_distributions:
     reference: 'The total retirement exemption does NOT reach distributions that are early or excess under the IRC (those triggering federal Form 5329), separation or severance pay, or deferred compensation taken before retirement age or service requirements are met. Those stay taxable and must be reported. The model exempts the whole pension and IRA pool [understates Mississippi tax for early withdrawals and for severance recipients. There is no numeric age test in the booklet -- the condition is functional, tied to the Form 5329 cross-reference]'
-  out_of_state_muni_interest:
-    reference: 'Interest on U.S. and Mississippi obligations is exempt while other states municipal interest is TAXABLE -- and taxable BY CONSTRUCTION, since Mississippi builds income from scratch and has no addback line. Neither share is observable, so taxable interest is carried in full and exempt interest is missed [overstates tax for Treasury and in-state holders, understates it for out-of-state municipal holders]'
   mississippi_domiciled_stock_gain_exclusion:
     reference: 'Miss. Code Ann. 27-7-9(f)(10) gives a 100% UNCAPPED exclusion for gains on stock of Mississippi-domiciled corporations and on Mississippi limited partnership and LLC interests held more than one year. The domicile of an asset is not in the microdata and cannot be imputed from survey data [overstates Mississippi tax for holders of in-state business interests; uncapped, so potentially large for individual records]'
   self_employment_tax_deduction_phase_in:

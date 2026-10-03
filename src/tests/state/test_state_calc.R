@@ -3367,6 +3367,37 @@ test_state_calc = function() {
            expect = list(st_agi = 40000, st_exempt = 6000, st_ded = 2300,
                          st_txbl_inc = 31700, liab_st_iit = 1019.90),
            label = 'MS-1 2024 single, $10,000 zero bracket at 4.7%')
+  # MS-ADJ1: own adjustments repeating a federal item (lines 50-61) and
+  # out-of-state bond interest. 2024 single, $50,000 of wages, $3,000 IRA,
+  # $10,000 of federally exempt interest (assumed 25% out of state): 50,000
+  # - 3,000 + 2,500 = 49,500
+  run_case('MS', 2024, list(agi = 47000, wages1 = 50000, ei1 = 50000, trad_contr_ira = 3000, exempt_int = 10000),
+           expect = list(st_agi = 49500), label = 'MS-ADJ1 IRA adjustment and out-of-state bond interest')
+  # MS-CC1/CC2: the TY2023 child care credit is 25% of the federal credit up
+  # to $50,000 of federal AGI and nothing above it (a cliff)
+  run_case('MS', 2023, list(agi = 50000, wages1 = 50000, ei1 = 50000, filing_status = 4, n_dep = 1, n_dep_ctc = 1, dep_age1 = 5,
+                            care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 150), label = 'MS-CC1 care credit at the $50,000 bound')
+  run_case('MS', 2023, list(agi = 50001, wages1 = 50001, ei1 = 50001, filing_status = 4, n_dep = 1, n_dep_ctc = 1, dep_age1 = 5,
+                            care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 0), label = 'MS-CC2 care credit cliff one dollar over')
+  # MS-SALT1: Schedule A taxes keep the federal $10,000 limit. 2024 single,
+  # $200,000 of wages, $15,000 of property tax and $8,000 of mortgage
+  # interest: Mississippi itemized = 8,000 + 10,000 = 18,000
+  run_case('MS', 2024, list(agi = 200000, wages1 = 200000, ei1 = 200000, salt_prop = 15000,
+                            mort_int_item_ded_potential = 8000, item_ded_ex_limits_potential = 23000, salt_item_ded_potential = 15000),
+           expect = list(st_item_ded = 18000), label = 'MS-SALT1 itemized taxes capped at $10,000')
+  # MS-CP1/CP2: combined return, two columns on the single schedule with the
+  # $12,000 exemption and $4,600 standard deduction divided freely. 2024,
+  # $60,000 of wages. Two earners at 30,000 each: 30,000 - 6,000 - 2,300 =
+  # 21,700 per column -> 4.7% x 11,700 x 2 = 1,099.80. One earner: the other
+  # column has nothing, so 60,000 - 16,600 = 43,400 -> 4.7% x 33,400 = 1,569.80
+  run_case('MS', 2024,
+           list(agi = 60000, filing_status = 2, age2 = 40, wages1 = 30000, wages2 = 30000, ei1 = 30000, ei2 = 30000),
+           expect = list(liab_st_iit = 1099.80), label = 'MS-CP1 combined return, two earners')
+  run_case('MS', 2024,
+           list(agi = 60000, filing_status = 2, age2 = 40, wages1 = 60000, ei1 = 60000),
+           expect = list(liab_st_iit = 1569.80), label = 'MS-CP2 combined return, one earner')
   # MS-1b: the same unit with $43,000 of wages and a $20,000 short-term
   # capital loss. Mississippi follows the federal $3,000 loss limit (Form
   # 80-105 line 40), so income is 40,000 and the tax is MS-1's 1,019.90
@@ -3407,14 +3438,18 @@ test_state_calc = function() {
   # MS-4: exemptions do the work Mississippi's small standard deduction does
   # not. 2024 joint with two dependents and 80,000 of wages: 12,000 of
   # exemption plus 2 x 1,500 for the dependents, then a 4,600 standard
-  # deduction, leaves 60,400, of which 50,400 sits above the zero bracket
-  # and is taxed at 4.7% -> 2,368.80
+  # deduction, leaves 60,400 of joint taxable income. On the combined
+  # return (2026-10-02) the couple is taxed in two columns: the 19,600 of
+  # exemptions and deduction all go to the 50,000 column (the 20,000 gap
+  # exceeds them), leaving 30,400 and 30,000, each with its own zero
+  # bracket -> 4.7% x 20,400 + 4.7% x 20,000 = 1,898.80 (one zero bracket on
+  # the joint figure would give 2,368.80)
   run_case('MS', 2024,
            list(agi = 80000, filing_status = 2, age2 = 40, wages1 = 50000,
                 wages2 = 30000, ei1 = 50000, ei2 = 30000, n_dep = 2,
                 dep_age1 = 6, dep_age2 = 10),
            expect = list(st_exempt = 15000, st_ded = 4600,
-                         st_txbl_inc = 60400, liab_st_iit = 2368.80),
+                         st_txbl_inc = 60400, liab_st_iit = 1898.80),
            label = 'MS-4 2024 joint exemption and dependent amounts')
 
   # MS-5: the enacted rate path. The MS-1 unit a year later pays 4.4% rather

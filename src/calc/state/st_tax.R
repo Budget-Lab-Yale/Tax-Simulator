@@ -69,6 +69,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.combined_sep_std_share', # (dbl) share of the mapped std deduction per column (1 = per-person std, KY; 0.5 = joint is twice the column amount, DE)
     'st_ord.combined_sep_std_amount', # (dbl) per-column std stated outright (IA); 0 = use the share
     'st_ord.combined_split',     # (int) pooled deductions, taxable income split by income share (MO)
+    'st_ord.combined_pool',      # (int) two single-schedule columns, deductions allocated freely (MS)
     'st_ord.combined_split_round', # (dbl) rounding increment for the income shares (MO 0.01)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
     'st_ord.st_gains_rate',      # (dbl) separate rate on short-term capital gains (MA)
@@ -377,6 +378,27 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       st_tax_pre_credit = if_else(
         st_ord.combined_split == 1 & filing_status == 2,
         csp_tax,
+        st_tax_pre_credit
+      ),
+
+      # Combined return with FREELY allocated deductions (MS Form 80-105
+      # married filing joint or combined: two columns, each on the single
+      # schedule, and the exemption and standard or itemized deduction "may
+      # be divided between spouses in any manner"). Column income is the
+      # combined_sep convention (own wages plus half of non-wage state AGI).
+      # With a rising schedule the cheapest allocation evens the columns'
+      # taxable income out as far as the pooled deductions allow, and
+      # otherwise gives all of them to the larger column
+      cp_ded  = pmax(0, st_agi - st_txbl_inc),
+      cp_hi   = pmax(cs_share1, cs_share2),
+      cp_lo   = pmin(cs_share1, cs_share2),
+      cp_even = cp_hi - cp_lo <= cp_ded,
+      cp_t_hi = if_else(cp_even, (cp_hi + cp_lo - cp_ded) / 2, cp_hi - cp_ded),
+      cp_t_lo = if_else(cp_even, (cp_hi + cp_lo - cp_ded) / 2, cp_lo),
+      cp_tax  = sched_tax_at(pmax(0, cp_t_hi)) + sched_tax_at(pmax(0, cp_t_lo)),
+      st_tax_pre_credit = if_else(
+        st_ord.combined_pool == 1 & filing_status == 2,
+        pmin(st_tax_pre_credit, cp_tax),
         st_tax_pre_credit
       )
     ) %>%

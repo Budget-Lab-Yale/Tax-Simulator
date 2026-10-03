@@ -99,25 +99,56 @@ child care credit arriving in TY2023.
 
 ## Known differences
 
-- **A COMBINED return runs two parallel columns**, so a two-earner couple
-  shelters TWO zero-brackets — $20,000 of taxable income at TY2025 rates
-  against $10,000 for a one-earner couple — and the exemption and standard
-  deduction may be split between spouses in any manner they choose, which the
-  booklet invites as an optimisation. Not modeled, and the largest structural
-  Mississippi gap. Needs the same per-spouse machinery as Arkansas status 4.
+- **The COMBINED return is modeled from 2026-10-02** (`st_ord.combined_pool`):
+  two columns on the single schedule, so a two-earner couple shelters two
+  zero brackets, with the pooled exemption and deduction allocated to
+  minimize tax ("may be divided between the spouses in any manner they
+  choose"). Column income is own wages plus half of unobserved non-wage
+  income; one spouse's wages are never split ("If only one spouse has
+  income, this income may not be split"). Both external models compute two
+  columns too (probes: TAXSIM 2019 $1,750 two-earner against $1,960
+  one-earner on $60,000; PolicyEngine 2024 $1,099.80 against $1,569.80).
+  MS-4 now expects 1,898.80 (it assumed one zero bracket); MS-CP1/CP2 pin both
+  cases.
 - Early and excess distributions, severance, and deferred compensation taken
   before retirement age stay taxable despite the total exemption; the model
   exempts the whole pool.
 - The 27-7-9(f)(10) exclusion for gains on Mississippi-domiciled stock and
   LP/LLC interests held over a year is 100% and uncapped, and unmodellable
   from survey data.
-- Out-of-state municipal interest is taxable BY CONSTRUCTION, with no addback
-  line, and neither interest share is observable.
+- Out-of-state municipal interest: now added back (`add_exempt_int`, the
+  model-wide 75% in-state assumption) with US-obligation interest subtracted;
+  the line 43 instructions say other states' bond interest "is taxable".
+- Own adjustments repeating a federal item now subtracted (lines 50-61: IRA,
+  SEP/SIMPLE/Keogh, early-withdrawal penalty, self-employed health insurance,
+  HSA, and half of self-employment tax via the new `st_agi.ob_adj_seca`).
+  Alimony paid (federally gated by divorce date) and moving expenses (military
+  only since 2018) are documented, not applied (MS-ADJ1).
 - The head-of-family filing threshold is UNVERIFIED — no booklet prints one,
   and the encoded $11,400 is the arithmetic analogue of the single and married
   figures rather than a transcription.
 
 ## Cross-model validation notes
+
+- 2026-10-02 triage (refit vintage, filers only). Start: TAXSIM 2017-20 0.847 /
+  0.830 / 0.829 / 0.826, PolicyEngine 2021-25 0.866 / 0.841 / 0.800 / 0.808 /
+  0.888. Our-side fixes: the combined return, own adjustments, out-of-state
+  bond interest (above); the TY2023+ child care credit's $50,000 federal-AGI
+  CLIFF, documented but never encoded (now the generic income cap with a zero
+  amount; MS-CC1/CC2); and the federal $10,000 SALT limit on Mississippi's
+  Schedule A taxes ("Per the Tax Cuts and Jobs Act, there is a $10,000
+  limitation"), which the state itemized base never applied (new generic
+  `st_ded.item_salt_cap`; MS-SALT1).
+- External: **P18** (PolicyEngine's Mississippi AGI omits miscellaneous income,
+  the Alabama P17 pattern) and **P19** (its generic `state_income_tax` does not
+  net the Mississippi child care credit that `ms_income_tax` does; the harness
+  now reads `ms_income_tax`). Muni rows for both models.
+- **Closed 2026-10-02.** Final cells: TAXSIM 2017-20 0.953 / 0.958 / 0.969 /
+  0.963; PolicyEngine 2021-24 0.962 / 0.966 / 0.953 / 0.955 (2025 0.947).
+- Open: one-earner couples whose half of unobserved non-wage income uses the
+  second column's zero bracket under our even-split convention, where
+  PolicyEngine gives all of it to the head (candidate key tested, hits match
+  0.4-0.6, not adopted).
 
 - TAXSIM years 2017-2020; PolicyEngine 2021-2024
 - Expected mismatch reasons: the combined-return two-column treatment will

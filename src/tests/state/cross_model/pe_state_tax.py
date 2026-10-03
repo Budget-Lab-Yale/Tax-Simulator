@@ -86,6 +86,10 @@ EVEN_SPLIT_COLS = {"pension_income"}
 # (verified empirically 2026-07-24, see research/raw/md_research_core.md §11).
 STATE_ONLY_LIAB_VARS = {
     "MD": "md_income_tax",
+    # P19: for Mississippi the generic state_income_tax does not subtract the
+    # TY2023+ child and dependent care credit that ms_income_tax does
+    # (2026-10-02 probe: state_income_tax 159, ms_income_tax 0, ms_cdcc 159)
+    "MS": "ms_income_tax",
 }
 
 OUTPUT_VARS = {
