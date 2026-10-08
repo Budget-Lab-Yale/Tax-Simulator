@@ -718,6 +718,11 @@ scalars:
   st_credits.cwfc_po_rate_older_only: 0
   st_credits.cwfc_po_thresh: .inf
   st_credits.cwfc_mfs_eligible: 0      # 1 = separate filers with a qualifying child allowed (IRC 32(d)(2) rule)
+  # Childless age band and disqualifying investment income for the whole
+  # combined credit (EITC-style eligibility); defaults impose no test
+  st_credits.cwfc_age_min: 0
+  st_credits.cwfc_age_max: .inf
+  st_credits.cwfc_inv_inc_limit: .inf
   # Two-earner marriage credit (MN M1MA): joint-schedule tax less the two
   # spouses' single-schedule tax on imputed shares (lesser earner = own
   # earned income less the share offset), subject to eligibility floors
@@ -727,6 +732,10 @@ scalars:
   st_credits.mc_min_joint_txbl: .inf
   st_credits.mc_max: .inf
   st_credits.mc_share_offset: 0
+  # Share of the unit's taxable pensions, IRA distributions and Social
+  # Security counted in EACH spouse's marriage-credit income (MN M1MA lines
+  # 3-4); ownership is unobserved, so 0.5 = even split. 0 = earned income only
+  st_credits.mc_retirement_split_share: 0
   # CDCTC cap above an income threshold (MN M1CD): min(cap per qualifying
   # person, up to two, less po_rate x excess AGI)
   st_credits.cdctc_cap_amount: .inf

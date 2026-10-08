@@ -313,6 +313,39 @@ st_n_dep_in = function(tax_unit, lo, hi) {
 
 
 
+st_eitc_inv_inc = function(tax_unit) {
+
+  #----------------------------------------------------------------------------
+  # Disqualifying investment income for EITC-style eligibility, mirroring
+  # the federal EITC composition (eitc.R) -- the measure a state's own
+  # ceiling (FTB 3514, Schedule M1WFC/M1CWFC) is tested against.
+  #
+  # Returns: per-row investment income (dbl[]).
+  #----------------------------------------------------------------------------
+
+  tax_unit$txbl_int + tax_unit$exempt_int +
+    tax_unit$div_ord + tax_unit$div_pref + pmax(0, tax_unit$txbl_kg) +
+    pmax(0, tax_unit$sch_e - tax_unit$part_scorp)
+}
+
+
+
+st_head_or_spouse_in_age_band = function(tax_unit, lo, hi) {
+
+  #----------------------------------------------------------------------------
+  # Childless EITC-style age test: the head, or the spouse on a joint
+  # return, has an age in [lo, hi] (vectors allowed), mirroring the federal
+  # childless-EITC rule.
+  #
+  # Returns: per-row flag (lgl[]).
+  #----------------------------------------------------------------------------
+
+  in_band = function(age) !is.na(age) & age >= lo & age <= hi
+  in_band(tax_unit$age1) | (tax_unit$filing_status == 2 & in_band(tax_unit$age2))
+}
+
+
+
 lookup_state_credit_table = function(income, key, credit_tables, table_id,
                                      filing_status = NULL) {
 

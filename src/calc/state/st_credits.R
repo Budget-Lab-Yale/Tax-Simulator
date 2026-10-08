@@ -190,6 +190,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.mc_min_joint_txbl',
     'st_credits.mc_max',
     'st_credits.mc_share_offset',
+    'st_credits.mc_retirement_split_share',
     'st_credits.twoearner_rate',
     'st_credits.twoearner_max',
     'st_credits.item_credit_rate',
@@ -292,11 +293,15 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # earned income less the share offset (half the MFJ standard deduction;
   # plus one exemption pre-2019), remainder to the other spouse. Both
   # eligibility floors must be met; result floored at zero and capped at
-  # the published maximum. Earned income proxies the M1MA lines 1-5
-  # concept (taxable pension/SS elements unobserved; known-difference).
-  # The single-schedule brackets come in as the mc_single_brackets family
-  # (the unit's own st_ord.brackets are its filing-status-mapped MFJ
-  # schedule); rates are shared across statuses. Nonrefundable
+  # the published maximum. Each spouse's income is earned income (M1MA
+  # lines 1-2) plus mc_retirement_split_share of the unit's taxable
+  # pensions, IRA distributions and Social Security (lines 3-4): whose
+  # they are is unobserved, so a state counting them divides them evenly
+  # (0.5), the ST_SPLIT_HALVE convention; the default 0 counts earned
+  # income only. The single-schedule brackets come in as the
+  # mc_single_brackets family (the unit's own st_ord.brackets are its
+  # filing-status-mapped MFJ schedule); rates are shared across statuses.
+  # Nonrefundable
   st_marriage_credit = rep(0, nrow(tax_unit))
   mc_br = st_family_matrix(tax_unit, 'st_credits.mc_single_brackets')
   if (!is.null(mc_br)) {
@@ -309,7 +314,10 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       upper[is.na(upper)] = Inf
       rowSums(mc_rt * pmax(0, pmin(y, upper) - br), na.rm = TRUE)
     }
-    mc_ei_lo  = pmin(pmax(0, tax_unit$ei1), pmax(0, tax_unit$ei2))
+    mc_retire = tax_unit$st_credits.mc_retirement_split_share *
+                (tax_unit$txbl_pens_dist + tax_unit$txbl_ira_dist +
+                 tax_unit$txbl_ss)
+    mc_ei_lo  = pmin(pmax(0, tax_unit$ei1), pmax(0, tax_unit$ei2)) + mc_retire
     mc_share1 = pmax(0, pmin(mc_ei_lo - tax_unit$st_credits.mc_share_offset,
                              tax_unit$st_txbl_inc))
     mc_share2 = tax_unit$st_txbl_inc - mc_share1

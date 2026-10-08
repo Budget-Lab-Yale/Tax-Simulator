@@ -67,11 +67,22 @@ earned_credit_age_min:
   value:
     '2017': 25
     '2019': 21
-  reference: '290.0671 subd. 1(a): childless filers must be federal-EIC-eligible, so 25-64 in TY2017-18 (IRC 32(c)(1)(A)(ii)(II)); from TY2019 "attained the age of 21, but not attained age 65" (Laws 2017 1Sp ch. 1 art. 1 s. 20, effective for taxable years beginning after December 31, 2018). Upper bound in earned_credit_age_max'
+    '2021': 19
+  reference: '290.0671 subd. 1(a): childless filers must be federal-EIC-eligible, so 25-64 in TY2017-18 (IRC 32(c)(1)(A)(ii)(II)); from TY2019 "attained the age of 21, but not attained age 65" (Laws 2017 1Sp ch. 1 art. 1 s. 20, effective for taxable years beginning after December 31, 2018); from TY2021 "attained the age of 19" (Laws 2021 1Sp ch. 14 art. 1 s. 10 strikes 21 and inserts 19, "effective for taxable years beginning after December 31, 2020"; Schedule M1WFC 2021 and 2022: "None (if between the age of 19 and 64)"). Corrected 2026-10-07: had stayed at 21 through 2022. From TY2023 see cwfc_age_min. Upper bound in earned_credit_age_max'
 
 earned_credit_age_max:
   value: 64
   reference: 'Childless WFC filers must not have attained age 65 by year end: through IRC 32(c)(1)(A)(ii)(II) in TY2017-18 and 290.0671 subd. 1(a)(1) from TY2019 ("not attained age 65 before the close of the taxable year"). Added 2026-09-30; it had been unmodeled, paying a small WFC to childless filers aged 65+ (TAXSIM triage: 95 of 100 childless 2018 records where we paid and TAXSIM did not)'
+
+earned_credit_inv_inc_limit:
+  value:
+    '2017': 3450
+    '2018': 3500
+    '2019': 3600
+    '2020': 3650
+    '2021': 10000
+    '2022': 10300
+  reference: '290.0671 subd. 1(a): the WFC requires federal-EIC eligibility, including the IRC 32(i) disqualified-income test. TY2017-2019: Schedule M1WFC directs the filer to complete the federal EIC worksheet first, so the federal limit applies ($3,450 / $3,500 / $3,600). TY2020-2022: Schedule M1WFC instructions, "Am I eligible?": "You have investment income less than $3,650" (2020), "$10,000" (2021), "$10,300" (2022). Added 2026-10-07: the test had been unmodeled'
 
 earned_credit_mfs_eligible:
   value: 0
@@ -244,6 +255,22 @@ cwfc_mfs_eligible:
     '2023': 1
   reference: 'From TY2023, Minn. Stat. 290.01 subd. 31 (2023) conforms to the IRC as amended through May 1, 2023, so the IRC 32(d)(2) separated-spouse rule (ARPA sec. 9623) applies through 290.0671 subd. 1(a) and 290.0661 subd. 2. 2024 Schedule M1CWFC instructions, "Exception for Those Who are Married and Filing Separately": at least one qualifying child (Schedule M1DQC) who lived with the filer over half the year, and not sharing a principal abode with the spouse for the last six months or legally separated. The child test is applied in st_credits_child.R; the living-apart condition is unobserved and assumed met'
 
+cwfc_age_min:
+  value: 19
+  reference: '290.0671 subd. 1(a)(1) (2023 and 2024 editions): a taxpayer with no qualifying children "who has attained the age of 19, but not attained age 65 before the close of the taxable year"; 290.0661 subd. 2 makes the child amounts follow the same eligibility. Schedule M1CWFC instructions 2023, 2024 and 2025, "Am I eligible?": "If you have no qualifying children on rows 10 and 11 of Schedule M1DQC, you or your spouse must be between the ages of 19 and 64". Added 2026-10-07: the childless 4% amount had been paid at any age'
+
+cwfc_age_max:
+  value: 64
+  reference: 'Same sources as cwfc_age_min: "not attained age 65 before the close of the taxable year"'
+
+cwfc_inv_inc_limit:
+  value:
+    '2017': .inf
+    '2023': 11000
+    '2024': 11600
+    '2025': 11950
+  reference: 'Schedule M1CWFC instructions, "Am I eligible?" (requirements for both the Working Family and Child Tax credits): "You have investment income less than $11,000" (2023), "$11,600" (2024), "$11,950" (2025); statutory route is IRC 32(i) through 290.0671 subd. 1(a) and 290.0661 subd. 2. Added 2026-10-07: the test had been unmodeled'
+
 cwfc_po_thresh_other:
   value:
     '2017': .inf
@@ -308,6 +335,10 @@ mc_share_offset:
     '2025': 14950
   reference: 'DOR Computation of the Marriage Credit (TY2017/TY2022): lesser earner''s share = earned income less half the MFJ standard deduction (2017-18: plus one personal exemption -- 12,700/2 + 4,050 and 13,000/2 + 4,150)'
 
+mc_retirement_split_share:
+  value: 0.5
+  reference: 'Schedule M1MA lines 1-5 (2017, 2019, 2024 schedules): each spouse''s income is wages (line 1), self-employment income less the SE tax deduction (line 2), taxable pension income (line 3: 1040 lines 4b and 4d, IRA and pension distributions) and taxable Social Security (line 4). We see lines 1-2 per spouse but lines 3-4 only for the unit, so each spouse is credited half (the ST_SPLIT_HALVE convention for unobserved ownership, as in the AR/MT/VA split elections). Added 2026-10-07: lines 3-4 had been omitted, denying the credit to retiree couples (TAXSIM pays it there: 2019 joint records with no earnings get 206.92)'
+
 mc_single_brackets:
   value:
     '2017': [0, 25390, 83400, 156900]
@@ -323,8 +354,36 @@ mc_single_brackets:
 
 # ---- Dependent care ----
 cdctc_match:
+  value: 0
+  reference: '290.067 / Schedule M1CD: the credit is the federal-FORMULA credit before the federal tax-liability limit, not the federal credit as claimed. 2017 M1CD line 2 takes Form 2441 line 9 (the tentative credit, before the line 10 limit; "complete federal Form 2441 even if you did not claim the federal credit"); from 2021 the schedule computes it itself (lines 1-7: expenses capped at $3,000/$6,000 and at earned income, times the Table 3 decimal). So it is encoded as an own-rate credit (cdctc_style 2) in every year rather than a share of the claimed federal credit, which is zero for a family with no federal tax (the federal credit is nonrefundable outside 2021) and carries the federal take-up draw. Changed 2026-10-07: had been cdctc_match = 1, which paid nothing to low-income families (PolicyEngine 2023 probe: mn_cdcc 990 = 0.33 x 3,000 on a record where ours was 0) and applied ARPA in 2021'
+cdctc_style:
+  value: 2
+  reference: 'Schedule M1CD own computation, every year (see cdctc_match)'
+cdctc_rate_max:
+  value: 0.35
+  reference: 'M1CD Table 3 (2021, 2024): .35 at $15,000 or less; pre-ARPA IRC 21(a)(2) for 2017-2020 via Form 2441 line 8. Minnesota did not adopt the ARPA 2021 expansion (2021 M1CD prints the pre-ARPA table, $3,000/$6,000 limits)'
+cdctc_rate_floor:
+  value: 0.20
+  reference: 'M1CD Table 3: .20 over $43,000'
+cdctc_rate_po_start:
+  value: 15000
+  reference: 'M1CD Table 3: the decimal falls above $15,000'
+cdctc_rate_po_step:
+  value: 2000
+  reference: 'M1CD Table 3: one hundredth per $2,000 band (over 15,000 but not over 17,000 = .34)'
+cdctc_rate_po_per_1k:
+  value: 0.01
+  reference: 'Read as the per-step decrement because a step is encoded'
+cdctc_rate_income_base:
   value: 1
-  reference: '290.067 / Schedule M1CD: the federal-formula credit (federal expense caps and 35%-20% percentage), all years; MN did not adopt ARPA 2021 [known-difference for 2021]'
+  reference: 'M1CD line 5 (2021): Form M1 line 1, federal adjusted gross income (or Schedule M1NC line 37 for nonconformity filers -- not modeled); 2017 line 1 federal AGI'
+cdctc_expense_ei_limit:
+  value: 1
+  reference: 'M1CD lines 2-4: expenses limited to the lower of the spouses'' earned income (student/disabled spouse deemed income unobserved)'
+cdctc_expense_caps:
+  value:
+    '2017': [3000.0, 6000.0, 6000.0, 6000.0, 6000.0]
+  reference: 'M1CD line 1: "Do not enter more than $3,000 for one qualifying person or $6,000 for two or more" (2021, 2024 schedules; Form 2441 limits 2017-2020)'
 
 cdctc_refundable:
   value: 1

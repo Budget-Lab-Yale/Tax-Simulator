@@ -44,6 +44,9 @@ st_credits_child_req_vars = c(
   'st_credits.cwfc_po_rate_older_only',
   'st_credits.cwfc_po_thresh',
   'st_credits.cwfc_mfs_eligible',
+  'st_credits.cwfc_age_min',
+  'st_credits.cwfc_age_max',
+  'st_credits.cwfc_inv_inc_limit',
   'st_credits.ctc_mfs_eligible'
 )
 
@@ -277,13 +280,21 @@ st_credits_child = function(tax_unit, st_eitc) {
   # ctc_refundable. Dependent filers are ineligible; separate filers too,
   # unless cwfc_mfs_eligible = 1 and they have a qualifying child (the IRC
   # 32(d)(2) separated-spouse rule, living-apart condition assumed met). The
-  # child test uses this credit's own age-based counts, not n_dep_eitc
+  # child test uses this credit's own age-based counts, not n_dep_eitc.
+  # The WFC's EITC-style eligibility (290.0671 subd. 1(a)) gates the whole
+  # schedule, child amounts included (290.0661 subd. 2): investment income
+  # at most cwfc_inv_inc_limit, and a childless unit needs the head or
+  # spouse aged cwfc_age_min to cwfc_age_max
   cwfc = rep(0, n)
   if (any(tax_unit$st_credits.cwfc_style == 1)) {
     n_cwfc_young = st_n_dep_in(tax_unit, 0, tax_unit$st_credits.cwfc_ctc_max_age)
+    # A qualifying older child must also be younger than the filer (or
+    # either spouse on a joint return), IRC 152(c)(3)(A) via 32(c)(3)
+    oldest_filer_age = if_else(tax_unit$filing_status == 2 & !is.na(tax_unit$age2),
+                               pmax(tax_unit$age1, tax_unit$age2), tax_unit$age1)
     n_cwfc_older = pmin(3L, st_n_dep_in(tax_unit,
                                         tax_unit$st_credits.cwfc_ctc_max_age + 1,
-                                        23))
+                                        pmin(23, oldest_filer_age - 1)))
     older_amts = st_family_matrix(tax_unit, 'st_credits.cwfc_older_amounts',
                                   1:3, require_sentinel = FALSE)
     cwfc_older_amt = rep(0, n)
@@ -302,11 +313,16 @@ st_credits_child = function(tax_unit, st_eitc) {
     cwfc_po_rate = if_else(n_cwfc_young == 0 & n_cwfc_older > 0,
                            tax_unit$st_credits.cwfc_po_rate_older_only,
                            tax_unit$st_credits.cwfc_po_rate)
+    cwfc_has_child = n_cwfc_young + n_cwfc_older > 0
     cwfc = if_else(
       tax_unit$st_credits.cwfc_style == 1 & tax_unit$dep_status != 1 &
         (tax_unit$filing_status != 3 |
-           (tax_unit$st_credits.cwfc_mfs_eligible == 1 &
-              n_cwfc_young + n_cwfc_older > 0)),
+           (tax_unit$st_credits.cwfc_mfs_eligible == 1 & cwfc_has_child)) &
+        st_eitc_inv_inc(tax_unit) <= tax_unit$st_credits.cwfc_inv_inc_limit &
+        (cwfc_has_child |
+           st_head_or_spouse_in_age_band(tax_unit,
+                                         tax_unit$st_credits.cwfc_age_min,
+                                         tax_unit$st_credits.cwfc_age_max)),
       pmax(0, cwfc_base - cwfc_po_rate *
                 pmax(0, pmax(cwfc_earned, agi) -
                         tax_unit$st_credits.cwfc_po_thresh)),

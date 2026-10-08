@@ -103,22 +103,20 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
             pmax(0, maximum - (income - phaseout_at) * phaseout_rate),
             pmin(maximum, income * phasein_rate))
   }
+  # Phase-in on earned income, phase-out on the greater of earned income
+  # and AGI (290.0671 subd. 1; the federal EITC rule, eitc.R): AGI below
+  # earned income never reduces the credit
   earned_credit_earned = earned_credit_curve(earned_income)
-  earned_credit_agi    = earned_credit_curve(pmax(0, agi))
+  earned_credit_agi    = earned_credit_curve(pmax(earned_income, agi))
   # The age test applies only to filers WITHOUT qualifying children, mirroring
   # the federal childless-EITC rule. States may gate on a band rather than a
   # floor (DC's worksheet: "at least age 25, but not age 65 at the end of the
   # year"; MN's packet flags the same ceiling); earned_credit_age_max defaults
   # to Inf, so states gating only on a minimum are unaffected
-  earned_credit_in_age_band = function(age) {
-    !is.na(age) &
-      age >= tax_unit$st_credits.earned_credit_age_min &
-      age <= tax_unit$st_credits.earned_credit_age_max
-  }
   earned_credit_age_ok = tax_unit$n_dep_eitc > 0 |
-                         earned_credit_in_age_band(tax_unit$age1) |
-                         (tax_unit$filing_status == 2 &
-                          earned_credit_in_age_band(tax_unit$age2))
+    st_head_or_spouse_in_age_band(tax_unit,
+                                  tax_unit$st_credits.earned_credit_age_min,
+                                  tax_unit$st_credits.earned_credit_age_max)
   # Dependents of another taxpayer are ineligible for the independent
   # earned-income credit, mirroring the federal EITC (eitc.R) and the state
   # exempt/household/WFTC credits; ei1/ei2 are never dependent-zeroed upstream.
@@ -130,9 +128,7 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # Disqualifying investment income, mirroring the federal EITC composition
   # (eitc.R) -- states with their own ceiling (FTB 3514) set the limit;
   # default .inf imposes no state-side test
-  earned_credit_inv_inc = tax_unit$txbl_int + tax_unit$exempt_int +
-    tax_unit$div_ord + tax_unit$div_pref + pmax(0, tax_unit$txbl_kg) +
-    pmax(0, tax_unit$sch_e - tax_unit$part_scorp)
+  earned_credit_inv_inc = st_eitc_inv_inc(tax_unit)
   earned_credit_eligible = tax_unit$dep_status != 1 &
     (tax_unit$filing_status != 3 |
        (tax_unit$st_credits.earned_credit_mfs_eligible == 1 &

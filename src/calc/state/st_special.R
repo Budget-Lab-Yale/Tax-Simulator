@@ -150,12 +150,13 @@ calc_st_special = function(tax_unit, fill_missings = F) {
       st_wftc_child_bin = pmin(3, pmax(0, n_dep_eitc)) + 1,
       st_wftc_earned_income = pmax(0, ei1) +
         if_else(filing_status == 2, pmax(0, ei2), 0),
-      st_wftc_investment_income = txbl_int + exempt_int + div_ord + div_pref +
-        pmax(0, txbl_kg) + pmax(0, sch_e - part_scorp),
+      st_wftc_investment_income = st_eitc_inv_inc(
+        pick(txbl_int, exempt_int, div_ord, div_pref, txbl_kg, sch_e, part_scorp)
+      ),
       st_wftc_age_ok = n_dep_eitc > 0 |
-        (age1 >= st_transfers.wftc_min_age & age1 <= st_transfers.wftc_max_age) |
-        (filing_status == 2 & !is.na(age2) &
-           age2 >= st_transfers.wftc_min_age & age2 <= st_transfers.wftc_max_age),
+        st_head_or_spouse_in_age_band(pick(age1, age2, filing_status),
+                                      st_transfers.wftc_min_age,
+                                      st_transfers.wftc_max_age),
       st_wftc_mfs_ok = filing_status != 3 | st_transfers.wftc_mfs_eligible == 1,
       st_wftc_max_amount     = st_pick_slot(wftc_max_amounts, st_wftc_child_bin),
       st_wftc_phaseout_width = st_pick_slot(wftc_phaseout_widths,

@@ -2,8 +2,9 @@
 
 State: `MN`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-09-30` (separate-filer rule for WFC and M1CWFC resolved;
-previous: `2026-08-11` TAXSIM triage: clean, 11 exact probe cases;
+Last updated: `2026-10-07` (WFC/M1CWFC eligibility: childless age 19 from
+2021, M1CWFC age band and investment-income limits; previous: `2026-09-30`
+separate-filer rule for WFC and M1CWFC resolved; earlier: `2026-08-11` TAXSIM triage: clean, 11 exact probe cases;
 
 > **Status note (as of 2026-08-11), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -71,7 +72,9 @@ credit (2022); NIIT + flat-80% limitation (2024); dependent-care cap
   casualty is federal disaster-only (MN allows non-disaster); the property
   tax cap is applied to property taxes alone rather than the combined line.
 - **2021 dependent care:** our federal CDCTC is ARPA-law; MN computed its
-  own pre-ARPA credit — overstates the MN credit for 2021.
+  own pre-ARPA credit — overstates the MN credit for 2021. *(Resolved
+  2026-10-07: M1CD is now computed on its own pre-ARPA terms in every year;
+  see "Dependent care credit (M1CD)" below.)*
 - **WFC eligibility:** the 2017-18 federal-EIC gate approximated by age
   alone; the childless upper age limit (64) unmodeled; M1CWFC older
   children proxied by dependents aged 18-23 (students/disabled
@@ -99,6 +102,64 @@ credit (2022); NIIT + flat-80% limitation (2024); dependent-care cap
   for every separate filer), and the living-apart condition is unobserved and
   assumed met. Tests MN-8b/8c/8d. The 2023 M1CWFC instructions were not
   retrieved (the DOR URL pattern for 2023 404s); 2023 rests on the statute.
+- **WFC and M1CWFC eligibility, resolved 2026-10-07.** Prompted by the
+  State-EITC-Align cross-check (`research/state_tax/notes/state_eitc_align_crosscheck_2026_10_02.md`,
+  used as a check, not a source), and verified here against primary law:
+  - *Childless minimum age 19 from TY2021, not 21.* Laws 2021 1Sp ch. 14
+    art. 1 s. 10 strikes 21 and inserts 19 in 290.0671 subd. 1(a)(1),
+    "effective for taxable years beginning after December 31, 2020"; Schedule
+    M1WFC 2021 and 2022: "None (if between the age of 19 and 64)". We had kept
+    21 through 2022 (`earned_credit_age_min`). Tests MN-7d/7e.
+  - *M1CWFC applies the WFC's EITC-style eligibility to the whole schedule.*
+    290.0661 subd. 2 (2024): the child credit requires eligibility "under
+    section 290.0671, except a taxpayer whose earned income was insufficient".
+    The 2023-2025 M1CWFC instructions ("Am I eligible?", which covers both
+    credits) list: investment income below $11,000 / $11,600 / $11,950; and
+    with no qualifying child on M1DQC rows 10-11, "you or your spouse must be
+    between the ages of 19 and 64". Both tests had been missing, so the 4%
+    childless amount was paid at any age and no unit was screened on
+    investment income (new `cwfc_age_min/_max`, `cwfc_inv_inc_limit`; tests
+    MN-12b-12e).
+  - *WFC investment-income limit, 2017-2022.* 290.0671 subd. 1(a) requires
+    federal-EIC eligibility, including IRC 32(i). The 2017-2019 M1WFC sends the
+    filer through the federal EIC worksheet ($3,450 / $3,500 / $3,600); the
+    2020-2022 instructions print $3,650 / $10,000 / $10,300. The 2021 value
+    is DOR's printed figure, the ARPA amount, even though 290.01 subd. 31 then
+    read the IRC as of December 31, 2018 (which would give about $3,650); we
+    follow the form. Unmodeled before (`earned_credit_inv_inc_limit`; tests
+    MN-7f/7g).
+  - *Qualifying older child must be younger than the filer.* 290.0671 subd. 1:
+    an IRC 32(c) qualifying child aged 18 or over; IRC 152(c)(3)(A) requires
+    the child to be younger than the filer (or than either spouse on a joint
+    return). The older-child count now caps the age at the oldest filer's age
+    less one (tests MN-12f/12g). Ages 19-23 still assume full-time student
+    status, which is unobserved.
+  - Generic: the investment-income measure and the head-or-spouse age-band
+    test are now single helpers (`st_eitc_inv_inc`,
+    `st_head_or_spouse_in_age_band`, `src/calc/state/st_utils.R`) shared by
+    the independent earned credit, M1CWFC and the WA WFTC.
+- **Dependent care credit (M1CD), resolved 2026-10-07.** The credit is the
+  federal-formula credit before the federal tax-liability limit: the 2017
+  M1CD takes Form 2441 line 9 ("complete federal Form 2441 even if you did not
+  claim the federal credit"), and from 2021 the schedule computes it itself
+  (lines 1-7: expenses up to $3,000 / $6,000 and the lower spouse's earned
+  income, times the Table 3 decimal, .35 falling .01 per $2,000 of AGI over
+  $15,000 to .20). We had taken a share of the federal credit as claimed,
+  which (a) is zero for a family with no federal tax, because the federal
+  credit is nonrefundable outside 2021, (b) carries the federal 90% take-up
+  draw, and (c) applied the ARPA expansion in 2021, which Minnesota did not
+  adopt (the 2021 M1CD prints the pre-ARPA table and limits). Now an own-rate
+  credit (`cdctc_style` 2) every year, with the income cap on top (tests
+  MN-11b/11c). This closed the 2021 known difference listed above. The
+  newborn-without-expenses rule and the student/disabled-spouse deemed income
+  stay unmodeled.
+- **Marriage credit income (M1MA lines 3-4), resolved 2026-10-07.** Each
+  spouse's M1MA income includes taxable pensions and IRA distributions (1040
+  lines 4b and 4d) and taxable Social Security, not only earnings (2017, 2019
+  and 2024 schedules). Their owner is unobserved, so each spouse is credited
+  half (`mc_retirement_split_share` = 0.5, the ST_SPLIT_HALVE convention);
+  retiree couples previously got no credit (test MN-9b). This supersedes the
+  "earned income only" note under Marriage credit below.
 - **Cross-model triage, 2026-09-30/10-01: the TAXSIM gap was four TAXSIM bugs and
   one of ours.** The 2026-08-11 note put the residual in itemizers. On the
   current board they are almost all excluded by crosswalk-exposure rows; what

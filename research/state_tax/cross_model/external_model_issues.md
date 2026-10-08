@@ -158,6 +158,42 @@ filers aged 65 and over in 2019–2020 (77 and 76 records in our samples, median
 on every one. In 2017–2018 TAXSIM ties the credit to federal eligibility and is right. Effect: TAXSIM understates
 Minnesota tax for low-earning childless seniors by up to the childless maximum ($279 / $284).
 
+### T32. Minnesota 2019–2020: the Working Family Credit ignores the EITC investment-income limit
+
+Minnesota's Working Family Credit requires eligibility for the federal EITC (Minn. Stat. 290.0671 subd. 1(a)), and
+that includes the IRC 32(i) limit on investment income. The 2019 Schedule M1WFC line 1 instructions send the filer
+through Steps 1–5 of the federal EIC instructions and waive only the AGI and earned-income limits (Steps 1, 4 and
+5), not Step 2, the investment-income test. The 2020 instructions print the limit itself ($3,650). TAXSIM-35 pays
+the credit regardless. Probe (2026-10-07), single, age 40, no children, $6,000 of wages:
+
+| year | dividends | v25 (federal EITC) | v39 (MN WFC) |
+|---|---|---|---|
+| 2018 | 5,000 | 0 | **0** |
+| 2019 | 5,000 | 0 | **188.60** |
+| 2020 | 5,000 | 0 | **191.40** |
+
+As with T23, TAXSIM tied the credit to federal eligibility in 2017–2018 and decoupled it from 2019. Effect: TAXSIM
+understates Minnesota tax by up to the family's credit for filers over the investment-income limit.
+
+### T33. Minnesota marriage credit: business income pooled across the spouses
+
+Minnesota's marriage credit (Minn. Stat. 290.0675, Schedule M1MA) is keyed to the lesser-earning spouse's own
+income: wages, that spouse's self-employment income from their own Schedule SE (line 2), taxable pensions and
+taxable Social Security. TAXSIM-35 takes self-employment income per spouse (`pbusinc`/`pprofinc` and
+`sbusinc`/`sprofinc`) but treats it as the couple's jointly for this credit. Probe (2026-10-07), joint, both 45:
+
+| year | input | v40 (credits) |
+|---|---|---|
+| 2017 | $100,000 primary business income, spouse nothing | 230.10 |
+| 2017 | $50,000 / $50,000 wages | 230.10 |
+| 2017 | $100,000 primary wages, spouse nothing | 0.00 |
+| 2017 | $486,691 primary business income, spouse nothing | 1,430.91 (the maximum) |
+| 2019 | $100,000 spouse business income, primary nothing | 206.92 |
+
+The credit for one spouse's business income equals the credit for an even wage split. Effect: TAXSIM understates
+Minnesota tax for couples where one spouse has the business income, by up to the credit maximum ($1,433 in 2017,
+$1,533 in 2020).
+
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
@@ -973,6 +1009,22 @@ does. Probe (2026-10-02), four TY2023 records: `state_income_tax` 159 / 108 / 21
 0 / 0 / 96 / 963, the gap being `ms_cdcc` each time. Our harness now reads `ms_income_tax` for Mississippi (as it
 reads `md_income_tax` for Maryland). Anything built on `state_income_tax` overstates Mississippi tax for these
 filers.
+
+### P20. Minnesota M1CWFC: an 18-year-old is never a qualifying older child
+
+Minn. Stat. 290.0671 subd. 1 defines a "qualifying older child" as an IRC 32(c) qualifying child "that attained
+at least the age of 18 in the taxable year". Under IRC 152(c)(3)(A)(i) a child under 19 at year end is a qualifying
+child with no student test. policyengine-us 1.775.7 (`mn_child_and_working_families_credits`) counts an older
+child only where `age > wfc.additional.age_threshold` (18) **and** the child is a full-time student or disabled.
+An 18-year-old therefore never counts, student or not. The comparison is ">= 18", and the student test should
+apply only from 19. Effect: PolicyEngine omits the older-child amount ($925 / $970 / $1,000 for one child in
+2023 / 2024 / 2025) for families whose older child is 18, for example harness records 15386, 19779 and 29976
+(2023): the gap is −925 each time, and `mn_child_and_working_families_credits` equals our credit less that
+amount.
+
+For ages 19–23 the student requirement is the law. Our harness cannot tell PolicyEngine who is a student, and we
+assume a dependent aged 19–23 is one (a dependent of that age who is not a student is usually a qualifying
+relative, not a qualifying child). That part is an assumption difference, not a PolicyEngine bug.
 
 ## Corroboration worth passing along
 

@@ -1806,6 +1806,46 @@ test_state_calc = function() {
            expect = list(st_earned_credit = 105),
            label = 'MN-7c childless WFC inside the age band')
 
+  # MN-7d/7e: the childless floor drops from 21 to 19 in TY2021 (Laws 2021
+  # 1Sp ch. 14 art. 1 s. 10). Single aged 20, wages 5,000: 2020 zero;
+  # 2021 3.9% x 5,000 = 195 (below the 286 maximum and the 8,960
+  # phase-out start)
+  run_case('MN', 2020,
+           list(agi = 5000, age1 = 20, wages1 = 5000, ei1 = 5000),
+           expect = list(st_earned_credit = 0),
+           label = 'MN-7d childless WFC barred at 20 in 2020')
+  run_case('MN', 2021,
+           list(agi = 5000, age1 = 20, wages1 = 5000, ei1 = 5000),
+           expect = list(st_earned_credit = 195),
+           label = 'MN-7e childless WFC at 20 from 2021')
+
+  # MN-7f/7g: the WFC investment-income limit (2022 M1WFC: $10,300).
+  # Single, two children, wages 15,000: interest 10,000 -> 11% x 15,000
+  # = 1,650 (AGI 25,000 x 11% exceeds the 2,283 maximum, so earned
+  # binds); interest 11,000 -> zero
+  run_case('MN', 2022,
+           list(agi = 25000, wages1 = 15000, ei1 = 15000, txbl_int = 10000,
+                n_dep = 2, n_dep_eitc = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_earned_credit = 1650),
+           label = 'MN-7f WFC investment income under the limit')
+  run_case('MN', 2022,
+           list(agi = 26000, wages1 = 15000, ei1 = 15000, txbl_int = 11000,
+                n_dep = 2, n_dep_eitc = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_earned_credit = 0),
+           label = 'MN-7g WFC investment income over the limit')
+
+  # MN-7h: AGI below earned income does not reduce the credit in the
+  # phase-in (phase-in on earned income, phase-out on the greater of earned
+  # income or AGI). 2021 joint, two children, earned 21,733, AGI 18,660:
+  # 11% x 21,733 = 2,390.63, capped at the 2,213 maximum (both incomes
+  # below the 33,720 phase-out start)
+  run_case('MN', 2021,
+           list(agi = 18660, filing_status = 2, age2 = 40, wages1 = 21733,
+                ei1 = 21733, n_dep = 2, n_dep_eitc = 2, dep_age1 = 8,
+                dep_age2 = 10),
+           expect = list(st_earned_credit = 2213),
+           label = 'MN-7h WFC phase-in on earned income when AGI is lower')
+
   # MN-8: 2024 M1CWFC: MFJ, 2 kids under 18, earned = AGI = 50,000:
   # 2 x 1,750 + 4% x 9,220 = 3,868.80, less 12% x (50,000 - 36,880) =
   # 1,574.40 -> 2,294.40 refundable. Taxable = 50,000 - 29,150 - 10,100
@@ -1856,6 +1896,16 @@ test_state_calc = function() {
                          liab_st_iit = 4450.375 - 204.885),
            label = 'MN-9 marriage credit')
 
+  # MN-9b: M1MA lines 3-4 count taxable pensions and Social Security, whose
+  # owner is unobserved, so each spouse is credited half. Wages 20,000 (one
+  # spouse) + taxable pensions 80,000: spouse incomes 60,000 / 40,000, the
+  # same lesser income and taxable income (74,200) as MN-9 -> 204.885
+  run_case('MN', 2022,
+           list(agi = 100000, filing_status = 2, age2 = 40,
+                wages1 = 20000, ei1 = 20000, txbl_pens_dist = 80000),
+           expect = list(st_marriage_credit = 204.885),
+           label = 'MN-9b marriage credit with retirement income split')
+
   # MN-10: 2024 NIIT + flat 80% deduction cut: single, AGI 2.1M (NII =
   # 1.65M -> 1% x 650,000 = 6,500); AGI > 1,053,750 -> std = 20% x 14,575.
   # The 15% US-obligation share of 50,000 interest (7,500) comes off the
@@ -1869,9 +1919,10 @@ test_state_calc = function() {
                                        6500),
            label = 'MN-10 NIIT + flat 80% limitation')
 
-  # MN-11: 2023 dependent care cap: MFJ AGI 70,000, federal CDCTC 1,200:
-  # cap = 1,200 - 5% x 10,790 = 660.50. M1CWFC fully phased out at this
-  # income (3,850 - 4,200 < 0). Taxable = 70,000 - 27,650 - 9,600
+  # MN-11: 2023 dependent care cap: MFJ AGI 70,000, expenses 6,000: M1CD
+  # credit .20 x 6,000 = 1,200; cap = 1,200 - 5% x 10,790 = 660.50.
+  # M1CWFC fully phased out at this income (3,850 - 4,200 < 0). Taxable =
+  # 70,000 - 27,650 - 9,600
   run_case('MN', 2023,
            list(agi = 70000, filing_status = 2, age2 = 40, n_dep = 2,
                 n_dep_ctc = 2, n_dep_eitc = 2, dep_age1 = 5, dep_age2 = 8,
@@ -1880,6 +1931,28 @@ test_state_calc = function() {
            expect = list(st_cdctc = 660.5, st_ctc = 0,
                          liab_st_iit = 32750 * 0.0535 - 660.5),
            label = 'MN-11 dependent care cap')
+
+  # MN-11b: the M1CD credit does not depend on the federal credit being
+  # claimed. 2023 head of household, one child aged 4, wages = AGI =
+  # 18,439, expenses 3,000, no federal tax (federal credit claimed 0):
+  # Table 3 decimal .33 (17,000-19,000) x 3,000 = 990, refundable
+  run_case('MN', 2023,
+           list(agi = 18439, filing_status = 4, n_dep = 1, n_dep_ctc = 1,
+                dep_age1 = 4, wages1 = 18439, ei1 = 18439, care_exp = 3000,
+                cdctc_nonref = 0),
+           expect = list(st_cdctc = 990),
+           label = 'MN-11b M1CD paid without a federal credit')
+
+  # MN-11c: Minnesota did not adopt the ARPA 2021 expansion. Head of
+  # household, one child aged 4, AGI 30,000, expenses 8,000: 2021 M1CD
+  # Table 3 decimal .27 (29,000-31,000) x the $3,000 limit = 810, where
+  # the ARPA federal credit would be 50% x 8,000 = 4,000
+  run_case('MN', 2021,
+           list(agi = 30000, filing_status = 4, n_dep = 1, n_dep_ctc = 1,
+                dep_age1 = 4, wages1 = 30000, ei1 = 30000, care_exp = 8000,
+                cdctc_ref = 4000),
+           expect = list(st_cdctc = 810),
+           label = 'MN-11c M1CD pre-ARPA in 2021')
 
   # MN-12: M1CWFC childless phase-out at the GENERAL 12% rate (2024 form
   # line 13: 9% only with older children and no young children --
@@ -1890,6 +1963,49 @@ test_state_calc = function() {
            list(agi = 33000, txbl_inc = 18400, wages1 = 33000, ei1 = 33000),
            expect = list(st_ctc = 139.60),
            label = 'MN-12 childless M1CWFC 12% phase-out')
+
+  # MN-12b/12c: the M1CWFC childless age band, 19-64 (290.0671 subd.
+  # 1(a)(1); 2024 M1CWFC "Am I eligible?"). Single, wages 5,000: aged 19,
+  # 4% x 5,000 = 200; aged 70, zero
+  run_case('MN', 2024,
+           list(agi = 5000, age1 = 19, wages1 = 5000, ei1 = 5000),
+           expect = list(st_ctc = 200),
+           label = 'MN-12b childless M1CWFC at 19')
+  run_case('MN', 2024,
+           list(agi = 5000, age1 = 70, wages1 = 5000, ei1 = 5000),
+           expect = list(st_ctc = 0),
+           label = 'MN-12c childless M1CWFC barred at 65+')
+
+  # MN-12d/12e: the investment-income limit gates the whole schedule,
+  # child amounts included (290.0661 subd. 2; 2024 limit $11,600). Single,
+  # one child aged 8, wages 10,000: interest 11,000 -> 1,750 + 4% x 9,220
+  # = 2,118.80 (AGI 21,000 below the 31,090 threshold); interest 12,000
+  # -> zero
+  run_case('MN', 2024,
+           list(agi = 21000, wages1 = 10000, ei1 = 10000, txbl_int = 11000,
+                n_dep = 1, n_dep_ctc = 1, n_dep_eitc = 1, dep_age1 = 8),
+           expect = list(st_ctc = 2118.8),
+           label = 'MN-12d M1CWFC investment income under the limit')
+  run_case('MN', 2024,
+           list(agi = 22000, wages1 = 10000, ei1 = 10000, txbl_int = 12000,
+                n_dep = 1, n_dep_ctc = 1, n_dep_eitc = 1, dep_age1 = 8),
+           expect = list(st_ctc = 0),
+           label = 'MN-12e M1CWFC investment income over the limit')
+
+  # MN-12f/12g: a qualifying older child must be younger than the filer
+  # (IRC 152(c)(3)(A)). Head of household with a 21-year-old dependent,
+  # wages 10,000: filer aged 45 -> 970 + 4% x 9,220 = 1,338.80; filer aged
+  # 20 -> no qualifying child, the childless 368.80 only
+  run_case('MN', 2024,
+           list(agi = 10000, filing_status = 4, age1 = 45, n_dep = 1,
+                dep_age1 = 21, wages1 = 10000, ei1 = 10000),
+           expect = list(st_ctc = 1338.8),
+           label = 'MN-12f M1CWFC older child younger than the filer')
+  run_case('MN', 2024,
+           list(agi = 10000, filing_status = 4, age1 = 20, n_dep = 1,
+                dep_age1 = 21, wages1 = 10000, ei1 = 10000),
+           expect = list(st_ctc = 368.8),
+           label = 'MN-12g M1CWFC older dependent not younger than the filer')
 
   #--------------------------------------------------------------------------
   # Maryland (Form 502, state lines only) -- 15%-of-AGI std deduction,

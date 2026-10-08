@@ -60,6 +60,13 @@ Two verified sub-patterns (IL 2019, TAXSIM):
   seed 76): our `eitc = 0`, TAXSIM granted ~$240 federal → ~$43 IL EITC gap.
   **Review question**: confirm every such denial traces to investment income
   or another modeled test, not a bug in `calc_eitc()`.
+  A second route, found while probing Minnesota (2026-10-07,
+  `output/mn_ts_invinc_probe*.R`): TAXSIM-35 does not apply the 32(i) limit as
+  a cliff. Head of household with one child, $15,000 of wages and $5,000 of
+  dividends (over the $3,600 / $3,650 limit) gets a federal EITC of $1,971 in
+  2019 and $2,127 in 2020, where IRC 32(i) gives zero. Records like this are
+  not `fed_aligned`, so they fall outside the clean subset rather than
+  biasing it. Documented, not pursued (federal-side).
 - **Amounts**: records where both grant EITC but amounts differ, e.g. id
   296044: ours $403.92 vs TAXSIM $504.88 (gap ×18% → $18 IL state gap).
   Candidate causes: earned-income concept differences (SE income treatment),

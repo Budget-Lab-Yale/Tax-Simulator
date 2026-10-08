@@ -927,6 +927,11 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # estate and miscellaneous income (net ordinary losses included, see
     # cross_model_pe_leg). PolicyEngine's Arkansas gross income omits all
     # three (P13), so the exclusion predicate needs the amount
+    # eitc_inv_inc is the EITC disqualified-investment-income measure the
+    # state calculators test (st_eitc_inv_inc): TAXSIM's Minnesota WFC skips
+    # that test in 2019-2020 (T32). se1/se2 are each spouse's self-employment
+    # income: TAXSIM's Minnesota marriage credit pools business income across
+    # the spouses instead of crediting it to the one who earned it (T33)
     ours = ours %>%
       left_join(sampled %>%
                   mutate(n_dep_ge18 = (!is.na(dep_age1) & dep_age1 >= 18) +
@@ -944,7 +949,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          xw_fed_only_atl = ed_exp + sl_int_ded + tuition_ded,
                          xw_pe_passthru_misc = part_scorp - part_se +
                                                estate - estate_loss +
-                                               other_inc + other_gains) %>%
+                                               other_inc + other_gains,
+                         eitc_inv_inc = st_eitc_inv_inc(
+                           pick(txbl_int, exempt_int, div_ord, div_pref,
+                                txbl_kg, sch_e, part_scorp))) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
@@ -952,7 +960,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          itemizing, n_dep_ge18, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
-                         xw_fed_only_atl, other_gains),
+                         xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2),
                 by = 'id')
 
     for (model in yr_models) {
