@@ -2,7 +2,7 @@
 
 State: `ND`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-22`
+Last updated: `2026-10-08` (marriage credit retirement income); previous: `2026-08-22`
 
 ## Scope
 
@@ -39,6 +39,10 @@ Last updated: `2026-08-22`
   standard/itemized deduction, no state income-tax addback, no exemptions).
 - `filing.yaml`: `req_type=3`, `req_if_fed_filer=1`.
 - `credits.yaml`: `eitc_match=0` (documents that ND has no EITC/CTC).
+
+## Marriage penalty credit: retirement income, 2026-10-08
+
+Aligned with Minnesota's M1MA treatment (JI 2026-10-08). Form ND-1 instructions (2019, 2022 booklets): each spouse's qualified income is wages, net self-employment income less the SE tax deduction, and the "Taxable portion of IRAs, pensions, annuities, and social security benefits reported on Form 1040 or 1040-SR, lines 4b, 5b, and 6b", reduced by ND-1 lines 9 (Railroad Retirement) and 15 (Social Security). Retirement income is observed only for the unit, so each spouse is credited half (`mc_retirement_split_share` = 0.5), net of the state's Social Security subtraction (`mc_retirement_net_ss_sub` = 1; `st_sub_ss` is now returned by the AGI step). Tests ND-9c/9d. TAXSIM counts wages only (T35, probe-verified), so the couples who qualify only through retirement income are excluded on the TAXSIM leg; PolicyEngine agrees with the new treatment (2023 +0.4pp, 2024 +0.2pp). The earlier note that TAXSIM "shares the limitation exactly" no longer holds: the limitation is gone on our side.
 
 ## Known differences / approximations
 

@@ -6,7 +6,7 @@
 return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_excl',
                             'st_agi', 'st_age_package_taken',
                             'st_age_package_forgone', 'st_bid', 'st_bus_excess',
-                            'st_sub_pens', 'st_sub_capgain')
+                            'st_sub_pens', 'st_sub_capgain', 'st_sub_ss')
 
 
 calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
@@ -97,6 +97,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_int_share',          # (dbl) own-base share: taxable interest
     'st_agi.ob_div_share',          # (dbl) own-base share: dividends
     'st_agi.ob_bus_share',          # (dbl) own-base share: business/pass-through
+    'st_agi.ob_bus_split',          # (int) business, partnership, S-corp floored separately (NJ)
     'st_agi.ob_gains_share',        # (dbl) own-base share: long-term/other gains
     'st_agi.ob_st_gains_share',     # (dbl) own-base share: SHORT-TERM gains (MA taxes these at their own rate)
     'st_agi.ob_rent_share',         # (dbl) own-base share: rents/royalties
@@ -338,8 +339,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_comp_share       * (wages1 + wages2)) +
     ob_floor(st_agi.ob_int_share        * txbl_int) +
     ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
-    ob_floor(st_agi.ob_bus_share        * (sole_prop + farm +
-             if_else(st_agi.ob_passthru_as_federal == 1, part_scorp, part + scorp))) +
+    # ob_bus_split = 1: business/farm, partnership and S-corporation income
+    # are separate classes, each floored on its own (Schedule NJ-BUS-1 Parts
+    # I-III -> NJ-1040 lines 18, 21, 22, "If loss, make no entry")
+    if_else(st_agi.ob_bus_split == 1,
+            ob_floor(st_agi.ob_bus_share * (sole_prop + farm)) +
+              ob_floor(st_agi.ob_bus_share * part) +
+              ob_floor(st_agi.ob_bus_share * scorp),
+            ob_floor(st_agi.ob_bus_share * (sole_prop + farm +
+                     if_else(st_agi.ob_passthru_as_federal == 1, part_scorp,
+                             part + scorp)))) +
     ob_floor(ob_cap_loss(st_agi.ob_gains_share    * (kg_lt + other_gains) +
                          st_agi.ob_st_gains_share * kg_st)) +
     ob_floor(st_agi.ob_rent_share       * net_rent) +

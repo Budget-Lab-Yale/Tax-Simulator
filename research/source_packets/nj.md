@@ -2,7 +2,7 @@
 
 State: `NJ`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-18`
+Last updated: `2026-10-08` (high-income pass); previous: `2026-10-07` (State EITC cross-check); previous: `2026-08-18`
 
 ## Scope
 
@@ -99,6 +99,14 @@ NJ-7 the Child Tax Credit tier; NJ-8 the earned income credit at 40%.
 - **The printed rate schedule carries a $0.50 defect** relative to the Tax
   Table at band boundaries, found by comparing all 10,015 table rows.
 - Only the top bracket ever moved (TY2018 and TY2020); nothing is indexed.
+
+## High-income pass, 2026-10-08
+
+After the October 1 close the remaining misses sat above $500,000. Three causes:
+
+- **Ours, fixed: business, partnership and S-corporation income are separate categories.** Schedule NJ-BUS-1 Part I (NJ-1040 line 18), Part II (line 21) and Part III (line 22) are each summed with "If loss, make no entry", and the instructions say "You cannot apply a net loss in one category of income against income or gains in a different category." The model had one floored business class, so partnership losses erased sole-proprietorship profit (record 434680, 2024: $512,451 dropped). New generic `st_agi.ob_bus_split`; test NJ-6b.
+- **TAXSIM never applies the 10.75% bracket (T28, widened).** Its marginal rate above $5 million is 8.97% in every year 2017-2020, so 2018-2019 tax above $5 million is understated by 1.78% as well as 2020's $1 million-$5 million band.
+- **Form 4797 gains and losses (crosswalk).** New Jersey nets them with capital gains in the disposition-of-property category, floored at zero; both crosswalks hand them over as generic other/pass-through income. Input-coverage row on both legs.
 
 ## State EITC cross-check, 2026-10-07
 

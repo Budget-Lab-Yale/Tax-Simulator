@@ -1054,6 +1054,25 @@ test_state_calc = function() {
                          liab_st_iit = 1360.85),
            label = 'ND-9 2019 marriage penalty credit below the cap')
 
+  # ND-9c: qualified income includes taxable pensions/IRAs and Social
+  # Security (ND-1 instructions), split evenly between the spouses because
+  # whose they are is unobserved. Wages 15,000 (one spouse) + pensions 90,000:
+  # spouse incomes 60,000 / 45,000, the same as ND-9 -> 59.69
+  run_case('ND', 2019,
+           list(filing_status = 2, agi = 105000, txbl_inc = 100000,
+                ei1 = 15000, wages1 = 15000, txbl_pens_dist = 90000),
+           expect = list(st_marriage_credit = 59.69),
+           label = 'ND-9c marriage credit with pensions split')
+  # ND-9d: Social Security the state subtracts (ND-1 line 15; all of it
+  # from TY2021) is not qualified income: one earner plus Social Security
+  # leaves the other spouse with nothing -> no credit
+  run_case('ND', 2022,
+           list(filing_status = 2, agi = 90000, txbl_inc = 70000,
+                ei1 = 60000, wages1 = 60000, gross_ss = 35000,
+                txbl_ss = 29750),
+           expect = list(st_marriage_credit = 0),
+           label = 'ND-9d Social Security netted out of qualified income')
+
   # ND-9b: at the cap. ei 200,000/200,000, ND taxable income 400,000:
   #   line 6  187,800; line 7  = 3,672.58
   #   line 8  212,200; line 9  = 4,274.375
@@ -4621,6 +4640,15 @@ run_case('AR', 2024,
            expect = list(st_agi = 50000, st_txbl_inc = 49000,
                          liab_st_iit = 1214.75),
            label = 'NJ-6 2024 a business loss cannot offset wages')
+
+  # NJ-6b: business, partnership and S-corporation income are SEPARATE
+  # categories (Schedule NJ-BUS-1 Parts I-III, each "If loss, make no
+  # entry"). 50,000 of sole-proprietorship profit and a 30,000 partnership
+  # loss: the base is 50,000, not 20,000
+  run_case('NJ', 2024,
+           list(agi = 20000, sole_prop = 50000, part = -30000),
+           expect = list(st_agi = 50000),
+           label = 'NJ-6b 2024 a partnership loss cannot offset business profit')
 
   # NJ-7: the Child Tax Credit, refundable and tiered on New Jersey TAXABLE
   # income. 2024 joint, wages 45,000, two children aged 3 and 7 -- only the

@@ -37,6 +37,9 @@ ob_div_share:
 ob_bus_share:
   value: 1
   reference: 'NJ-1040 lines 18 (net profits from business), 21 (distributive share of partnership income) and 22 (net pro rata share of S corporation income)'
+ob_bus_split:
+  value: 1
+  reference: 'Schedule NJ-BUS-1 (2019): Part I net profits from business -> NJ-1040 line 18, Part II distributive share of partnership income -> line 21, Part III net pro rata share of S corporation income -> line 22, each summed separately with "If loss, make no entry"; NJ-1040 instructions (2024): "You cannot apply a net loss in one category of income against income or gains in a different category". Added 2026-10-08: the three had been one floored class, so partnership losses wiped out business profits (record 434680, 2024: $512,451 of sole-proprietorship profit dropped, -$55,088 against PolicyEngine)'
 ob_gains_share:
   value: 1
   reference: 'NJ-1040 line 19, net gains or income from disposition of property. New Jersey draws no distinction by holding period'

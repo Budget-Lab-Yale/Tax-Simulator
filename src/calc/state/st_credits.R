@@ -120,6 +120,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'itemizing',         # (bool) whether unit itemizes federally
     'gross_ss',          # (dbl)  gross Social Security benefits (ME STFC income)
     'txbl_ss',           # (dbl)  taxable Social Security benefits (UT SS credit)
+    'st_sub_ss',         # (dbl)  state Social Security subtraction (ND marriage credit)
     'txbl_pens_dist',    # (dbl)  taxable pension distributions (OH retirement credit)
     'txbl_ira_dist',     # (dbl)  taxable IRA distributions (OH retirement credit)
     'dep_age1',          # (int)  age of youngest dependent (NA if none)
@@ -194,6 +195,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.mc_max',
     'st_credits.mc_share_offset',
     'st_credits.mc_retirement_split_share',
+    'st_credits.mc_retirement_net_ss_sub',
     'st_credits.twoearner_rate',
     'st_credits.twoearner_max',
     'st_credits.item_credit_rate',
@@ -326,9 +328,13 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       upper[is.na(upper)] = Inf
       rowSums(mc_rt * pmax(0, pmin(y, upper) - br), na.rm = TRUE)
     }
+    # ND qualified income drops the Social Security the state itself
+    # subtracts (ND-1 line 15; mc_retirement_net_ss_sub = 1)
     mc_retire = tax_unit$st_credits.mc_retirement_split_share *
-                (tax_unit$txbl_pens_dist + tax_unit$txbl_ira_dist +
-                 tax_unit$txbl_ss)
+                pmax(0, tax_unit$txbl_pens_dist + tax_unit$txbl_ira_dist +
+                        tax_unit$txbl_ss -
+                        tax_unit$st_credits.mc_retirement_net_ss_sub *
+                          tax_unit$st_sub_ss)
     mc_ei_lo  = pmin(pmax(0, tax_unit$ei1), pmax(0, tax_unit$ei2)) + mc_retire
     mc_share1 = pmax(0, pmin(mc_ei_lo - tax_unit$st_credits.mc_share_offset,
                              tax_unit$st_txbl_inc))

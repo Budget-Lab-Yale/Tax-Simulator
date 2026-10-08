@@ -45,7 +45,7 @@ exempt_credit_personal:
 #
 #   line  1  ND taxable income                       -> st_txbl_inc
 #   line  2  gate: line 1 more than T1               -> mc_min_joint_txbl
-#   line  4  smaller of the two qualified incomes    -> pmin(ei1, ei2)
+#   line  4  smaller of the two qualified incomes    -> pmin(ei1, ei2) + half the retirement income
 #   line  5  gate: line 4 more than T2               -> mc_min_lesser_income
 #   line  6  line 4 less the single allowance        -> mc_share_offset
 #   lines 7+9  SINGLE-schedule tax on each share     -> mc_single_brackets
@@ -63,9 +63,10 @@ exempt_credit_personal:
 #     exactly on a whole-dollar threshold.
 #   - Statutory "qualified income" is per-spouse wages and net self-employment
 #     income PLUS the taxable portions of Social Security and IRA/pension/
-#     annuity distributions. Only the first two are observable per spouse, so
-#     ei1/ei2 proxies the concept and the credit is understated for couples
-#     whose qualified income is substantially retirement income. TAXSIM-35 has
+#     annuity distributions (net of the state Social Security subtraction).
+#     Only the first two are observable per spouse; from 2026-10-08 the
+#     retirement income is split evenly between the spouses (as for MN M1MA),
+#     where earlier it was omitted. TAXSIM-35 has
 #     the same limitation (its crosswalk receives per-spouse WAGES only), which
 #     is what made the credit representable at all. See
 #     research/state_tax/cross_model/nd_marriage_credit_probe.md
@@ -124,6 +125,13 @@ mc_max:
     '2024': 303
     '2025': 312
   reference: 'Marriage Penalty Credit Worksheet line 13 ("Maximum credit"), Form ND-1 instructions, per year. The 208 -> 287 jump at TY2023 is the HB 1158 three-tier rate restructure. All four values in the TAXSIM validation window (188/192/195/198) were independently confirmed against TAXSIM-35, which implements this worksheet'
+
+mc_retirement_split_share:
+  value: 0.5
+  reference: 'Form ND-1 instructions, "Calculate qualified income for lines 3a and 3b of the worksheet by adding the following amounts separately for you and your spouse": wages (1040 line 1z), net self-employment income less the SE tax deduction, and the "Taxable portion of IRAs, pensions, annuities, and social security benefits reported on Form 1040 or 1040-SR, lines 4b, 5b, and 6b", reduced by amounts on ND-1 lines 9 (Railroad Retirement) and 15 (Social Security) (2022 booklet; 2019 booklet: Social Security deducted from ND taxable income is "not included in qualified income"). We see wages and SE income per spouse but retirement income only for the unit, so each spouse is credited half -- the ST_SPLIT_HALVE convention, aligned with Minnesota M1MA (JI 2026-10-08). Added 2026-10-08: retirement income had been omitted, denying the credit to retiree couples'
+mc_retirement_net_ss_sub:
+  value: 1
+  reference: 'ND-1 instructions: qualified income is reduced by the Social Security subtraction (ND-1 line 15; full exemption from TY2021, AGI-capped TY2019-2020). The Railroad Retirement subtraction (line 9) is not modeled'
 
 mc_single_brackets:
   value:

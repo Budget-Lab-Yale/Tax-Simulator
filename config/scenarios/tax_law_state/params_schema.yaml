@@ -159,6 +159,7 @@ scalars:
   st_agi.ob_int_share: 0
   st_agi.ob_div_share: 0
   st_agi.ob_bus_share: 0
+  st_agi.ob_bus_split: 0   # 1 = business/farm, partnership and S-corp are separate floored classes (NJ-BUS-1)
   st_agi.ob_gains_share: 0
   st_agi.ob_rent_share: 0
   # Pension/annuity distributions and IRA distributions carry SEPARATE shares:
@@ -759,6 +760,8 @@ scalars:
   # Security counted in EACH spouse's marriage-credit income (MN M1MA lines
   # 3-4); ownership is unobserved, so 0.5 = even split. 0 = earned income only
   st_credits.mc_retirement_split_share: 0
+  # 1 = net the state's own Social Security subtraction out of that income (ND)
+  st_credits.mc_retirement_net_ss_sub: 0
   # CDCTC cap above an income threshold (MN M1CD): min(cap per qualifying
   # person, up to two, less po_rate x excess AGI)
   st_credits.cdctc_cap_amount: .inf

@@ -213,6 +213,14 @@ aged 4, $2,080 of care:
 With no federal tax TAXSIM pays the full credit (2018-2020), so the cap is applied only where it binds partway; 2017 has
 its own error at zero tax. Effect: TAXSIM understates Nebraska refunds for low-income families with care costs.
 
+### T35. North Dakota marriage penalty credit ignores retirement income
+
+Form ND-1 instructions define each spouse's qualified income as wages, net self-employment income and the "Taxable
+portion of IRAs, pensions, annuities, and social security benefits reported on Form 1040 or 1040-SR, lines 4b, 5b, and
+6b", less the North Dakota Social Security subtraction. TAXSIM-35 counts wages only. Probe (2026-10-08), 2019 joint,
+both 60: wages $60,000 / $50,000 -> `v40` 106.69; wages $60,000 plus $100,000 of pensions -> 0.00, the same as wages
+alone. Effect: TAXSIM understates the credit for couples whose lesser qualified income is retirement income.
+
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
@@ -272,13 +280,18 @@ disabled) whose "income on line 27", New Jersey total income, which excludes Soc
 Effect: TAXSIM overstates New Jersey tax for retirees aged 62-64, and for older retirees whose Social Security pushes
 federal AGI over $100,000 while New Jersey income stays under it.
 
-### T28. New Jersey 2020: the 10.75% bracket still starts at $5 million
+### T28. New Jersey: the 10.75% bracket is never applied (TY2018-2020)
 
 P.L. 2020, c. 95 (the 2020 "millionaires tax") moved New Jersey's 10.75% bracket floor from $5,000,000 down to
 $1,000,000 for tax year 2020 (NJ-1040 Tax Rate Schedules, Tables A and B, TY2020 booklet). TAXSIM-35 uses the 2019
 schedule for 2020. Probe (2026-10-01), single, $2,000,000 of wages (NJ taxable income $1,999,000): `siitax` =
 164,184.05 in both 2019 and 2020; the TY2020 schedule gives $17,782 more. Effect: TAXSIM understates 2020 New Jersey
 tax by 1.78% of taxable income between $1 million and $5 million.
+
+**Wider than first recorded (2026-10-08).** TAXSIM applies no 10.75% bracket in any year: probe, single, $5,000,000 and
+$10,000,000 of wages, marginal rate between them 8.97% in 2017, 2018, 2019 and 2020 (`v41` = 8.97). P.L. 2018 c.45 created
+the 10.75% bracket above $5,000,000 from TY2018, so TAXSIM also understates 2018-2019 tax by 1.78% of taxable income above
+$5 million (record 400580, 2018: $1,538,717 on $91.5 million of AGI).
 
 ### T29. Arkansas $6,000 retirement exemption applied only at 65 and over
 
