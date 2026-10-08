@@ -12,6 +12,11 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_fed_base',
   'st_credits.cdctc_base_liab_limit',
   'st_credits.cdctc_fed_base_switch_income',
+  'st_credits.cdctc_lowinc_rate',
+  'st_credits.cdctc_lowinc_agi_limit',
+  'st_credits.cdctc_lowinc_agi_limit_joint',
+  'st_credits.cdctc_lowinc_qual_share',
+  'st_credits.cdctc_ref_qual_share',
   'st_credits.cdctc_rate_max',
   'st_credits.cdctc_rate_floor',
   'st_credits.cdctc_rate_po_per_1k',
@@ -165,5 +170,24 @@ st_credits_care = function(tax_unit) {
     st_cdctc
   )
 
-  list(st_cdctc = st_cdctc)
+  # Low-income refundable alternative (VT 32 V.S.A. 5828c through TY2021,
+  # IN-112 Part II): cdctc_lowinc_rate of the same federal base, prorated by
+  # the share of care paid to qualifying (accredited) providers, refundable,
+  # for federal AGI at or below the limit -- "instead of" the regular credit,
+  # so the unit keeps whichever pays more. Provider status is unobserved:
+  # cdctc_lowinc_qual_share is an assumption, documented per state
+  lowinc_amt = tax_unit$st_credits.cdctc_lowinc_rate * cdctc_fed *
+               tax_unit$st_credits.cdctc_lowinc_qual_share
+  lowinc_limit = if_else(tax_unit$filing_status == 2,
+                         tax_unit$st_credits.cdctc_lowinc_agi_limit_joint,
+                         tax_unit$st_credits.cdctc_lowinc_agi_limit)
+  regular_benefit = if_else(tax_unit$st_credits.cdctc_refundable == 1,
+                            st_cdctc,
+                            pmin(st_cdctc, pmax(0, tax_unit$st_tax_pre_credit)))
+  st_cdctc_lowinc = tax_unit$st_credits.cdctc_lowinc_rate > 0 &
+                    tax_unit$agi <= lowinc_limit &
+                    lowinc_amt > regular_benefit
+  st_cdctc = if_else(st_cdctc_lowinc, lowinc_amt, st_cdctc)
+
+  list(st_cdctc = st_cdctc, st_cdctc_lowinc = st_cdctc_lowinc)
 }

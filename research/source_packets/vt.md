@@ -174,7 +174,7 @@ one-signed, so encoding without them would have guaranteed a large residual:
 
 ## Child care credit base, 2026-10-08
 
-Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. The refundable Low Income Child and Dependent Care Credit (32 V.S.A. 5828c through TY2021: 50% of the federal credit, line 10 / the ARPA credit in 2021, for AGI up to $30,000 / $40,000 joint with a Vermont-accredited provider, instead of the 24% credit) is documented, not modeled: accreditation is unobservable. The 24% and 72% credits read the claimed federal credit (Form 2441 line 11), as encoded.
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. The refundable Low Income Child and Dependent Care Credit (32 V.S.A. 5828c through TY2021) is now MODELED (2026-10-08): 50% of the federal credit (Form 2441 line 11 in TY2017-2020, line 10 -- the full ARPA credit -- in TY2021), refundable, for federal AGI of $30,000 or less ($40,000 joint), taken instead of the 24% credit when it pays more (new generic `cdctc_lowinc_*`). Care must be from a provider accredited by the Agency of Human Services, which is unobserved; the ASSUMPTION is that all care qualifies (`cdctc_lowinc_qual_share` = 1), as in TAXSIM and PolicyEngine. Tests VT-6 (updated), VT-6c, VT-6d. VT PE 2021 cell 0.956 -> 0.970. The 24% and 72% credits read the claimed federal credit (Form 2441 line 11), as encoded.
 
 ## Known differences (beyond the two machinery gaps)
 

@@ -68,8 +68,11 @@ cdctc_expense_caps:
     '2017': [3000.0, 6000.0, 6000.0, 6000.0, 6000.0]
   reference: 'Pre-ARPA IRC 21(c): $3,000 for one qualifying person, $6,000 for two or more'
 cdctc_refundable:
-  value: 0
-  reference: 'The Arkansas child care credit is nonrefundable'
+  value: 1
+  reference: 'Two lines carry the same amount (20% of the federal credit; the AR2441 amount from TY2021): line 35 (credits) is nonrefundable ("the difference is not refundable"), while the Early Childhood Program Credit on payments line 43 (line 41 in TY2017) is refundable for "a dependent child placed in an APPROVED child care facility" approved by the Arkansas Department of Education (Form AR1000EC certification); lines 35 and 43 together may not exceed the federal-based amount (AR1000F/AR1000NR instructions 2017, 2020, 2022). Refundable here, scaled by the assumed qualifying share (cdctc_ref_qual_share). Changed 2026-10-08 (had been nonrefundable with the line 43 credit documented only)'
+cdctc_ref_qual_share:
+  value: 1.0
+  reference: 'ASSUMPTION: the share of the credit that is claimed through the refundable early-childhood line, i.e. care at an ADE-approved facility. Facility approval is not observed and no published share exists; 1.0 treats all qualifying care as approved (an upper bound on refundability). Neither TAXSIM (probe 2026-10-08: nonrefundable 20%) nor PolicyEngine (ar_cdcc_potential: "not modeled; we don''t track facility" approval) models the refundable line. Set 2026-10-08'
 
 cdctc_fed_base:
   value:
@@ -131,8 +134,6 @@ stepcred2_joint_mode:
   reference: 'Filing status 2: "Find your net taxable income in the table below ... Double the credit from line 2"'
 
 documented_not_modeled:
-  early_childhood_program_credit:
-    reference: 'AR1000F payments section (line 41 in 2017, line 43 from about 2019): a REFUNDABLE Early Childhood Program Credit of 20% of the federal credit for a child in an approved early-childhood facility; lines 35 and 43 together may not exceed the AR2441 amount. Facility approval is unobservable, so it is not modeled [understates refunds for such families]. Documented 2026-10-07'
   deaf_and_head_of_household_credits:
     reference: 'Line 7A grants an additional personal credit for deafness, and another where the filing status is head of household or surviving spouse. Deafness is not a model input, and the head-of-household add-on has no place in the per-taxpayer/aged/blind/dependent structure the machinery carries [understates credits by $29 per affected return]'
   developmental_disabilities_credit:

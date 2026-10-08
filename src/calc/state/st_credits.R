@@ -255,9 +255,18 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # remainder nonrefundable; .inf keeps the all-or-nothing split. Louisiana
   # instead makes refundability turn on income -- the credit is refundable at
   # or below $25,000 of federal AGI and nonrefundable above it (R.S. 47:297.4)
-  cdctc_ref_part = tax_unit$st_credits.cdctc_refundable *
-                   (tax_unit$agi <= tax_unit$st_credits.cdctc_ref_agi_limit) *
-                   pmin(care$st_cdctc, tax_unit$st_credits.cdctc_ref_cap)
+  # Arkansas makes the same credit refundable only for care at an approved
+  # early-childhood facility (AR1000F payments line 43), which is unobserved:
+  # cdctc_ref_qual_share is the assumed qualifying share. A unit taking a
+  # low-income alternative (VT) has it wholly refundable
+  cdctc_ref_part = if_else(
+    care$st_cdctc_lowinc,
+    care$st_cdctc,
+    tax_unit$st_credits.cdctc_refundable *
+      tax_unit$st_credits.cdctc_ref_qual_share *
+      (tax_unit$agi <= tax_unit$st_credits.cdctc_ref_agi_limit) *
+      pmin(care$st_cdctc, tax_unit$st_credits.cdctc_ref_cap)
+  )
 
   # Remaining tax after the credits that precede the JFC/EITC in the OH
   # ordering (5747.98: retirement -> senior -> CDCTC -> exemption credit)

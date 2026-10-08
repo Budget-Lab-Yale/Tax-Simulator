@@ -2961,17 +2961,35 @@ test_state_calc = function() {
            expect = list(st_eitc = 1596),
            label = 'VT-5b 2025 match stays 38% with a qualifying child')
 
-  # VT-6 TY2019 the care credit is 24% of the federal credit and NONREFUNDABLE;
-  # TY2022 turns the same credit into 72% refundable. Single with one dependent
-  # and 20,000 of AGI: deduction 6,150, exemptions 2 x 4,250 = 8,500 (the
-  # dependent counts), so taxable 5,350 and tax 179.23. The 144 credit is
-  # nonrefundable and can only offset, leaving 35.23
+  # VT-6 TY2019: at 20,000 of federal AGI the Low Income Child and Dependent
+  # Care Credit applies (5828c: 50% of the federal credit, refundable, instead
+  # of the 24% nonrefundable credit; all care assumed accredited). Single with
+  # one dependent: deduction 6,150, exemptions 2 x 4,250 = 8,500 (the
+  # dependent counts), so taxable 5,350 and tax 179.23. 50% of 600 = 300
+  # beats the 144 (24%) credit and is refunded past the tax: -120.77
   run_case('VT', 2019,
            list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
                 dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600),
-           expect = list(st_cdctc = 144, st_exempt = 8500,
-                         st_txbl_inc = 5350, liab_st_iit = 35.23),
-           label = 'VT-6 2019 care credit at 24% nonrefundable')
+           expect = list(st_cdctc = 300, st_exempt = 8500,
+                         st_txbl_inc = 5350, liab_st_iit = 179.23 - 300),
+           label = 'VT-6 2019 low-income care credit, refundable')
+
+  # VT-6c: above the $30,000 limit the 24% credit, nonrefundable: 35,000 of
+  # AGI, federal credit 700 -> 168
+  run_case('VT', 2019,
+           list(agi = 35000, filing_status = 4, wages1 = 35000, ei1 = 35000,
+                n_dep = 1, dep_age1 = 4, care_exp = 3000, cdctc_nonref = 700),
+           expect = list(st_cdctc = 168),
+           label = 'VT-6c 2019 above the limit: the 24% credit')
+
+  # VT-6d: TY2021 the low-income credit is 50% of Form 2441 line 10, the full
+  # refundable ARPA credit: head of household, AGI 20,000, federal 4,000 ->
+  # 2,000 refundable
+  run_case('VT', 2021,
+           list(agi = 20000, filing_status = 4, wages1 = 20000, ei1 = 20000,
+                n_dep = 1, dep_age1 = 4, care_exp = 8000, cdctc_ref = 4000),
+           expect = list(st_cdctc = 2000, st_credits_ref = 2000),
+           label = 'VT-6d 2021 low-income care credit on the ARPA credit')
 
   # VT-6b the same return in TY2022: 72% of 600 = 432, REFUNDABLE. Deduction
   # 6,500 and exemptions 2 x 4,500 = 9,000 leave 4,500 taxable and 150.75 of
@@ -3890,6 +3908,16 @@ run_case('AR', 2024,
            expect = list(st_txbl_inc = 37590, st_cdctc = 120,
                          liab_st_iit = 1056.15 - 149),
            label = 'AR-7 2024 child care credit at 20% of federal')
+
+  # AR-7b: the same 20% is refundable through the Early Childhood Program
+  # Credit (payments line 43) for care at an approved facility -- assumed for
+  # all qualifying care (cdctc_ref_qual_share = 1). 2019, low tax, claimed
+  # federal credit 600 -> 120 refundable
+  run_case('AR', 2019,
+           list(agi = 8000, wages1 = 8000, ei1 = 8000, n_dep = 1, dep_age1 = 4,
+                care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 120, st_credits_ref = 120),
+           label = 'AR-7b early childhood program credit refundable')
 
   #--------------------------------------------------------------------------
   # Montana (Form 2)

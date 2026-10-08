@@ -580,6 +580,16 @@ scalars:
   st_credits.cdctc_fed_base: 0
   st_credits.cdctc_base_liab_limit: 0          # 1 = cap the base at federal tax less FTC (KY 2441-K 2021)
   st_credits.cdctc_fed_base_switch_income: .inf  # above this (share-table income base), use the claimed credit
+  # Low-income refundable alternative to the care credit (VT 5828c through
+  # TY2021): rate x the federal base x the assumed qualifying-provider share,
+  # for federal AGI at or below the limit; 0 = none
+  st_credits.cdctc_lowinc_rate: 0
+  st_credits.cdctc_lowinc_agi_limit: 0
+  st_credits.cdctc_lowinc_agi_limit_joint: 0
+  st_credits.cdctc_lowinc_qual_share: 1
+  # Assumed share of the care credit that qualifies for refundability where it
+  # turns on an unobserved provider status (AR approved facilities); 1 = all
+  st_credits.cdctc_ref_qual_share: 1
   st_credits.cdctc_rate_max: 0
   st_credits.cdctc_rate_floor: 0
   st_credits.cdctc_rate_po_per_1k: 0
