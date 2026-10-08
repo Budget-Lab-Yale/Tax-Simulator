@@ -194,6 +194,25 @@ The credit for one spouse's business income equals the credit for an even wage s
 Minnesota tax for couples where one spouse has the business income, by up to the credit maximum ($1,433 in 2017,
 $1,533 in 2020).
 
+### T34. Nebraska low-income child care credit capped at federal tax
+
+Neb. Rev. Stat. 77-2715.07(2): at or below $29,000 of federal AGI the credit is a refundable percentage of the federal
+credit allowable "whether or not the federal credit was limited by the federal tax liability", and Form 2441N recomputes
+it from expenses (capped expenses x federal decimal x state decimal; the state decimal is 1.00 at or below $22,000).
+TAXSIM-35 caps it at the filer's federal tax whenever there is some. Probe (2026-10-08), head of household, one child
+aged 4, $2,080 of care:
+
+| year | wages | v38 | Form 2441N | federal tax before credits |
+|---|---|---|---|---|
+| 2018 | 21,000 | 300.00 | 665.60 | 300 |
+| 2019 | 21,000 | 265.00 | 665.60 | 265 |
+| 2020 | 21,000 | 235.00 | 665.60 | 235 |
+| 2018-2020 | 15,000 | 728.00 | 728.00 | 0 |
+| 2017 | 9,125 | 79.32 | 728.00 | 0 |
+
+With no federal tax TAXSIM pays the full credit (2018-2020), so the cap is applied only where it binds partway; 2017 has
+its own error at zero tax. Effect: TAXSIM understates Nebraska refunds for low-income families with care costs.
+
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
@@ -1025,6 +1044,22 @@ amount.
 For ages 19–23 the student requirement is the law. Our harness cannot tell PolicyEngine who is a student, and we
 assume a dependent aged 19–23 is one (a dependent of that age who is not a student is usually a qualifying
 relative, not a qualifying child). That part is an assumption difference, not a PolicyEngine bug.
+
+### P21. Kentucky 2021 child and dependent care credit built on the ARPA federal credit
+
+Kentucky conforms to the IRC as of December 31, 2018, and Form 2441-K (2021) says "Kentucky does not conform to Section
+9631 of the federal American Rescue Plan (ARP) of 2021": it recomputes the credit on pre-ARPA terms ($3,000 / $6,000,
+the .35-.20 decimal), limits it by federal tax, and takes 20% (line 12). policyengine-us 1.775.7 takes 20% of the ARPA
+federal credit. Probe (2026-10-08, harness records): `cdcc` 3,392 / 1,672 / 2,822, `ky_cdcc` 678 / 334 / 564 (exactly
+20%). Effect: PolicyEngine overstates Kentucky 2021 care credits, often several-fold.
+
+### P22. New York 2021 child and dependent care credit built on the ARPA federal credit
+
+IT-216-I (2021): "NYS has decoupled from federal changes made to the Internal Revenue Code (IRC) after March 1, 2020";
+IT-216 recomputes the credit before any federal limitation on pre-ARPA terms ($3,000 / $6,000, New York's caps for three
+or more persons, the .35-.20 decimal) and applies the New York share. policyengine-us 1.775.7 uses the ARPA-era amount.
+Probe (2026-10-08, harness records 18023 / 157421 / 138587): `ny_cdcc` 3,000 / 2,400 / 1,693, where IT-216 gives
+630 / 360 / 360. Effect: PolicyEngine overstates New York 2021 care credits.
 
 ## Corroboration worth passing along
 

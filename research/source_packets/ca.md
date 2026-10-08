@@ -2,7 +2,7 @@
 
 State: `CA`  
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-22`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-22`
 
 > **Status note (as of 2026-08-16), kept from the packet's former Status line:**
 > resident regular IIT encoded; cross-model DONE 2026-08-16 -- all eight canonical-window cells clear the 95% bar (TAXSIM 0.969-0.985, PE 0.965-0.995); P1 production readiness still blocked
@@ -143,6 +143,10 @@ move to 0.9858 / 0.9835 / 0.9877 / 0.9786, and all eight now clear. This is the 
 a sweep of all 48 enabled jurisdictions finds an age effect in 23, though most
 of the others are unchecked against their own statutes and some genuinely do
 restrict by age.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. FTB 3506 builds its own base in every year: expenses up to $3,000 / $6,000, limited by earned income, times the federal decimal on federal AGI (line 8), then the line 9 percentage chart, with no federal tax-liability limit; in TY2021 CA did not conform to ARPA. Now `cdctc_fed_base` = 2 (own recomputation) with the federal decimal parameters; it had taken the chart percentage of the CLAIMED federal credit, which paid nothing to families without federal tax and used the ARPA credit in 2021. Tests CA-17d/17e.
 
 ## Known differences
 

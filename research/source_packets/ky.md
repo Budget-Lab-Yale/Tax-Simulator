@@ -2,7 +2,7 @@
 
 State: `KY`  
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-11` (2017 graduated schedule, combined-return
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-11` (2017 graduated schedule, combined-return
 
 > **Status note (as of 2026-08-11), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -39,6 +39,10 @@ from the 2017 Form 740 packet + DOR announcements; see below)
 - KY-8: pension exclusion cap ($31,110, 2018).
 - KY-9: aged $40 credit (2023).
 - KY-10: CDCTC 20% match (2024).
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Form 740 reads Form 2441 line 9 (tentative) in TY2017-2018 and line 11 (claimed) in TY2019-2020 and TY2022+. TY2021: Kentucky did not adopt ARPA section 9631; Form 2441-K recomputes the pre-ARPA credit, limits it by federal tax less the foreign tax credit, and takes 20%. Now encoded by year (`cdctc_fed_base` 1 / 0 / 2 / 0, `cdctc_base_liab_limit` in 2021). Test KY-11. The instructions also let a non-filer who would have had the federal credit claim the Kentucky one; not modeled.
 
 ## Known differences
 

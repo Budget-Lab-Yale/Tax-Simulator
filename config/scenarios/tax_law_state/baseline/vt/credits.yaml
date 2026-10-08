@@ -100,6 +100,8 @@ char_credit_base_cap:
   reference: 'The $20,000 contribution ceiling, which is what produces the published $1,000 maximum credit at the 5% rate'
 
 documented_not_modeled:
+  low_income_child_care_credit:
+    reference: '32 V.S.A. 5828c as it read through TY2021: a refundable Low Income Child and Dependent Care Credit of 50% of the federal credit (Form 2441 line 11; line 10, the full ARPA credit, in TY2021) for federal AGI of $30,000 or less ($40,000 joint) with care from a Vermont-accredited provider, taken INSTEAD of the 24% credit (IN-112 Part II, 2019; IN-112 2021: "enter 50% of federal Form 2441, Line 10"). Provider accreditation is unobservable, so the credit is not modeled [understates refunds for low-income Vermont families, most in TY2021]. From TY2022 the 72% refundable credit replaces both. Documented 2026-10-07'
   low_income_refundable_cdcc_2017_2021:
     reference: '32 V.S.A. 5828(c) (pre-Act 138): a low-income filer using an ACCREDITED provider could instead claim 50% of the federal credit, REFUNDABLE. The accreditation test is unobservable, so the 24% nonrefundable credit is applied to everyone 2017-2021 [understates the credit worst for units with no Vermont liability, where a nonrefundable 24% is worth about nothing against a refundable 50%]'
   renter_credit:

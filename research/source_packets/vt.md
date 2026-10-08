@@ -2,7 +2,7 @@
 
 State: `VT`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-13`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-13`
 
 > **Status note (as of 2026-08-13), kept from the packet's former Status line:**
 > ENCODED 2026-08-13 (baseline/vt/, tests VT-1..VT-6b); cross-model not yet run
@@ -171,6 +171,10 @@ one-signed, so encoding without them would have guaranteed a large residual:
   **a +$231.15 wedge** ($150.08 capital-gains exclusion where the
   40%-of-federal-taxable cap binds at $4,480, $81.07 charitable credit). This
   is the archetypal VT residual signature.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. The refundable Low Income Child and Dependent Care Credit (32 V.S.A. 5828c through TY2021: 50% of the federal credit, line 10 / the ARPA credit in 2021, for AGI up to $30,000 / $40,000 joint with a Vermont-accredited provider, instead of the 24% credit) is documented, not modeled: accreditation is unobservable. The 24% and 72% credits read the claimed federal credit (Form 2441 line 11), as encoded.
 
 ## Known differences (beyond the two machinery gaps)
 

@@ -2,7 +2,7 @@
 
 State: `IA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-19`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-19`
 
 ## Scope
 
@@ -153,6 +153,10 @@ to $90,000.
   **retroactively to TY2021** (2021 Acts ch 177), and the credit is computed
   off the GROSS federal section 21 credit "without regard to whether or not
   the federal credit was limited by the taxpayer's federal tax liability".
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Iowa Code 422.12C(1): shares of the federal credit "without regard to whether or not the federal credit was limited by the taxpayer's federal tax liability". Worksheets read line 9 (2017-2018), line 10 (2021, ARPA), line 9c (2022+); the TY2019-2020 worksheet's "line 11" contradicts the statute, which governs. Now `cdctc_fed_base` = 1 in every year; the documented known difference is retired.
 
 ## Known differences
 

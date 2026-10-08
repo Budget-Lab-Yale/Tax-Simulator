@@ -90,6 +90,9 @@ cdctc_refundable:
   value: 0
   reference: 'D.C. Code 47-1806.04(c): nonrefundable'
 
+cdctc_fed_base:
+  value: 1
+  reference: 'D.C. Code 47-1806.04(c)(1): "32% of the credit allowed under section 21 ... regardless of the amount of the credit actually used to offset federal tax liability"; D-40 booklets: "the amount from federal Form 2441, Line 9" (2017), "Line 10 or Line 11" (2021, the ARPA credit), "Line 9c" (2024, 2025). The tentative federal credit, before the liability limit. Encoded 2026-10-07 (had been documented as cdctc_base_is_post_limitation)'
 documented_not_modeled:
   low_income_credit_2017:
     reference: 'D.C. Code 47-1806.04(e), repealed after TY2017: a nonrefundable table-driven credit of $119-$1,311 capped at remaining tax, MUTUALLY EXCLUSIVE with the DC EITC -- so it reaches non-EITC low-income filers, especially seniors. Not modeled [understates DC credits in TY2017 only. TAXSIM models it, so pre-register a 2017 wedge]'
@@ -99,8 +102,6 @@ documented_not_modeled:
     reference: 'D.C. Code 47-1806.06: refundable, up to $1,025 (2017) rising to $1,425 (2025), based on rent paid and HOUSEHOLD income. Tier-1 blocked -- neither rent nor household income is a tax-unit concept [understates DC refunds for low-income renters and owners; PolicyEngine models it]'
   childless_eitc_phaseout_measure:
     reference: 'DC reduces the tentative childless credit by 8.48% of the excess of MAX(earned income, federal AGI) over the threshold. earned_credit_style 1 computes min(curve(earned), curve(AGI)) instead, which is exact when both sit in the same region of the schedule but OVERSTATES -- by up to the full maximum, at most $649 -- for units whose earned income is still phasing in while AGI is already past the phase-out start. Compounded by the absent investment-income disqualifier and the Schedule E / Form 4797 exclusions, which also overstate eligibility'
-  cdctc_base_is_post_limitation:
-    reference: 'DC allows 32% of the federal credit "regardless of the amount actually used to offset federal tax liability"; we apply 32% to the POST-limitation federal credit [understates the DC credit for units whose federal tax cannot absorb the section 21 credit]'
   itin_and_non_custodial_parent_eitc:
     reference: '47-1806.04(f)(1)(D) extends the DC EITC to ITIN filers from TY2023, but our federal eitc is zero for those units so nothing flows through [understates DC refunds for ITIN filers]. The non-custodial parent EITC (Schedule N, 47-1806.04(g)), the credit for tax paid to another state, and the Schedule U credit menu are likewise not modeled'
   ty2026_child_tax_credit:

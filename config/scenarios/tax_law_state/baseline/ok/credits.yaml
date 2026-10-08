@@ -13,7 +13,7 @@ eitc_refundable:
     '2022': 1
   reference: 'Refundability was removed for TY2017-2021 and restored from TY2022 by HB 2962 (2021), which also froze the federal base (see documented_not_modeled)'
 
-# Child care / child tax credit (68 O.S. 2357.43(B)): the GREATER of 20% of
+# Child care / child tax credit (68 O.S. 2357(B)(2); cite corrected 2026-10-07 from 2357.43, the EITC section): the GREATER of 20% of
 # the federal child and dependent care credit and 5% of the federal child tax
 # credit, denied outright above $100,000 of federal AGI. Both are
 # nonrefundable.
@@ -26,7 +26,7 @@ eitc_refundable:
 # so both columns report what was actually claimed.
 ctc_cdctc_greater_of:
   value: 1
-  reference: '68 O.S. 2357.43(B): "a credit equal to the GREATER of twenty percent (20%) of the credit for child care expenses or five percent (5%) of the child tax credit allowed on the federal return"'
+  reference: '68 O.S. 2357(B)(2): "a credit equal to the GREATER of twenty percent (20%) of the credit for child care expenses or five percent (5%) of the child tax credit allowed on the federal return"'
 
 # 5%-of-federal-CTC leg. Encoded through the tiered-share style with a SINGLE
 # tier whose bound is the $100,000 cliff: a return at or under the bound takes
@@ -36,32 +36,32 @@ ctc_cdctc_greater_of:
 # of the federal credit claimed rather than a share of it.
 ctc_style:
   value: 1
-  reference: '68 O.S. 2357.43(B); Schedule 511-G. Style 1 = share of the federal child tax credit actually claimed'
+  reference: '68 O.S. 2357(B)(2); Schedule 511-G. Style 1 = share of the federal child tax credit actually claimed'
 ctc_tier1_bound:
   value: 100000
-  reference: '68 O.S. 2357.43(C): no credit is allowed where federal adjusted gross income exceeds $100,000. A single-tier ladder reproduces the cliff -- above the last bound the tier selector returns ineligible'
+  reference: '68 O.S. 2357(B)(2): no credit is allowed where federal adjusted gross income exceeds $100,000. A single-tier ladder reproduces the cliff -- above the last bound the tier selector returns ineligible'
 ctc_tier_shares:
   value: [0.05, 0.0, 0.0]
-  reference: '68 O.S. 2357.43(B): five percent of the federal child tax credit. Only the FIRST element is reachable -- one tier bound is declared, so an eligible return is always in tier 1 and an ineligible one is out of the ladder entirely. The trailing zeros exist because vector families are addressed by numbered element (shares1, shares2, ...), and a bare scalar would land in a suffix-less column the family reader cannot see'
+  reference: '68 O.S. 2357(B)(2): five percent of the federal child tax credit. Only the FIRST element is reachable -- one tier bound is declared, so an eligible return is always in tier 1 and an ineligible one is out of the ladder entirely. The trailing zeros exist because vector families are addressed by numbered element (shares1, shares2, ...), and a bare scalar would land in a suffix-less column the family reader cannot see'
 ctc_max_child_age:
   value: 16
   reference: 'Matches the federal CTC qualifying-child age, so every CTC-qualifying child counts in both the numerator and the denominator of the style''s age ratio and the credit is exactly 5% of the federal amount'
 ctc_refundable:
   value: 0
-  reference: '68 O.S. 2357.43: the credit may not exceed the tax, in every year'
+  reference: '68 O.S. 2357(B)(2): the credit may not exceed the tax, in every year'
 
 # 20%-of-federal-CDCC leg, under the same $100,000 cliff. The cap machinery
 # with a zero amount and a zero phase-out rate zeroes the credit above the
 # threshold, which is the cliff.
 cdctc_match:
   value: 0.20
-  reference: '68 O.S. 2357.43(B): twenty percent of the federal credit for child care expenses'
+  reference: '68 O.S. 2357(B)(2): twenty percent of the federal credit for child care expenses'
 cdctc_refundable:
   value: 0
-  reference: '68 O.S. 2357.43: nonrefundable in every year'
+  reference: '68 O.S. 2357(B)(2): nonrefundable in every year'
 cdctc_cap_thresh:
   value: 100000
-  reference: '68 O.S. 2357.43(C), the same $100,000 federal-AGI cliff that applies to the child-credit leg'
+  reference: '68 O.S. 2357(B)(2), the same $100,000 federal-AGI cliff that applies to the child-credit leg'
 cdctc_cap_amount:
   value: 0
   reference: 'Zero above the threshold -- with cdctc_cap_po_rate also zero this is a cliff, not a phase-out, matching the statute'

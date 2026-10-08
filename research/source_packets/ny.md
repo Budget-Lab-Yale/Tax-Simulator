@@ -2,7 +2,7 @@
 
 State: `NY`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-13`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-07-13`
 
 > **Status note (as of 2026-07-13), kept from the packet's former Status line:**
 > baseline encoded; source packet normalized; record-level worksheet tests complete
@@ -45,6 +45,10 @@ Last updated: `2026-07-13`
 - Household-credit reduction of state EITC and Empire State child credit.
 - Charitable-only itemization and full recapture.
 - Enacted 2026 child-credit schedule.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Tax Law 606(c)(1) (pre-2026 text): a percentage of the section 21 credit "without regard to whether the taxpayer in fact claimed the credit"; IT-216 line 11 is "your eligible federal child and dependent care credit before any federal limitation", computed with NY's own expense caps ($7,500 / $8,500 / $9,000 for 3 / 4 / 5+ persons from TY2018); TY2021 decoupled from ARPA. Now `cdctc_fed_base` = 2 (own recomputation) with the federal decimal for TY2017-2025 and the existing 2026 own-rate parameters year-keyed after it. Had taken shares of the CLAIMED federal credit.
 
 ## Known differences
 

@@ -2,7 +2,7 @@
 
 State: `PA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-23`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-07-23`
 
 > **Status note (as of 2026-07-23), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -65,6 +65,10 @@ Full research notes with per-year citations: [research/raw/pa_research_core.md](
   forgiveness; forgiveness step-down (80% cell verified against SP Table 1);
   forgiveness at the exact Table 2 limit with exempt-interest additions;
   CDCTC 100% vs 30% years; WPTC on/off across 2025/2024.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Schedule DC (2022-2025) reads Form 2441 line 9a, the tentative credit; the DOR's $180-$630 range for TY2022 confirms it (30% of the tentative $600-$2,100). Now `cdctc_fed_base` = 1; the header's known difference is resolved. TY2022 refundability confirmed by the DOR press release of 2023-03-21.
 
 ## Known differences
 

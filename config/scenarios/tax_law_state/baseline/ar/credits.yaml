@@ -35,7 +35,7 @@ cdctc_match:
     '2017': 0.20
     '2021': 0.0
     '2022': 0.20
-  reference: 'Form AR2441: the Arkansas child care credit is 20% of the federal child and dependent care credit. For TY2021 Arkansas did not adopt the ARPA expansion, so the credit is 20% of the federal credit RECOMPUTED under pre-ARPA rules, encoded below as an own-rate credit (cdctc_style 2). From TY2022 the federal credit is back on those rules and 20% of it as claimed is the same thing'
+  reference: 'Form AR2441: the Arkansas child care credit is 20% of the federal child and dependent care credit. For TY2021 Arkansas did not adopt the ARPA expansion, so the credit is 20% of the federal credit RECOMPUTED under pre-ARPA rules, encoded below as an own-rate credit (cdctc_style 2). From TY2022 the federal credit is back on those rules, and AR2441 takes 20% of it before any liability limit (cdctc_fed_base = 1)'
 cdctc_style:
   value:
     '2017': 0
@@ -71,6 +71,11 @@ cdctc_refundable:
   value: 0
   reference: 'The Arkansas child care credit is nonrefundable'
 
+cdctc_fed_base:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'TY2017-2020 booklets: "twenty percent (20%) of the amount allowed on your federal return" (claimed). From TY2021 Form AR2441 recomputes the credit itself -- capped expenses, earned income, the federal-AGI decimal, times .20 -- with no tax-liability limit; TY2021 is the pre-ARPA own-rate credit (cdctc_style 2) and TY2022+ equals 20% of the tentative federal credit, since the federal formula is pre-ARPA again. Encoded 2026-10-07: TY2022+ had used the claimed credit'
 eitc_match:
   value: 0
   reference: 'Arkansas has NO state earned income credit: zero hits across all nine booklets and no line on Form AR1000TC. Stated explicitly to record the verified negative'
@@ -126,6 +131,8 @@ stepcred2_joint_mode:
   reference: 'Filing status 2: "Find your net taxable income in the table below ... Double the credit from line 2"'
 
 documented_not_modeled:
+  early_childhood_program_credit:
+    reference: 'AR1000F payments section (line 41 in 2017, line 43 from about 2019): a REFUNDABLE Early Childhood Program Credit of 20% of the federal credit for a child in an approved early-childhood facility; lines 35 and 43 together may not exceed the AR2441 amount. Facility approval is unobservable, so it is not modeled [understates refunds for such families]. Documented 2026-10-07'
   deaf_and_head_of_household_credits:
     reference: 'Line 7A grants an additional personal credit for deafness, and another where the filing status is head of household or surviving spouse. Deafness is not a model input, and the head-of-household add-on has no place in the per-taxpayer/aged/blind/dependent structure the machinery carries [understates credits by $29 per affected return]'
   developmental_disabilities_credit:

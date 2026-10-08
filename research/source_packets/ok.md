@@ -2,7 +2,7 @@
 
 State: `OK`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-13`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-13`
 
 > **Status note (as of 2026-08-13), kept from the packet's former Status line:**
 > ENCODED 2026-08-13 (baseline/ok/, tests OK-1..OK-9); cross-model not yet run
@@ -162,6 +162,10 @@ number, the fifth increment, from $2,400 to $4,600. Note the married column is
 3. **Per-person retirement caps pooled**: `st_sub_pens_raw` pools cap1 + cap2
    at unit level, so a one-pension couple can reach $20,000 where OK allows
    $10,000. Same limitation DE documents.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Child care / child tax credit cite corrected to 68 O.S. 2357(B)(2) (2357.43 is the EITC section). The base is the claimed federal credit ("Your allowed federal credit cannot exceed the amount of your federal tax", Form 511 2017-2020), as encoded.
 
 ## Known differences (direction and magnitude)
 

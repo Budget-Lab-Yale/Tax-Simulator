@@ -134,6 +134,34 @@ cdctc_refundable:
   value: 0
   reference: 'FTB 3506: nonrefundable for taxable years beginning on or after January 1, 2011 (R&TC 17052.6)'
 
+cdctc_fed_base:
+  value: 2
+  reference: 'FTB 3506 (2017-2025) computes its own base: expenses up to $3,000 / $6,000, limited by earned income, times the federal decimal on federal AGI (line 8), before the line 9 percentage chart -- with no federal tax-liability limit. TY2021 instructions: "CA law does not conform to the changes under the ARPA", so the pre-ARPA formula applies that year too. Encoded 2026-10-07: had taken the chart percentage of the CLAIMED federal credit (zero for families with no federal tax; the ARPA credit in 2021)'
+cdctc_rate_max:
+  value: 0.35
+  reference: 'FTB 3506: the federal decimal, .35 at federal AGI of $15,000 or less (pre-ARPA IRC 21(a)(2))'
+cdctc_rate_floor:
+  value: 0.20
+  reference: 'FTB 3506: .20 over $43,000'
+cdctc_rate_po_start:
+  value: 15000
+  reference: 'FTB 3506: the decimal falls above $15,000'
+cdctc_rate_po_step:
+  value: 2000
+  reference: 'FTB 3506: .01 per $2,000 band or fraction'
+cdctc_rate_po_per_1k:
+  value: 0.01
+  reference: 'Read as the per-step decrement because a step is encoded'
+cdctc_rate_income_base:
+  value: 1
+  reference: 'FTB 3506: the decimal is read on federal AGI'
+cdctc_expense_ei_limit:
+  value: 1
+  reference: 'FTB 3506: expenses limited to the lower-earning spouse''s earned income (IRC 21(d))'
+cdctc_expense_caps:
+  value:
+    '2017': [3000.0, 6000.0, 6000.0, 6000.0, 6000.0]
+  reference: 'FTB 3506: $3,000 for one qualifying person, $6,000 for two or more, all years including 2021'
 # The California EITC is its own earned-income schedule rather than a match
 # of federal EITC. Style 2 selects the annual $50 FTB 3514 tables from
 # credit_tables.csv, including the FTB safe-harbor rule for a second AGI lookup.

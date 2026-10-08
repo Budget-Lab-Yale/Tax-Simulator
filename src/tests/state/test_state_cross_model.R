@@ -931,7 +931,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # state calculators test (st_eitc_inv_inc): TAXSIM's Minnesota WFC skips
     # that test in 2019-2020 (T32). se1/se2 are each spouse's self-employment
     # income: TAXSIM's Minnesota marriage credit pools business income across
-    # the spouses instead of crediting it to the one who earned it (T33)
+    # the spouses instead of crediting it to the one who earned it (T33).
+    # cdctc_shortfall is the part of the tentative federal care credit the
+    # federal tax-liability limit removes: TAXSIM's Nebraska low-income care
+    # credit applies that limit where the statute does not (T34)
     ours = ours %>%
       left_join(sampled %>%
                   mutate(n_dep_ge18 = (!is.na(dep_age1) & dep_age1 >= 18) +
@@ -950,6 +953,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          xw_pe_passthru_misc = part_scorp - part_se +
                                                estate - estate_loss +
                                                other_inc + other_gains,
+                         cdctc_shortfall = cdctc_potential - cdctc_nonref -
+                                           cdctc_ref,
                          eitc_inv_inc = st_eitc_inv_inc(
                            pick(txbl_int, exempt_int, div_ord, div_pref,
                                 txbl_kg, sch_e, part_scorp))) %>%
@@ -960,7 +965,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          itemizing, n_dep_ge18, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
-                         xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2),
+                         xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2,
+                         cdctc_shortfall),
                 by = 'id')
 
     for (model in yr_models) {

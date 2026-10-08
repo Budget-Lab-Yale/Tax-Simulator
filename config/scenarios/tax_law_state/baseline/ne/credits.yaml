@@ -57,12 +57,17 @@ cdctc_share_end:
   reference: 'Value at each band''s upper bound: the ramp ends at 0.30, which is the state decimal for the $28,000-$29,000 band'
 cdctc_refundable:
   value: 1
-  reference: 'DECISION D2. The refundability flag is single but Nebraska''s credit is refundable at or below $29,000 and nonrefundable above it. Refundable is the smaller error BY FAR: making it nonrefundable would zero the low-income credit for exactly the population it exists to serve, since the per-exemption credit already drives Nebraska tax to zero up to roughly $30,000-$45,000 of AGI. See documented_not_modeled for the cost of this choice'
+  reference: 'Refundable at or below $29,000 only (cdctc_ref_agi_limit). Superseded 2026-10-07 -- formerly DECISION D2. The refundability flag is single but Nebraska''s credit is refundable at or below $29,000 and nonrefundable above it. Refundable is the smaller error BY FAR: making it nonrefundable would zero the low-income credit for exactly the population it exists to serve, since the per-exemption credit already drives Nebraska tax to zero up to roughly $30,000-$45,000 of AGI. See documented_not_modeled for the cost of this choice'
 
+cdctc_fed_base:
+  value: 1
+  reference: 'Neb. Rev. Stat. 77-2715.07(2): at or below $29,000 of federal AGI, "a refundable credit equal to a percentage of the federal credit allowable under section 21 ... whether or not the federal credit was limited by the federal tax liability"; Form 2441N lines 10-11 compute it from capped expenses x the federal decimal x the state decimal (the tentative federal credit; ARPA $8,000 / $16,000 and .50 in 2021). Above $29,000 the base switches to the claimed credit (cdctc_fed_base_switch_income). Encoded 2026-10-07; resolves DECISION D1'
+cdctc_fed_base_switch_income:
+  value: 29000
+  reference: '77-2715.07(2): above $29,000 of federal AGI, "a nonrefundable credit equal to twenty-five percent of the federal credit allowed"; 1040N line 23: "Multiply the amount on line 2 of Schedule 3, Federal Form 1040 by 25%" (the claimed credit)'
+cdctc_ref_agi_limit:
+  value: 29000
+  reference: '77-2715.07(2): refundable at or below $29,000 of federal AGI, nonrefundable above. Encoded 2026-10-07 with the per-tier refundability machinery added for Louisiana; resolves DECISION D2 (which had made both tiers refundable for want of it)'
 documented_not_modeled:
-  cdctc_refundable_base_is_liability_limited:
-    reference: 'DECISION D1. Nebraska''s Form 2441N recomputes the low-income credit from EXPENSES (capped expenses x federal decimal x state decimal), while the share table multiplies the LIABILITY-LIMITED federal credit. At or below $29,000 of AGI federal liability is often zero, so the model returns zero or a fraction of a credit worth up to 100% of 35% of $3,000/$6,000 of expenses [UNDERSTATES Nebraska refunds by up to about $1,050 for one child and $2,100 for two or more. Worked case NE-3 shows a $295.12 gap on a single return]. Not fixable with existing parameters: it needs a pre-limitation federal CDCTC. If the module ever exposes one, NEBRASKA SHOULD BE REVISITED FIRST among all states'
-  cdctc_refundability_above_29000:
-    reference: 'DECISION D2, the cost of the choice made above: the 25% match above $29,000 is made refundable where the form makes it nonrefundable [understates liability by up to roughly $260-$525 for units whose Nebraska tax falls below 25% of the federal credit -- a real population, since the per-exemption credit zeroes Nebraska tax up to roughly $30,000-$45,000 of AGI]. Fixable only with per-band refundability'
   mfs_credit_ineligibility:
     reference: 'CDCC only: taxpayers who file jointly federally but separately in Nebraska cannot claim the child/dependent care credit (1040N booklet line 40, TY2024), a joint-federal/separate-state case the model does not build. The EITC is NOT barred: "If you file a Nebraska married, filing separately return, your ability to claim this credit depends on whether you are allowed the federal EIC on your federal married, filing separately return" (1040N booklets TY2021 line 35, TY2024 line 42), so it follows the federal credit (IRC 32(d)(2) from 2021). Corrected 2026-10-07: this note had said the EITC was barred'

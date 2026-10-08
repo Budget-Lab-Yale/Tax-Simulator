@@ -213,10 +213,11 @@ test_state_calc = function() {
 
   # NY-5: 2024 dependent-care credit (IT-216 Worksheet 1 share table): at
   # NYAGI 45,000 the share segment [40,000, 50,000) is flat at 1.00, so the
-  # NY credit equals the federal credit (500)
+  # NY credit equals its own federal-formula base, .20 x 2,500 = 500 (IT-216
+  # line 11, before any federal limitation)
   run_case('NY', 2024,
            list(agi = 45000, n_dep = 1, dep_age1 = 4, cdctc_nonref = 500,
-                care_exp = 2500),
+                wages1 = 45000, ei1 = 45000, care_exp = 2500),
            expect = list(st_cdctc = 500),
            label = 'NY-5 dependent-care share table')
 
@@ -514,6 +515,16 @@ test_state_calc = function() {
            expect = list(st_cdctc = 120, liab_st_iit = 1473.60 - 120),
            label = 'KY-10 CDCTC 20% match')
 
+  # KY-11: TY2021 Form 2441-K: pre-ARPA recomputation limited by federal tax.
+  # Single, one child, wages = AGI = 30,000, expenses 3,000, ARPA federal
+  # credit 1,500, federal tax 500: min(.27 x 3,000 = 810, 500) x 20% = 100
+  run_case('KY', 2021,
+           list(agi = 30000, wages1 = 30000, ei1 = 30000, n_dep = 1,
+                dep_age1 = 4, care_exp = 3000, cdctc_ref = 1500,
+                liab_bc = 500),
+           expect = list(st_cdctc = 100),
+           label = 'KY-11 TY2021 Form 2441-K pre-ARPA, liability-limited')
+
   # KY-11: 2017 combined-return itemizers: wages 60,000/40,000, federal
   # itemized 20,000 divided by income share (Schedule A rule): columns
   # (60,000 - 12,000) and (40,000 - 8,000) -> 2,600 + 1,672 = 4,272 <
@@ -807,24 +818,45 @@ test_state_calc = function() {
 
   # CA-17: FTB 3506 child/dependent care credit: 43% of the federal CDCTC
   # in the $40,001-70,000 federal-AGI tier, nonrefundable. 2023 single,
-  # AGI 67,868, federal credit 600: st_cdctc = 258. Schedule X tax on
+  # AGI 67,868: the FTB 3506 base .20 x 3,000 = 600, x 43% = 258. Schedule X tax on
   # 62,505 (std 5,363) = 2,541.80, less exemption credits (144 personal +
   # 446 dependent) and the 258 care credit.
   run_case('CA', 2023,
-           list(agi = 67868, n_dep = 1, dep_age1 = 6, care_exp = 5000,
+           list(agi = 67868, wages1 = 67868, ei1 = 67868, n_dep = 1, dep_age1 = 6,
+                care_exp = 5000,
                 cdctc_nonref = 600),
            expect = list(st_cdctc = 258, liab_st_iit = 1693.80),
            label = 'CA-17 CDCTC 43% tier, nonrefundable')
 
+  # CA-17d: FTB 3506 builds its own base, so a family with no federal tax
+  # still gets the credit. 2023 single, one child aged 6, wages = AGI =
+  # 20,000, expenses 3,000, no federal credit claimed: .32 x 3,000 = 960
+  # (19,000-21,000 band), x 50% = 480
+  run_case('CA', 2023,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                dep_age1 = 6, care_exp = 3000, cdctc_nonref = 0),
+           expect = list(st_cdctc = 480),
+           label = 'CA-17d CDCTC with no federal tax')
+  # CA-17e: CA did not conform to ARPA in TY2021 (FTB 3506 instructions).
+  # AGI 30,000, expenses 8,000, ARPA federal credit 4,000: the pre-ARPA base
+  # .27 x 3,000 = 810, x 50% = 405
+  run_case('CA', 2021,
+           list(agi = 30000, wages1 = 30000, ei1 = 30000, n_dep = 1,
+                dep_age1 = 6, care_exp = 8000, cdctc_ref = 4000),
+           expect = list(st_cdctc = 405),
+           label = 'CA-17e CDCTC pre-ARPA in TY2021')
+
   # CA-17b: tier edges -- 34% through exactly $100,000 of federal AGI,
   # zero above.
   run_case('CA', 2023,
-           list(agi = 100000, n_dep = 1, dep_age1 = 6, care_exp = 5000,
+           list(agi = 100000, wages1 = 100000, ei1 = 100000, n_dep = 1, dep_age1 = 6,
+                care_exp = 5000,
                 cdctc_nonref = 600),
            expect = list(st_cdctc = 204),
            label = 'CA-17b CDCTC 34% tier upper edge')
   run_case('CA', 2023,
-           list(agi = 100001, n_dep = 1, dep_age1 = 6, care_exp = 5000,
+           list(agi = 100001, wages1 = 100001, ei1 = 100001, n_dep = 1, dep_age1 = 6,
+                care_exp = 5000,
                 cdctc_nonref = 600),
            expect = list(st_cdctc = 0),
            label = 'CA-17c CDCTC zero above $100,000')
@@ -1548,10 +1580,23 @@ test_state_calc = function() {
   # Liab = 437.725 - 300 - 40 = 97.725
   run_case('OH', 2017,
            list(agi = 30000, filing_status = 4, n_dep = 1, dep_age1 = 4,
-                care_exp = 3000, cdctc_nonref = 1200),
+                care_exp = 3000, cdctc_nonref = 1200, cdctc_potential = 1200),
            expect = list(st_cdctc = 300, st_exempt_credit = 40,
                          liab_st_iit = 97.725),
            label = 'OH-9 2017 CDCTC tiers + $20 credit')
+
+  # OH-9b/9c: TY2019 tiers: below $20,000 100% of the TENTATIVE credit (2441
+  # line 9); $20,000-$40,000 25% of the CLAIMED credit (line 11)
+  run_case('OH', 2019,
+           list(agi = 15000, filing_status = 4, n_dep = 1, dep_age1 = 4,
+                care_exp = 3000, cdctc_nonref = 0, cdctc_potential = 1050),
+           expect = list(st_cdctc = 1050),
+           label = 'OH-9b care credit below 20,000 on the tentative base')
+  run_case('OH', 2019,
+           list(agi = 30000, filing_status = 4, n_dep = 1, dep_age1 = 4,
+                care_exp = 3000, cdctc_nonref = 200, cdctc_potential = 810),
+           expect = list(st_cdctc = 50),
+           label = 'OH-9c care credit 20,000-40,000 on the claimed base')
 
   #--------------------------------------------------------------------------
   # Pennsylvania (PA-40) -- own-base state: eight income classes, class-level
@@ -1617,13 +1662,13 @@ test_state_calc = function() {
   run_case('PA', 2023,
            list(filing_status = 2, age2 = 40, n_dep = 1, dep_age1 = 4,
                 wages1 = 25000, wages2 = 15000, care_exp = 3000,
-                cdctc_nonref = 600),
+                cdctc_nonref = 600, cdctc_potential = 600),
            expect = list(st_cdctc = 600, liab_st_iit = 1228 - 600),
            label = 'PA-6a 2023 CDCTC 100%')
   run_case('PA', 2022,
            list(filing_status = 2, age2 = 40, n_dep = 1, dep_age1 = 4,
                 wages1 = 25000, wages2 = 15000, care_exp = 3000,
-                cdctc_nonref = 600),
+                cdctc_nonref = 600, cdctc_potential = 600),
            expect = list(st_cdctc = 180, liab_st_iit = 1228 - 180),
            label = 'PA-6b 2022 CDCTC 30%')
 
@@ -2232,9 +2277,18 @@ test_state_calc = function() {
   # CDCTC, nonrefundable. Federal credit 600 -> WI 300
   run_case('WI', 2022,
            list(agi = 40000, wages1 = 40000, ei1 = 40000, n_dep = 1,
-                dep_age1 = 4, cdctc_nonref = 600, care_exp = 3000),
+                dep_age1 = 4, cdctc_nonref = 600, cdctc_potential = 600, care_exp = 3000),
            expect = list(st_cdctc = 300),
            label = 'WI-8 dependent-care 50% match')
+
+  # WI-9: TY2024 Schedule WI-2441: 100% of a federal-formula credit on up to
+  # $10,000 of expenses (one child). Wages = AGI = 40,000, expenses 12,000:
+  # .22 x 10,000 = 2,200
+  run_case('WI', 2024,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, n_dep = 1,
+                dep_age1 = 4, care_exp = 12000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 2200),
+           label = 'WI-9 2024 Schedule WI-2441 own computation')
 
   # WI-9: net capital loss addback (71.05(10)(c)): the federal return
   # deducts the full $3,000 net loss; WI allows $500/year through 2022,
@@ -3234,10 +3288,19 @@ test_state_calc = function() {
   # 27,800 gives 400 + 6% x 17,800 = 1,468 of tax, which absorbs the 192
   run_case('DC', 2019,
            list(agi = 40000, wages1 = 40000, ei1 = 40000, n_dep = 1,
-                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600),
+                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600, cdctc_potential = 600),
            expect = list(st_cdctc = 192, st_txbl_inc = 27800,
                          liab_st_iit = 1276.00),
            label = 'DC-9 2019 care credit at 32%, nonrefundable')
+
+  # DC-9b: 32% of the federal credit "regardless of the amount ... actually
+  # used to offset federal tax liability": tentative 600, claimed 0 -> 192
+  run_case('DC', 2019,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 0,
+                cdctc_potential = 600),
+           expect = list(st_cdctc = 192),
+           label = 'DC-9b care credit on the tentative federal credit')
 
   # DC-10 state income tax refunds taxed federally come back out of the DC
   # base ("Taxable refunds, credits or offsets of state and local income
@@ -3326,7 +3389,7 @@ test_state_calc = function() {
   # share family
   ne_care = function(agi) {
     list(agi = agi, wages1 = agi, ei1 = agi, n_dep = 1, dep_age1 = 4,
-         care_exp = 3000, cdctc_nonref = 1000)
+         care_exp = 3000, cdctc_nonref = 1000, cdctc_potential = 1000)
   }
   run_case('NE', 2019, ne_care(20000),
            expect = list(st_cdctc = 1000),
@@ -3334,6 +3397,14 @@ test_state_calc = function() {
   run_case('NE', 2019, ne_care(35000),
            expect = list(st_cdctc = 250),
            label = 'NE-5b care credit at the 25% match above 29,000')
+  # NE-5c/5d: at or below $29,000 Form 2441N works from the TENTATIVE federal
+  # credit (no federal tax needed); above it the claimed credit governs
+  run_case('NE', 2019, modifyList(ne_care(20000), list(cdctc_nonref = 0)),
+           expect = list(st_cdctc = 1000),
+           label = 'NE-5c care credit on the tentative base below 29,000')
+  run_case('NE', 2019, modifyList(ne_care(35000), list(cdctc_nonref = 0)),
+           expect = list(st_cdctc = 0),
+           label = 'NE-5d care credit on the claimed base above 29,000')
 
   # NE-6 the per-exemption credit is NONREFUNDABLE. A single filer at AGI
   # 13,000 in TY2024 has 4,650 of taxable income and 122.27 of tax, which the
@@ -3815,7 +3886,7 @@ run_case('AR', 2024,
   # 2024 single, wages 40,000, federal credit 600 -> 120 of Arkansas credit on
   # top of the $29 personal credit
   run_case('AR', 2024,
-           list(agi = 40000, wages1 = 40000, ei1 = 40000, cdctc_nonref = 600),
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, cdctc_nonref = 600, cdctc_potential = 600),
            expect = list(st_txbl_inc = 37590, st_cdctc = 120,
                          liab_st_iit = 1056.15 - 149),
            label = 'AR-7 2024 child care credit at 20% of federal')
@@ -4330,7 +4401,7 @@ run_case('AR', 2024,
   # federal credit for a filer in the 25,000-34,999 band
   run_case('IA', 2022,
            list(agi = 30000, wages1 = 30000, ei1 = 30000, n_dep = 1,
-                dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600),
+                dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600, cdctc_potential = 600),
            expect = list(st_cdctc = 300),
            label = 'IA-12 2022 care credit at 50% of federal')
 
@@ -4339,7 +4410,8 @@ run_case('AR', 2024,
   # filer at 50,000 of income gets nothing in TY2020 and 30% of the federal
   # credit from TY2021
   cdc_unit = list(agi = 50000, wages1 = 50000, ei1 = 50000, n_dep = 1,
-                  dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600)
+                  dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600,
+                  cdctc_potential = 600)
   run_case('IA', 2020, cdc_unit,
            expect = list(st_cdctc = 0),
            label = 'IA-13a 2020 care credit cut off above 45,000')
@@ -5554,8 +5626,9 @@ run_case('AR', 2024,
   # MACH-9: child and care credits as ALTERNATIVES (OK 68 O.S. 2357.43 grants
   # the greater of 20% of the federal CDCC and 5% of the federal CTC). Same unit
   # in both directions, so the election is shown choosing each leg in turn.
-  # NY 2025's style-2 CTC pays 1,330 against a 1,200 care credit, so the care
-  # leg is zeroed
+  # NY 2025's style-2 CTC pays 1,330 against a 1,320 care credit (the IT-216
+  # base: .22 x 6,000 of expenses at federal AGI 40,000, share 1.00), so the
+  # care leg is zeroed
   greater_of_unit = list(filing_status = 2, age2 = 40, agi = 40000,
                          wages1 = 25000, ei1 = 25000, wages2 = 15000,
                          ei2 = 15000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 2,
@@ -5571,7 +5644,7 @@ run_case('AR', 2024,
   # reported as claimed, which is what lets the downstream refundable /
   # nonrefundable split stay ignorant of the election
   run_case('NY', 2017, greater_of_unit,
-           expect = list(st_ctc = 0, st_cdctc = 1200),
+           expect = list(st_ctc = 0, st_cdctc = 1320),
            law_overrides = list(st_credits.ctc_cdctc_greater_of = 1),
            label = 'MACH-9b greater-of keeps the larger care credit')
 
@@ -5865,7 +5938,7 @@ st_test_unit = function(overrides = list()) {
     casualty_item_ded = 0, char_item_ded = 0, misc_item_ded = 0,
     other_item_ded = 0, std_ded = 0,
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
-    cdctc_ref = 0, care_exp = 0, ui = 0,
+    cdctc_ref = 0, cdctc_potential = 0, care_exp = 0, ui = 0, ftc = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
     liab_pr_ee = 0, liab_seca = 0, liab_seca_er = 0, liab_add_med = 0, liab_niit = 0, excess_ptc = 0,
     rebate = 0

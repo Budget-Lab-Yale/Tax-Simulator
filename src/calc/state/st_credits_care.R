@@ -9,6 +9,9 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_match',
   'st_credits.cdctc_refundable',
   'st_credits.cdctc_style',
+  'st_credits.cdctc_fed_base',
+  'st_credits.cdctc_base_liab_limit',
+  'st_credits.cdctc_fed_base_switch_income',
   'st_credits.cdctc_rate_max',
   'st_credits.cdctc_rate_floor',
   'st_credits.cdctc_rate_po_per_1k',
@@ -105,15 +108,45 @@ st_credits_care = function(tax_unit) {
       tax_unit$agi > tax_unit$st_credits.cdctc_style_switch_agi,
     1, tax_unit$st_credits.cdctc_style
   )
+  # The federal credit a share-based state credit starts from
+  # (cdctc_fed_base):
+  #   0 = as claimed (Form 2441 line 11, capped at federal tax; default)
+  #   1 = the tentative federal credit before that cap (2441 line 9/9c;
+  #       cdctc_potential), which pays families with no federal tax
+  #   2 = the state's own recomputation of the federal formula: capped
+  #       expenses times the cdctc_rate_* decimal (CA FTB 3506 line 8, NY
+  #       IT-216 line 11 with its own caps, WI 2024+ Schedule WI-2441, and
+  #       the pre-ARPA TY2021 recomputations of CA/NY/KY)
+  # cdctc_base_liab_limit = 1 caps the base at federal tax less the foreign
+  # tax credit (KY Form 2441-K line 10, TY2021). A tiered credit uses the
+  # chosen base only at or below cdctc_fed_base_switch_income (measured on
+  # the share-table income base) and the claimed credit above it (NE Form
+  # 2441N: at or below $29,000 federal AGI; OH: below $20,000)
+  cdctc_claimed = tax_unit$cdctc_nonref + tax_unit$cdctc_ref
+  cdctc_own = if_else(n_care_v > 0,
+                      cdctc_rate2 * pmin(tax_unit$care_exp, cdctc_cap_vec,
+                                         cdctc_ei_cap),
+                      0)
+  cdctc_fed = case_when(
+    tax_unit$st_credits.cdctc_fed_base == 1 ~ tax_unit$cdctc_potential,
+    tax_unit$st_credits.cdctc_fed_base == 2 ~ cdctc_own,
+    TRUE ~ cdctc_claimed
+  )
+  cdctc_fed = if_else(tax_unit$st_credits.cdctc_base_liab_limit == 1,
+                      pmin(cdctc_fed, pmax(0, tax_unit$liab_bc - tax_unit$ftc)),
+                      cdctc_fed)
+  cdctc_fed = if_else(
+    st_income_base(tax_unit, tax_unit$st_credits.cdctc_share_income_base) >
+      tax_unit$st_credits.cdctc_fed_base_switch_income,
+    cdctc_claimed, cdctc_fed
+  )
   cdctc_ny = case_when(
     cdctc_style_v == 1 ~
-      cdctc_ny_share * (tax_unit$cdctc_nonref + tax_unit$cdctc_ref),
-    cdctc_style_v == 2 & n_care_v > 0 ~
-      cdctc_rate2 * pmin(tax_unit$care_exp, cdctc_cap_vec, cdctc_ei_cap),
+      cdctc_ny_share * cdctc_fed,
+    cdctc_style_v == 2 ~ cdctc_own,
     TRUE ~ 0
   )
-  st_cdctc = tax_unit$st_credits.cdctc_match *
-               (tax_unit$cdctc_nonref + tax_unit$cdctc_ref) + cdctc_ny
+  st_cdctc = tax_unit$st_credits.cdctc_match * cdctc_fed + cdctc_ny
 
   # Income-capped variant (MN M1CD): above the threshold, the credit is
   # limited to cap_amount per qualifying person (up to two) less po_rate

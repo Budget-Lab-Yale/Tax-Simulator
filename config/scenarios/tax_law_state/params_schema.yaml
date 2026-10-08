@@ -573,6 +573,13 @@ scalars:
   st_credits.ctc_cdctc_greater_of: 0
   st_credits.cdctc_refundable: 1
   st_credits.cdctc_style: 0
+  # Federal care credit a share-based state credit starts from: 0 = as claimed
+  # (Form 2441 line 11, capped at federal tax), 1 = the tentative credit
+  # before that cap (cdctc_potential), 2 = the state's own recomputation of
+  # the federal formula (cdctc_rate_* on cdctc_expense_caps)
+  st_credits.cdctc_fed_base: 0
+  st_credits.cdctc_base_liab_limit: 0          # 1 = cap the base at federal tax less FTC (KY 2441-K 2021)
+  st_credits.cdctc_fed_base_switch_income: .inf  # above this (share-table income base), use the claimed credit
   st_credits.cdctc_rate_max: 0
   st_credits.cdctc_rate_floor: 0
   st_credits.cdctc_rate_po_per_1k: 0

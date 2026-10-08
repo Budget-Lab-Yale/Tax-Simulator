@@ -3,7 +3,7 @@
 #-------------------------------------------------------------------
 
 # Set return variables for function
-return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref')
+return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref', 'cdctc_potential')
 
 
 calc_cdctc = function(tax_unit, fill_missings = F) {
@@ -22,6 +22,10 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
   #                         the CDCTC is refundable, this variable is 0 for all
   #  - cdctc_ref (dbl)    : refundable component of CDCTC; if law specifies the
   #                         CDCTC is nonrefundable, this variable is 0 for all
+  #  - cdctc_potential (dbl) : the credit before the tax-liability limit (Form
+  #                            2441's tentative credit), after take-up; states
+  #                            that match the federal FORMULA rather than the
+  #                            credit claimed read this
   #----------------------------------------------------------------------------
   
   req_vars = c(
@@ -161,7 +165,8 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       
       # Model take-up: 90% calibrated to target 2019 actual CDCTC
       cdctc_nonref = cdctc_nonref * (r.cdctc_takeup < 0.9),
-      cdctc_ref    = cdctc_ref    * (r.cdctc_takeup < 0.9)
+      cdctc_ref    = cdctc_ref    * (r.cdctc_takeup < 0.9),
+      cdctc_potential = (young_cdctc + old_cdctc) * (r.cdctc_takeup < 0.9)
     
     ) %>% 
     

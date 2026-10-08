@@ -2,7 +2,7 @@
 
 State: `NE`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-13`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-10-07` (State EITC cross-check); previous: `2026-08-13`
 
 > **Status note (as of 2026-08-13), kept from the packet's former Status line:**
 > ENCODED 2026-08-13 (baseline/ne/, tests NE-1..NE-6b); cross-model not yet run
@@ -182,6 +182,10 @@ revisited first among all states**.
   threshold rule wins → `$460.82`. **A $4,000 AGI increase raises NE tax by
   $561.60 — a genuine cliff in the law, not an artifact.**
 - NE-5 the 2017 Additional Tax identity above.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. 77-2715.07(2): at or below $29,000 of federal AGI the credit is a REFUNDABLE share of the federal credit "whether or not the federal credit was limited by the federal tax liability" (Form 2441N recomputes it from expenses); above $29,000 a NONREFUNDABLE 25% of the federal credit allowed (1040N: Schedule 3 line 2). Now `cdctc_fed_base` = 1 with `cdctc_fed_base_switch_income` = 29000 and `cdctc_ref_agi_limit` = 29000. This resolves DECISIONS D1 (liability-limited base) and D2 (one refundability flag for both tiers), which had been forced by missing machinery. Tests NE-5c/5d.
 
 ## State EITC cross-check, 2026-10-07
 

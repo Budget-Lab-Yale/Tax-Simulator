@@ -165,3 +165,11 @@ cdctc_share_income_base:
 cdctc_refundable:
   value: 0
   reference: 'ORC 5747.054: nonrefundable'
+cdctc_fed_base:
+  value: 1
+  reference: 'ORC 5747.054: the credit is a share of the federal credit "for which the taxpayer is eligible ... in any case without regard to any limitation imposed by section 26" (the tax-liability limit). Forms: TY2017 both tiers "Enter the amount from federal 2441, line 9" (tentative); TY2018-2020 and 2022-2025 below $20,000 "federal form 2441, line 9" / "line 9c" (tentative) but $20,000-$40,000 "25% of the amount on your federal form 2441, line 11" (claimed); TY2021 "line 10" if refundable, else "line 11". The middle tier follows the forms (claimed) via cdctc_fed_base_switch_income, though the statute reads tentative. Encoded 2026-10-07'
+cdctc_fed_base_switch_income:
+  value:
+    '2017': .inf
+    '2018': 19999.99
+  reference: 'Below $20,000 of the tier income the tentative credit; at or above it the claimed credit (TY2018+ forms); TY2017 tentative throughout'

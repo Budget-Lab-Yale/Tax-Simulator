@@ -127,9 +127,14 @@ cdctc_style:
     '2017': 1
     '2026': 2
   reference: 'IT-216-I 2021/2024; Tax Law 606(c) current text (FY2027 budget restructure)'
+cdctc_fed_base:
+  value: 2
+  reference: 'Tax Law 606(c)(1) (text for years before 2026): the applicable percentage "of the credit allowable under section twenty-one ... (without regard to whether the taxpayer in fact claimed the credit)"; IT-216-I 2017 line 11: "your eligible federal child and dependent care credit before any federal limitation" (capped expenses x the federal decimal). TY2021: "NYS has decoupled from federal changes made to the Internal Revenue Code after March 1, 2020" (IT-216-I 2021), so the pre-ARPA formula applies. Read by the 2017-2025 share table; the 2026+ own-rate credit (style 2) uses the same own computation with the 2026 rates. Encoded 2026-10-07: had taken shares of the CLAIMED federal credit'
 cdctc_expense_caps:
-  value: [3000, 6000, 7500, 8500, 9000]
-  reference: 'IT-216-I Worksheet 1 line 12 (1/2/3/4/5+ qualifying persons); unchanged incl. 2026+'
+  value:
+    '2017': [3000, 6000, 6000, 6000, 6000]
+    '2018': [3000, 6000, 7500, 8500, 9000]
+  reference: 'IT-216-I Worksheet 1 line 12 (1/2/3/4/5+ qualifying persons) from TY2018, unchanged incl. 2026+; TY2017 the federal $3,000 / $6,000 (IT-216 line 5)'
 cdctc_share_agi_bounds:
   value: [0, 25000, 40000, 50000, 65000, 150000]
   reference: 'IT-216-I 2024 p.7 limitation table (anchors; $200-step detail deferred)'
@@ -140,17 +145,38 @@ cdctc_share_end:
   value: [1.10, 1.00, 1.00, 0.60, 0.60, 0.20]
   reference: 'IT-216-I 2024 p.7 (share at upper bound of each segment)'
 cdctc_rate_max:
-  value: 0.55
-  reference: 'Tax Law 606(c) (2026+): 55% at NYAGI <= 15000'
+  value:
+    '2017': 0.35
+    '2026': 0.55
+  reference: 'TY2017-2025: the federal decimal (IT-216 line 10 table, .35 at federal AGI of $15,000 or less, pre-ARPA in 2021); Tax Law 606(c) (2026+): 55% at NYAGI <= 15000'
 cdctc_rate_floor:
-  value: 0.04
-  reference: 'Tax Law 606(c) (2026+): 4% floor (~NYAGI 219k)'
+  value:
+    '2017': 0.20
+    '2026': 0.04
+  reference: 'TY2017-2025: .20 over $43,000 (IT-216 table); Tax Law 606(c) (2026+): 4% floor (~NYAGI 219k)'
 cdctc_rate_po_per_1k:
-  value: 0.0025
-  reference: 'Tax Law 606(c) (2026+): 0.25pp per $1,000 over 15000'
+  value:
+    '2017': 0.01
+    '2026': 0.0025
+  reference: 'TY2017-2025: .01 per $2,000 step (per-step decrement, cdctc_rate_po_step); Tax Law 606(c) (2026+): 0.25pp per $1,000 over 15000, continuous'
 cdctc_rate_po_start:
   value: 15000
-  reference: 'Tax Law 606(c) (2026+)'
+  reference: 'IT-216 table (TY2017-2025) and Tax Law 606(c) (2026+): the rate falls above $15,000'
+cdctc_rate_po_step:
+  value:
+    '2017': 2000
+    '2026': .inf
+  reference: 'TY2017-2025: one hundredth per $2,000 band of federal AGI; 2026+ continuous'
+cdctc_rate_income_base:
+  value:
+    '2017': 1
+    '2026': 2
+  reference: 'TY2017-2025: the IT-216 decimal is read on federal AGI (recomputed FAGI in 2021, not modeled); 2026+: NYAGI'
+cdctc_expense_ei_limit:
+  value:
+    '2017': 1
+    '2026': 0
+  reference: 'TY2017-2025: IT-216 limits expenses to the lower earned income (the federal rule); 2026+ encoded without it, as before'
 
 # Documentation-only entries: transcribed from the forms for completeness but
 # NOT read by the calculator (the parser skips this block). Citations are

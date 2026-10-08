@@ -2,7 +2,7 @@
 
 State: `AR`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-18`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-18`
 
 ## Scope
 
@@ -142,6 +142,10 @@ of household with two dependents, exempt income counted toward the ceiling).
   on the qualified-individuals ceiling, and the TY2025 filing threshold for
   joint filers with two or more dependants prints $28,723 where the
   low-income table implies $29,723.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. TY2017-2020 the credit is 20% of "the amount allowed on your federal return" (claimed). From TY2021 Form AR2441 recomputes it with no federal tax-liability limit: pre-ARPA own-rate in TY2021 (already encoded), and TY2022+ now 20% of the tentative federal credit (`cdctc_fed_base` = 1; had used the claimed credit). The refundable Early Childhood Program Credit (payments section, approved facilities) is documented, not modeled.
 
 ## Known differences
 

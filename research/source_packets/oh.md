@@ -2,7 +2,7 @@
 
 State: `OH`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-22`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-22`
 
 > **Status note (as of 2026-08-11), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -144,6 +144,10 @@ Business income: taxable business income taxed at FLAT 3% all years (ORC
 - Retirement + senior credit case with the $100,000 MAGI-less-exemptions test.
 - BID: business income above/below $250,000; MAGI-based credit denial via addback.
 - 2017-18 EITC 50%-of-remaining-tax limitation above $20,000 tax base.
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. ORC 5747.054 bases both tiers on the federal credit "without regard to any limitation imposed by section 26", but the forms read Form 2441 line 9 / 9c (tentative) below $20,000 and line 11 (claimed) for $20,000-$40,000 from TY2018 (both tiers line 9 in TY2017; line 10 or 11 in TY2021). Encoded as the forms: `cdctc_fed_base` = 1 with `cdctc_fed_base_switch_income` = 19,999.99 from TY2018. The middle-tier statute/form conflict is recorded here. Tests OH-9b/9c.
 
 ## Known differences
 

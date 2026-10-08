@@ -106,6 +106,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'ctc_ref',           # (dbl)  federal CTC, refundable portion
     'cdctc_nonref',      # (dbl)  federal CDCTC, nonrefundable portion
     'cdctc_ref',         # (dbl)  federal CDCTC, refundable portion
+    'cdctc_potential',   # (dbl)  federal CDCTC before the tax-liability limit
+    'liab_bc',           # (dbl)  federal tax before credits (KY 2441-K liability limit)
+    'ftc',               # (dbl)  federal foreign tax credit (same limit)
     'care_exp',          # (dbl)  eligible dependent care expenses
     'kg_lt',             # (dbl)  net long-term capital gain (MT capital gains credit)
     'kg_st',             # (dbl)  net short-term capital gain (MT capital gains credit)

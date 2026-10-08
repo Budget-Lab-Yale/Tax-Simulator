@@ -71,6 +71,9 @@ cdctc_style:
 cdctc_refundable:
   value: 1
   reference: 'Iowa Code 422.12C(3): "Any credit in excess of the tax liability shall be refunded"'
+cdctc_fed_base:
+  value: 1
+  reference: 'Iowa Code 422.12C(1) (2017, 2021, 2025 editions): percentages of the section 21 credit "without regard to whether or not the federal credit was limited by the taxpayer''s federal tax liability". Expanded instructions: "line 9 of federal form 2441" (2017-2018), "line 10" (2021, the ARPA credit), "line 9c" (2022-2025). The TY2019-2020 worksheet says "line 11", contradicting the statute; the statute governs. Encoded 2026-10-07 (had been documented as gross_versus_limited_federal_care_credit)'
 cdctc_share_income_base:
   value:
     '2017': 2
@@ -129,8 +132,6 @@ documented_not_modeled:
     reference: 'Separately from the alternate tax, Iowa imposes no tax at all where net income is at or below $13,500 ($9,000 for other filers, $32,000 and $24,000 at 65 or older) and reduces tax so the taxpayer retains that much where it would otherwise dip below -- an automatic exemption, not an election, implemented for single filers on form 41-146. For every status that may use the alternate tax the alternate ceiling is far tighter and governs, so only the single-filer version is unencoded. It binds in a narrow band just above the threshold, and from TY2023 barely at all, since the embedded federal standard deduction leaves a filer at those income levels with little or no Iowa taxable income [understates the exemption for single filers within a few hundred dollars of the threshold]'
   dependent_filers_keep_the_personal_credit:
     reference: 'Iowa lets a dependent filing their own return claim the $40 personal credit even though they are claimed on someone else''s Iowa return. The generic exemption-credit machinery zeroes the taxpayer credit for dependent filers [understates the credit by $40 for dependent filers]'
-  gross_versus_limited_federal_care_credit:
-    reference: 'Iowa Code 422.12C(1) computes its percentage off the federal credit "without regard to whether or not the federal credit was limited by the taxpayer''s federal tax liability" -- the GROSS section 21 credit from Form 2441 line 9c. The model uses the federal credit as claimed, which for a filer with little federal tax is smaller [understates the Iowa credit for low-liability filers, the very group the 75% and 65% tiers target]'
   early_childhood_development_credit:
     reference: 'Iowa Code 422.12C(2): 25% of the first $1,000 paid per dependent aged 3 through 5 for early childhood development expenses, refundable, and MUTUALLY EXCLUSIVE with the child and dependent care credit -- the taxpayer takes whichever is better. Preschool and instructional-material spending is not a model input'
   tuition_and_textbook_credit:

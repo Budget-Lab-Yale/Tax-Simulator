@@ -2,7 +2,7 @@
 
 State: `WI`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-24`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-07-24`
 
 > **Status note (as of 2026-07-24), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -29,6 +29,10 @@ child count (new eitc_match_by_kids family); school property tax credit
 care subtraction 2017-21 then 50%/100% federal-credit match.
 
 ## Worksheet tests: WI-1..WI-7
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. TY2022-2023: Form 1 line 14 reads Form 2441 line 9c (tentative), now `cdctc_fed_base` = 1. TY2024+: Schedule WI-2441 computes 100% of a federal-formula credit on expenses up to $10,000 / $20,000 with no federal tax-liability limit (71.07(9g)), now `cdctc_fed_base` = 2 with those caps. Both had used the claimed federal credit. Test WI-9.
 
 ## Known differences
 

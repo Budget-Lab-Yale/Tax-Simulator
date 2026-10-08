@@ -2,7 +2,7 @@
 
 State: `DC`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-15`
+Last updated: `2026-10-08` (child care credit base); previous: `2026-08-15`
 
 > **Status note (as of 2026-08-15), kept from the packet's former Status line:**
 > ENCODED 2026-08-13 (baseline/dc/, tests DC-1..DC-10); cross-model TRIAGED 2026-08-15
@@ -147,6 +147,10 @@ read and identical to 2021), and its one apparent divergence -- the itemized
 limitation starting in 2021 -- is a coverage artifact, not a vintage claim
 (the 5%-over-$200,000 rule has been in force since 2011 and is printed in
 every 2017-2025 booklet). **The real risk in DC is entirely on our side.**
+
+## Child care credit base, 2026-10-08
+
+Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. D.C. Code 47-1806.04(c)(1): 32% of the federal credit "regardless of the amount of the credit actually used to offset federal tax liability"; D-40 reads Form 2441 line 9 (2017), line 10 or 11 (2021, the ARPA credit), line 9c (2024-2025). Now the tentative base (`cdctc_fed_base` = 1); the former documented known difference is retired. Test DC-9b.
 
 ## Known differences (largest first)
 

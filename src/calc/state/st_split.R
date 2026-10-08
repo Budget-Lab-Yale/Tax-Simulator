@@ -63,7 +63,8 @@ ST_SPLIT_HALVE = c(
   'salt_prop', 'salt_pers', 'salt_inc_sales',
   # Federal tax and credit quantities, which feed the federal-tax deduction
   'liab_bc', 'nonref', 'liab_niit', 'liab_pr_ee', 'liab_seca', 'excess_ptc',
-  'eitc', 'ctc_nonref', 'ctc_ref', 'cdctc_nonref', 'cdctc_ref', 'ed_ref',
+  'eitc', 'ctc_nonref', 'ctc_ref', 'cdctc_nonref', 'cdctc_ref',
+  'cdctc_potential', 'ed_ref',
   'net_ptc'
 )
 

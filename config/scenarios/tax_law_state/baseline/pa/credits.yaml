@@ -16,8 +16,8 @@
 #   - Child and Dependent Care Enhancement credit (Schedule DC): 30% of the
 #     federal CDCTC for TY2022 (Act 53 of 2022), 100% from TY2023 (Act 34 of
 #     2023), refundable. The statute bases the match on the TENTATIVE federal
-#     credit (Form 2441 line 9a, before the federal liability cap); the model
-#     applies it to the limited federal credit (known-difference: understates
+#     credit (Form 2441 line 9a, before the federal liability cap); encoded
+#     via cdctc_fed_base = 1 (2026-10-07; previously a known difference that understated
 #     the PA credit for low-federal-liability filers).
 #   - Working Pennsylvanians Tax Credit (TY2025+): 10% of the federal EITC,
 #     refundable, enacted Nov 2025 (2025-26 budget; Tax Reform Code Article
@@ -89,3 +89,6 @@ cdctc_match:
 cdctc_refundable:
   value: 1
   reference: '2024/2025 Schedule DC instructions ("This credit is refundable"); PA DOR CDCTC page; 2022 refundability implied by PA-40 line 23/24 payments-and-credits placement [2022 primary wording unverified]'
+cdctc_fed_base:
+  value: 1
+  reference: 'Schedule DC (2022-2025): "Enter the amount as shown on Line 9a of your federal Form 2441" -- the tentative federal credit before the liability limit (line 9a excludes the line 9b prior-year credit, which the model does not carry). PA DOR (2023-03-21): the state credit "can range between $180 and $630", 30% of the $600-$2,100 tentative federal range. Encoded 2026-10-07; this was the documented known difference in the header'
