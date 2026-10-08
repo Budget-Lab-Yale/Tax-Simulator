@@ -66,6 +66,10 @@ Full research notes with per-year citations: [research/raw/pa_research_core.md](
   forgiveness at the exact Table 2 limit with exempt-interest additions;
   CDCTC 100% vs 30% years; WPTC on/off across 2025/2024.
 
+## Business class check, 2026-10-08
+
+Checked after New Jersey's business, partnership and S-corporation categories were split (NJ-BUS-1 Parts I-III). Pennsylvania is different, and the single floored business class is right: the PA-40 instructions (2024) report "the net profits (losses) from all other PA Schedules C and/or F and all business income amounts from partnerships, PA S corporations or limited liability companies reporting on PA-20S/PA-65 Schedules RK-1 or NRK-1 or federal Schedules K-1 on Line 4", and the worked example nets a sole proprietor's profit, an S-corporation share and a joint store loss into one Line 4 figure. `ob_bus_split` stays 0. Two documented approximations remain: pass-through RENTAL income and gains belong on Lines 6 and 5 but the PUF cannot separate them from business income, and each spouse's class is netted separately ("Do not take into account the spouse's loss"), which unit-level netting cannot reproduce.
+
 ## Child care credit base, 2026-10-08
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Schedule DC (2022-2025) reads Form 2441 line 9a, the tentative credit; the DOR's $180-$630 range for TY2022 confirms it (30% of the tentative $600-$2,100). Now `cdctc_fed_base` = 1; the header's known difference is resolved. TY2022 refundability confirmed by the DOR press release of 2023-03-21.
