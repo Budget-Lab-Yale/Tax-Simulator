@@ -2,7 +2,7 @@
 
 State: `WA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-13`
+Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-07-13`
 
 ## Scope
 
@@ -33,6 +33,22 @@ Last updated: `2026-07-13`
 - 2024 capital-gains tax above the standard deduction.
 - 2025 additional 2.9% capital-gains rate.
 - 2022 one-child WFTC phaseout and 2025 childless age eligibility.
+
+## State EITC cross-check, 2026-10-07
+
+Reviewed against two State-EITC-Align flags:
+
+- **Separate filers.** RCW 82.08.0206(2)(a)(ii)(B), from 2023 legislation (2SHB 1477 / SSB 5565): a
+  separate filer is eligible and "the special rule for separated spouse under ... 32(d)(2)(B) ... does not
+  apply"; WAC 458-20-285(1)(c)(ii): "For tax years 2023 and beyond ... no longer required to fulfill the
+  conditions of ... 32(d)(2)(B)". So the 2023+ encoding (every separate filer, no qualifying child needed)
+  was right. TY2022 is different: WAC 458-20-285 Answer 1A requires a separate filer to be "unmarried" under
+  IRC 32(d), i.e. a qualifying child who lived with them plus living apart. TY2022 now uses the federal rule
+  (`wftc_mfs_eligible` = 2; living apart assumed, as in `eitc.R`). It is inert while Tax-Data gives separate
+  filers no EITC children.
+- **Childless age.** Through 2028 the statute requires IRC 32 eligibility, so 25-64 is right for every
+  encoded year. The version effective January 1, 2029 adds childless filers "at least age 18"
+  ((2)(a)(ii)(D)).
 
 ## Known Differences
 

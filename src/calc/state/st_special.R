@@ -157,7 +157,12 @@ calc_st_special = function(tax_unit, fill_missings = F) {
         st_head_or_spouse_in_age_band(pick(age1, age2, filing_status),
                                       st_transfers.wftc_min_age,
                                       st_transfers.wftc_max_age),
-      st_wftc_mfs_ok = filing_status != 3 | st_transfers.wftc_mfs_eligible == 1,
+      # wftc_mfs_eligible: 0 barred; 1 every separate filer (RCW 82.08.0206
+      # (2)(a)(ii)(B), TY2023+: the IRC 32(d)(2)(B) conditions do not apply);
+      # 2 the federal separated-spouse rule, a qualifying child required
+      # (TY2022, WAC 458-20-285 Answer 1A; living apart assumed, as eitc.R)
+      st_wftc_mfs_ok = filing_status != 3 | st_transfers.wftc_mfs_eligible == 1 |
+        (st_transfers.wftc_mfs_eligible == 2 & n_dep_eitc > 0),
       st_wftc_max_amount     = st_pick_slot(wftc_max_amounts, st_wftc_child_bin),
       st_wftc_phaseout_width = st_pick_slot(wftc_phaseout_widths,
                                             st_wftc_child_bin),

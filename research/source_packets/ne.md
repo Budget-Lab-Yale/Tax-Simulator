@@ -2,7 +2,7 @@
 
 State: `NE`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-13`
+Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-13`
 
 > **Status note (as of 2026-08-13), kept from the packet's former Status line:**
 > ENCODED 2026-08-13 (baseline/ne/, tests NE-1..NE-6b); cross-model not yet run
@@ -182,6 +182,14 @@ revisited first among all states**.
   threshold rule wins → `$460.82`. **A $4,000 AGI increase raises NE tax by
   $561.60 — a genuine cliff in the law, not an artifact.**
 - NE-5 the 2017 Additional Tax identity above.
+
+## State EITC cross-check, 2026-10-07
+
+The known-difference note said separate filers were barred from the Nebraska EITC. They are not: "If you
+file a Nebraska married, filing separately return, your ability to claim this credit depends on whether you
+are allowed the federal EIC on your federal married, filing separately return" (1040N booklet TY2021 line
+35, TY2024 line 42). The EITC follows the federal credit; the note now confines the bar to the care credit
+(joint-federal/separate-state filers).
 
 ## Known differences
 

@@ -118,9 +118,14 @@ cdctc_refundable:
     '2021': 1
   reference: 'Nonrefundable TY2018-2020; refundable from TY2021 (the restructure that also raised the ceiling to $150,000 and dropped the cap)'
 
+eitc_mfs_barred:
+  value:
+    '2017': 0
+    '2018': 1
+    '2022': 0
+  reference: 'NJ-1040 booklets: the NJEITC is barred to married filing separately in TY2018-TY2021 (it binds only from TY2021, when IRC 32(d)(2) first gives a separated spouse with a qualifying child a federal credit). From TY2023 the booklet allows it to a separate filer with a qualifying child who lived apart for the last six months, the federal rule, so the federal credit governs (0). TY2022 is undocumented in the booklet; encoded as following the federal credit like TY2023. Encoded 2026-10-07 (had been documented only, on the ground that separate filers rarely hold a federal credit, which stopped holding in 2021; flagged by the State-EITC-Align cross-check)'
+
 documented_not_modeled:
-  eitc_mfs_rule:
-    reference: 'The credit is barred to married filing separately in TY2018-TY2021, and from TY2023 a conditional rule allows it where the filer has a qualifying child and lived apart for the last six months. TY2022 is genuinely undocumented in the booklet. Not gated here; a separate filer rarely holds a federal credit to match'
   property_tax_credit:
     reference: 'The flat $50 property tax credit is the alternative to the property tax deduction and is documented in ded.yaml, where the election is explained'
   other_credits:

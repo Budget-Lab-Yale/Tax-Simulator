@@ -2,7 +2,7 @@
 
 State: `MT`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-19`
+Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-19`
 
 ## Scope
 
@@ -144,6 +144,14 @@ subtraction; MT-11a and MT-11b the earned income credit tripling for TY2024.
 - The TY2024 "repealed deductions" list does not name the federal income tax
   deduction, because that item lived on the itemized schedule and the
   schedule was eliminated wholesale rather than itemized for repeal.
+
+## State EITC cross-check, 2026-10-07
+
+The "separate forms" exclusion from the Montana EITC is printed through TY2023 (Form 2 instructions 2021
+p.10) but not in TY2024, when Montana adopted the federal filing status and the credit became "10 percent of
+the federal EITC claimed on your federal return". Through TY2023 a federal separate filer could still claim
+on a same-form return (status 2a), which is unobservable, so the credit follows the federal one in every
+year. Note clarified; no gate.
 
 ## Known differences
 

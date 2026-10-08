@@ -485,6 +485,12 @@ scalars:
   # capped, refundable, replacing both regular options)
   st_credits.eitc_childless_match: 0
   st_credits.eitc_childless_cap: .inf
+  # 1 = a childless filer below the federal EITC minimum age gets the state
+  # EITC on the federal credit recomputed without the age test (MD 10-704(b)(3))
+  st_credits.eitc_childless_min_age_disregard: 0
+  # 1 = separate filers get no state EITC match even where the federal EITC
+  # reaches them (IRC 32(d)(2), 2021+); 0 = follow the federal credit
+  st_credits.eitc_mfs_barred: 0
   # Two-earner credit (WI married couple credit): rate x the lesser
   # earner's earned income, capped
   st_credits.twoearner_rate: 0
@@ -780,7 +786,7 @@ scalars:
   # transfers.yaml (Washington Working Families Tax Credit)
   st_transfers.wftc_min_age: .inf
   st_transfers.wftc_max_age: -.inf
-  st_transfers.wftc_mfs_eligible: 0
+  st_transfers.wftc_mfs_eligible: 0   # 0 barred, 1 all separate filers, 2 with a qualifying child (IRC 32(d)(2))
   st_transfers.wftc_inv_inc_limit: -.inf
   st_transfers.wftc_phaseout_width1: 1
   st_transfers.wftc_phaseout_width2: 1

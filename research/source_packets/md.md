@@ -2,7 +2,7 @@
 
 State: `MD`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-22`
+Last updated: `2026-10-07` (State EITC cross-check: childless credit from TY2020, minimum-age disregard from TY2018); previous: `2026-08-22`
 
 > **Status note (as of 2026-07-24), kept from the packet's former Status line:**
 > baseline encoded (state-level); record-level worksheet tests complete
@@ -80,6 +80,28 @@ has not been triaged at all -- and it is now what binds Maryland, at 0.8702.
 0.9448 / 0.9255. 2017 and 2018 now clear; 2019 and 2020 do not, and neither
 does any PolicyEngine cell. Maryland's care residual remains undiagnosed and
 T18 remains refuted for Maryland.
+
+## State EITC cross-check, 2026-10-07
+
+Two State-EITC-Align flags (packets `MD-2020-01`, `MD-2018-02`), each verified here against the chapter
+laws and booklets; State-EITC-Align was a check, not a source.
+
+- **The 100% childless credit starts in TY2020, not TY2021.** Tax-General 10-704(b)(3)(ii)-(iv) as
+  enacted by Laws of Maryland 2021 ch. 39 (SB 496, the RELIEF Act, approved February 15, 2021) reads "for a
+  taxable year beginning after December 31, 2019, but before January 1, 2023 ... equal to 100% of the earned
+  income credit allowable", capped at $530 and refundable. The amendment sits in Section 1 of the act, which
+  has no separate applicability clause; the statute's own year range governs. (State-EITC-Align quoted Section
+  14, which in the enrolled chapter applies to Section 2, the pass-through-entity provision. The conclusion is
+  the same.) The 2020 booklet predates the act. `eitc_childless_match` and the $530 cap now start in 2020.
+- **Childless filers under the federal minimum age, TY2018+.** 10-704(b)(3) (Laws 2018 ch. 612, HB 856,
+  "applicable to all taxable years beginning after December 31, 2017"): the IRC 32 credit for an individual
+  without a qualifying child "is calculated without regard to the minimum age requirement". 2018 and 2020
+  booklets, Instruction 18: "calculate federal earned income credit disregarding the minimum age requirement".
+  New generic `st_credits.eitc_childless_min_age_disregard`: for such filers every Maryland EITC computation
+  (50% nonrefundable, refundable percentage, 100% childless credit) runs on the federal childless credit
+  recomputed without the age test; the other federal tests stand (not a dependent, not separate, under 65,
+  investment income within the federal limit). Tests MD-4b to MD-4e.
+- The TY2023 $600 cap equals the federal childless maximum and never binds; left as encoded.
 
 ## Known differences
 

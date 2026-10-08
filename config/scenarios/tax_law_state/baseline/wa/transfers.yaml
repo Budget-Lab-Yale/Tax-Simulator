@@ -3,15 +3,16 @@
 # are held at 2025 pending the annual Washington DOR amount update.
 wftc_min_age:
   value: 25
-  reference: 'RCW 82.08.0206(2)(a), qualifying-child-free claimant age requirement: https://app.leg.wa.gov/Rcw/default.aspx?cite=82.08.0206'
+  reference: 'RCW 82.08.0206(2)(a)(i)(A): eligibility for the IRC 32 credit, so the federal childless band 25-64 for every encoded year. The version effective January 1, 2029 adds (2)(a)(ii)(D), childless filers "at least age 18" -- outside the encoded window (checked 2026-10-07). https://app.leg.wa.gov/Rcw/default.aspx?cite=82.08.0206'
 wftc_max_age:
   value: 64
   reference: 'RCW 82.08.0206(2)(a), qualifying-child-free claimant age requirement'
 wftc_mfs_eligible:
   value:
     '2017': 0
+    '2022': 2
     '2023': 1
-  reference: 'Washington Working Families Tax Credit eligibility, married filing separately eligible beginning in 2023: https://workingfamiliescredit.wa.gov/eligibility'
+  reference: 'TY2022: a separate filer qualifies only if "unmarried" under IRC 32(d), i.e. the separated-spouse rule with a qualifying child who lived with them over half the year (WAC 458-20-285 Answer 1A; living apart unobserved and assumed met, as for the federal EITC) -> 2. TY2023+: RCW 82.08.0206(2)(a)(ii)(B) (2023 legislation, 2SHB 1477 / SSB 5565) makes every separate filer eligible, "the special rule for separated spouse under ... 32(d)(2)(B) ... does not apply"; WAC 458-20-285(1)(c)(ii): "For tax years 2023 and beyond ... no longer required to fulfill the conditions of ... 32(d)(2)(B)" -> 1, no qualifying child required. Childless separate filers still need every other federal test (age 25-64, income, investment income). Reviewed 2026-10-07 against the State-EITC-Align flag: the 2023+ encoding was right; TY2022 had barred all separate filers. https://workingfamiliescredit.wa.gov/eligibility'
 wftc_inv_inc_limit:
   value:
     '2017': 0

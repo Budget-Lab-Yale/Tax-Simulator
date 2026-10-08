@@ -2,7 +2,7 @@
 
 State: `MO`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-18`
+Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-18`
 
 ## Scope
 
@@ -139,6 +139,12 @@ All default-neutral; the full suite stays green across the other 35 states.
 - MO-12 itemized deductions with the payroll add-on
 - MO-13 the business income deduction at 20%
 - MO-14 the TY2025 full capital gains subtraction
+
+## State EITC cross-check, 2026-10-07
+
+Form MO-WFTC excludes married filing separately ("Do you have a filing status of married filing separately
+... Yes - STOP", 2024 MO-1040 instructions). It binds because the federal EITC reaches separated spouses with
+a qualifying child from TY2021. Now encoded (`st_credits.eitc_mfs_barred` = 1); test MO-1b.
 
 ## Known differences
 

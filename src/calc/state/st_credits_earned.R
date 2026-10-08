@@ -52,6 +52,8 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_ageband_min_age',
   'st_credits.eitc_ageband_max_age',
   'st_credits.eitc_ageband_share',
+  'st_credits.eitc_childless_min_age_disregard',
+  'st_credits.eitc_mfs_barred',
   'eitc.pi_rate_0', 'eitc.pi_end_0', 'eitc.po_rate_0', 'eitc.po_thresh_0',
   'eitc.min_age', 'eitc.max_age', 'eitc.inv_inc_limit'
 )
@@ -238,17 +240,44 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
                            eitc_match_v)
   }
 
+  # The federal childless credit recomputed with the age test dropped, for
+  # states that extend their EITC to childless filers the federal credit
+  # excludes on age (NJ-1040 line 58 age band; MD 10-704(b)(3) minimum-age
+  # disregard). Earned income and the phase-out follow eitc.R
+  childless_ei = pmax(0, tax_unit$ei1) +
+                 if_else(tax_unit$filing_status == 2, pmax(0, tax_unit$ei2), 0)
+  childless_fed_credit_no_age = pmax(0,
+    tax_unit$eitc.pi_rate_0 * pmin(childless_ei, tax_unit$eitc.pi_end_0) -
+    tax_unit$eitc.po_rate_0 * pmax(0, pmax(childless_ei, tax_unit$agi) -
+                                     tax_unit$eitc.po_thresh_0))
+
+  # The federal credit as the state counts it. MD Tax-General 10-704(b)(3)
+  # (Laws 2018 ch. 612, TY2018+): for a filer without a qualifying child the
+  # IRC 32 credit is "calculated without regard to the minimum age
+  # requirement" -- every other federal test stands (not a dependent, not
+  # separate, head or spouse under the federal maximum age, investment
+  # income within the federal limit)
+  eitc_state_base = if_else(
+    tax_unit$st_credits.eitc_childless_min_age_disregard == 1 &
+      coalesce(tax_unit$n_dep_eitc, 0L) == 0 & tax_unit$eitc <= 0 &
+      tax_unit$dep_status != 1 & tax_unit$filing_status != 3 &
+      st_head_or_spouse_in_age_band(tax_unit, 0, tax_unit$eitc.max_age) &
+      earned_credit_inv_inc <= tax_unit$eitc.inv_inc_limit,
+    childless_fed_credit_no_age,
+    tax_unit$eitc
+  )
+
   # State EITC: match on the federal credit, less the household credit
   # (capped at remaining tax) where flagged (NY IT-215 lines 13-16),
   # plus a flat per-return bonus for filers with a federal qualifying
   # child (CT Schedule CT-EITC line 15a, 2025+), capped at W-2 wages
   # where flagged (UT 59-10-1044 2023+ "earn income in Utah reported on
   # a W-2"; total wages proxy Utah-source wages -- known-difference)
-  st_eitc_main = pmax(0, eitc_match_v * tax_unit$eitc -
+  st_eitc_main = pmax(0, eitc_match_v * eitc_state_base -
                          tax_unit$st_credits.eitc_less_household_credit *
                          pmin(st_hh_credit, pmax(0, tax_unit$st_tax_pre_credit))) +
                  tax_unit$st_credits.eitc_child_bonus *
-                   (tax_unit$eitc > 0 & tax_unit$n_dep_eitc > 0)
+                   (eitc_state_base > 0 & tax_unit$n_dep_eitc > 0)
   st_eitc_main = if_else(
     tax_unit$st_credits.eitc_wage_cap == 1,
     pmin(st_eitc_main, pmax(0, tax_unit$wages1 + tax_unit$wages2)),
@@ -260,7 +289,7 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # benefit of a nonrefundable credit is capped at pre-credit tax; the
   # unit takes whichever option yields the larger benefit, keeping the
   # main option on ties. Per-unit refundability follows the chosen option
-  st_eitc_alt_amt = tax_unit$st_credits.eitc_match_alt * tax_unit$eitc
+  st_eitc_alt_amt = tax_unit$st_credits.eitc_match_alt * eitc_state_base
   st_eitc_benefit_main = if_else(tax_unit$st_credits.eitc_refundable == 1,
                                  st_eitc_main,
                                  pmin(st_eitc_main,
@@ -281,10 +310,10 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # regular options for non-joint filers without qualifying children
   childless_gate = tax_unit$st_credits.eitc_childless_match > 0 &
                    coalesce(tax_unit$n_dep_eitc, 0L) == 0 &
-                   tax_unit$eitc > 0 & tax_unit$filing_status != 2
+                   eitc_state_base > 0 & tax_unit$filing_status != 2
   st_eitc = if_else(
     childless_gate,
-    pmin(tax_unit$st_credits.eitc_childless_match * tax_unit$eitc,
+    pmin(tax_unit$st_credits.eitc_childless_match * eitc_state_base,
          tax_unit$st_credits.eitc_childless_cap),
     st_eitc
   )
@@ -298,12 +327,6 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # credit with the age test dropped: it must be positive, and investment
   # income must be within the federal limit
   ageband_in = function(age, lo, hi) !is.na(age) & age >= lo & age <= hi
-  ageband_ei = pmax(0, tax_unit$ei1) +
-               if_else(tax_unit$filing_status == 2, pmax(0, tax_unit$ei2), 0)
-  ageband_fed_credit = pmax(0,
-    tax_unit$eitc.pi_rate_0 * pmin(ageband_ei, tax_unit$eitc.pi_end_0) -
-    tax_unit$eitc.po_rate_0 * pmax(0, pmax(ageband_ei, tax_unit$agi) -
-                                     tax_unit$eitc.po_thresh_0))
   ageband_state_age = ageband_in(tax_unit$age1, tax_unit$st_credits.eitc_ageband_min_age,
                                  tax_unit$st_credits.eitc_ageband_max_age) |
     (tax_unit$filing_status == 2 &
@@ -315,7 +338,7 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   ageband_gate = tax_unit$st_credits.eitc_ageband_style == 1 &
     coalesce(tax_unit$n_dep_eitc, 0L) == 0 & tax_unit$eitc <= 0 &
     tax_unit$dep_status != 1 & tax_unit$filing_status != 3 &
-    ageband_state_age & !ageband_fed_age & ageband_fed_credit > 0 &
+    ageband_state_age & !ageband_fed_age & childless_fed_credit_no_age > 0 &
     earned_credit_inv_inc <= tax_unit$eitc.inv_inc_limit
   st_eitc = if_else(
     ageband_gate,
@@ -324,6 +347,13 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     st_eitc
   )
   st_eitc_ref_share = if_else(ageband_gate, 1, st_eitc_ref_share)
+
+  # States that bar separate filers from a credit matching the federal EITC
+  # even where the federal credit reaches them (IRC 32(d)(2), 2021+: a
+  # separated spouse with a qualifying child): NJ-1040 TY2018-2021, Form
+  # MO-WFTC. 0 = follow the federal credit
+  st_eitc = if_else(tax_unit$st_credits.eitc_mfs_barred == 1 &
+                      tax_unit$filing_status == 3, 0, st_eitc)
 
   # Credit for low-income individuals (VA Schedule ADJ Lines 10-17): a
   # flat amount per personal + dependent exemption (65+/blind add-ons

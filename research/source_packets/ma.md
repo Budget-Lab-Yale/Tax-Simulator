@@ -2,7 +2,7 @@
 
 State: `MA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-21`
+Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-21`
 
 ## Scope
 
@@ -141,6 +141,14 @@ MA-13 the regime gone from TY2021.
   a statutory base doubling rather than indexation.
 - From TY2024 a federal joint return forces a Massachusetts joint return
   (TIR 24-4), which removes any need for a separate-return election.
+
+## State EITC cross-check, 2026-10-07
+
+The known-difference note said separate filers were barred from the earned income credit. Form 1
+instructions TY2021 and TY2024: "Massachusetts adopts the expansion of the federal EIC in calculating the
+Massachusetts EIC", plus a domestic-abuse exception (unobservable). So the credit follows the federal one,
+which reaches separated spouses with a qualifying child from TY2021; the note is corrected. The CFTC
+separate-filer bar stands as documented.
 
 ## Known differences
 

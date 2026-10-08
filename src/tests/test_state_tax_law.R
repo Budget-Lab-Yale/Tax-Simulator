@@ -623,7 +623,7 @@ test_special_state_values = function() {
       pick('WA', 2025, 1, 'st_transfers.wftc_max_amount1') == 335 &&
       pick('WA', 2025, 2, 'st_transfers.wftc_max_income_joint2') == 57554,
     'WA WFTC MFS change wrong' =
-      pick('WA', 2022, 3, 'st_transfers.wftc_mfs_eligible') == 0 &&
+      pick('WA', 2022, 3, 'st_transfers.wftc_mfs_eligible') == 2 &&
       pick('WA', 2023, 3, 'st_transfers.wftc_mfs_eligible') == 1
   )
 

@@ -2050,6 +2050,34 @@ test_state_calc = function() {
                          liab_st_iit = (90 + 0.0475 * 6550) - 530),
            label = 'MD-4 childless EITC capped')
 
+  # MD-4b: the 100% childless credit starts in TY2020 (10-704(b)(3) as
+  # enacted by 2021 ch. 39: "after December 31, 2019"), capped at 530
+  run_case('MD', 2020,
+           list(agi = 15000, age1 = 30, wages1 = 15000, ei1 = 15000,
+                eitc = 1000),
+           expect = list(st_eitc = 530),
+           label = 'MD-4b childless EITC in TY2020')
+
+  # MD-4c/4d/4e: from TY2018 a childless filer under the federal minimum age
+  # claims the state EITC on the federal credit recomputed without the age
+  # test (10-704(b)(3), 2018 ch. 612). Single aged 22, wages 5,000, no
+  # federal EIC: recomputed credit 7.65% x 5,000 = 382.50 (phase-in). 2019:
+  # tax 2% x (5,000 - 1,500 - 3,200) = 6, so the refundable 28% option
+  # (107.10) beats the 50% nonrefundable one (benefit 6). 2017: no
+  # disregard yet. Aged 66: over the federal maximum age, still barred
+  run_case('MD', 2019,
+           list(agi = 5000, age1 = 22, wages1 = 5000, ei1 = 5000, eitc = 0),
+           expect = list(st_eitc = 0.28 * 382.5),
+           label = 'MD-4c childless EITC under 25 from TY2018')
+  run_case('MD', 2017,
+           list(agi = 5000, age1 = 22, wages1 = 5000, ei1 = 5000, eitc = 0),
+           expect = list(st_eitc = 0),
+           label = 'MD-4d childless EITC under 25 barred in TY2017')
+  run_case('MD', 2019,
+           list(agi = 5000, age1 = 66, wages1 = 5000, ei1 = 5000, eitc = 0),
+           expect = list(st_eitc = 0),
+           label = 'MD-4e childless EITC over the federal maximum age')
+
   # MD-5: 2023 EITC option choice: HoH, 2 kids, federal EIC 6,000, FAGI
   # 25,000. Tax 500.875; alt (45% refundable = 2,700) beats the capped
   # nonrefundable benefit -> refundable 2,700. CTC zero (FAGI > 15,000)
@@ -4389,6 +4417,15 @@ run_case('AR', 2024,
            expect = list(st_eitc = 120), label = 'NJ-1h federally eligible: 40% match')
   run_case('NJ', 2022, list(agi = 30000, age1 = 22, wages1 = 30000, ei1 = 30000),
            expect = list(st_eitc = 0), label = 'NJ-1i past the federal childless phase-out')
+  # NJ-1o/1p: a separate filer with a federal credit (IRC 32(d)(2), 2021+)
+  # gets no NJEITC in TY2021 (booklet bar, TY2018-21) but the 40% match from
+  # TY2023 (the booklet's separated-spouse rule, i.e. the federal one)
+  run_case('NJ', 2021, list(agi = 15000, filing_status = 3, wages1 = 15000, ei1 = 15000,
+                            n_dep = 1, n_dep_eitc = 1, dep_age1 = 6, eitc = 1000),
+           expect = list(st_eitc = 0), label = 'NJ-1o separate filer barred in TY2021')
+  run_case('NJ', 2023, list(agi = 15000, filing_status = 3, wages1 = 15000, ei1 = 15000,
+                            n_dep = 1, n_dep_eitc = 1, dep_age1 = 6, eitc = 1000),
+           expect = list(st_eitc = 400), label = 'NJ-1p separate filer matched from TY2023')
 
   # NJ-1j/1k: the NJ child tax credit bars separate filers (line 65). 2024,
   # one child aged 3, taxable income under $30,000: $1,000 for a head of
@@ -5020,6 +5057,15 @@ run_case('AR', 2024,
            expect = list(st_agi = 50000, st_fed_tax_ded = 1004,
                          st_std_ded = 14600, liab_st_iit = 1471.28),
            label = 'MO-1 2024 single, federal tax deduction at 25%')
+
+  # MO-1b: the Working Family Tax Credit (20% of the federal EIC in 2024)
+  # excludes married filing separately (Form MO-WFTC), even where the
+  # federal credit reaches a separated spouse with a child
+  run_case('MO', 2024,
+           list(agi = 15000, filing_status = 3, wages1 = 15000, ei1 = 15000,
+                n_dep = 1, n_dep_eitc = 1, dep_age1 = 6, eitc = 1000),
+           expect = list(st_eitc = 0),
+           label = 'MO-1b WFTC separate filer barred')
 
   # MO-2: the band is a cliff, not a phase-out. Same unit as MO-1 but one
   # dollar of Missouri AGI higher, into the "$50,001 to $100,000" band ->

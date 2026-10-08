@@ -50,20 +50,26 @@ eitc_refundable_alt:
   value: 1
   reference: 'Worksheet 18A refundable option'
 
-# Childless non-joint filers, 2021+ (Worksheet 18A.1)
+# Childless non-joint filers, 2020+ (Worksheet 18A.1)
 eitc_childless_match:
   value:
     '2017': 0
-    '2021': 1
-  reference: 'SB218 (2021): 100% of the federal EIC for childless single/HoH/QSS filers, refundable; TY2020 applicability UNVERIFIED (first worksheet appearance TY2021)'
+    '2020': 1
+  reference: 'Tax-General 10-704(b)(3)(ii)-(iv) as enacted by Laws of Maryland 2021 ch. 39 (SB 496, the RELIEF Act, approved February 15, 2021): "for a taxable year beginning after December 31, 2019, but before January 1, 2023, the credit ... for an individual without a qualifying child is equal to 100% of the earned income credit allowable ... under section 32", capped and refundable; continued from TY2023 by later law (Worksheet 18A.1 in the 2021+ booklets). Corrected 2026-10-07: had started in TY2021 ("TY2020 applicability UNVERIFIED"); the statute text itself covers TY2020, although the 2020 booklet predates the act (State-EITC-Align packet MD-2020-01 raised it; verified here against the chapter law)'
 
 eitc_childless_cap:
   value:
     '2017': .inf
-    '2021': 530
+    '2020': 530
     '2023': 600
     '2024': .inf
-  reference: 'Caps: $530 (2021-22), $600 (2023), none 2024+ (booklets)'
+  reference: 'Caps: $530 TY2020-2022 (10-704(b)(3)(iii) as enacted by 2021 ch. 39: "may not exceed $530 for a taxable year"), $600 (2023), none 2024+ (booklets)'
+
+eitc_childless_min_age_disregard:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'Tax-General 10-704(b)(3) (Laws of Maryland 2018 ch. 612, HB 856, "applicable to all taxable years beginning after December 31, 2017"): for an individual without a qualifying child the IRC 32 credit "is calculated without regard to the minimum age requirement under section 32(c)(1)(A)(ii)(II)". 2018 and 2020 Resident Booklets, Instruction 18: "If you do not meet the minimum age requirement under the federal credit and are otherwise eligible for the federal credit for those without a qualifying child, you may claim the state earned income credit (calculate federal earned income credit disregarding the minimum age requirement)". Applies to every state EITC computation for such filers (50% nonrefundable, refundable percentage, and the 2020+ 100% childless credit). Added 2026-10-07: under-25 childless filers had received nothing'
 
 # MD CTC (10-751), modelable from 2023
 ctc_style:

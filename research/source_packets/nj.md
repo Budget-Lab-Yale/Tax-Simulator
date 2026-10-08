@@ -2,7 +2,7 @@
 
 State: `NJ`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-18`
+Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-18`
 
 ## Scope
 
@@ -99,6 +99,16 @@ NJ-7 the Child Tax Credit tier; NJ-8 the earned income credit at 40%.
 - **The printed rate schedule carries a $0.50 defect** relative to the Tax
   Table at band boundaries, found by comparing all 10,015 table rows.
 - Only the top bracket ever moved (TY2018 and TY2020); nothing is indexed.
+
+## State EITC cross-check, 2026-10-07
+
+The separate-filer bar (TY2018-TY2021 booklets) had been documented but not encoded, on the ground that a
+separate filer rarely holds a federal credit. That stopped holding in TY2021, when IRC 32(d)(2) gave
+separated spouses with a qualifying child a federal credit (`22c259749`). Now encoded through the generic
+`st_credits.eitc_mfs_barred`: 1 for TY2018-TY2021, then 0 (from TY2023 the booklet's separated-spouse rule
+is the federal one; TY2022 is undocumented and follows the federal credit). Tests NJ-1o/1p. The shared
+childless recomputation that the age band uses moved to `childless_fed_credit_no_age` (Maryland uses it too);
+NJ values are unchanged.
 
 ## Known differences
 
