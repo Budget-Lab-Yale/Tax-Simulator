@@ -2309,6 +2309,16 @@ test_state_calc = function() {
            expect = list(st_cdctc = 2200),
            label = 'WI-9 2024 Schedule WI-2441 own computation')
 
+  # WI-10: unemployment compensation worksheet (Schedule SB line 3). 2021
+  # head of household, wages 12,000 and benefits 20,000 (AGI 32,000): line 7
+  # = 32,000 - 12,000 = 20,000, half = 10,000, taxable = min(20,000,
+  # 10,000), subtraction 10,000
+  run_case('WI', 2021,
+           list(agi = 32000, filing_status = 4, wages1 = 12000, ei1 = 12000,
+                ui = 20000, n_dep = 1, dep_age1 = 12),
+           expect = list(st_subtractions = 10000),
+           label = 'WI-10 unemployment compensation worksheet')
+
   # WI-9: net capital loss addback (71.05(10)(c)): the federal return
   # deducts the full $3,000 net loss; WI allows $500/year through 2022,
   # so $2,500 is added back on Schedule I. Single, wages 55,000,
@@ -4467,6 +4477,28 @@ run_case('AR', 2024,
            expect = list(st_cdctc = 180),
            label = 'IA-13b 2021 the cutoff moves to 90,000')
 
+  # IA-14: the federal tax deduction is federal liability after nonrefundable
+  # credits, NOT reduced by refundable credits that pay it (Expanded
+  # Instructions line 31: "The $1,500 federal tax liability paid by EITC ...
+  # is deductible"). 2021 head of household, federal tax 2,000 before credits,
+  # EITC 2,500 and refundable CTC 3,000: the deduction stays 2,000
+  run_case('IA', 2021,
+           list(agi = 30000, filing_status = 4, wages1 = 30000, ei1 = 30000,
+                n_dep = 1, dep_age1 = 6, liab_bc = 2000, nonref = 0,
+                eitc = 2500, ctc_ref = 3000),
+           expect = list(st_fed_tax_ded = 2000),
+           label = 'IA-14 federal tax deduction not reduced by refundable credits')
+  # IA-14b: TY2021, the fully refundable child tax credit: the part applied
+  # against federal liability (ctc_nonref) is added back, so the deduction
+  # is federal tax before the credit. Federal tax 5,000 before credits,
+  # CTC 3,000 applied against it (nonref = 3,000): deduction 5,000
+  run_case('IA', 2021,
+           list(agi = 60000, filing_status = 4, wages1 = 60000, ei1 = 60000,
+                n_dep = 1, dep_age1 = 6, liab_bc = 5000, nonref = 3000,
+                ctc_nonref = 3000),
+           expect = list(st_fed_tax_ded = 5000),
+           label = 'IA-14b 2021 fully refundable CTC added back')
+
   #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
   #
@@ -5994,7 +6026,8 @@ st_test_unit = function(overrides = list()) {
     casualty_item_ded = 0, char_item_ded = 0, misc_item_ded = 0,
     other_item_ded = 0, std_ded = 0,
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
-    cdctc_ref = 0, cdctc_potential = 0, care_exp = 0, ui = 0, ftc = 0,
+    cdctc_ref = 0, cdctc_potential = 0, cdctc_takeup = 1L, care_exp = 0, ui = 0,
+    ftc = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
     liab_pr_ee = 0, liab_seca = 0, liab_seca_er = 0, liab_add_med = 0, liab_niit = 0, excess_ptc = 0,
     rebate = 0

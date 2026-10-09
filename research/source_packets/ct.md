@@ -2,7 +2,7 @@
 
 State: `CT`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-17`
+Last updated: `2026-10-08` (cross-model closed); previous: `2026-07-17`
 
 > **Status note (as of 2026-07-17), kept from the packet's former Status line:**
 > baseline encoded; worksheet tests complete
@@ -109,6 +109,10 @@ Last updated: `2026-07-17`
   with the 0.85 phase-out factor, property tax credit reduction.
 - CT-5: 2023 MFJ low-income: full exemption, 75% Table E credit, 40% EITC.
 - CT-6: 2025 EITC child bonus and MFS Table C increments.
+
+## Close, 2026-10-08
+
+The two failing cells (TAXSIM 2019 0.939, 2020 0.935) were one TAXSIM behaviour: it phases the 14% / 28% pension and annuity subtraction and the Social Security subtraction out linearly from the federal-AGI threshold to twice the threshold ($100,000-$200,000 joint and head of household, $75,000-$150,000 single), where the 2019 CT-1040 booklet allows the pension subtraction only below the threshold ("with federal AGI of less than $100,000") and the Social Security Benefit Adjustment Worksheet switches rules at the same amounts (T36, probe-verified both ways). Our cliff encoding stands; PolicyEngine agrees with it (2021-2024 at 0.978). Excluded by a T36 row keyed on the phased band; hits match 0.20-0.22. Cells after: TAXSIM 0.987 / 0.972 / 0.966 / 0.962, PE 0.978 x 4. Cross-model closed.
 
 ## Known differences
 

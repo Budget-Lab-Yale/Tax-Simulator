@@ -14,9 +14,6 @@ documented_not_modeled:
   conformity:
     value: 0
     reference: 'Wis. Stat. 71.01(6) fixed-date conformity updated by acts (2017 Act 231 adopted TCJA whole for 2018+); modeled rolling. Targeted gaps documented: 2020-21 above-the-line charitable addback, pre-ARPA federal EITC base 2021-22, 10% medical floor in the itemized credit 2017/2019/2020'
-  ui_partial_exclusion:
-    value: 0
-    reference: 'WI 71.05(6)(b)8: pre-1987-federal-style partial UI exclusion (50% over a base); worksheet-dependent, small at PUF incomes; omitted [known-difference]'
   capital_loss_carryforward:
     value: 0
     reference: 'WI loss carryforwards diverge from federal once the $500/$3,000 limits differ (71.05(10)(c)); carryforward stock unobserved [known-difference]. The current-year add-back itself IS modeled (cap_loss_limit below, 2026-08-11): the federal $3,000 cap makes it exact from capped inputs'
@@ -65,6 +62,11 @@ cap_gains_excl_share:
 
 # $5,000 retirement income exclusion at 65+ with an FAGI cliff
 filing_status_mapper:
+  sub_ui_worksheet_base:
+    '1': ui_base_single
+    '2': ui_base_joint
+    '3': ui_base_separate
+    '4': ui_base_single
   pension_excl_agi_limit:
     '1': pension_agi_limit_single
     '2': pension_agi_limit_joint
@@ -90,3 +92,18 @@ pension_agi_limit_single:
 pension_agi_limit_joint:
   value: 30000
   reference: 'FAGI < $30,000 (married) cliff'
+
+# Unemployment compensation: Wisconsin taxes only the lesser of the benefits
+# or half of federal AGI over a base, and subtracts the rest (71.05(6)(b)8)
+sub_ui_worksheet:
+  value: 1
+  reference: 'Schedule SB instructions (2021), line 3 "Unemployment Compensation Worksheet": taxable unemployment compensation = the smaller of the benefits (line 1) or one-half of federal AGI less the base amount, taxable Social Security and taxable state refunds (lines 2-8); "Subtract line 9 from line 1. Fill in this amount on line 3 of Schedule SB as your subtraction for unemployment compensation". Wis. Stat. 71.05(6)(b)8. Encoded 2026-10-08: had been documented only as "small at PUF incomes", which the 2021 pandemic benefits broke (PolicyEngine applies it; record 57026, $206,047 of benefits, subtraction $103,120)'
+ui_base_single:
+  value: 12000
+  reference: 'Schedule SB worksheet: "$12,000 if you checked box C or D" (single; married not filing jointly and not living with the spouse). Head of household uses the single box'
+ui_base_joint:
+  value: 18000
+  reference: 'Schedule SB worksheet: "Married filing a joint return -- write $18,000 on line 3"'
+ui_base_separate:
+  value: 0
+  reference: 'Schedule SB worksheet box B: "Married not filing a joint return and lived with your spouse at any time during the year -- write -0-"; living apart is unobserved, so separate filers take the zero base'

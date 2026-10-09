@@ -107,6 +107,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'cdctc_nonref',      # (dbl)  federal CDCTC, nonrefundable portion
     'cdctc_ref',         # (dbl)  federal CDCTC, refundable portion
     'cdctc_potential',   # (dbl)  federal CDCTC before the tax-liability limit
+    'cdctc_takeup',      # (int)  federal CDCTC take-up draw (own-computation credits share it)
     'liab_bc',           # (dbl)  federal tax before credits (KY 2441-K liability limit)
     'ftc',               # (dbl)  federal foreign tax credit (same limit)
     'care_exp',          # (dbl)  eligible dependent care expenses

@@ -122,6 +122,10 @@ OUTPUT_VARS = {
     # us -- no rent data) into wi_income_tax; exported for the KD predicate.
     "pe_wi_homestead": ["wi_homestead_credit"],
     "pe_ct_rebate": ["ct_child_tax_rebate"],
+    # NE Child Care Tax Credit (77-7203, TY2024+): application-based, $15M
+    # first-come annual cap, licensed-care condition. PE pays it to every
+    # household with care expenses or at/below poverty; exported for the KD row
+    "pe_ne_refundable_ctc": ["ne_refundable_ctc"],
     "pe_ri_child_rebate": ["ri_child_tax_rebate"],
     # New Mexico ran THREE one-time 2021 rebates and PE nets all three into
     # state_income_tax for TY2021 only. The variables still compute nonzero

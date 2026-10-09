@@ -187,6 +187,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
+    'st_agi.sub_ui_worksheet',      # (int) WI Schedule SB worksheet: taxable UI = lesser of UI or half of (AGI - base - taxable SS - state refunds)
+    'st_agi.sub_ui_worksheet_base', # (dbl) that worksheet's base (filing-status mapped: $18,000 joint, $12,000 single/head, $0 separate living together)
     'st_agi.bus_carveout',          # (int) OH-style business income carve-out active
     'st_agi.bus_ded_cap',           # (dbl) business income deduction cap (mapped)
     'st_agi.bus_excl_share',        # (dbl) flat share of business income subtracted (MO)
@@ -745,7 +747,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # Subtraction: unemployment benefits included in the federal base
       # (VA; MD RELIEF Act 2020-21 adds an AGI cliff)
       st_sub_ui = st_agi.sub_ui_share * pmax(0, ui) *
-                  (agi < st_agi.sub_ui_agi_limit),
+                  (agi < st_agi.sub_ui_agi_limit) +
+                  # WI Schedule SB line 3 worksheet (71.05(6)(b)8, the
+                  # pre-1987 federal rule): only the lesser of the benefits
+                  # or half of federal AGI over a base (less taxable Social
+                  # Security and state refunds) is taxable; the rest is
+                  # subtracted
+                  st_agi.sub_ui_worksheet *
+                  (pmax(0, ui) - pmin(pmax(0, ui),
+                                      0.5 * pmax(0, agi - st_agi.sub_ui_worksheet_base -
+                                                    txbl_ss - state_ref))),
 
       # Subtraction: two-income married couple (MD Form 502 line 14 /
       # 10-207(y)): the lesser-earning spouse's income up to the cap,

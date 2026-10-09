@@ -221,6 +221,42 @@ portion of IRAs, pensions, annuities, and social security benefits reported on F
 both 60: wages $60,000 / $50,000 -> `v40` 106.69; wages $60,000 plus $100,000 of pensions -> 0.00, the same as wages
 alone. Effect: TAXSIM understates the credit for couples whose lesser qualified income is retirement income.
 
+### T36. Connecticut: the pension and Social Security subtractions are phased out, not cut off
+
+Connecticut's 14% (TY2019) / 28% (TY2020) pension and annuity subtraction is allowed only to filers "with federal AGI of
+less than $100,000" (joint) or "less than $75,000" (single), and its Social Security Benefit Adjustment Worksheet switches
+to the 25%-taxable rule at the same amounts (2019 CT-1040 booklet, Line 48b and Line 41). TAXSIM-35 phases both out
+linearly from the threshold to twice the threshold. Probes (2026-10-08), both filers aged 68/66:
+
+| filer | pensions | AGI | TAXSIM subtraction | share of 14% |
+|---|---|---|---|---|
+| joint | 80,000 | 95,000 | 11,200 | 1.00 |
+| joint | 80,000 | 105,000 | 10,640 | 0.95 |
+| joint | 80,000 | 150,000 | 5,600 | 0.50 |
+| single | 60,000 | 70,000 / 100,000 / 140,000 / 160,000 | 8,400 / 5,600 / 1,120 / 0 | 1.00 / 0.67 / 0.13 / 0 |
+
+Effect: TAXSIM understates Connecticut tax for retirees just above the thresholds by up to the full subtraction times
+the rate, and overstates nothing. PolicyEngine applies the cliff.
+
+### T37. Iowa 2020: the recovery rebate credit is netted out of the federal tax deduction
+
+Iowa deducts federal income tax paid. The 2020 IA 1040 Expanded Instructions ("New for 2020") say "Economic impact
+payments (EIPs) whether in the form of a rebate or refundable tax credit will not be included in Iowa taxable income, or
+added back as part of your reportable federal income tax refund", and the Step 7 list of refunds not to report begins
+with "Economic Impact Payment (stimulus payment)". TAXSIM-35 nets the TY2020 recovery rebate credit ($1,800 per adult,
+the two 2020 payments) out of the federal tax it lets Iowa deduct. On our TY2020 comparison the Iowa taxable income
+TAXSIM computes exceeds ours by exactly $1,800 on 848 single and 31 separate returns and by $3,600 on 265 joint returns;
+TY2019 shows no such mode. Effect: TAXSIM overstates 2020 Iowa tax by the rebate times the Iowa rate ($100-$300), on
+nearly every return.
+
+### T38. Iowa pension exclusion applied only at 65 and over
+
+Iowa Code 422.7(31) excludes up to $6,000 ($12,000 joint) of pension and retirement income for taxpayers "who are 55
+years of age or older", disabled, or surviving spouses. TAXSIM-35 applies it at 65. Probe (2026-10-08), single, $10,000
+of wages and $20,000 of pensions: `v32` equals federal AGI at ages 50 and 57 and is $6,000 lower at 66, in 2017 and
+2019 alike. Same pattern as T29 (Arkansas). Effect: TAXSIM overstates Iowa tax for 55-64-year-old retirees by up to
+$1,024.
+
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
@@ -1073,6 +1109,26 @@ IT-216 recomputes the credit before any federal limitation on pre-ARPA terms ($3
 or more persons, the .35-.20 decimal) and applies the New York share. policyengine-us 1.775.7 uses the ARPA-era amount.
 Probe (2026-10-08, harness records 18023 / 157421 / 138587): `ny_cdcc` 3,000 / 2,400 / 1,693, where IT-216 gives
 630 / 360 / 360. Effect: PolicyEngine overstates New York 2021 care credits.
+
+### P23. Iowa net income ignores the federal capital-loss limitation
+
+Iowa net income starts from federal AGI (IA 1040 line 1; Iowa Code 422.7), which carries the IRC 1211(b) $3,000 limit on
+net capital losses. policyengine-us 1.775.7 lets the whole loss through. Per-record rerun (2026-10-08): record 430290
+(wages $135,568, pensions $243,633, a $24.4 million long-term capital loss) gets `ia_net_income` of -24,041,686,
+`ia_is_tax_exempt` = 1 and `ia_income_tax` = 0 where the Iowa return owes about $20,600; record 94929 (wages $347,859,
+$439,301 of losses) likewise pays nothing. Effect: PolicyEngine understates Iowa tax for filers with capital losses over
+$3,000, to zero for large losses.
+
+### P24. Nebraska Child Care Tax Credit paid without the application cap or the licensed-care condition
+
+Neb. Rev. Stat. 77-7203 (LB 754, 2023; TY2024+) gives a parent a refundable $2,000 ($1,000 above $75,000 of household
+income, nothing above $150,000) per child aged five or less, but only on application to the Department of Revenue, which
+approves credits "in the order in which they are received ... until the total amount of credits approved for the year
+equals fifteen million dollars", and only where the child is in a licensed child care program (or a subsidy provider, or
+the household is at or below poverty). policyengine-us 1.775.7 (`ne_refundable_ctc`) pays it to every tax unit with any
+reported care expense or poverty-level income, with no cap. In our TY2024 Nebraska comparison it adds exactly $2,000 or
+$4,000 to 23 of 462 records. Effect: PolicyEngine overstates Nebraska refunds by far more than the $15 million program
+can pay.
 
 ## Corroboration worth passing along
 

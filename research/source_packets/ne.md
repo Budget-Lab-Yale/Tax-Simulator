@@ -2,7 +2,7 @@
 
 State: `NE`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-08` (child care credit base); previous: `2026-10-07` (State EITC cross-check); previous: `2026-08-13`
+Last updated: `2026-10-08` (PE window); previous: `2026-10-08` (child care credit base); previous: `2026-10-07` (State EITC cross-check); previous: `2026-08-13`
 
 > **Status note (as of 2026-08-13), kept from the packet's former Status line:**
 > ENCODED 2026-08-13 (baseline/ne/, tests NE-1..NE-6b); cross-model not yet run
@@ -182,6 +182,10 @@ revisited first among all states**.
   threshold rule wins → `$460.82`. **A $4,000 AGI increase raises NE tax by
   $561.60 — a genuine cliff in the law, not an artifact.**
 - NE-5 the 2017 Additional Tax identity above.
+
+## PolicyEngine window, 2026-10-08
+
+The 2024 cell (0.918) was one thing: 23 misses of exactly $2,000 or $4,000, PolicyEngine paying Nebraska's new Child Care Tax Credit (Neb. Rev. Stat. 77-7201 to 77-7205, LB 754, TY2024+: $2,000 / $1,000 per child aged five or less by household income). The statute makes it an application credit approved in order received until $15 million a year is reached, for children in licensed care (or a subsidy provider, or households at or below poverty). We document it as not modeled (the cap is a small fraction of the eligible population and the care condition is unobserved); PolicyEngine pays it to any unit with care expenses (P24). The harness now exports `pe_ne_refundable_ctc` and a row excludes those records: 2024 0.918 -> 0.972, 2025 0.847 -> 0.943. The 2022-2023 cells (0.940 / 0.938) are not attributed: high-income itemizers and separate filers, diffuse +-$1,000-$4,000.
 
 ## Child care credit base, 2026-10-08
 

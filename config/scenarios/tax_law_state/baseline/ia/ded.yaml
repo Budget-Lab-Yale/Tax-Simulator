@@ -93,17 +93,23 @@ fed_tax_ded_add_niit:
   value: 1
   reference: 'IA 1040 Expanded Instructions TY2021 line 28: the net investment income tax is among the non-deductible federal taxes added back into the deductible base, alongside additional Medicare tax WITHHELD, section 965 installments, excess FICA and the fuel tax credit'
 fed_tax_ded_less_eitc:
-  value: 1
-  reference: 'The Expanded Instructions allow refundable federal credits to reduce the deduction to the extent they extinguish federal tax, taking the EITC first. Since the base is floored at zero, the ordering does not change the total'
+  value: 0
+  reference: 'CORRECTED 2026-10-08 (had been 1). IA 1040 Expanded Instructions, line 31 "Refundable Credits" (TY2020 and TY2021 editions): "Refundable credits on the federal 1040 may be included on IA 1040, line 31, to the extent federal income tax was paid by applying the federal refundable credits, including: Earned Income Tax Credit, Additional Child Tax Credit. Any refundable federal credits that reduce federal income tax liability are allowed as a federal tax deduction -- up to the amount of the federal tax paid by the refundable credits". Worked example: "The $1,500 federal tax liability paid by EITC for Tax Year 2020 is deductible on the 2020 Iowa return". So the deductible base is federal liability after nonrefundable credits, NOT reduced by the refundable credits that pay it; the EITC-first ordering governs only which credit is treated as having paid the tax. The earlier reading ("allow refundable credits to REDUCE the deduction") inverted the rule and understated the deduction for every EITC and additional-child-credit family'
 fed_tax_ded_less_ctc_ref:
-  value: 1
-  reference: 'Same rule, the additional child tax credit taken second -- note this differs from Missouri, which does NOT subtract the ACTC'
+  value: 0
+  reference: 'Same rule and edition as fed_tax_ded_less_eitc: the additional child tax credit (the whole refundable credit in TY2021) pays federal tax and stays in the deductible base. CORRECTED 2026-10-08'
 fed_tax_ded_less_ed_ref:
-  value: 1
-  reference: 'Same rule, "then others", which reaches the refundable American Opportunity credit'
+  value: 0
+  reference: 'Same rule ("and then any other refundable federal credits"). CORRECTED 2026-10-08'
 fed_tax_ded_less_ptc:
-  value: 1
-  reference: 'Same rule, reaching the net premium tax credit'
+  value: 0
+  reference: 'Same rule. CORRECTED 2026-10-08'
+fed_tax_ded_add_ctc_nonref:
+  value:
+    '2017': 0
+    '2021': 1
+    '2022': 0
+  reference: 'TY2021 only: the American Rescue Plan Act made the federal child tax credit fully refundable, so under the Expanded Instructions line 31 rule (refundable credits that pay federal tax count as tax paid) none of it reduces the deductible federal tax. The federal calculator applies the 2021 credit against liability first (ctc_nonref, median $3,000 on families with children) and refunds the rest, so the offset part is added back here. PolicyEngine makes the same adjustment (ia_fedtax_deduction: "correct ustax amount for flaw in CTC refundable/nonrefundable split"). Added 2026-10-08: PE 2021 misses were families with children, ours higher by $100-$500'
 fed_tax_ded_less_excess_ptc:
   value: 1
   reference: 'Excess advance premium tax credit repayment is excluded from the deductible base (Expanded Instructions TY2021 line 31), as are self-employment tax, household employment tax and the Schedule 2 line 11 additional Medicare tax'

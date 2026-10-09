@@ -2,7 +2,7 @@
 
 State: `AR`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-08` (child care credit base); previous: `2026-08-18`
+Last updated: `2026-10-08` (cross-model closed); previous: `2026-10-08` (child care credit base); previous: `2026-08-18`
 
 ## Scope
 
@@ -142,6 +142,10 @@ of household with two dependents, exempt income counted toward the ceiling).
   on the qualified-individuals ceiling, and the TY2025 filing threshold for
   joint filers with two or more dependants prints $28,723 where the
   low-income table implies $29,723.
+
+## Close, 2026-10-08
+
+The two failing PolicyEngine cells (2022 0.945, 2023 0.924) were one-earner couples for whom we take the status-4 separate-return split. A per-record rerun showed PolicyEngine does not elect the split for them at all (`ar_files_separately` 0 on records 205397 and 64662), and its driver gives all non-wage income except pensions to the head; TAXSIM allocates by its own rule. With JI's October 2 decision to keep the even split of unobserved income, the class is an assumption row keyed on one-earner split couples (`st_split_used & pmin(ei1, ei2) <= 0`; hits match 0.69-0.77 on the TAXSIM leg, 0.22-0.79 on PolicyEngine). Cells after: TAXSIM 0.966-0.970, PolicyEngine 0.973 / 0.964 / 0.960 / 0.984 (2025 0.964). Cross-model closed.
 
 ## Child care credit base, 2026-10-08
 

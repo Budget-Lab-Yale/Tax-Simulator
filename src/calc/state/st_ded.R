@@ -52,6 +52,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'ed_ref',             # (dbl)  refundable education credit (AOC)
     'net_ptc',            # (dbl)  net premium tax credit
     'ctc_ref',            # (dbl)  additional (refundable) child tax credit
+    'ctc_nonref',         # (dbl)  nonrefundable child tax credit (IA 2021 add-back)
     'liab_niit',          # (dbl)  net investment income tax
     'excess_ptc',         # (dbl)  excess advance premium tax credit repayment
     'rebate',             # (dbl)  recovery rebate / economic stimulus entitlement
@@ -200,6 +201,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.fed_tax_ded_less_ptc',   # (int) net premium tax credit reduces the base (MO, NOT AL)
     'st_ded.fed_tax_ded_less_excess_ptc', # (int) excess APTC repayment stripped from the base (OR)
     'st_ded.fed_tax_ded_less_rebate', # (int) recovery rebate / stimulus reduces the base (OR 2020-2021)
+    'st_ded.fed_tax_ded_add_ctc_nonref', # (int) the CTC's liability-offset part added back when the federal CTC is fully refundable (IA 2021)
     'st_ded.fed_tax_ded_cap',        # (dbl) cap on the deduction (filing-status mapped)
     'st_ded.fed_tax_ded_band_base',  # (int) share-band income base (st_income_base enum)
     'st_ded.fed_tax_ded_in_itemized' # (int) the deduction sits INSIDE itemized deductions (MT)
@@ -397,8 +399,13 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # back out: it reaches 1040 line 22 through Schedule 2 Part I, but
       # Oregon's subtraction is "limited to income tax" and its worksheet
       # removes the repayment on line 2. Missouri and Alabama both leave it in
+      # A state that counts refundable credits paying federal tax as tax paid
+      # (IA) must not let the fully refundable TY2021 child tax credit reduce
+      # the base: the federal calculator applies it against liability first
+      # (ctc_nonref) and refunds the rest, so the offset part is added back
       st_fed_tax_base = pmax(0,
         liab_bc - nonref +
+          st_ded.fed_tax_ded_add_ctc_nonref * ctc_nonref +
           st_ded.fed_tax_ded_add_niit * liab_niit -
           st_ded.fed_tax_ded_less_excess_ptc * excess_ptc -
           st_ded.fed_tax_ded_less_rebate  * rebate -

@@ -2,7 +2,7 @@
 
 State: `IA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-08` (child care credit base); previous: `2026-08-19`
+Last updated: `2026-10-08` (federal tax deduction corrected; 2020-21 collapse); previous: `2026-10-08` (child care credit base); previous: `2026-08-19`
 
 ## Scope
 
@@ -153,6 +153,18 @@ to $90,000.
   **retroactively to TY2021** (2021 Acts ch 177), and the credit is computed
   off the GROSS federal section 21 credit "without regard to whether or not
   the federal credit was limited by the taxpayer's federal tax liability".
+
+## The 2020-2021 collapse, 2026-10-08
+
+Iowa's cells fell from ~0.87 to 0.586 (TAXSIM 2020) and 0.632 (PolicyEngine 2021). Three causes, one ours.
+
+- **Ours: the federal tax deduction was reduced by refundable credits.** `ded.yaml` had `fed_tax_ded_less_eitc / _ctc_ref / _ed_ref / _ptc` = 1, citing the Expanded Instructions' EITC-first ordering. The instructions say the opposite: "Refundable credits on the federal 1040 may be included on IA 1040, line 31, to the extent federal income tax was paid by applying the federal refundable credits", with the worked example "The $1,500 federal tax liability paid by EITC for Tax Year 2020 is deductible on the 2020 Iowa return" (TY2020 and TY2021 editions, line 31). The deductible base is federal liability after nonrefundable credits, not reduced by the refundable credits that pay it. All four flags are now 0. For TY2021 the fully refundable child tax credit cannot reduce the base either; the federal calculator applies it against liability first (`ctc_nonref`, median $3,000 on families with children), so that part is added back (new generic `fed_tax_ded_add_ctc_nonref`; PolicyEngine's `ia_fedtax_deduction` makes the same correction). Tests IA-14, IA-14b. The ordering rule in the instructions decides only which credit is treated as having paid the tax, which matters for the cash-basis refund line we do not model.
+- **TAXSIM, T37 (2020):** it nets the recovery rebate credit ($1,800 per adult, the two 2020 payments) out of the deductible federal tax; Iowa's "New for 2020" says the payments are not "added back as part of your reportable federal income tax refund". Our taxable income was below TAXSIM's by exactly $1,800 / $3,600 on 1,144 clean records. Excluded by a row keyed on the rebate at the Iowa marginal rate.
+- **TAXSIM, T38 (2017-2020):** the $6,000 / $12,000 pension exclusion only at 65, where Iowa Code 422.7(31) says 55 (probe at 50 / 57 / 66; 113 of 117 affected 2019 records aged 55-64). Same pattern as Arkansas T29.
+- **PolicyEngine, P23 (2021+):** Iowa net income built without the federal $3,000 capital-loss limit (record 430290: a $24.4 million loss gives `ia_net_income` of -$24 million and zero tax).
+- **Both: the foreign tax credit** shrinks the deduction on our side and is not an input to either model (the Alabama class); input-coverage row through TY2022, when the deduction ends.
+
+Cells after: TAXSIM 0.904 / 0.914 / 0.925 / 0.926, PolicyEngine 0.839 / 0.833 / 0.986 / 0.987. Not closed. The 2017-2022 residual (misses of +-$100-$400 in both directions, 2019 modes +100 / -200 / -300) is not attributed; the next pass should start from the 2019 TAXSIM misses with `d_txbl` modes of 0 / +2,500 / +3,000 on families with dependents.
 
 ## Child care credit base, 2026-10-08
 

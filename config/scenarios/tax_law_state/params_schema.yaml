@@ -145,6 +145,8 @@ scalars:
   st_agi.retire_sub_factor_income_base: 1   # st_income_base enum
   st_agi.age_excl_eitc: 0
   st_agi.sub_ui_share: 0
+  st_agi.sub_ui_worksheet: 0        # 1 = WI Schedule SB unemployment worksheet (half-of-excess rule)
+  st_agi.sub_ui_worksheet_base: 0   # its base amount, filing-status mapped
   st_agi.bus_carveout: 0
   st_agi.bus_ded_cap: .inf
   # Flat share of (zero-floored) business income subtracted, as against the
@@ -339,6 +341,7 @@ scalars:
   # Recovery rebate / economic stimulus payments reduce the deductible federal
   # tax base (OR Form OR-40 line 10 worksheet, TY2020-TY2021)
   st_ded.fed_tax_ded_less_rebate: 0
+  st_ded.fed_tax_ded_add_ctc_nonref: 0   # 1 = add the CTC's liability offset back to the base (IA 2021, fully refundable CTC)
   st_ded.fed_tax_ded_cap: {default: .inf, units: per_return}
   st_ded.fed_tax_ded_band_base: 2   # st_income_base enum (MO: state AGI, Line 6)
   # The federal tax deduction sits INSIDE the itemized schedule rather than

@@ -2,7 +2,7 @@
 
 State: `WI`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-08` (child care credit base); previous: `2026-07-24`
+Last updated: `2026-10-08` (unemployment worksheet; PE window); previous: `2026-10-08` (child care credit base); previous: `2026-07-24`
 
 > **Status note (as of 2026-07-24), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -29,6 +29,10 @@ child count (new eitc_match_by_kids family); school property tax credit
 care subtraction 2017-21 then 50%/100% federal-credit match.
 
 ## Worksheet tests: WI-1..WI-7
+
+## PolicyEngine window, 2026-10-08
+
+The 2021 cell (0.907) was the Schedule SB unemployment compensation worksheet (Wis. Stat. 71.05(6)(b)8): Wisconsin taxes only the lesser of the benefits or half of federal AGI over a base ($18,000 joint, $12,000 single and head of household, $0 for a separate filer living with the spouse), less taxable Social Security and state refunds, and subtracts the rest. It had been documented as "small at PUF incomes"; the 2021 pandemic benefits made it the whole residual (29 clean records with benefits over $10,200 matched at 0.17; record 57026, $206,047 of benefits, subtraction $103,120 in PolicyEngine). Now encoded in the generic UI subtraction (`sub_ui_worksheet`, base filing-status mapped; test WI-10); it applies in every year, where it was negligible before 2020. A second row covers separate filers claiming the care credit (IRC 21(e)(2), the Minnesota class). Cells after: TAXSIM 0.983-0.990, PolicyEngine 0.967 / 0.941 / 0.947 / 0.949 (2025 0.932). Not closed: 2022-2024 sit 0.1-0.9pp under the bar, the misses high-income separate and single filers with +-$100-$1,900 gaps, unattributed.
 
 ## Child care credit base, 2026-10-08
 

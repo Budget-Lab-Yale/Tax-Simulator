@@ -127,10 +127,13 @@ st_credits_care = function(tax_unit) {
   # chosen base only at or below cdctc_fed_base_switch_income (measured on
   # the share-table income base) and the claimed credit above it (NE Form
   # 2441N: at or below $29,000 federal AGI; OH: below $20,000)
+  # A state credit recomputed from expenses shares the federal take-up draw
+  # (cdctc_takeup; 90% calibrated in cdctc.R), as the claimed and tentative
+  # bases already do -- JI 2026-10-08
   cdctc_claimed = tax_unit$cdctc_nonref + tax_unit$cdctc_ref
   cdctc_own = if_else(n_care_v > 0,
                       cdctc_rate2 * pmin(tax_unit$care_exp, cdctc_cap_vec,
-                                         cdctc_ei_cap),
+                                         cdctc_ei_cap) * tax_unit$cdctc_takeup,
                       0)
   cdctc_fed = case_when(
     tax_unit$st_credits.cdctc_fed_base == 1 ~ tax_unit$cdctc_potential,
