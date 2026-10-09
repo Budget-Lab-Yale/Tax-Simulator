@@ -170,6 +170,45 @@ Cells after: TAXSIM 0.904 / 0.914 / 0.925 / 0.926, PolicyEngine 0.839 / 0.833 / 
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Iowa Code 422.12C(1): shares of the federal credit "without regard to whether or not the federal credit was limited by the taxpayer's federal tax liability". Worksheets read line 9 (2017-2018), line 10 (2021, ARPA), line 9c (2022+); the TY2019-2020 worksheet's "line 11" contradicts the statute, which governs. Now `cdctc_fed_base` = 1 in every year; the documented known difference is retired.
 
+## Closed, 2026-10-09
+
+Every 2017-2025 cell clears 0.95: TAXSIM 0.991 / 0.985 / 0.987 / 0.982,
+PolicyEngine 0.964 / 0.955 / 0.995 / 0.998 / 1.000 (runs ia_run_1009 and
+iats_run_1009).
+
+**Our fixes.**
+- *Reportable Social Security in the low-income and alternate-tax test.*
+  Through TY2022 the test income is Iowa net income plus the pension exclusion
+  plus reportable Social Security, computed on Iowa's worksheet at the
+  original 50% tier ($25,000 / $32,000 joint base, at most half the
+  benefits). We had used federal AGI, which carries the 85% tier, and taxed
+  older couples whom Iowa exempts. New `st_income_base` code 10; test IA-15.
+- *Single filers' low-income tax reduction* (form 41-146): tax may not exceed
+  test income less $9,000, or $24,000 at 65 or older. It had been left
+  unmodeled as binding only just above $9,000; at 65 or older it removed the
+  whole tax for PolicyEngine 2021 records 170871, 40486 and 118376. Encoded on
+  the alternate-tax ceiling with a 100% rate for single filers; test IA-16.
+
+**External.**
+- *P30:* PolicyEngine's federal tax deduction subtracts self-employment tax
+  and Additional Medicare Tax that its base never contained (record 293990,
+  2022: $88,308 short).
+- *P31:* PolicyEngine grants the $12,000 joint pension cap to each spouse.
+- *T42:* TAXSIM leaves the deductible half of self-employment tax in Iowa net
+  income and deducts federal income tax less the whole self-employment tax.
+- *T43:* TAXSIM never applies the $24,000 single threshold at 65 or older.
+- The all-state federal-tax-gap, education and foreign-tax-credit rows are now
+  keyed on the six deduction states; a foreign tax credit that zeroed our
+  deduction had escaped them (records 318344, 299962). A new PolicyEngine row
+  covers investment interest and other itemized deductions the harness cannot
+  pass (records 220684, 163276).
+
+**Open question.** Iowa's reportable Social Security worksheet (IA 1040
+instructions, Step 4) could not be retrieved. We add half the benefits to the
+income compared with the base, as the federal worksheet does; PolicyEngine
+does not. It matters only for Social Security recipients near the elderly
+thresholds.
+
 ## Known differences
 
 - **The Iowa AMT is the largest unencoded feature.** It ran through TY2022 at

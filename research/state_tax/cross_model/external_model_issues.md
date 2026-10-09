@@ -303,6 +303,15 @@ self-employment tax in Iowa net income and (b) deducts federal income tax LESS t
 gives federal AGI 74,348.18 but v32 80,000.01, and v36 77,577.85 = 80,000 - 2,000 - (fiitax 11,725.80 - SE tax
 11,303.65), siitax 5,042.98. Same in 2020. Effect: TAXSIM overstates Iowa tax for self-employed filers by roughly the
 Iowa rate times one and a half times their self-employment tax.
+
+### T43. Iowa single-filer low-income threshold at 65 or older not applied
+
+Form 41-146 (Iowa Income Tax Reduction Worksheet) caps a single filer's tax at income (net income plus the pension
+exclusion plus reportable Social Security) less $9,000, or less $24,000 if 65 or older. TAXSIM-35 applies the $9,000
+threshold at every age. Probe (2026-10-09), single, pensions only: at age 66, $20,000 of pensions (test income
+$20,000 < $24,000) gives siitax 254.07 in 2017 and 247.99 in 2020, where the form gives zero; at age 40, $8,500 gives
+zero as it should. Effect: TAXSIM overstates Iowa tax for single filers 65 or older with test income between $9,000 and
+$24,000.
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
