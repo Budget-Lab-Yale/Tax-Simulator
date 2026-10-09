@@ -19,8 +19,11 @@
 #     "Individual" thresholds cover single, separate and head-of-household
 #     filers; only married couples filing jointly get the joint ones.
 #   - Poverty level credit (10-709): 5% of earned income for sub-poverty
-#     households, nonrefundable -- binding only when tax exceeds 50% of
-#     the federal EIC; omitted as de-minimis [documented].
+#     households, nonrefundable (Worksheet 18B). Encoded 2026-10-09: it was
+#     omitted as de minimis on the view that it binds only when tax exceeds
+#     50% of the federal EIC, but that is every sub-poverty household with
+#     no EIC child -- adult dependents, childless filers over the EIC's
+#     income or age limits -- and those were PolicyEngine misses.
 
 filing_status_mapper:
   senior_credit_amount:
@@ -304,3 +307,32 @@ care_ref_agi_limit_joint:
     '2024': 89100
     '2025': 91400
   reference: 'Worksheet 21B line 1: joint FAGI limit. 2019 $75,000; 2023 $84,500, 2024 $89,100, 2025 $91,400 (verified); 2020-2022 from PolicyEngine [UNVERIFIED against the form]'
+
+# Poverty level credit (Tax-Gen 10-709; Form 502 line 23, Worksheet 18B),
+# added 2026-10-09
+pov_credit_rate:
+  value: 0.05
+  reference: 'Worksheet 18B line 5: "Multiply Line 2 by 5% (.05). This is your State Poverty Level Credit" (2023-2025 booklets; 10-709). Line 2: wages, tips and net self-employment profit, no farm or business loss. Nonrefundable ("This is not a refundable credit"); dependent filers (status 6) ineligible'
+
+pov_credit_income_base:
+  value: 3
+  reference: 'Worksheet 18B line 1: Form 502 line 7, federal AGI plus Maryland additions; line 4 takes the larger of lines 1 and 2, and the credit requires the poverty income (line 3) to be GREATER than it'
+
+# Poverty guideline by persons on the federal return: credit_tables.csv beside
+# this file (credit_id cli_poverty_guideline, shared with the VA low-income
+# credit machinery). The booklets print the HHS guideline for the tax year
+# itself: 2023 $14,580, 2024 $15,060, 2025 $15,650 for one person (Resident
+# Booklets, Worksheet 18B table, verified 2026-10-09); 2017-2022 carry the
+# same-year HHS guidelines on that pattern [booklets not fetched]
+cli_poverty_addl:
+  value:
+    '2017': 4180
+    '2018': 4320
+    '2019': 4420
+    '2020': 4480
+    '2021': 4540
+    '2022': 4720
+    '2023': 5140
+    '2024': 5380
+    '2025': 5500
+  reference: 'Worksheet 18B table: "For families/households with more than 8 persons, add $5,140 [2023] / $5,380 [2024] / $5,500 [2025] for each additional person"; 2017-2022 the HHS increment'

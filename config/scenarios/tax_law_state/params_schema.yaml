@@ -525,6 +525,11 @@ scalars:
   st_credits.eitc_liab_cap_base: 1   # st_income_base enum
   st_credits.cli_amount: {default: 0, units: per_exemption}
   st_credits.cli_poverty_addl: 0
+  # Poverty level credit (MD 10-709): rate x earned income when the larger of
+  # earned income and the income base is below the cli_poverty_guideline
+  # table for the persons on the federal return; nonrefundable
+  st_credits.pov_credit_rate: 0
+  st_credits.pov_credit_income_base: 3   # st_income_base enum (MD: federal AGI plus additions)
   st_credits.eitc_cli_excl_age_package: 0
   st_credits.eitc_less_household_credit: 0
   st_credits.eitc_child_bonus: {default: 0, units: per_return}

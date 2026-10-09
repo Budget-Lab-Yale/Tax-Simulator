@@ -156,6 +156,20 @@ PolicyEngine -$1,224.
   line 22 plus the refundable excess; their liabilities are unchanged. MD-11f
   reproduces record 12337.
 
+**Our bug, found on the second rerun: the poverty level credit.** The packet
+called it de minimis because it binds only when tax exceeds half the federal
+EIC. That is every sub-poverty household without an EIC child: adult
+dependents, and childless filers past the EIC's income or age limits.
+PolicyEngine records 94312 and 60346 (2024, $18,000-$19,000 of wages, one
+adult dependent) owe $409 and $389 with us and nothing with PolicyEngine,
+whose `md_poverty_line_credit` wipes the tax. Encoded from Worksheet 18B
+(10-709): 5% of earned income when the larger of earned income and federal
+AGI plus additions is below the same-year HHS guideline for the persons on
+the federal return; nonrefundable; dependent filers ineligible. New generic
+`pov_credit_rate` / `pov_credit_income_base`, reusing the Virginia
+`cli_poverty_guideline` table. The credit is a statutory cliff, so the
+continuity allowance rose to $500. Tests MD-12a/b.
+
 **PolicyEngine bug P27: no 2021 unemployment subtraction.** policyengine-us
 1.775.7 has no RELIEF Act subtraction (Laws of Maryland 2021 ch. 39; 502SU code
 yy). Record 75235: `md_agi` equals federal AGI with $43,633 of unemployment
@@ -195,7 +209,7 @@ exceeds $100.
 Military (code u) and public-safety (code v) retirement subtractions
 omitted (source unobservable, one-sided); per-spouse SS attribution in
 the pension-exclusion offset (unit-level gross SS used); poverty level
-credit omitted (binds only when tax exceeds 50% of the federal EIC);
+credit encoded 2026-10-09 (see the triage section);
 2021-22 disabled-child CTC omitted (unobservable, de-minimis at a $6k
 cliff); 65+ dependent extra exemption omitted; SALT 17b income-first
 allocation assumed; 502CG surtax exceptions unobserved; MD-source UI

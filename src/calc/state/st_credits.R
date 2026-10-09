@@ -8,6 +8,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
                                 'st_pct_credit', 'st_cli', 'st_ded_credit',
                                 'st_lic', 'st_kg_credit', 'st_step_credit',
+                                'st_pov_credit',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
@@ -504,6 +505,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_lic            = st_lic,
     st_kg_credit      = st_kg_credit,
     st_step_credit    = st_step_credit,
+    st_pov_credit     = earn$st_pov_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -512,6 +514,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_jfc + earn$st_forgive_credit + st_marriage_credit +
                         st_twoearner_credit + st_item_credit +
                         st_char_credit + st_lic + st_kg_credit + st_step_credit +
+                        earn$st_pov_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         hh$st_stfc *

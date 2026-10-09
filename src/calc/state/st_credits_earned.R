@@ -21,6 +21,8 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_child_bonus',
   'st_credits.cli_amount',
   'st_credits.cli_poverty_addl',
+  'st_credits.pov_credit_rate',
+  'st_credits.pov_credit_income_base',
   'st_credits.eitc_cli_excl_age_package',
   'st_credits.earned_credit_style',
   'st_credits.earned_credit_age_min',
@@ -79,6 +81,7 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   #   - st_eitc_ref_share (dbl) : refundability of the chosen option (0/1)
   #   - st_cli (dbl)            : credit for low-income individuals (VA)
   #   - st_forgive_credit (dbl) : poverty-based forgiveness credit (PA)
+  #   - st_pov_credit (dbl)     : poverty level credit (MD)
   #----------------------------------------------------------------------------
 
   n   = nrow(tax_unit)
@@ -428,7 +431,26 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     0
   )
 
+  # Poverty level credit (MD Tax-Gen 10-709; Form 502 line 23, Worksheet
+  # 18B): pov_credit_rate (5%) of earned income -- wages and net
+  # self-employment profit, losses excluded -- when the LARGER of earned
+  # income and the income base (MD: federal AGI plus additions, Form 502
+  # line 7) is below the poverty guideline for the persons on the federal
+  # return (the cli_poverty_guideline table; strict "Line 3 is greater than
+  # Line 4"). Nonrefundable, stacking after the EIC on line 22; dependent
+  # filers ineligible
+  pov_earned = pmax(0, tax_unit$ei1) + pmax(0, coalesce(tax_unit$ei2, 0))
+  pov_income = pmax(pov_earned,
+                    st_income_base(tax_unit, tax_unit$st_credits.pov_credit_income_base))
+  st_pov_credit = if_else(
+    tax_unit$st_credits.pov_credit_rate > 0 & tax_unit$dep_status != 1 &
+      pov_income < cli_guideline,
+    tax_unit$st_credits.pov_credit_rate * pov_earned,
+    0
+  )
+
   list(
+    st_pov_credit     = st_pov_credit,
     st_earned_credit  = st_earned_credit,
     st_yctc           = st_yctc,
     st_eitc           = st_eitc,

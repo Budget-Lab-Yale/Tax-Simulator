@@ -40,7 +40,7 @@ test_state_calc = function() {
     'st_pct_credit', 'st_cli', 'st_ded_credit', 'st_age_credit',
     'st_retire_credit', 'st_senior_credit', 'st_jfc', 'st_forgive_credit',
     'st_percap_credit', 'st_marriage_credit', 'st_twoearner_credit',
-    'st_item_credit', 'st_stfc', 'st_lic', 'st_kg_credit'
+    'st_item_credit', 'st_stfc', 'st_lic', 'st_kg_credit', 'st_pov_credit'
   )
   case_exercised = new.env()
   case_exercised$sets = list()
@@ -2275,6 +2275,22 @@ test_state_calc = function() {
            expect = list(st_cdctc = 0.32 * 913,
                          liab_st_iit = 471.52 - 0.45 * 3769),
            label = 'MD-11f care credit refundable only above pre-credit tax')
+
+  # MD-12: poverty level credit (10-709, Worksheet 18B). (a) PolicyEngine
+  # record 94312, 2024 single aged 22, wages 18,817, one adult dependent
+  # (no EIC child; the childless EIC is phased out at this income): two
+  # persons, guideline $20,440 > 18,817 -> 5% x 18,817 = 940.85, capped
+  # at the 409 of tax -> zero (PolicyEngine: 0)
+  run_case('MD', 2024,
+           list(agi = 18817, age1 = 22, wages1 = 18817, ei1 = 18817,
+                n_dep = 1, dep_age1 = 24),
+           expect = list(st_pov_credit = 0.05 * 18817, liab_st_iit = 0),
+           label = 'MD-12a poverty level credit, adult dependent')
+  # (b) one person, wages 16,000 >= the $15,060 guideline -> none
+  run_case('MD', 2024,
+           list(agi = 16000, age1 = 40, wages1 = 16000, ei1 = 16000),
+           expect = list(st_pov_credit = 0),
+           label = 'MD-12b poverty level credit, above the guideline')
 
   #--------------------------------------------------------------------------
   # Wisconsin (Form 1) -- sliding standard deduction (HoH single-floor),
@@ -5958,7 +5974,12 @@ run_case('AR', 2024,
                 #   2,500 in 2018-23; booklet-table-verified; KS-2/2b)
     OH = 400,   # zero-bracket base-amount cliff (statutory; tax owed on
                 #   the first taxed dollar from 2019, OH-3)
-    MD = 130,   # banded exemption steps at $100k/$125k/$150k
+    MD = 500,   # poverty level credit CLIFF (10-709, Worksheet 18B: income
+                #   must be below the guideline; no taper), so the whole
+                #   credit, capped at tax, vanishes at the one-person
+                #   guideline -- $300 in 2017, $460 in 2024 across the $15,000 -> $15,500 step (tax at
+                #   $15,060 less the 50% EIC). Was 130 for the banded
+                #   exemption steps at $100k/$125k/$150k. Pinned by MD-12
     HI = 160,   # N-311 food-credit band edges (published cliffs: the single
                 #   table ends at $40,000 in the 2023-2027 vintage, dropping
                 #   $110 for the one-person sweep unit, plus the bracket
