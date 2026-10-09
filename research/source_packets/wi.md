@@ -38,6 +38,21 @@ The 2021 cell (0.907) was the Schedule SB unemployment compensation worksheet (W
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. TY2022-2023: Form 1 line 14 reads Form 2441 line 9c (tentative), now `cdctc_fed_base` = 1. TY2024+: Schedule WI-2441 computes 100% of a federal-formula credit on expenses up to $10,000 / $20,000 with no federal tax-liability limit (71.07(9g)), now `cdctc_fed_base` = 2 with those caps. Both had used the claimed federal credit. Test WI-9.
 
+## Closed, 2026-10-09
+
+Every 2017-2025 cell clears 0.95 (TAXSIM 0.983 / 0.983 / 0.990 / 0.990;
+PolicyEngine 0.994 / 0.990 / 0.998 / 0.988 / 0.973; runs all_run_1009c and
+pe_run_1009d). The last PolicyEngine 2022-2024 misses were two PolicyEngine
+classes, both now excluded:
+
+- **P25:** PolicyEngine gives separate filers the $300 school property tax
+  credit cap; the form allows $150 per spouse (2023 Form 1 instructions,
+  line 15). Record 116220.
+- **Municipal-bond interest:** PolicyEngine adds back all tax-exempt interest;
+  we add back 25%, our assumption for the share from non-Wisconsin bonds. Neither
+  side observes the issuer. Keyed where 75% of exempt interest at 6.27% exceeds
+  $100.
+
 ## Known differences
 
 Homestead credit not modeled (PE includes it: expected one-sided

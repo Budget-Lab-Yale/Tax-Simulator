@@ -199,6 +199,23 @@ are allowed the federal EIC on your federal married, filing separately return" (
 35, TY2024 line 42). The EITC follows the federal credit; the note now confines the bar to the care credit
 (joint-federal/separate-state filers).
 
+## Closed, 2026-10-09
+
+Every 2017-2025 cell clears 0.95 (TAXSIM 0.990-0.993; PolicyEngine 0.980 /
+0.976 / 0.974 / 0.988 / 0.988).
+
+**Our bug: the itemized rebuild ignored the federal SALT cap.** Form 1040N
+lines 7-9 start from the capped federal itemized total and subtract the
+Schedule A line 5a income tax "even if the total amount of state and local
+taxes was limited to $10,000" (2022 booklet line 8). We rebuilt the
+deduction from uncapped components. New `item_component_style` 3 (federal
+total less the full income tax); test NE-5e.
+
+**P26:** PolicyEngine keeps property tax up to the cap instead of subtracting
+the full income tax, so it understates tax for itemizers over the cap
+(record 294403, 2022: $37,379 against the form's zero). Excluded for
+itemizers whose taxes exceed the cap.
+
 ## Known differences
 
 **Tier 1.** School-district property tax credit (LB 1107, TY2020-2023) and

@@ -284,6 +284,14 @@ federal credit (530 / 530 / 521.93 / 483.68 / 445.43) and siitax goes negative; 
 switch does not follow the poverty-credit guideline ($12,760) or the point where the credit stops exceeding the tax. In
 the 2020 clean subset, the 75 childless non-joint records above $10,000 with a state credit worth over $100 all miss.
 Effect: TAXSIM overstates 2020 Maryland tax for childless filers by up to half the federal credit.
+
+### T41. Maryland extra exemption for dependents 65 or over not applied
+
+Form 502B gives each dependent aged 65 or over a second exemption, valued like any dependent exemption under the
+federal-AGI banding ($3,200 below $100,000 single / $150,000 joint). TAXSIM-35 ignores the dependent's age. Probe
+(2026-10-09), 2019 head of household, $50,000 of wages, one dependent aged 10, 40, 70 or 80: `v33_state_exemption_amount`
+6,400 and siitax 1,871.25 in every case, where the form gives 9,600 at ages 70 and 80. Effect: TAXSIM overstates
+Maryland tax by $3,200 times the marginal rate (about $152) per aged dependent.
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
