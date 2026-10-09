@@ -2291,6 +2291,18 @@ test_state_calc = function() {
            list(agi = 16000, age1 = 40, wages1 = 16000, ei1 = 16000),
            expect = list(st_pov_credit = 0),
            label = 'MD-12b poverty level credit, above the guideline')
+  # (c) childless credit and poverty credit together, PolicyEngine record
+  #     11515 (2021 single aged 33, wages 11,552, federal EIC 1,502): tax
+  #     90 + 4.75% x (11,552 - 1,733 - 3,200 - 3,000) = 261.90; childless
+  #     credit 530 (capped) absorbs it on line 22 and refunds only 530 -
+  #     261.90; the poverty credit (577.60) finds no tax left.
+  #     PolicyEngine: -268
+  run_case('MD', 2021,
+           list(agi = 11552, age1 = 33, wages1 = 11552, ei1 = 11552,
+                eitc = 1502),
+           expect = list(st_pov_credit = 0.05 * 11552,
+                         liab_st_iit = (90 + 0.0475 * 3619) - 530),
+           label = 'MD-12c childless credit refundable only above the tax')
 
   #--------------------------------------------------------------------------
   # Wisconsin (Form 1) -- sliding standard deduction (HoH single-floor),

@@ -273,6 +273,17 @@ it only up to fixed amounts of income. Probes (2026-10-09), 2019:
 2018 shows the same cutoff. Effect: TAXSIM understates Iowa refunds for families in the upper part of the EITC phase-out
 by up to 15% of their federal credit.
 
+
+### T40. Maryland 2020 childless earned income credit dropped above about $10,000
+
+The RELIEF Act (Laws of Maryland 2021 ch. 39) made Maryland's credit for filers without a qualifying child 100% of
+the federal credit, capped at $530 and refundable, from tax year 2020 (Worksheet 18A.1). TAXSIM-35 applies it only at
+low incomes. Probe (2026-10-09), 2020 single aged 30, wages only: at $8,000-$10,000 `v39_state_eitc` equals the
+federal credit (530 / 530 / 521.93 / 483.68 / 445.43) and siitax goes negative; from $10,500 up it falls back to 50%
+(203.59 at $10,500, 107.97 at $13,000) and siitax is 0.00 and 212.41, where the form gives about -$188 and $104. The
+switch does not follow the poverty-credit guideline ($12,760) or the point where the credit stops exceeding the tax. In
+the 2020 clean subset, the 75 childless non-joint records above $10,000 with a state credit worth over $100 all miss.
+Effect: TAXSIM overstates 2020 Maryland tax for childless filers by up to half the federal credit.
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
@@ -1176,6 +1187,31 @@ contributions only. Per-record rerun (2026-10-09): record 75235, 2021 separate f
 is unemployment compensation: `md_agi` 73,933 and `md_total_subtractions` 0 where the form gives $30,300. Record 49111
 (single, $30,150 of unemployment compensation) has the same shape. Effect: PolicyEngine overstates 2021 Maryland tax by
 the state rate times unemployment compensation below the cliff, about $1,400-$2,700 on the affected records.
+
+### P28. State retirement exclusions never see IRA distributions
+
+policyengine-us 1.775.7 carries IRA distributions as `taxable_ira_distributions` (inside federal gross income via
+`taxable_retirement_distributions`), but no state income tax variable or parameter reads it: every state pension or
+retirement exclusion takes `taxable_pension_income` only (for example the Illinois subtraction list,
+`gov.states.il.tax.income.base.subtractions`, is taxable Social Security plus taxable pension income). States whose
+exclusion covers IRA distributions therefore tax them in PolicyEngine. Illinois exempts all qualified retirement
+income, IRA distributions included (IL-1040 line 5). Harness evidence (2026-10-09): passing IRA distributions as
+`taxable_ira_distributions` instead of pension income dropped the Illinois 2024 clean match from 0.989 to 0.924, with
+IRA records matching 0.268 against 0.988 for the rest; record 334315 (2024 head of household, $106,106 of IRA
+distributions) owes $5,266 of Illinois tax in PolicyEngine where the subtraction leaves $14. New York, Oklahoma, Iowa,
+Maine and Michigan moved the same way. The harness now folds IRA distributions into pension income except for Maryland
+and Rhode Island, whose exclusions do not cover IRAs. Effect: PolicyEngine overstates state tax on IRA income wherever
+the state exclusion includes it.
+
+### P29. Maryland earned income credit paid to filers past the federal maximum age
+
+Maryland's credit is a share of the federal credit, and Tax-General 10-704(b)(3) waives only the federal MINIMUM age
+for filers without a qualifying child ("calculated without regard to the minimum age requirement under section
+32(c)(1)(A)(ii)(II)"). Filers whose only adults are 65 or older get no federal credit outside TY2021 and so no Maryland
+credit. policyengine-us 1.775.7 pays them one. Per-record rerun (2026-10-09), 2023: record 297237 (single, 68, $7,937
+of wages) `md_unmarried_childless_non_refundable_eitc` 600 and `md_unmarried_childless_refundable_eitc` 549; record
+132613 (joint, both 80, $13,495 of wages) `md_married_or_has_child_refundable_eitc` 227. Effect: PolicyEngine
+understates Maryland tax for low-earning filers aged 65 and over by up to the childless cap.
 
 ## Corroboration worth passing along
 

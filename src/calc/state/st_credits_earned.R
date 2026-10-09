@@ -336,7 +336,18 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
          tax_unit$st_credits.eitc_childless_cap),
     st_eitc
   )
-  st_eitc_ref_share = if_else(childless_gate, 1, st_eitc_ref_share)
+  # Under the MD stacking rule (eitc_alt_excess) the childless credit is
+  # also refundable only above the Maryland tax before credits (Worksheet
+  # 18A.1 nets the tax as 18A does); the rest is a line-22 nonrefundable
+  # credit, so it cannot leave the tax free for the poverty, care or
+  # senior credits (2026-10-09, PolicyEngine record 11515, 2021)
+  childless_ref = if_else(
+    excess_style,
+    if_else(st_eitc > 0,
+            pmax(0, st_eitc - pmax(0, tax_unit$st_tax_pre_credit)) / st_eitc, 0),
+    1
+  )
+  st_eitc_ref_share = if_else(childless_gate, childless_ref, st_eitc_ref_share)
 
   # Flat credit for childless filers outside the FEDERAL age band but inside
   # the state's (NJ-1040 line 58: "at least 18 ... met all federal EIC

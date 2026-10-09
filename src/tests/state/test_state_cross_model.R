@@ -332,6 +332,10 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
   }
   driver = file.path(cross_model_harness_dir(), 'pe_state_tax.py')
 
+  # States whose pension exclusion does not cover IRA distributions (see
+  # the pension_income note below)
+  PE_IRA_SEPARATE_STATES = c('MD', 'RI')
+
   pe_input = map(states, function(st) {
     sampled %>%
       mutate(
@@ -360,8 +364,18 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         qualified_dividends = div_pref,
         ordinary_dividends  = div_ord,
         stcg = kg_st, ltcg = kg_lt,
-        pension_income  = txbl_pens_dist,
-        ira_dist        = txbl_ira_dist,
+        # IRA distributions: policyengine-us 1.775.7's state income tax code
+        # never reads taxable_ira_distributions -- every state retirement
+        # exclusion takes taxable_pension_income only (P28). Where state law
+        # treats IRA distributions like pensions (IL, NY, OK, IA, ME, MI, ...)
+        # folding them into pension income gives PolicyEngine the form-true
+        # base; where the law EXCLUDES IRAs from the pension exclusion (MD
+        # Worksheet 13A, RI-1040 Schedule M; our pension_excl_incl_ira = 0)
+        # they travel separately. Splitting them everywhere (2026-10-09)
+        # dropped IL 2024 from 0.989 to 0.924 on IRA records alone
+        pension_income  = txbl_pens_dist +
+          (if (st %in% PE_IRA_SEPARATE_STATES) 0 else txbl_ira_dist),
+        ira_dist        = if (st %in% PE_IRA_SEPARATE_STATES) txbl_ira_dist else 0,
         social_security = gross_ss,
         unemployment    = ui,
         rental          = rent - rent_loss,
