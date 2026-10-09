@@ -170,6 +170,28 @@ the federal return; nonrefundable; dependent filers ineligible. New generic
 `cli_poverty_guideline` table. The credit is a statutory cliff, so the
 continuity allowance rose to $500. Tests MD-12a/b.
 
+**Closed 2026-10-09 (run md_run_1009g).** Every cell clears 0.95: TAXSIM
+0.984 / 0.976 / 0.958 / 0.962, PolicyEngine 0.971 / 0.977 / 0.974 / 0.984 /
+0.965. The last steps, in order:
+
+- **Childless credit stacking (ours).** The 100% childless credit
+  (Worksheet 18A.1) was still fully refundable; with the poverty credit
+  absorbing the tax it was refunded in full on top. It now refunds only the
+  excess over the tax. Test MD-12c (PolicyEngine record 11515, -$268).
+- **Extra exemption for dependents 65 or over (ours).** Form 502B claims such
+  a dependent again; it had been left as documented-not-modeled. Ten of the
+  24 PolicyEngine 2024 misses were exactly $3,200 x 4.75% = $152. Generic
+  `st_exempt.dep_aged_extra`; test MD-13.
+- **T40 (TAXSIM).** TAXSIM applies the TY2020 childless credit only up to about
+  $10,000 of wages and the 50% credit above it (probe sweep).
+- **T41 (TAXSIM).** TAXSIM ignores the dependent's age in the exemption
+  (probe: $6,400 at dependent ages 10, 40, 70 and 80).
+- **P29 (PolicyEngine).** PolicyEngine pays the Maryland EIC to filers aged 65
+  and over, who have no federal credit outside 2021.
+- **Federal side.** Our federal care credit has no separate-filer bar (IRC
+  21(e)(2)); PolicyEngine pays none, so the Maryland credit diverges on those
+  returns. Documented and excluded for all states, not fixed here.
+
 **PolicyEngine bug P27: no 2021 unemployment subtraction.** policyengine-us
 1.775.7 has no RELIEF Act subtraction (Laws of Maryland 2021 ch. 39; 502SU code
 yy). Record 75235: `md_agi` equals federal AGI with $43,633 of unemployment

@@ -4617,6 +4617,21 @@ run_case('AR', 2024,
            expect = list(st_fed_tax_ded = 5000),
            label = 'IA-14b 2021 fully refundable CTC added back')
 
+  # IA-15: the elderly alternate-tax test counts Social Security at the 50%
+  # tier only (reportable Social Security). PolicyEngine record 51314
+  # (2021 joint, 74 and 67, $26,196 of pensions, $20,802 of benefits,
+  # federally taxable 15,172, AGI 41,368): provisional income 26,196 +
+  # 10,401 = 36,597; reportable 0.5 x (36,597 - 32,000) = 2,298.5; test
+  # income 28,494.5 <= $32,000 -> the alternate tax is zero and removes the
+  # whole Iowa tax (PolicyEngine: 0). On federal AGI it was 41,368 and the
+  # filer owed $252
+  run_case('IA', 2021,
+           list(agi = 41368.11, filing_status = 2, age1 = 74, age2 = 67,
+                txbl_pens_dist = 26195.87, gross_ss = 20802.43,
+                txbl_ss = 15172.24),
+           expect = list(liab_st_iit = 0),
+           label = 'IA-15 elderly test income uses reportable Social Security')
+
   #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
   #

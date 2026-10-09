@@ -109,8 +109,10 @@ lic_rate:
     '2025': 0.043
   reference: 'The ALTERNATE TAX rate. Through TY2024 the statute defined it as "the maximum state individual income tax rate", so it tracked the top bracket: 8.98% for TY2017-18 and 8.53% for TY2019-22 per the note to Table 1 in the IDR statistical reports, 6% per the TY2023 worksheet line 4 and 5.7% per the TY2024 one. SF 2442 then hard-coded a standalone rate: Iowa Code 422.5(2)(b) and (3)(b) (2026 ed.), "the alternate state individual income tax rate of four and three-tenths percent". Note 4.3% is ABOVE the 3.8% flat rate, so from TY2025 the alternate tax only ever helps taxpayers near the thresholds'
 lic_income_base:
-  value: 1
-  reference: 'Federal AGI, as the single stand-in for two different statutory constructions of "net income". Pre-2023 the test added the pension exclusion and reportable Social Security back to Iowa net income; from TY2023 it adds back the federal standard or itemized deduction, the federal personal exemption deduction and the QBI deduction to Iowa taxable income. Both land close to federal AGI'
+  value:
+    '2017': 10
+    '2023': 1
+  reference: 'TY2017-2022 (enum 10): Iowa net income plus the pension exclusion plus REPORTABLE Social Security, which is federal AGI with Social Security recomputed at the original 50% tier only (Expanded Instructions Step 4 worksheet: $25,000 / $32,000 joint bases, half the benefits); federal AGI carries the 85% tier and overstated the test income of every Social Security recipient above the base. Changed 2026-10-09 (PolicyEngine 2021 records 51314 and 86618, joint 65+, owed nothing in PolicyEngine and $230-$250 with us). TY2023 onward (enum 1): federal AGI as the stand-in for Iowa taxable income plus the federal standard or itemized deduction, personal exemption and QBI deductions'
 alt_thresh_single:
   value: 0
   reference: 'Single filers may NOT use the alternate tax -- "All filing statuses except filing status 1, Single, may qualify" (Expanded Instructions TY2023 and TY2025). Encoded as a zero threshold rather than a gate: the ceiling then becomes the alternate rate times all of income, and since that rate is at or above Iowa''s top marginal rate in every year the ceiling always exceeds the tax and the credit falls to zero on its own'

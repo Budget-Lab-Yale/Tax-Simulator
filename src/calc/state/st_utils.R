@@ -263,6 +263,14 @@ st_income_base = function(tax_unit, code) {
   #   8 = modified state AGI (7) less exemptions (OH 2019+ means tests)
   #   9 = state TAXABLE income (only available downstream of calc_st_txbl;
   #       NJ keys its child credit tiers on it)
+  #  10 = federal AGI with Social Security at the original 50% tier only
+  #       (Iowa "reportable Social Security", IA 1040 Expanded Instructions
+  #       Step 4 worksheet, TY2017-2022): AGI less federally taxable
+  #       benefits, plus 0.5 x min(benefits, provisional income - base),
+  #       provisional income = AGI less taxable benefits plus tax-exempt
+  #       interest plus half the benefits; base $32,000 joint, $25,000
+  #       otherwise (separate filers who lived with their spouse use 0 on
+  #       the form; unobserved, so 25,000)
   # An unavailable base (e.g. state AGI requested inside calc_st_agi) or an
   # unknown code resolves to NA, which downstream comparisons surface.
   #
@@ -287,6 +295,13 @@ st_income_base = function(tax_unit, code) {
     code == 7 ~ col_or_na('st_agi') + col_or_na('st_bid'),
     code == 8 ~ col_or_na('st_agi') + col_or_na('st_bid') - col_or_na('st_exempt'),
     code == 9 ~ col_or_na('st_txbl_inc'),
+    code == 10 ~ {
+      ss_other = tax_unit$agi - col_or_na('txbl_ss')
+      ss_ben   = pmax(0, col_or_na('gross_ss'))
+      ss_prov  = ss_other + coalesce(col_or_na('exempt_int'), 0) + 0.5 * ss_ben
+      ss_base  = if_else(tax_unit$filing_status == 2, 32000, 25000)
+      ss_other + 0.5 * pmin(ss_ben, pmax(0, ss_prov - ss_base))
+    },
     TRUE      ~ NA_real_
   )
 }

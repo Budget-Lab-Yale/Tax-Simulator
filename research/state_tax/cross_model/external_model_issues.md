@@ -1221,6 +1221,17 @@ of wages) `md_unmarried_childless_non_refundable_eitc` 600 and `md_unmarried_chi
 132613 (joint, both 80, $13,495 of wages) `md_married_or_has_child_refundable_eitc` 227. Effect: PolicyEngine
 understates Maryland tax for low-earning filers aged 65 and over by up to the childless cap.
 
+### P30. Iowa federal tax deduction subtracts payroll taxes that were never in it
+
+`ia_fedtax_deduction` starts from `income_tax_before_refundable_credits`, which is regular tax plus capital gains tax,
+AMT, the net investment income tax and recapture, less nonrefundable credits. It contains no self-employment tax and no
+Additional Medicare Tax. The formula then subtracts both ("remove SECA and Additional Medicare taxes"), so the Iowa
+deduction is understated by the filer's whole self-employment tax plus Additional Medicare Tax. Per-record rerun
+(2026-10-09), 2022 record 293990: `income_tax_before_refundable_credits` 690,444, `self_employment_tax` 73,084,
+`additional_medicare_tax` 15,224, `ia_fedtax_deduction` 602,135 (= 690,444 - 88,308); our deduction 690,474. Effect:
+PolicyEngine overstates Iowa tax in 2021-2022 by the Iowa rate times those payroll taxes ($7,535 on this record). The
+deduction is repealed from TY2023.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%
