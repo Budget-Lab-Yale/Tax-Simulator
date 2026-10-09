@@ -4618,19 +4618,28 @@ run_case('AR', 2024,
            label = 'IA-14b 2021 fully refundable CTC added back')
 
   # IA-15: the elderly alternate-tax test counts Social Security at the 50%
-  # tier only (reportable Social Security). PolicyEngine record 51314
-  # (2021 joint, 74 and 67, $26,196 of pensions, $20,802 of benefits,
-  # federally taxable 15,172, AGI 41,368): provisional income 26,196 +
+  # tier only (reportable Social Security). A constructed case shaped like
+  # PolicyEngine record 51314 (2021 joint, 74 and 67, $26,196 of pensions,
+  # $20,802 of benefits; here no other income, so federally taxable
+  # benefits are 15,172 and AGI 41,368): provisional income 26,196 +
   # 10,401 = 36,597; reportable 0.5 x (36,597 - 32,000) = 2,298.5; test
   # income 28,494.5 <= $32,000 -> the alternate tax is zero and removes the
-  # whole Iowa tax (PolicyEngine: 0). On federal AGI it was 41,368 and the
-  # filer owed $252
+  # whole Iowa tax. On federal AGI it was 41,368 and the filer owed tax
   run_case('IA', 2021,
            list(agi = 41368.11, filing_status = 2, age1 = 74, age2 = 67,
                 txbl_pens_dist = 26195.87, gross_ss = 20802.43,
                 txbl_ss = 15172.24),
            expect = list(liab_st_iit = 0),
            label = 'IA-15 elderly test income uses reportable Social Security')
+  # IA-16: single filers' tax reduction (form 41-146): tax capped at test
+  # income less $24,000 at 65 or older. 2021 single aged 65, $19,000 of
+  # pensions, $21,783 of benefits (none federally taxable at this income),
+  # AGI 19,000: test income 19,000 < 24,000 -> no tax
+  run_case('IA', 2021,
+           list(agi = 19000, age1 = 65, txbl_pens_dist = 19000,
+                gross_ss = 21783, txbl_ss = 0),
+           expect = list(liab_st_iit = 0),
+           label = 'IA-16 single filer low-income tax reduction at 65')
 
   #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
@@ -6011,6 +6020,11 @@ run_case('AR', 2024,
                 #   2,500 in 2018-23; booklet-table-verified; KS-2/2b)
     OH = 400,   # zero-bracket base-amount cliff (statutory; tax owed on
                 #   the first taxed dollar from 2019, OH-3)
+    IA = 200,   # single filers' low-income tax reduction (form 41-146):
+                #   tax capped at income less $9,000, a 100% phase-in, so
+                #   just above the threshold tax rises $1 per $1 until the
+                #   cap meets the schedule tax ($107.80 across $9,000 ->
+                #   $9,500 in 2017). Pinned by IA-16
     MD = 500,   # poverty level credit CLIFF (10-709, Worksheet 18B: income
                 #   must be below the guideline; no taper), so the whole
                 #   credit, capped at tax, vanishes at the one-person

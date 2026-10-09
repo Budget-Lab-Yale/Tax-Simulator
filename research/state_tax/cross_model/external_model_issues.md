@@ -292,6 +292,17 @@ federal-AGI banding ($3,200 below $100,000 single / $150,000 joint). TAXSIM-35 i
 (2026-10-09), 2019 head of household, $50,000 of wages, one dependent aged 10, 40, 70 or 80: `v33_state_exemption_amount`
 6,400 and siitax 1,871.25 in every case, where the form gives 9,600 at ages 70 and 80. Effect: TAXSIM overstates
 Maryland tax by $3,200 times the marginal rate (about $152) per aged dependent.
+
+### T42. Iowa self-employment tax counted twice against the filer
+
+IA 1040 subtracts the deductible part of self-employment tax in net income (line 17, as federal AGI does), and its
+federal tax deduction covers federal tax paid, with self-employment tax added back on line 28 because the payments
+include it; net, the deduction is federal income tax. TAXSIM-35 instead (a) leaves the deductible half of
+self-employment tax in Iowa net income and (b) deducts federal income tax LESS the whole self-employment tax. Probe
+(2026-10-09), single aged 40: $80,000 of wages gives v32 80,000 and siitax 3,963.82; $80,000 of self-employment income
+gives federal AGI 74,348.18 but v32 80,000.01, and v36 77,577.85 = 80,000 - 2,000 - (fiitax 11,725.80 - SE tax
+11,303.65), siitax 5,042.98. Same in 2020. Effect: TAXSIM overstates Iowa tax for self-employed filers by roughly the
+Iowa rate times one and a half times their self-employment tax.
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
@@ -1231,6 +1242,17 @@ deduction is understated by the filer's whole self-employment tax plus Additiona
 `additional_medicare_tax` 15,224, `ia_fedtax_deduction` 602,135 (= 690,444 - 88,308); our deduction 690,474. Effect:
 PolicyEngine overstates Iowa tax in 2021-2022 by the Iowa rate times those payroll taxes ($7,535 on this record). The
 deduction is repealed from TY2023.
+
+### P31. Iowa joint pension exclusion granted per spouse
+
+Iowa Code 422.7(31) excludes pension income "up to a maximum of six thousand dollars for a person ... who files a
+separate state income tax return and up to a maximum of twelve thousand dollars for a husband and wife who file a joint
+state income tax return". policyengine-us 1.775.7 `ia_pension_exclusion` is a Person variable that applies the
+filing-status cap to each person (`min_(pension, p.maximum_amount[filing_status])`), so on a joint return each spouse
+excludes up to $12,000 and the couple up to $24,000. Per-record rerun (2026-10-09), 2021 record 51314 (joint, 74 and
+67, $26,196 of pensions split between spouses): `ia_pension_exclusion` 24,000 where the statute allows 12,000. Effect:
+PolicyEngine understates Iowa tax for two-pensioner couples by up to $12,000 times the Iowa rate, through TY2022 (the
+retirement income exclusion replaces it from TY2023).
 
 ## Corroboration worth passing along
 

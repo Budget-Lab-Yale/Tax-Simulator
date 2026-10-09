@@ -38,6 +38,11 @@ filing_status_mapper:
     '2': alt_thresh_aged_joint
     '3': alt_thresh_aged_joint
     '4': alt_thresh_aged_joint
+  lic_rate:
+    '1': lic_rate_single
+    '2': lic_rate_alt
+    '3': lic_rate_alt
+    '4': lic_rate_alt
 
 exempt_credit_style:
   value: 1
@@ -100,7 +105,15 @@ cdctc_cap_per_return:
   value: 1
   reference: 'The zero applies to the return, so it must not be multiplied by the number of qualifying children'
 
-lic_rate:
+# Single filers: the low-income exemption and tax reduction (form 41-146,
+# Iowa Income Tax Reduction Worksheet), encoded 2026-10-09 on the same
+# ceiling formula with a 100% rate -- tax may not exceed test income less
+# $9,000 ($24,000 at 65 or older), so at or below the threshold there is no
+# tax and just above it the filer keeps the threshold
+lic_rate_single:
+  value: 1
+  reference: 'Form 41-146 (2019-2022 editions, identical): line 3 = income (line 1: net income + pension exclusion + reportable Social Security + lump-sum) less line 2 ($9,000, or $24,000 at 65 or older); line 5 = the smaller of line 3 and the tax. The worksheet line 4 is IA 1040 line 47, after credits; the model caps tax before credits [small difference near the threshold]'
+lic_rate_alt:
   value:
     '2017': 0.0898
     '2019': 0.0853
@@ -114,14 +127,14 @@ lic_income_base:
     '2023': 1
   reference: 'TY2017-2022 (enum 10): Iowa net income plus the pension exclusion plus REPORTABLE Social Security, which is federal AGI with Social Security recomputed at the original 50% tier only (Expanded Instructions Step 4 worksheet: $25,000 / $32,000 joint bases, half the benefits); federal AGI carries the 85% tier and overstated the test income of every Social Security recipient above the base. Changed 2026-10-09 (PolicyEngine 2021 records 51314 and 86618, joint 65+, owed nothing in PolicyEngine and $230-$250 with us). TY2023 onward (enum 1): federal AGI as the stand-in for Iowa taxable income plus the federal standard or itemized deduction, personal exemption and QBI deductions'
 alt_thresh_single:
-  value: 0
-  reference: 'Single filers may NOT use the alternate tax -- "All filing statuses except filing status 1, Single, may qualify" (Expanded Instructions TY2023 and TY2025). Encoded as a zero threshold rather than a gate: the ceiling then becomes the alternate rate times all of income, and since that rate is at or above Iowa''s top marginal rate in every year the ceiling always exceeds the tax and the credit falls to zero on its own'
+  value: 9000
+  reference: 'Single filers may NOT use the alternate tax ("All filing statuses except filing status 1, Single, may qualify", Expanded Instructions TY2023 and TY2025); their ceiling is the low-income tax reduction instead (form 41-146 line 2: $9,000 if 64 or younger). Was 0, which disabled the ceiling for singles, until 2026-10-09'
 alt_thresh_joint:
   value: 13500
   reference: 'Iowa Code 422.5(3)(b) pre-2023 and 422.5(2)(b) from TY2023: $13,500 for married persons filing jointly, married filing separately on a combined return, heads of household and surviving spouses. A flat statutory amount, never indexed -- identical text verified in the 2017 and 2026 Code editions'
 alt_thresh_aged_single:
-  value: 0
-  reference: 'Zero for the same reason as the ordinary single threshold'
+  value: 24000
+  reference: 'Form 41-146 line 2: "$24,000 if you were 65 or older as of 12/31" (2019-2022 editions). Was 0 until 2026-10-09'
 alt_thresh_aged_joint:
   value: 32000
   reference: 'Iowa Code 422.5(3B) pre-2023 and 422.5(3) from TY2023: the elderly variant raises the threshold to $32,000, and "applies even though one spouse has not attained the age of sixty-five, if the other spouse is at least sixty-five at the end of the tax year". Also never indexed'
@@ -130,8 +143,8 @@ lic_aged_min_age:
   reference: 'Same subsections: "at least sixty-five years old on December 31" of the tax year'
 
 documented_not_modeled:
-  low_income_exemption_for_single_filers:
-    reference: 'Separately from the alternate tax, Iowa imposes no tax at all where net income is at or below $13,500 ($9,000 for other filers, $32,000 and $24,000 at 65 or older) and reduces tax so the taxpayer retains that much where it would otherwise dip below -- an automatic exemption, not an election, implemented for single filers on form 41-146. For every status that may use the alternate tax the alternate ceiling is far tighter and governs, so only the single-filer version is unencoded. It binds in a narrow band just above the threshold, and from TY2023 barely at all, since the embedded federal standard deduction leaves a filer at those income levels with little or no Iowa taxable income [understates the exemption for single filers within a few hundred dollars of the threshold]'
+  low_income_exemption_for_non_single_filers:
+    reference: 'The low-income exemption and tax reduction also apply to the other statuses ($13,500 / $32,000), but for them the alternate tax ceiling is tighter and governs, so only the single-filer version is encoded (lic_rate_single). The single version was itself unencoded until 2026-10-09, on the view that it binds only just above $9,000; at 65 or older the threshold is $24,000 and it removed the whole tax for PolicyEngine 2021 records 170871, 40486 and 118376'
   dependent_filers_keep_the_personal_credit:
     reference: 'Iowa lets a dependent filing their own return claim the $40 personal credit even though they are claimed on someone else''s Iowa return. The generic exemption-credit machinery zeroes the taxpayer credit for dependent filers [understates the credit by $40 for dependent filers]'
   early_childhood_development_credit:
