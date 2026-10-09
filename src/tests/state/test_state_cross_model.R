@@ -936,7 +936,11 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # federal tax-liability limit removes: TAXSIM's Nebraska low-income care
     # credit applies that limit where the statute does not (T34). rebate is
     # the federal recovery rebate credit: TAXSIM nets it out of the federal
-    # tax Iowa deducts in 2020, which Iowa's instructions forbid (T37)
+    # tax Iowa deducts in 2020, which Iowa's instructions forbid (T37).
+    # cdctc_takeup is the federal care-credit take-up draw, which state care
+    # credits share and neither external model has; ed_nonref is the
+    # nonrefundable education credit, which neither crosswalk can hand over
+    # (no education-expense input), so a state deducting federal tax sees it
     ours = ours %>%
       left_join(sampled %>%
                   mutate(n_dep_ge18 = (!is.na(dep_age1) & dep_age1 >= 18) +
@@ -968,7 +972,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
                          xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2,
-                         cdctc_shortfall, rebate),
+                         cdctc_shortfall, rebate, cdctc_takeup, ed_nonref),
                 by = 'id')
 
     for (model in yr_models) {

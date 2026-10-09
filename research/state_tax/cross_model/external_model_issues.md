@@ -257,6 +257,22 @@ of wages and $20,000 of pensions: `v32` equals federal AGI at ages 50 and 57 and
 2019 alike. Same pattern as T29 (Arkansas). Effect: TAXSIM overstates Iowa tax for 55-64-year-old retirees by up to
 $1,024.
 
+### T39. Iowa earned income credit cut off at fixed income points
+
+Iowa's earned income credit is 15% of the federal credit for anyone who qualifies federally (IA 1040 Expanded Instructions
+2020, line 61: "multiply your federal EITC by 15% (.15)"; Iowa Code 422.12B), with no state income limit. TAXSIM-35 pays
+it only up to fixed amounts of income. Probes (2026-10-09), 2019:
+
+| family | last wages with v39 > 0 | first wages with v39 = 0 | federal EITC there |
+|---|---|---|---|
+| joint, 3 children | 40,000 | 41,000 | 3,149 |
+| head of household, 2 children | 40,000 | 41,000 | 1,201 |
+| joint, 1 child | 35,000 | 36,000 | 1,739 |
+| single, none | 13,000 | 14,000 | 120 |
+
+2018 shows the same cutoff. Effect: TAXSIM understates Iowa refunds for families in the upper part of the EITC phase-out
+by up to 15% of their federal credit.
+
 ### T24. New Jersey: non-property income (`nonprop`) left out of state AGI
 
 TAXSIM-35 keeps `nonprop` in federal AGI but drops it from New Jersey gross income. New Jersey taxes the income it
