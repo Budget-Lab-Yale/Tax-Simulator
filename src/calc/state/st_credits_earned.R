@@ -182,7 +182,11 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
                       pmax(0, -tax_unit$farm)
   yctc_zero_income_eligible =
     tax_unit$st_credits.young_child_credit_zero_income_enabled == 1 &
-    earned_income_raw <= 0 & tax_unit$n_dep_eitc > 0 &
+    # The qualifying child is the young dependent itself (n_young_child,
+    # required below). Not n_dep_eitc: Tax-Data assigns zero EITC children
+    # to every filer without earnings, which silently disabled this whole
+    # path (2026-10-09, PolicyEngine 2025 records 338706 and 303231)
+    earned_income_raw <= 0 &
     agi < tax_unit$st_credits.young_child_credit_zero_income_agi_limit &
     yctc_wages <= tax_unit$st_credits.young_child_credit_zero_income_wage_limit &
     yctc_current_loss <= tax_unit$st_credits.young_child_credit_zero_income_loss_limit

@@ -64,3 +64,6 @@ item_prop_tax_cap_regular:
 item_prop_tax_cap_mfs:
   value: 5000
   reference: 'G.S. 105-153.5(a)(2); North Carolina Form D-400 Schedule S (MFS real property tax cap)'
+item_mort_prop_cap:
+  value: 20000
+  reference: 'G.S. 105-153.5(a)(2)(b); NCDOR "North Carolina Standard Deduction or North Carolina Itemized Deductions" (TY2025): "the sum of qualified home mortgage interest and real estate property taxes may not exceed $20,000"; for married couples "the total ... claimed by both spouses combined may not exceed $20,000" (separate filers split by who paid, prorated when both exceed it -- unobserved, so a separate filer gets the full $20,000). Every year 2017-2025. Added 2026-10-09: had been missing; found on PolicyEngine 2025 records 5323 and 80184 ($104,000-$106,000 of mortgage interest)'

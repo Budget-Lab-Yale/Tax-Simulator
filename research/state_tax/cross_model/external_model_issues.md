@@ -1263,6 +1263,34 @@ excludes up to $12,000 and the couple up to $24,000. Per-record rerun (2026-10-0
 PolicyEngine understates Iowa tax for two-pensioner couples by up to $12,000 times the Iowa rate, through TY2022 (the
 retirement income exclusion replaces it from TY2023).
 
+### P32. 2025 state itemized deductions move with the federal $40,000 SALT cap (Minnesota, Virginia)
+
+Minnesota's itemized deductions (Schedule M1SA) allow real property taxes up to $10,000 ($5,000 separate), the limit
+Minnesota adopted for its own Schedule A from TY2019. policyengine-us 1.775.7 builds `mn_itemized_deductions` from
+`capped_property_taxes`, which caps property tax at the FEDERAL `salt_and_real_estate.cap` -- $40,000 for TY2025 under
+the 2025 federal act, without the federal phase-down to $10,000 above $500,000 of modified AGI. Per-record rerun
+(2026-10-09), 2025 record 135223 (joint, AGI $686,971, $33,928 of property tax): `mn_itemized_deductions` 31,307 =
+35,787 + 33,928 less the 38,407 high-income reduction; with the $10,000 cap the deduction is 9,157. Even if Minnesota
+conformed to the federal increase (a 2026 conformity bill, HF 2438, is reported; its treatment of the M1SA property tax
+line is not verified here), this filer's federal cap is $10,000 after the phase-down. Effect: PolicyEngine understates
+Minnesota tax for 2025 itemizers with more than $10,000 of property tax.
+
+Virginia shows the same dependence. Virginia's Schedule A has not used the federal state and local tax cap since
+TY2019: property and personal property taxes are allowed uncapped and income taxes are excluded, so the 2025 federal
+cap increase cannot move a Virginia deduction. PolicyEngine's `va_itemized_deductions` for 2025
+record 167921 (single, AGI $723,648) is 10,622, against 4,666 for the same inputs run as TY2024; our deduction, after
+Virginia's limitation, is 2,822.
+
+### P33. Mississippi income omits miscellaneous income and nonqualified dividends
+
+`ms_agi` sums `gov.states.ms.tax.income.income_sources`: wages, self-employment, partnership and S corporation
+income, loss-limited capital gains, rents, farm income, interest, QUALIFIED dividends, alimony, taxable pensions,
+taxable Social Security and unemployment compensation. It omits `miscellaneous_income` and
+`non_qualified_dividend_income`, though Form 80-105 taxes other income, Form 4797 gains and all dividends. Per-record
+rerun (2026-10-09), 2025 record 157169 (head of household, $102,555 of other income and Form 4797 gains passed as
+miscellaneous income): `ms_agi` 607,494 against federal AGI 710,048 with no Mississippi adjustment. Effect:
+PolicyEngine understates Mississippi tax by the state rate times those incomes.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

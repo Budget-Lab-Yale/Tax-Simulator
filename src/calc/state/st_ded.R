@@ -130,6 +130,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.item_include_pers_tax',
     'st_ded.item_include_income_sales_tax',
     'st_ded.item_prop_tax_cap',
+    'st_ded.item_mort_prop_cap',       # (dbl) cap on mortgage interest + property tax combined (NC $20,000)
     'st_ded.pease',           # (int) whether a pre-TCJA Pease limitation applies
     'st_ded.pease_thresh',    # (dbl) Pease AGI threshold (filing-status mapped)
     'st_ded.pease_thresh2',   # (dbl) second-tier threshold (MN 2023+)
@@ -434,13 +435,18 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                          agi >= st_ded.salt_addback_agi_thresh, 0, salt_inc_sales)),
       st_item_components =
         st_ded.item_include_medical * med_item_ded_potential +
-        st_ded.item_include_mortgage * mort_int_item_ded_potential +
+        # Mortgage interest and (capped) property tax, limited together where
+        # the state caps their sum (NC G.S. 105-153.5(a)(2): "the sum of
+        # qualified home mortgage interest and real estate property taxes
+        # may not exceed $20,000", shared by spouses)
+        pmin(st_ded.item_mort_prop_cap,
+             st_ded.item_include_mortgage * mort_int_item_ded_potential +
+               st_ded.item_include_prop_tax * pmin(salt_prop, st_ded.item_prop_tax_cap)) +
         st_ded.item_include_investment * inv_int_item_ded_potential +
         st_ded.item_include_charity * char_item_ded_potential +
         st_ded.item_include_casualty * casualty_item_ded_potential +
         st_ded.item_include_misc * misc_item_ded_potential +
         st_ded.item_include_other * other_item_ded_potential +
-        st_ded.item_include_prop_tax * pmin(salt_prop, st_ded.item_prop_tax_cap) +
         st_ded.item_include_pers_tax * salt_pers +
         st_ded.item_include_income_sales_tax * salt_inc_sales,
       st_item_base = if_else(

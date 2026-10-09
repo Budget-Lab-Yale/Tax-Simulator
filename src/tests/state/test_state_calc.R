@@ -404,6 +404,15 @@ test_state_calc = function() {
                          liab_st_iit = (50000 - 17500) * 0.05499),
            label = 'NC-5b 2018 pre-SB99 standard deduction')
 
+  # NC-6: mortgage interest plus property tax capped at $20,000 together
+  # (G.S. 105-153.5(a)(2)). 2025 single: mortgage interest 30,000, property
+  # tax 12,000 (itself capped at 10,000), charity 2,000 -> 20,000 + 2,000
+  run_case('NC', 2025,
+           list(agi = 200000, mort_int_item_ded = 30000,
+                char_item_ded = 2000, salt_prop = 12000),
+           expect = list(st_ded = 22000),
+           label = 'NC-6 combined mortgage and property tax cap')
+
   #--------------------------------------------------------------------------
   # Second broad-IIT rollout states
   #--------------------------------------------------------------------------
@@ -672,6 +681,14 @@ test_state_calc = function() {
            expect = list(st_earned_credit = 0, st_yctc = 1083,
                          liab_st_iit = -1083),
            label = 'CA-6 YCTC zero-income expansion')
+  # CA-6b: the same claimant as Tax-Data supplies it -- zero EITC children,
+  # since the federal credit needs earnings. The young dependent itself
+  # qualifies (PolicyEngine 2025 record 338706: $1,189)
+  run_case('CA', 2025,
+           list(agi = 214, filing_status = 2, age2 = 40, n_dep = 2,
+                n_dep_eitc = 0, dep_age1 = 5, dep_age2 = 12),
+           expect = list(st_yctc = 1189, liab_st_iit = -1189),
+           label = 'CA-6b YCTC zero-income path without an EITC child count')
 
   # CA-7: the state aggregate path must retain the table attribute and pass
   # the selected schedule into the per-state calculator.
@@ -4438,6 +4455,16 @@ run_case('AR', 2024,
                 cdctc_nonref = 1200),
            expect = list(st_cdctc = 25),
            label = 'LA-11b 2024 the $25 backstop above 60,000')
+  # LA-12: TY2021 federal tax deduction is Form 1040 line 22, before the
+  # wholly refundable child tax credit. Federal tax 5,000 before credits,
+  # 2,000 of the credit applied against it (nonref = ctc_nonref = 2,000):
+  # deduction 5,000
+  run_case('LA', 2021,
+           list(agi = 100000, filing_status = 4, wages1 = 100000, ei1 = 100000,
+                n_dep = 1, dep_age1 = 8, liab_bc = 5000, nonref = 2000,
+                ctc_nonref = 2000),
+           expect = list(st_fed_tax_ded = 5000),
+           label = 'LA-12 2021 refundable CTC added back to the federal tax deduction')
 
   #--------------------------------------------------------------------------
   # Iowa (IA 1040)

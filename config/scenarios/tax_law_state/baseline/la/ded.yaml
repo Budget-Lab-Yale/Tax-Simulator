@@ -77,6 +77,12 @@ fed_tax_ded_add_niit:
 fed_tax_ded_less_excess_ptc:
   value: 1
   reference: 'Worksheet line 4b subtracts the excess advance premium tax credit repayment from Form 8962 line 29, and line 6 floors the result at zero: "if amount is negative, enter a zero"'
+fed_tax_ded_add_ctc_nonref:
+  value:
+    '2017': 0
+    '2021': 1
+    '2022': 0
+  reference: 'TY2021 only. The worksheet starts from federal Form 1040 line 22; under the American Rescue Plan Act the 2021 child tax credit of a filer with a principal place of abode in the United States is wholly refundable and reported on line 28 (Schedule 8812), not against tax on line 19, so line 22 is federal tax BEFORE the credit. The federal calculator applies the 2021 credit against liability first (ctc_nonref) and refunds the rest, so the offset part is added back (same rule as Iowa). Added 2026-10-09: 11 PolicyEngine 2021 misses were families with one child, ours higher by exactly $100-$123 with PolicyEngine federal tax $1,993 higher'
 fed_tax_ded_cap:
   value: .inf
   reference: 'UNCAPPED in every year it existed. Louisiana was one of only a handful of states allowing a full deduction for federal income tax paid'
