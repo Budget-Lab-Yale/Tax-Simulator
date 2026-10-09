@@ -2304,6 +2304,16 @@ test_state_calc = function() {
                          liab_st_iit = (90 + 0.0475 * 3619) - 530),
            label = 'MD-12c childless credit refundable only above the tax')
 
+  # MD-13: dependent aged 65+ earns a second dependent exemption (Form
+  # 502B). PolicyEngine record 45802 (2024 single, FAGI 51,571, one
+  # dependent aged 80): exemptions 3 x 3,200 = 9,600 (PolicyEngine owes
+  # 3,200 x 4.75% = 152 less than we did without it)
+  run_case('MD', 2024,
+           list(agi = 51571, age1 = 54, wages1 = 51571, ei1 = 51571,
+                n_dep = 1, dep_age1 = 80),
+           expect = list(st_exempt = 9600),
+           label = 'MD-13 extra exemption for a dependent 65 or over')
+
   #--------------------------------------------------------------------------
   # Wisconsin (Form 1) -- sliding standard deduction (HoH single-floor),
   # 30% LTCG exclusion, itemized-deduction credit, married couple credit,

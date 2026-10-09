@@ -3,7 +3,7 @@
 # identical 2017-2025). $3,200 per taxpayer/spouse/dependent, phased DOWN
 # in FAGI cliff bands via the income-tiered machinery; $1,000 aged/blind
 # add-ons per filer are NOT phased. Dependent taxpayers get no personal
-# exemption. The extra $3,200 for 65+ dependents is documented in agi.yaml.
+# exemption. Dependents 65+ get a second dependent exemption (502B; below).
 
 filing_status_mapper:
   tier_bounds:
@@ -47,3 +47,15 @@ blind_addl:
 dep_filer_zero:
   value: 1
   reference: 'Filing status 6 (dependent taxpayer): no personal exemption'
+
+# Dependents aged 65 or over (Form 502B Part B), added 2026-10-09: was
+# documented_not_modeled as a small population, but PolicyEngine models it
+# and it was 10 of the 24 PolicyEngine 2024 misses (exactly 3,200 x 4.75%)
+dep_aged_extra:
+  value: 1
+  reference: 'Form 502B and Resident Booklet Instruction 10: a dependent 65 or over is entered again in the 65-or-over column and earns an additional exemption, valued like any dependent exemption under the FAGI banding (Tax-Gen 10-211)'
+
+dep_aged_min_age:
+  value: 65
+  reference: 'Form 502B: "65 or over" on the last day of the tax year'
+

@@ -429,6 +429,8 @@ scalars:
   st_ord.exempt_from_bottom: 0
   st_exempt.dep_child_addl: {default: 0, units: per_dependent}   # additional exemption per dependent child (IN $1,500)
   st_exempt.dep_child_max_age: 0   # max tracked dependent age for the child add-on (IN: 23, proxying under-19-or-student-under-24)
+  st_exempt.dep_aged_extra: 0     # 1 = each dependent at/over dep_aged_min_age gets a second dependent exemption (MD 502B)
+  st_exempt.dep_aged_min_age: 65
 
   # Alternative maximum rate on net capital gain (HI 235-51(f): the Tax on
   # Capital Gains Worksheet taxes gain above a filing-status floor at 7.25%

@@ -18,9 +18,6 @@ documented_not_modeled:
   public_safety_pension:
     value: 0
     reference: 'Hometown Heroes (code v / Worksheet 13E, correctional officers added by HB296 of 2018): $15,000 at 55+ for police/fire/EMS retirement; occupation unobservable; omitted [known-difference]'
-  dependent_aged_extra_exemption:
-    value: 0
-    reference: 'Form 502B: 65+ dependents get one extra (phased) $3,200 exemption; small population; omitted'
   century_club:
     value: 0
     reference: 'Code ya: 100+ year olds subtract up to $100,000 (first seen 2025 booklet); omitted'

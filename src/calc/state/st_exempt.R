@@ -50,6 +50,8 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.dep_amount',      # (dbl) exemption per dependent
     'st_exempt.dep_child_addl',  # (dbl) additional exemption per dependent CHILD (IN)
     'st_exempt.dep_child_max_age', # (dbl) max tracked age for the child add-on
+    'st_exempt.dep_aged_extra',  # (int) each dependent at/over dep_aged_min_age counts twice (MD 502B)
+    'st_exempt.dep_aged_min_age', # (dbl) minimum age for that extra dependent exemption
     'st_exempt.aged_addl',       # (dbl) additional exemption per person 65+
     'st_exempt.blind_addl',      # (dbl) additional exemption per blind person
     'st_exempt.aged_blind_addl_excl_eitc', # (int) add-ons forgone with EITC/CLI (VA)
@@ -79,6 +81,13 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
   # student-dominated by the federal qualifying-child rules, so the age
   # bound proxies the student test (documented approximation)
   n_dep_child_v = st_n_dep_in(tax_unit, 0, tax_unit$st_exempt.dep_child_max_age)
+
+  # Extra exemption for each dependent aged 65 or over (MD Form 502B Part
+  # B: the dependent is claimed again in the "65 or over" column, at the
+  # same income-banded amount as a regular dependent exemption). Counted
+  # from the tracked dependent ages (up to three)
+  n_dep_aged_v = tax_unit$st_exempt.dep_aged_extra *
+    st_n_dep_in(tax_unit, tax_unit$st_exempt.dep_aged_min_age, Inf)
 
   # Income-tiered per-exemption amount (OH 5747.025): where the tier family
   # is encoded, one amount applies to taxpayer, spouse, and each dependent,
@@ -144,7 +153,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
 
       st_exempt_gross = (st_medical_exempt +
                          n_taxpayers * st_personal_v * dep_filer_factor +
-                         n_dep       * st_dep_v +
+                         (n_dep + n_dep_aged_v) * st_dep_v +
                          n_dep_child_v * st_exempt.dep_child_addl +
                          n_aged      * st_exempt.aged_addl * addl_factor +
                          n_blind     * st_exempt.blind_addl * addl_factor),
