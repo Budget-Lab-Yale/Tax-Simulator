@@ -213,7 +213,7 @@ scalars:
   # deduction is denied only at FAGI >= 100k/150k/200k). -.inf = the
   # exclusion is unconditional, preserving every other salt_addback state
   st_ded.salt_addback_agi_thresh: -.inf
-  st_ded.item_component_style: 0
+  st_ded.item_component_style: 0   # 0 default rebuild, 1 components, 2 federal potential, 3 federal total less full income tax (NE)
   st_ded.item_include_medical: 0
   st_ded.item_include_mortgage: 0
   st_ded.item_include_investment: 0
@@ -515,6 +515,10 @@ scalars:
   st_credits.char_credit_base_cap: 0
   st_credits.eitc_match_alt: 0
   st_credits.eitc_refundable_alt: 0
+  # 0/1: the alternative match is paid only as its excess over pre-credit
+  # state tax, ON TOP of the main nonrefundable match (MD Worksheet 18A),
+  # rather than as an either/or choice (VA, DE)
+  st_credits.eitc_alt_excess: 0
   st_credits.eitc_wage_cap: 0   # cap the match at W-2 wages (UT 2023+)
   st_credits.eitc_liab_cap_thresh: .inf   # OH 2017-18 50%-of-remaining-tax limit
   st_credits.eitc_liab_cap_share: 1
@@ -570,12 +574,17 @@ scalars:
   # Federal AGI at or below which the care credit is refundable (LA $25,000);
   # above it the credit is nonrefundable
   st_credits.cdctc_ref_agi_limit: .inf
+  # 0/1: only the excess of the care credit over pre-credit state tax is
+  # refundable, the rest nonrefundable (MD Worksheet 21B)
+  st_credits.cdctc_ref_excess_only: 0
   # 0/1: the child credit and the child/dependent care credit are ALTERNATIVES,
   # the taxpayer claiming whichever is larger (OK 68 O.S. 2357.43 grants the
   # greater of its two federal matches), not both. The losing leg is zeroed so
   # st_ctc and st_cdctc still report what was actually claimed
   st_credits.ctc_cdctc_greater_of: 0
   st_credits.cdctc_refundable: 1
+  # 0 none (match only), 1 share table x federal credit (NY), 2 own rate on
+  # capped expenses (NY/HI/MN), 3 stepped own-rate slide x federal credit (MD)
   st_credits.cdctc_style: 0
   # Federal care credit a share-based state credit starts from: 0 = as claimed
   # (Form 2441 line 11, capped at federal tax), 1 = the tentative credit

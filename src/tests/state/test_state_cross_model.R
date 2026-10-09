@@ -286,7 +286,7 @@ cross_model_taxsim_leg = function(sampled, states, year, state_law,
       taxsim_calculate_taxes(chunk, return_all_information = T) %>%
         select(taxsimid, siitax, staxbc,
                any_of(c('v10_federal_agi', 'v18_federal_taxable_income',
-                        'v25_eitc')),
+                        'v25_eitc', 'fiitax')),
                starts_with('v3'), any_of('v40_state_total_credits'),
                any_of('v41_state_bracket_rate')) %>%
         return()
@@ -360,7 +360,8 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         qualified_dividends = div_pref,
         ordinary_dividends  = div_ord,
         stcg = kg_st, ltcg = kg_lt,
-        pension_income  = txbl_pens_dist + txbl_ira_dist,
+        pension_income  = txbl_pens_dist,
+        ira_dist        = txbl_ira_dist,
         social_security = gross_ss,
         unemployment    = ui,
         rental          = rent - rent_loss,
@@ -386,7 +387,7 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
              pwages, swages, psemp, ssemp,
              taxable_interest, tax_exempt_interest,
              qualified_dividends, ordinary_dividends, stcg, ltcg,
-             pension_income, social_security, unemployment, rental,
+             pension_income, ira_dist, social_security, unemployment, rental,
              pass_through, estate, misc_income,
              real_estate_taxes, mortgage_interest,
              charitable_cash, charitable_noncash, childcare_expenses)
@@ -940,7 +941,13 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # cdctc_takeup is the federal care-credit take-up draw, which state care
     # credits share and neither external model has; ed_nonref is the
     # nonrefundable education credit, which neither crosswalk can hand over
-    # (no education-expense input), so a state deducting federal tax sees it
+    # (no education-expense input), so a state deducting federal tax sees it.
+    # liab_iit / liab_iit_net are our federal income tax before / after
+    # refundable credits, compared with TAXSIM's fiitax and PolicyEngine's
+    # pe_fed_income_tax in the federal-tax-deduction states, where any
+    # federal-tax disagreement flows straight into the state deduction.
+    # salt_prop is property tax paid: PolicyEngine gives separate filers the
+    # joint cap on Wisconsin's school property tax credit (P25)
     ours = ours %>%
       left_join(sampled %>%
                   mutate(n_dep_ge18 = (!is.na(dep_age1) & dep_age1 >= 18) +
@@ -972,7 +979,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
                          xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2,
-                         cdctc_shortfall, rebate, cdctc_takeup, ed_nonref),
+                         cdctc_shortfall, rebate, cdctc_takeup, ed_nonref,
+                         liab_iit, liab_iit_net, salt_prop),
                 by = 'id')
 
     for (model in yr_models) {

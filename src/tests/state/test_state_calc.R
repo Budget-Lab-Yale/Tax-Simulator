@@ -2127,11 +2127,13 @@ test_state_calc = function() {
   # test (10-704(b)(3), 2018 ch. 612). Single aged 22, wages 5,000, no
   # federal EIC: recomputed credit 7.65% x 5,000 = 382.50 (phase-in). 2019:
   # tax 2% x (5,000 - 1,500 - 3,200) = 6, so the refundable 28% option
-  # (107.10) beats the 50% nonrefundable one (benefit 6). 2017: no
+  # (107.10) beats the 50% nonrefundable one (benefit 6). Checked on
+  # liability: since 2026-10-09 st_eitc reports the line-22 credit plus the
+  # refundable excess (191.25 + 101.10), not the chosen option. 2017: no
   # disregard yet. Aged 66: over the federal maximum age, still barred
   run_case('MD', 2019,
            list(agi = 5000, age1 = 22, wages1 = 5000, ei1 = 5000, eitc = 0),
-           expect = list(st_eitc = 0.28 * 382.5),
+           expect = list(liab_st_iit = 6 - 0.28 * 382.5),
            label = 'MD-4c childless EITC under 25 from TY2018')
   run_case('MD', 2017,
            list(agi = 5000, age1 = 22, wages1 = 5000, ei1 = 5000, eitc = 0),
@@ -2144,12 +2146,15 @@ test_state_calc = function() {
 
   # MD-5: 2023 EITC option choice: HoH, 2 kids, federal EIC 6,000, FAGI
   # 25,000. Tax 500.875; alt (45% refundable = 2,700) beats the capped
-  # nonrefundable benefit -> refundable 2,700. CTC zero (FAGI > 15,000)
+  # nonrefundable benefit -> refundable 2,700. Since 2026-10-09 st_eitc is
+  # line 22 (3,000, absorbing the tax) plus the refundable excess (2,700 -
+  # tax); liability unchanged. CTC zero (FAGI > 15,000)
   run_case('MD', 2023,
            list(agi = 25000, filing_status = 4, n_dep = 2, n_dep_eitc = 2,
                 n_dep_ctc = 2, dep_age1 = 3, dep_age2 = 5, wages1 = 25000,
                 ei1 = 25000, eitc = 6000),
-           expect = list(st_eitc = 2700, st_ctc = 0,
+           expect = list(st_eitc = 3000 + (2700 - (90 + 0.0475 * 8650)),
+                         st_ctc = 0,
                          liab_st_iit = (90 + 0.0475 * 8650) - 2700),
            label = 'MD-5 refundable EITC option + CTC cliff')
 
@@ -2158,7 +2163,8 @@ test_state_calc = function() {
   run_case('MD', 2023,
            list(agi = 12000, n_dep = 1, n_dep_eitc = 1, n_dep_ctc = 1,
                 dep_age1 = 2, wages1 = 12000, ei1 = 12000, eitc = 3000),
-           expect = list(st_ctc = 500, st_eitc = 1350,
+           expect = list(st_ctc = 500,
+                         st_eitc = 1500 + (1350 - (90 + 0.0475 * 800)),
                          liab_st_iit = (90 + 0.0475 * 800) - 1350 - 500),
            label = 'MD-6 CTC under-6')
 
@@ -2211,6 +2217,64 @@ test_state_calc = function() {
            expect = list(st_agi = 58800, st_ded = 8550,
                          liab_st_iit = 90 + 0.0475 * 34450),
            label = 'MD-10 dependent-care expense subtraction')
+
+  # MD-11: child and dependent care credit (Form 502CR Part B; 10-716).
+  # (a) 2021 single, FAGI 66,601, federal ARPA credit 4,000 claimed: 19
+  #     $2,000 steps over $30,000 -> decimal 0.32 - 19 x 0.0032 = 0.2592
+  #     -> 1,036.80 (PolicyEngine record 157421: 1,037); FAGI over the
+  #     $52,100 refund limit, so nonrefundable
+  run_case('MD', 2021,
+           list(agi = 66601, wages1 = 66601, ei1 = 66601, n_dep = 1,
+                dep_age1 = 5, care_exp = 14329, cdctc_ref = 4000),
+           expect = list(st_cdctc = 0.2592 * 4000),
+           label = 'MD-11a care credit, individual chart')
+  # (b) 2024 joint, FAGI 60,000, federal credit 600: 4 $3,000 steps over
+  #     $50,000 -> 0.3072 (2024 joint chart row $59,001-$62,000) -> 184.32
+  run_case('MD', 2024,
+           list(agi = 60000, filing_status = 2, age2 = 40, wages1 = 30000,
+                wages2 = 30000, ei1 = 30000, ei2 = 30000, n_dep = 1,
+                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 0.3072 * 600),
+           label = 'MD-11b care credit, joint chart')
+  # (c) 2024 head of household uses the INDIVIDUAL cap: FAGI 109,500 >
+  #     $109,300 -> no credit
+  run_case('MD', 2024,
+           list(agi = 109500, filing_status = 4, wages1 = 109500,
+                ei1 = 109500, n_dep = 1, dep_age1 = 4, care_exp = 3000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 0),
+           label = 'MD-11c care credit, head of household above the cap')
+  # (d) 2018 old law: 32.5% less 10% of itself per $1,000 over $41,000;
+  #     FAGI 45,500 -> 5 steps -> 0.1625 x 600 = 97.50
+  run_case('MD', 2018,
+           list(agi = 45500, wages1 = 45500, ei1 = 45500, n_dep = 1,
+                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 0.1625 * 600),
+           label = 'MD-11d care credit, pre-2019 law')
+  # (e) 2021 head of household, FAGI 8,000, federal ARPA credit 4,000: full
+  #     0.32 -> 1,280, refundable (FAGI under $52,100) against zero tax
+  #     (Worksheet 21B). Filer aged 70 so the childless earned income
+  #     credit (ages 25-64) cannot ride along
+  run_case('MD', 2021,
+           list(agi = 8000, filing_status = 4, age1 = 70, wages1 = 8000, ei1 = 8000,
+                n_dep = 1, dep_age1 = 4, care_exp = 9000, cdctc_ref = 4000),
+           expect = list(st_cdctc = 1280, liab_st_iit = -1280),
+           label = 'MD-11e care credit refunded below the income limit')
+  # (f) Worksheet 21B refunds only the excess over Maryland tax before
+  #     credits. PolicyEngine record 12337 (2023 single, FAGI 22,982, one
+  #     child, $3,310 of care, federal care credit 913, federal EIC 3,769):
+  #     Maryland AGI 19,982 after the $3,000 care subtraction; deduction
+  #     2,550; exemptions 6,400; taxable 11,032 -> tax 471.52. The 50% EIC
+  #     absorbs it; the care credit (0.32 x 913 = 292.16) is below the tax,
+  #     so nothing is refundable and it is lost; the refundable EIC option
+  #     pays 0.45 x 3,769 - 471.52. PolicyEngine: -1,224
+  run_case('MD', 2023,
+           list(agi = 22982, wages1 = 22982, ei1 = 22982, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 5, care_exp = 3310,
+                cdctc_nonref = 913, eitc = 3769),
+           expect = list(st_cdctc = 0.32 * 913,
+                         liab_st_iit = 471.52 - 0.45 * 3769),
+           label = 'MD-11f care credit refundable only above pre-credit tax')
 
   #--------------------------------------------------------------------------
   # Wisconsin (Form 1) -- sliding standard deduction (HoH single-floor),
@@ -3452,6 +3516,22 @@ test_state_calc = function() {
   run_case('NE', 2019, modifyList(ne_care(35000), list(cdctc_nonref = 0)),
            expect = list(st_cdctc = 0),
            label = 'NE-5d care credit on the claimed base above 29,000')
+
+  # NE-5e: itemized deductions = the federal total (SALT capped at 10,000)
+  # less the FULL state income tax on Schedule A line 5a (Form 1040N line 8,
+  # "even if the total ... was limited to $10,000"). Federal itemized 37,379
+  # (mortgage 26,847 + SALT 10,000 + charity 532), state income tax 15,000:
+  # 22,379 > the 7,350 standard deduction
+  run_case('NE', 2022,
+           list(agi = 300000, wages1 = 300000, ei1 = 300000, itemizing = TRUE,
+                item_ded = 37379, item_ded_potential = 37379,
+                item_ded_ex_limits_potential = 37379, salt_inc_sales = 15000,
+                salt_prop = 9000, salt_item_ded = 10000,
+                salt_item_ded_potential = 10000,
+                mort_int_item_ded_potential = 26847,
+                char_item_ded_potential = 532),
+           expect = list(st_ded = 22379),
+           label = 'NE-5e itemized less the uncapped income tax')
 
   # NE-6 the per-exemption credit is NONREFUNDABLE. A single filer at AGI
   # 13,000 in TY2024 has 4,650 of taxable income and 122.27 of tax, which the

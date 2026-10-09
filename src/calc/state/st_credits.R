@@ -188,6 +188,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.ctc_cdctc_greater_of', # (0/1) child and care credits are alternatives
     'st_credits.cdctc_ref_cap',        # (dbl) cap on the refundable care-credit portion (ME $500)
     'st_credits.cdctc_ref_agi_limit',  # (dbl) federal AGI at or below which it is refundable (LA $25,000)
+    'st_credits.cdctc_ref_excess_only', # (0/1) only the excess over pre-credit state tax is refundable (MD 21B)
     'st_credits.percap_refundable',
     'st_credits.stfc_refundable',
     'st_credits.mc_style',
@@ -261,14 +262,23 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # Arkansas makes the same credit refundable only for care at an approved
   # early-childhood facility (AR1000F payments line 43), which is unobserved:
   # cdctc_ref_qual_share is the assumed qualifying share. A unit taking a
-  # low-income alternative (VT) has it wholly refundable
+  # low-income alternative (VT) has it wholly refundable. Maryland refunds
+  # only the excess of the credit over the Maryland tax BEFORE credits
+  # (Worksheet 21B: Part B line 4 less Form 502 lines 21-21a); the rest is
+  # an ordinary nonrefundable credit, so it is lost where other credits
+  # (the 50% EIC on line 22) have already absorbed the tax
+  cdctc_ref_amt = if_else(
+    tax_unit$st_credits.cdctc_ref_excess_only == 1,
+    pmax(0, care$st_cdctc - pmax(0, tax_unit$st_tax_pre_credit)),
+    care$st_cdctc
+  )
   cdctc_ref_part = if_else(
     care$st_cdctc_lowinc,
     care$st_cdctc,
     tax_unit$st_credits.cdctc_refundable *
       tax_unit$st_credits.cdctc_ref_qual_share *
       (tax_unit$agi <= tax_unit$st_credits.cdctc_ref_agi_limit) *
-      pmin(care$st_cdctc, tax_unit$st_credits.cdctc_ref_cap)
+      pmin(cdctc_ref_amt, tax_unit$st_credits.cdctc_ref_cap)
   )
 
   # Remaining tax after the credits that precede the JFC/EITC in the OH

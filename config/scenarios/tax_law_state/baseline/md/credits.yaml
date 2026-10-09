@@ -13,6 +13,11 @@
 #   - Senior tax credit (SB405, 2022+): $1,000 single / $1,750 joint
 #     (joint with one 65+ spouse: $1,000), FAGI cliffs 100k/150k,
 #     nonrefundable.
+#   - Child and dependent care credit (10-716, Form 502CR Part B): a share
+#     of the federal credit that steps down with federal AGI, zero above an
+#     AGI cap; refundable below a lower cap from TY2019 (Worksheet 21B).
+#     "Individual" thresholds cover single, separate and head-of-household
+#     filers; only married couples filing jointly get the joint ones.
 #   - Poverty level credit (10-709): 5% of earned income for sub-poverty
 #     households, nonrefundable -- binding only when tax exceeds 50% of
 #     the federal EIC; omitted as de-minimis [documented].
@@ -28,6 +33,26 @@ filing_status_mapper:
     '2': senior_limit_joint
     '3': senior_limit_single
     '4': senior_limit_joint
+  cdctc_rate_po_start:
+    '1': care_po_start_individual
+    '2': care_po_start_joint
+    '3': care_po_start_individual
+    '4': care_po_start_individual
+  cdctc_rate_po_step:
+    '1': care_po_step_individual
+    '2': care_po_step_joint
+    '3': care_po_step_individual
+    '4': care_po_step_individual
+  cdctc_cap_thresh:
+    '1': care_agi_cap_individual
+    '2': care_agi_cap_joint
+    '3': care_agi_cap_individual
+    '4': care_agi_cap_individual
+  cdctc_ref_agi_limit:
+    '1': care_ref_agi_limit_individual
+    '2': care_ref_agi_limit_joint
+    '3': care_ref_agi_limit_individual
+    '4': care_ref_agi_limit_individual
 
 # 50% nonrefundable option
 eitc_match:
@@ -49,6 +74,10 @@ eitc_match_alt:
 eitc_refundable_alt:
   value: 1
   reference: 'Worksheet 18A refundable option'
+
+eitc_alt_excess:
+  value: 1
+  reference: 'Not a choice: Form 502 line 22 (50% of the federal EIC, limited to tax) stacks with the line 23-24 nonrefundable credits, and the refundable EIC (line 42, Worksheet 18A) is the refundable percentage of the federal EIC less the Maryland tax (lines 21-21a, before credits). Same EIC benefit as the choice model; differs only when other nonrefundable credits (care, senior) exist. Changed 2026-10-09 (test MD-11f, PolicyEngine record 12337)'
 
 # Childless non-joint filers, 2020+ (Worksheet 18A.1)
 eitc_childless_match:
@@ -151,3 +180,127 @@ senior_limit_joint:
     '2017': 0
     '2022': 150000
   reference: 'FAGI <= $150,000 (joint/HoH tier)'
+
+# Child and dependent care credit (Tax-Gen 10-716; Form 502CR Part B), added
+# 2026-10-09. Was missing entirely: the source packet's "undiagnosed" care
+# residual (care records matching 0.447 against 0.740) and the PolicyEngine
+# 2021 care misses were this credit
+cdctc_style:
+  value: 3
+  reference: 'Form 502CR Part B line 3: a decimal from the CREDIT FOR CHILD AND DEPENDENT CARE EXPENSES CHART times the federal credit (line 2); Tax-Gen 10-716(c)-(d)'
+
+cdctc_fed_base:
+  value: 0
+  reference: 'Form 502CR Part B line 2: "your federal Child and Dependent Care Credit from federal Form 2441" -- the credit claimed (10-716(a)(2): "properly claimed ... under section 21"); TY2021 that is the refundable ARPA credit'
+
+cdctc_rate_income_base:
+  value: 1
+  reference: 'Form 502CR Part B line 1: federal adjusted gross income from Form 502 line 1'
+
+cdctc_rate_max:
+  value:
+    '2017': 0.325
+    '2019': 0.32
+  reference: 'TY2017-18: 32.5% (10-716(c)(1) before Laws of Maryland 2019 ch. 432, SB 870, struck text; DLS fiscal note SB 422 of 2018). TY2019+: 32% (10-716(c) as amended by 2019 ch. 432, "applicable to all taxable years beginning after December 31, 2018"; 2023-2025 502CR instructions: "The credit starts at 32% of the federal credit allowed")'
+
+cdctc_rate_floor:
+  value: 0
+  reference: 'No floor: the decimal steps down until the AGI cap'
+
+cdctc_rate_po_per_1k:
+  value:
+    '2017': 0.0325
+    '2019': 0.0032
+  reference: 'Read as the per-step decrement (cdctc_rate_po_step is finite). TY2017-18: "reduced by 10% for each $1,000 or fraction of $1,000" over $41,000 = 0.0325 of the 32.5% share (pre-2019 10-716(d)(1)). TY2019+: "reduced by 1% for each $2,000 (joint: $3,000) or fraction thereof" = 0.0032 of the 32% share (10-716(d)); the 2024 chart steps 0.3200, 0.3168, 0.3136, ...'
+
+care_po_start_individual:
+  value:
+    '2017': 41000
+    '2019': 30000
+  reference: 'TY2017-18: $41,000 (pre-2019 10-716(d)(1); the separate-filer $20,500 / $500 steps never bind because a separate filer cannot claim the federal credit). TY2019+: $30,000 (10-716(d); 2024 chart first reduced band $30,001-$32,000 at 0.3168). Not indexed'
+
+care_po_start_joint:
+  value:
+    '2017': 41000
+    '2019': 50000
+  reference: 'TY2017-18: $41,000, same as individuals (pre-2019 law has no joint schedule). TY2019+: $50,000 (10-716(d); 2024 joint chart first reduced band $50,001-$53,000). Not indexed'
+
+care_po_step_individual:
+  value:
+    '2017': 1000
+    '2019': 2000
+  reference: 'TY2017-18 $1,000; TY2019+ $2,000 "or fraction thereof" (10-716(d)). The 2024 individual chart tightens to $1,000 bands from $103,001 up to the cap (0.1984 ... 0.1792), at odds with the statute; the statute is encoded and the chart quirk documented (at most ~$10 on the affected band)'
+
+care_po_step_joint:
+  value:
+    '2017': 1000
+    '2019': 3000
+  reference: 'TY2017-18 $1,000; TY2019+ $3,000 "or fraction thereof" (10-716(d); 2024 joint chart bands of $3,000 throughout)'
+
+# Above the AGI cap the credit is zero: encoded as the MN-style income cap
+# with a zero cap amount
+cdctc_cap_amount:
+  value: 0
+  reference: 'No credit above the federal AGI eligibility limit (10-716(b))'
+
+cdctc_cap_po_rate:
+  value: 0
+  reference: 'Cliff at the eligibility limit'
+
+care_agi_cap_individual:
+  value:
+    '2017': 50000
+    '2019': 92000
+    '2020': 92950
+    '2021': 95900
+    '2022': 102600
+    '2023': 103650
+    '2024': 109300
+    '2025': 112100
+  reference: 'TY2017-18 $50,000 (pre-2019 10-716(b)). TY2019 $92,000 (10-716(b) as amended by 2019 ch. 432), indexed from TY2020 by the Comptroller (10-716(f)). 2020 $92,950 (2020 502CR instructions), 2023 $103,650, 2024 $109,300, 2025 $112,100 (502CR instructions, verified 2026-10-09). 2021 $95,900 and 2022 $102,600 from the PolicyEngine parameter file citing the 2021-22 502CR instructions; the official PDFs for those years were unreachable 2026-10-09 [UNVERIFIED against the form]'
+
+care_agi_cap_joint:
+  value:
+    '2017': 50000
+    '2019': 143000
+    '2020': 144450
+    '2021': 149050
+    '2022': 159500
+    '2023': 161100
+    '2024': 169900
+    '2025': 174300
+  reference: 'TY2017-18 $50,000. TY2019 $143,000 (2019 ch. 432), indexed from TY2020. 2020 $144,450, 2023 $161,100, 2024 $169,900, 2025 $174,300 (502CR instructions, verified). 2021 $149,050 and 2022 $159,500 from PolicyEngine [UNVERIFIED against the form]'
+
+cdctc_refundable:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'TY2017-18 nonrefundable ("lesser of ... the State income tax"). TY2019+: the excess over State income tax is refunded below the refund AGI limit (10-716(e); Worksheet 21B: line 2 credit less line 3 Maryland tax)'
+
+cdctc_ref_excess_only:
+  value: 1
+  reference: 'Worksheet 21B: line 2 credit (Part B line 4) less line 3 Maryland tax (Form 502 lines 21-21a, before credits); only that excess is refundable (Part CC line 7), the credit itself is a Part AA nonrefundable credit. PolicyEngine md_refundable_cdcc computes the same (verified on record 12337, 2023)'
+
+care_ref_agi_limit_individual:
+  value:
+    '2017': .inf
+    '2019': 50000
+    '2020': 50500
+    '2021': 52100
+    '2022': 55750
+    '2023': 56300
+    '2024': 59400
+    '2025': 60900
+  reference: 'Worksheet 21B line 1: individual FAGI limit. 2019 $50,000 (10-716(e)); 2023 $56,300, 2024 $59,400, 2025 $60,900 (502CR instructions, verified 2026-10-09); 2020-2022 from PolicyEngine [UNVERIFIED against the form]. Irrelevant in 2017-18 (cdctc_refundable = 0)'
+
+care_ref_agi_limit_joint:
+  value:
+    '2017': .inf
+    '2019': 75000
+    '2020': 75750
+    '2021': 78150
+    '2022': 83650
+    '2023': 84500
+    '2024': 89100
+    '2025': 91400
+  reference: 'Worksheet 21B line 1: joint FAGI limit. 2019 $75,000; 2023 $84,500, 2024 $89,100, 2025 $91,400 (verified); 2020-2022 from PolicyEngine [UNVERIFIED against the form]'

@@ -2,7 +2,7 @@
 
 State: `MD`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-07` (State EITC cross-check: childless credit from TY2020, minimum-age disregard from TY2018); previous: `2026-08-22`
+Last updated: `2026-10-09` (child and dependent care credit encoded; PolicyEngine unemployment gap P27; IRA distributions split out of the PolicyEngine pension input); previous: `2026-10-07`
 
 > **Status note (as of 2026-07-24), kept from the packet's former Status line:**
 > baseline encoded (state-level); record-level worksheet tests complete
@@ -36,9 +36,10 @@ subtraction 2020-21 with FAGI cliffs (new sub_ui_agi_limit); EITC 50%
 nonref vs 27/28/45% refundable (VA dual-option machinery) + the childless
 100% capped refundable override 2021+ (new eitc_childless params); CTC
 under-6 from 2023 (cliff, then the 2025 phase-out); senior credit 2022+
-with the one-65+ joint tier (new senior_credit_one65_amount).
+with the one-65+ joint tier (new senior_credit_one65_amount); child and
+dependent care credit (Form 502CR Part B, 2026-10-09: new cdctc_style 3).
 
-## Worksheet tests: MD-1..MD-9
+## Worksheet tests: MD-1..MD-11
 
 ## Triage 2026-08-22 — exposure class landed; NOT closed
 
@@ -79,7 +80,8 @@ has not been triaged at all -- and it is now what binds Maryland, at 0.8702.
 (see the Idaho packet) lifted the Maryland TAXSIM cells to 0.9655 / 0.9542 /
 0.9448 / 0.9255. 2017 and 2018 now clear; 2019 and 2020 do not, and neither
 does any PolicyEngine cell. Maryland's care residual remains undiagnosed and
-T18 remains refuted for Maryland.
+T18 remains refuted for Maryland. (Diagnosed 2026-10-09: the residual was our
+missing child and dependent care credit; see below.)
 
 ## State EITC cross-check, 2026-10-07
 
@@ -102,6 +104,91 @@ laws and booklets; State-EITC-Align was a check, not a source.
   recomputed without the age test; the other federal tests stand (not a dependent, not separate, under 65,
   investment income within the federal limit). Tests MD-4b to MD-4e.
 - The TY2023 $600 cap equals the federal childless maximum and never binds; left as encoded.
+
+## Triage 2026-10-09: care credit encoded, three harness classes
+
+**Our bug: the child and dependent care credit was missing.** Form 502CR Part B
+(Tax-Gen 10-716) had never been encoded. It is the "undiagnosed" care residual
+above, and the PolicyEngine 2021 care misses (records 345983, 157421, 273690,
+where PolicyEngine pays $1,037-$1,342 and we paid nothing).
+
+- *TY2019 onward* (Laws of Maryland 2019 ch. 432, SB 870, "applicable to all
+  taxable years beginning after December 31, 2018"; current 10-716): 32% of
+  the federal credit claimed on Form 2441. The share falls by 1% of itself
+  (0.0032) for each $2,000 of federal AGI over $30,000, or each $3,000 over
+  $50,000 for married couples filing jointly, "or fraction thereof". It is
+  zero above an AGI cap and refundable below a lower limit (Worksheet 21B:
+  the credit less Maryland tax). Head-of-household and separate filers use the
+  individual thresholds; only joint filers use the joint ones. The thresholds
+  are indexed from TY2020 (10-716(f)).
+- *TY2017-2018*: the pre-2019 text, read from the struck language in the SB 870
+  first-reader and the DLS fiscal note on SB 422 of 2018 (which died). 32.5% of
+  the federal credit, reduced 10% of itself per $1,000 over $41,000, zero
+  above $50,000, nonrefundable, with no separate joint schedule.
+- Thresholds verified against the official 502CR instructions for 2020 (caps
+  only) and 2023-2025. The 2021-2022 values come from PolicyEngine's parameter
+  file, which cites the 2021-22 502CR instructions; those PDFs could not be
+  fetched on 2026-10-09 and are marked UNVERIFIED in the YAML.
+- The 2024 individual chart departs from the statute above $103,000: it steps
+  every $1,000 instead of every $2,000 (0.1984 down to 0.1792 at the cap). The
+  statute is encoded. The gap is at most about $10 on that band.
+- Encoded as generic `cdctc_style` 3: the stepped own-rate slide
+  (`cdctc_rate_*`) times the federal credit. The cap reuses the MN-style income
+  cap with a zero cap amount. Tests MD-11a to MD-11e; MD-11a reproduces
+  PolicyEngine record 157421 ($1,036.80 against its $1,037).
+
+**Our bug, found on the first rerun: refundability of the two credits.** The
+first rerun (md_run_1009) moved the PolicyEngine cells only partly. The
+remaining care misses were ours. Record 12337 (2023 single, Maryland tax
+$471.52, federal EIC $3,769, Maryland care credit $292): we owed -$1,516,
+PolicyEngine -$1,224.
+
+- Worksheet 21B refunds only the care credit's excess over the Maryland tax
+  before credits. The credit itself is a nonrefundable Part AA credit. We had
+  refunded all of it. New generic flag `cdctc_ref_excess_only`.
+- The earned income credit is not an either/or choice in Maryland, unlike
+  Virginia and Delaware. Form 502 line 22 (50% of the federal EIC) stacks with
+  the line 23-24 nonrefundable credits against the tax. The refundable credit
+  (line 42, Worksheet 18A) is the refundable percentage less the Maryland tax
+  before credits, paid on top. The choice representation gave the same EIC
+  benefit but left the tax free for the care and senior credits. New generic
+  flag `eitc_alt_excess`. Tests MD-4c, MD-5 and MD-6 now report `st_eitc` as
+  line 22 plus the refundable excess; their liabilities are unchanged. MD-11f
+  reproduces record 12337.
+
+**PolicyEngine bug P27: no 2021 unemployment subtraction.** policyengine-us
+1.775.7 has no RELIEF Act subtraction (Laws of Maryland 2021 ch. 39; 502SU code
+yy). Record 75235: `md_agi` equals federal AGI with $43,633 of unemployment
+compensation in it. This was 17 of the 49 clean 2021 PolicyEngine misses.
+Excluded for 2021.
+
+**Harness fix: IRA distributions are no longer handed over as pensions.** The
+PolicyEngine driver received taxable pensions plus IRA distributions as
+pension income. Maryland's exclusion does not cover IRAs (Worksheet 13A; 2021
+booklet Instruction 13 line 10a), and neither does PolicyEngine's Maryland
+pension source list. PolicyEngine was therefore excluding IRA money that we
+correctly tax. Record 331632 (2024): $72,057 of IRA distributions, PolicyEngine
+$0 tax against our $1,557. With IRA distributions passed as
+`taxable_ira_distributions` (split evenly on joint returns, like pensions),
+federal AGI is unchanged at $127,060 and PolicyEngine's Maryland tax becomes
+$1,618 against our $1,557. This changes the PolicyEngine input for every state.
+
+**TAXSIM input coverage: one retirement input.** TAXSIM-35 has only
+`pensions`, which the harness fills with pensions plus IRA distributions, so
+TAXSIM grants the exclusion on IRA money. In the 2020 clean subset with a filer
+65 or older, IRA-heavy records match 0.387 (joint) and 0.451 (single) against
+0.923 and 0.996 for pension-heavy ones. Excluded where the pooled exclusion on
+pensions plus IRAs beats ours by more than $100 of tax. Offline on the
+2026-10-07 run: TAXSIM 2017-2020 cells 0.956 / 0.943 / 0.937 / 0.929 become
+0.973 / 0.963 / 0.952 / 0.946.
+
+**Data proxy: Social Security attribution in the pension offset.** Each
+spouse's cap is reduced by that spouse's own benefits. We pool (the couple's
+caps less total gross Social Security). The PolicyEngine driver gives all
+benefits to the head and splits pensions evenly. Record 140113 (2024):
+PolicyEngine subtracts $39,500, we subtract $17,248. Neither is form-true.
+Excluded where the two differ by more than $100 of tax and Maryland tax
+exceeds $100.
 
 ## Known differences
 

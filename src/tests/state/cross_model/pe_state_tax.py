@@ -11,7 +11,7 @@ src/tests/state/test_state_cross_model.R):
     pwages, swages, psemp, ssemp,
     taxable_interest, tax_exempt_interest,
     qualified_dividends, ordinary_dividends, stcg, ltcg,
-    pension_income, social_security, unemployment, rental, pass_through,
+    pension_income, ira_dist, social_security, unemployment, rental, pass_through,
     estate, misc_income, real_estate_taxes, mortgage_interest,
     charitable_cash, charitable_noncash, childcare_expenses
 
@@ -65,6 +65,12 @@ PRIMARY_VARS = {
     "stcg": ["short_term_capital_gains"],
     "ltcg": ["long_term_capital_gains"],
     "pension_income": ["taxable_pension_income", "pension_income"],
+    # IRA distributions travel separately: state pension exclusions differ on
+    # whether they qualify (MD Worksheet 13A excludes IRAs; PolicyEngine's MD
+    # pension sources are pensions and 401(k)/403(b) only). Folding them into
+    # pension income handed PolicyEngine an exclusion the form denies
+    # (2026-10-09: MD 2024 record 331632, $72,057 of IRA distributions)
+    "ira_dist": ["taxable_ira_distributions"],
     "social_security": ["social_security"],
     "unemployment": ["unemployment_compensation"],
     "rental": ["rental_income"],
@@ -78,7 +84,7 @@ PRIMARY_VARS = {
     "childcare_expenses": ["tax_unit_childcare_expenses", "childcare_expenses"],
 }
 # Tax-unit-level person inputs split evenly between spouses on a joint record
-EVEN_SPLIT_COLS = {"pension_income"}
+EVEN_SPLIT_COLS = {"pension_income", "ira_dist"}
 # PE's generic state_income_tax INCLUDES local piggyback taxes for some
 # states. For MD, with no county input, PE defaults the county to
 # first-in-state (Allegany, ~3%), silently adding a county tax to every
@@ -162,6 +168,9 @@ OUTPUT_VARS = {
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],
     "pe_fed_eitc": ["eitc", "earned_income_tax_credit"],
+    # Federal income tax before refundable credits: compared with ours where a
+    # state deducts federal tax (AL, IA, LA, MO, MT, OR)
+    "pe_fed_income_tax": ["income_tax_before_refundable_credits"],
 }
 
 GROUP_PLURALS = {
@@ -252,7 +261,8 @@ def build_situation(rows, year):
         group_values = {}
         for col, candidates in PRIMARY_VARS.items():
             var, entity = resolve(candidates)
-            val = float(row[col])
+            # .get: input files written before a column was added still load
+            val = float(row.get(col) or 0)
             if entity == "person":
                 # Pension and IRA income is held at tax-unit level, so who
                 # owns it is unobserved. Our state calculator pools it against

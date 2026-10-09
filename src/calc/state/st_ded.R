@@ -448,6 +448,12 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         case_when(
           st_ded.item_component_style == 1 ~ st_item_components,
           st_ded.item_component_style == 2 ~ item_ded_potential,
+          # Style 3 (NE Form 1040N lines 7-9): the federal itemized total as
+          # claimed, SALT cap included, less the FULL state and local income
+          # tax on Schedule A line 5a -- "even if the total amount of state
+          # and local taxes was limited to $10,000"
+          st_ded.item_component_style == 3 ~
+            pmax(0, item_ded_ex_limits_potential - salt_inc_sales),
           TRUE ~ st_item_default
         ),
         0

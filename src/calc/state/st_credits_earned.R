@@ -15,6 +15,7 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_refundable',
   'st_credits.eitc_match_alt',
   'st_credits.eitc_refundable_alt',
+  'st_credits.eitc_alt_excess',
   'st_credits.eitc_less_household_credit',
   'st_credits.eitc_wage_cap',
   'st_credits.eitc_child_bonus',
@@ -304,6 +305,21 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   st_eitc_ref_share = if_else(st_eitc_use_alt,
                               tax_unit$st_credits.eitc_refundable_alt,
                               tax_unit$st_credits.eitc_refundable)
+
+  # Maryland does not offer a choice: the nonrefundable match (Form 502
+  # line 22) stacks with the other nonrefundable credits against the tax,
+  # and the refundable credit is the alternative match LESS the Maryland tax
+  # before credits (Worksheet 18A; Form 502 line 42), paid on top. The two
+  # options give the same EIC benefit, but under the choice representation
+  # the refundable option left the tax free for the care and senior
+  # credits, which the form has already used up (eitc_alt_excess = 1)
+  alt_excess = pmax(0, st_eitc_alt_amt - pmax(0, tax_unit$st_tax_pre_credit))
+  excess_style = tax_unit$st_credits.eitc_alt_excess == 1
+  st_eitc_use_alt = st_eitc_use_alt & !excess_style
+  st_eitc = if_else(excess_style, st_eitc_main + alt_excess, st_eitc)
+  st_eitc_ref_share = if_else(excess_style,
+                              if_else(st_eitc > 0, alt_excess / st_eitc, 0),
+                              st_eitc_ref_share)
 
   # Childless-filer EITC override (MD Worksheet 18A.1, 2021+): a separate
   # match of the federal EIC, capped, fully refundable, REPLACING both

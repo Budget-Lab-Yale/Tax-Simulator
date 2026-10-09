@@ -1146,6 +1146,37 @@ reported care expense or poverty-level income, with no cap. In our TY2024 Nebras
 $4,000 to 23 of 462 records. Effect: PolicyEngine overstates Nebraska refunds by far more than the $15 million program
 can pay.
 
+### P25. Wisconsin school property tax credit: separate filers get the joint cap
+
+Wisconsin's renter's and homeowner's school property tax credit is 12% of up to $2,500 of property tax or rent-constituting
+tax, "not ... more than $300 ($150 if married filing a separate return or married filing as head of household)"; "The
+maximum credit allowable to each spouse is $150" (Form 1 instructions 2023, line 15). policyengine-us 1.775.7 allows a
+separate filer $300. Per-record rerun (2026-10-09): record 116220, a separate filer, `wi_property_tax_credit` 300 where
+the form allows 150. Effect: PolicyEngine understates Wisconsin tax for separate filers with more than $1,250 of property
+tax by up to $150.
+
+### P26. Nebraska itemized deductions keep property tax instead of subtracting the full income tax
+
+Form 1040N line 7 takes the federal itemized total (Schedule A line 17, SALT cap included) and line 8 subtracts "the amount
+of state and local income taxes reported on Federal Schedule A, line 5a even if the total amount of state and local taxes
+was limited to $10,000" (2022 booklet). policyengine-us 1.775.7 (`ne_itemized_deductions`) instead takes itemized
+deductions less all SALT plus property taxes up to the cap. The two agree when the cap does not bind; when it does,
+Nebraska keeps less than the property tax and often nothing. Per-record rerun (2026-10-09): record 294403, 2022 single,
+federal itemized $37,379 ($10,000 of capped SALT, $690,766 of income tax): `ne_itemized_deductions` 37,379 where the
+form gives zero and the $7,350 standard deduction applies. Effect: PolicyEngine understates Nebraska tax for itemizers
+over the cap.
+
+### P27. Maryland 2021 unemployment insurance subtraction missing
+
+The RELIEF Act (Laws of Maryland 2021 ch. 39, SB 496) subtracts unemployment compensation from Maryland AGI for tax
+years 2020 and 2021 when federal AGI is under $100,000 (married filing jointly, head of household, surviving spouse) or
+$75,000 (other filers); Form 502SU code yy. policyengine-us 1.775.7 has no such subtraction: the Maryland subtraction list
+(`md_total_subtractions`) holds dependent care, pensions, Social Security, military retirement, two-income and 529
+contributions only. Per-record rerun (2026-10-09): record 75235, 2021 separate filer, federal AGI $73,933 of which $43,633
+is unemployment compensation: `md_agi` 73,933 and `md_total_subtractions` 0 where the form gives $30,300. Record 49111
+(single, $30,150 of unemployment compensation) has the same shape. Effect: PolicyEngine overstates 2021 Maryland tax by
+the state rate times unemployment compensation below the cliff, about $1,400-$2,700 on the affected records.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

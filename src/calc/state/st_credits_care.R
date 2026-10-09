@@ -1,7 +1,8 @@
 #---------------------------------------------------------------------------
 # Child/dependent care credit family (called by calc_st_credits): flat
-# federal-CDCTC matches (GA/KY-style) and the NY styles (share table of the
-# federal credit; own-rate credit on capped expenses).
+# federal-CDCTC matches (GA/KY-style), the NY styles (share table of the
+# federal credit; own-rate credit on capped expenses) and the MD style
+# (stepped-rate share of the federal credit).
 #---------------------------------------------------------------------------
 
 # Law parameters this family reads (assembled into calc_st_credits req_vars)
@@ -148,10 +149,18 @@ st_credits_care = function(tax_unit) {
       tax_unit$st_credits.cdctc_fed_base_switch_income,
     cdctc_claimed, cdctc_fed
   )
+  # Style 3: a share of the federal credit at the stepped own-rate slide --
+  # cdctc_rate_max less cdctc_rate_po_per_1k per step (or fraction) of income
+  # over cdctc_rate_po_start. MD Tax-Gen 10-716(c)-(d), Form 502CR Part B:
+  # 32% of the federal credit, reduced 1% of itself (0.0032) per $2,000
+  # ($3,000 joint) of federal AGI over $30,000 ($50,000); TY2017-18, 32.5%
+  # less 10% of itself per $1,000 over $41,000. The style-1 share table
+  # cannot hold a 40-step chart, and the rate slide already is one
   cdctc_ny = case_when(
     cdctc_style_v == 1 ~
       cdctc_ny_share * cdctc_fed,
     cdctc_style_v == 2 ~ cdctc_own,
+    cdctc_style_v == 3 ~ cdctc_rate2 * cdctc_fed,
     TRUE ~ 0
   )
   st_cdctc = tax_unit$st_credits.cdctc_match * cdctc_fed + cdctc_ny
