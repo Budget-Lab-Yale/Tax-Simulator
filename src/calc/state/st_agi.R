@@ -189,6 +189,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
     'st_agi.sub_ui_worksheet',      # (int) WI Schedule SB worksheet: taxable UI = lesser of UI or half of (AGI - base - taxable SS - state refunds)
     'st_agi.sub_ui_worksheet_base', # (dbl) that worksheet's base (filing-status mapped: $18,000 joint, $12,000 single/head, $0 separate living together)
+    'st_agi.sub_ui_worksheet_net_ss_ref', # (int) 1 = the worksheet's AGI nets taxable SS and state refunds (WI); 0 = plain federal AGI (IN)
     'st_agi.bus_carveout',          # (int) OH-style business income carve-out active
     'st_agi.bus_ded_cap',           # (dbl) business income deduction cap (mapped)
     'st_agi.bus_excl_share',        # (dbl) flat share of business income subtracted (MO)
@@ -756,7 +757,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                   st_agi.sub_ui_worksheet *
                   (pmax(0, ui) - pmin(pmax(0, ui),
                                       0.5 * pmax(0, agi - st_agi.sub_ui_worksheet_base -
-                                                    txbl_ss - state_ref))),
+                                                    st_agi.sub_ui_worksheet_net_ss_ref *
+                                                      (txbl_ss + state_ref)))),
 
       # Subtraction: two-income married couple (MD Form 502 line 14 /
       # 10-207(y)): the lesser-earning spouse's income up to the cap,

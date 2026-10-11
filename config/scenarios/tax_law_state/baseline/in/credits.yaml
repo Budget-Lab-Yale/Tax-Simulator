@@ -8,3 +8,73 @@ eitc_match:
 eitc_refundable:
   value: 1
   reference: 'IRS, States and local governments with EITC; Indiana Schedule IN-EIC, 2017-2025'
+
+# Decoupled EIC, TY2017-2022 (IC 6-3.1-21 with the IRC frozen by IC 6-3-1-11;
+# Schedule IN-EIC Worksheets A/B in the IT-40 booklet). Added 2026-10-11:
+# the match had been applied to the actual federal credit, overpaying
+# families with three or more children and married couples in the federal
+# joint-bonus band. From TY2023 Indiana follows the federal credit (2023
+# booklet: "Indiana follows all requirements and allowances for the federal
+# EIC")
+eitc_rc:
+  value:
+    '2017': 1
+    '2023': 0
+  reference: 'Schedule IN-EIC (2022, State Form 49469 R22): "You must complete Section B if you are claiming one or two children when figuring Indiana''s EIC"; "Since Marie may claim up to two qualified children"; income must be less than $49,399 for every filing status (the federal two-child single limit). 2023 booklet Line 6: the EIC is the federal EIC x 10%, Indiana follows all federal requirements'
+eitc_rc_max_kids:
+  value: 2
+  reference: 'Schedule IN-EIC Section B, TY2017-2022: up to two qualifying children'
+eitc_rc_po_thresh_0:
+  value:
+    '2017': 8340
+    '2018': 8490
+    '2019': 8650
+    '2020': 8790
+    '2021': 8880
+    '2022': 9160
+  reference: 'Federal single-filer phase-out start with no qualifying child (Rev. Procs. 2016-55, 2017-58, 2018-57, 2019-44, 2020-45 [pre-ARPA], 2021-45); Indiana applies it to every filing status (no joint bonus: the $49,399 2022 limit is the single figure)'
+eitc_rc_po_thresh_kids:
+  value:
+    '2017': 18340
+    '2018': 18660
+    '2019': 19030
+    '2020': 19330
+    '2021': 19520
+    '2022': 20130
+  reference: 'Federal single-filer phase-out start with one or more children, same Rev. Procs. Check: 2022 two-child credit 6,164 at 21.06% ends at 20,130 + 29,269 = 49,399, the Schedule IN-EIC limit'
+eitc_rc_childless_pi_rate:
+  value:
+    '2017': -1
+    '2021': 0.0765
+    '2022': -1
+  reference: 'TY2021: Indiana did not adopt the American Rescue Plan Act childless expansion (IRC frozen); pre-ARPA 7.65% (Rev. Proc. 2020-45). -1 = federal value'
+eitc_rc_childless_pi_end:
+  value:
+    '2017': -1
+    '2021': 7100
+    '2022': -1
+  reference: 'TY2021 pre-ARPA earned income amount, no qualifying child (Rev. Proc. 2020-45): $7,100 (maximum credit $543)'
+eitc_rc_childless_po_rate:
+  value:
+    '2017': -1
+    '2021': 0.0765
+    '2022': -1
+  reference: 'TY2021 pre-ARPA phase-out rate, no qualifying child: 7.65%'
+
+# Unified tax credit for the elderly (IC 6-3-3-9; IT-40 Schedule 5 line 5),
+# added 2026-10-11. Amounts by income band in credit_tables.csv beside this
+# file (credit_id elderly_credit): Table A, joint filers both 65 or older,
+# $140 / $90 / $80; Table B, one person 65 or older, $100 / $50 / $40; IT-40
+# line 1 below $1,000 / $1,000-$2,999 / $3,000-$9,999; nothing at $10,000 or
+# more. Read from the 2024 booklet; PolicyEngine cites the same tables for
+# 2021-2025. TY2017-2020 assumed identical [UNVERIFIED against those booklets]
+elderly_credit_style:
+  value: 1
+  reference: 'IT-40 booklet 2024, Schedule 5 line 5 "Unified Tax Credit for the Elderly": age 65 or older by December 31, line 1 income less than $10,000, Tables A and B; refundable ("may be claimed during the same time period as any other refundable credit"). Six-month residency, the separate-filer living-apart condition and the incarceration test are unobserved [assumed met]. PolicyEngine encodes the same tables (in_unified_elderly_tax_credit, citing IC 6-3-3-9 and the 2023-2025 booklets); found 2026-10-11 on PolicyEngine 2025 records 111813, 152254 and 291378'
+elderly_credit_min_age:
+  value: 65
+  reference: 'Booklet: "You and/or your spouse must have been age 65 or older by Dec. 31"; disabled persons under 65 do not qualify'
+elderly_credit_income_base:
+  value: 1
+  reference: 'Booklet: "The amount on line 1 of Form IT-40 must be less than $10,000" (line 1 is federal AGI)'
+

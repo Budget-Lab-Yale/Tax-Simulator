@@ -8,7 +8,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
                                 'st_pct_credit', 'st_cli', 'st_ded_credit',
                                 'st_lic', 'st_kg_credit', 'st_step_credit',
-                                'st_pov_credit',
+                                'st_pov_credit', 'st_elderly_credit',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
@@ -167,6 +167,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.lic_thresh_aged',      # (dbl) higher threshold where either filer meets the age test (IA)
     'st_credits.lic_aged_min_age',     # (dbl) that age test (IA 65)
     'st_credits.kg_credit_rate',       # (dbl) nonrefundable credit as a share of net capital gain (MT 0.02)
+    'st_credits.elderly_credit_style', # (int) 1 = banded refundable elderly credit from the elderly_credit table (IN)
+    'st_credits.elderly_credit_min_age', # (dbl) age for that credit
+    'st_credits.elderly_credit_income_base', # (int) st_income_base enum for its income bands
     'st_credits.stepcred1_amount',      # (dbl) stepped flat credit 1: maximum per return (AR)
     'st_credits.stepcred1_thresh',      # (dbl) state taxable income up to which the maximum applies
     'st_credits.stepcred1_step',        # (dbl) income step above the threshold
@@ -478,6 +481,23 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   }
   st_step_credit = stepcred(1) + stepcred(2)
 
+  # Banded elderly credit (IN unified tax credit for the elderly, IC 6-3-3-9;
+  # IT-40 Schedule 5 line 5): a refundable amount from the state's
+  # elderly_credit table, keyed by the number of filers at or over the age
+  # (key 2 = joint return with both, Table A; key 1 = one, Table B) and banded
+  # on the income base (IT-40 line 1, federal AGI; zero at $10,000 or more)
+  n_elderly = (tax_unit$age1 >= tax_unit$st_credits.elderly_credit_min_age) +
+              (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) &
+                 tax_unit$age2 >= tax_unit$st_credits.elderly_credit_min_age)
+  st_elderly_credit = if_else(
+    tax_unit$st_credits.elderly_credit_style == 1 & n_elderly > 0 &
+      tax_unit$dep_status != 1,
+    lookup_state_credit_table(
+      floor(st_income_base(tax_unit, tax_unit$st_credits.elderly_credit_income_base)),
+      pmin(n_elderly, 2L), credit_tables, 'elderly_credit'),
+    0
+  )
+
   tibble(
     st_hh_credit     = hh$st_hh_credit,
     st_eitc          = st_eitc,
@@ -506,6 +526,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_kg_credit      = st_kg_credit,
     st_step_credit    = st_step_credit,
     st_pov_credit     = earn$st_pov_credit,
+    st_elderly_credit = st_elderly_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -530,7 +551,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         earn$st_earned_credit *
                           tax_unit$st_credits.earned_credit_refundable +
                         earn$st_yctc +
-                        cdctc_ref_part +
+                        cdctc_ref_part + st_elderly_credit +
                         hh$st_percap_credit *
                           tax_unit$st_credits.percap_refundable +
                         hh$st_stfc * tax_unit$st_credits.stfc_refundable

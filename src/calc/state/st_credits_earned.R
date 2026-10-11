@@ -57,7 +57,17 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_ageband_share',
   'st_credits.eitc_childless_min_age_disregard',
   'st_credits.eitc_mfs_barred',
+  'st_credits.eitc_rc',
+  'st_credits.eitc_rc_max_kids',
+  'st_credits.eitc_rc_po_thresh_0',
+  'st_credits.eitc_rc_po_thresh_kids',
+  'st_credits.eitc_rc_childless_pi_rate',
+  'st_credits.eitc_rc_childless_pi_end',
+  'st_credits.eitc_rc_childless_po_rate',
   'eitc.pi_rate_0', 'eitc.pi_end_0', 'eitc.po_rate_0', 'eitc.po_thresh_0',
+  'eitc.pi_rate_1', 'eitc.pi_end_1', 'eitc.po_rate_1',
+  'eitc.pi_rate_2', 'eitc.pi_end_2', 'eitc.po_rate_2',
+  'eitc.pi_rate_3', 'eitc.pi_end_3', 'eitc.po_rate_3',
   'eitc.min_age', 'eitc.max_age', 'eitc.inv_inc_limit'
 )
 
@@ -265,6 +275,35 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # requirement" -- every other federal test stands (not a dependent, not
   # separate, head or spouse under the federal maximum age, investment
   # income within the federal limit)
+  # Decoupled recomputation (IN 2011-2022, IC 6-3.1-21 with the IRC frozen
+  # by IC 6-3-1-11; Schedule IN-EIC Worksheets A/B): the federal formula
+  # with qualifying children capped at eitc_rc_max_kids, the phase-out
+  # starting at the state's (single-filer, no joint bonus) thresholds, and,
+  # where set (>= 0), the childless phase-in/out parameters overridden (TY2021
+  # pre-ARPA values). Paid only to filers with a federal credit ("You must be
+  # eligible for and have claimed an EIC on your federal tax return")
+  rc_kids = pmin(coalesce(tax_unit$n_dep_eitc, 0L), tax_unit$st_credits.eitc_rc_max_kids)
+  rc_pick = function(stem) case_when(
+    rc_kids <= 0 ~ tax_unit[[paste0(stem, '_0')]],
+    rc_kids == 1 ~ tax_unit[[paste0(stem, '_1')]],
+    rc_kids == 2 ~ tax_unit[[paste0(stem, '_2')]],
+    TRUE         ~ tax_unit[[paste0(stem, '_3')]]
+  )
+  rc_childless_override = function(fed, st) if_else(rc_kids <= 0 & st >= 0, st, fed)
+  rc_pi_rate = rc_childless_override(rc_pick('eitc.pi_rate'), tax_unit$st_credits.eitc_rc_childless_pi_rate)
+  rc_pi_end  = rc_childless_override(rc_pick('eitc.pi_end'),  tax_unit$st_credits.eitc_rc_childless_pi_end)
+  rc_po_rate = rc_childless_override(rc_pick('eitc.po_rate'), tax_unit$st_credits.eitc_rc_childless_po_rate)
+  rc_po_thresh = if_else(rc_kids <= 0, tax_unit$st_credits.eitc_rc_po_thresh_0,
+                         tax_unit$st_credits.eitc_rc_po_thresh_kids)
+  rc_credit = pmax(0, pmin(rc_pi_rate * pmin(childless_ei, rc_pi_end),
+                           rc_pi_rate * rc_pi_end -
+                             rc_po_rate * pmax(0, pmax(childless_ei, tax_unit$agi) - rc_po_thresh)))
+
+  eitc_state_base = if_else(
+    tax_unit$st_credits.eitc_rc == 1,
+    if_else(tax_unit$eitc > 0, rc_credit, 0),
+    tax_unit$eitc
+  )
   eitc_state_base = if_else(
     tax_unit$st_credits.eitc_childless_min_age_disregard == 1 &
       coalesce(tax_unit$n_dep_eitc, 0L) == 0 & tax_unit$eitc <= 0 &
@@ -272,7 +311,7 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
       st_head_or_spouse_in_age_band(tax_unit, 0, tax_unit$eitc.max_age) &
       earned_credit_inv_inc <= tax_unit$eitc.inv_inc_limit,
     childless_fed_credit_no_age,
-    tax_unit$eitc
+    eitc_state_base
   )
 
   # State EITC: match on the federal credit, less the household credit

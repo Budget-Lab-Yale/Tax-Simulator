@@ -55,3 +55,28 @@ and now encoded — only the extra income-tested $500 remains omitted)
 
 - Cross-model: `todo`; compare 2017, 2023, 2025, and 2027 resident cases against TAXSIM after its Indiana interface is available.
 - Aggregate: blocked until state weights land; compare state-only HT2 liability with DOR statistics before separately layering county tax.
+
+## Closed, 2026-10-11
+
+Every 2017-2025 cell clears 0.95 (run in_run_1011): TAXSIM 0.994 / 0.985 /
+0.987 / 0.986, PolicyEngine 0.986 / 0.982 / 0.976 / 0.985 / 0.983. All three
+fixes were Indiana law we had not encoded; both external models apply them.
+
+- **Unemployment compensation deduction** (IC 6-3-2-10; IT-40 Schedule 2 line
+  10 worksheet). Taxable unemployment for Indiana is the smaller of the
+  benefits and half of federal AGI over $12,000 ($18,000 joint; $0 for
+  separate filers who lived with the spouse, assumed); the rest is deducted.
+  Reuses the Wisconsin worksheet code with a new flag (`sub_ui_worksheet_
+  net_ss_ref` = 0: plain federal AGI). It was 23 of 39 PolicyEngine 2021
+  misses. Test IN-4.
+- **Decoupled earned income credit, TY2017-2022.** Indiana computed its own
+  credit (Schedule IN-EIC Worksheets A/B): at most two qualifying children,
+  the single-filer phase-out start for every status (the 2022 limit, $49,399,
+  is the federal two-child single figure), and in 2021 the pre-ARPA childless
+  parameters. From 2023 Indiana follows the federal credit. New generic
+  `eitc_rc_*`; test IN-5.
+- **Unified tax credit for the elderly** (IC 6-3-3-9; Schedule 5 line 5).
+  Refundable, by IT-40 line 1 income below $10,000: $140 / $90 / $80 for a
+  joint return with both 65 or older, $100 / $50 / $40 with one. New generic
+  table-driven `elderly_credit_*`; test IN-6. Amounts read from the 2024
+  booklet; 2017-2020 assumed identical [UNVERIFIED].

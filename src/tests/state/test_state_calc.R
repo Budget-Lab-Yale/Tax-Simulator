@@ -40,7 +40,8 @@ test_state_calc = function() {
     'st_pct_credit', 'st_cli', 'st_ded_credit', 'st_age_credit',
     'st_retire_credit', 'st_senior_credit', 'st_jfc', 'st_forgive_credit',
     'st_percap_credit', 'st_marriage_credit', 'st_twoearner_credit',
-    'st_item_credit', 'st_stfc', 'st_lic', 'st_kg_credit', 'st_pov_credit'
+    'st_item_credit', 'st_stfc', 'st_lic', 'st_kg_credit', 'st_pov_credit',
+    'st_elderly_credit'
   )
   case_exercised = new.env()
   case_exercised$sets = list()
@@ -443,6 +444,35 @@ test_state_calc = function() {
            expect = list(st_exempt = 2000,
                          liab_st_iit = 48000 * 0.0323),
            label = 'IN-3 universal aged exemption')
+
+  # IN-4: unemployment compensation deduction (IC 6-3-2-10, Schedule 2 line
+  # 10 worksheet). 2021 head of household (single base $12,000), federal AGI
+  # 217,854 of which 206,047 is unemployment: taxable = min(206,047,
+  # 0.5 x (217,854 - 12,000) = 102,927) -> deduction 103,120 (PolicyEngine
+  # record 57026)
+  run_case('IN', 2021,
+           list(agi = 217854, filing_status = 4, n_dep = 1, dep_age1 = 10,
+                wages1 = 11807, ei1 = 11807, ui = 206047),
+           expect = list(st_agi = 217854 - 103120),
+           label = 'IN-4 unemployment compensation deduction')
+  # IN-5: TY2017-2022 decoupled EIC (Schedule IN-EIC): at most two children
+  # and the single phase-out start for every status. 2022 joint, three
+  # children, earned income = AGI = 40,000, federal EIC 3,000 (claimed):
+  # Indiana recomputes with two children: 6,164 - 0.2106 x (40,000 -
+  # 20,130) = 1,979.38 -> 9% = 178.14
+  run_case('IN', 2022,
+           list(agi = 40000, filing_status = 2, age2 = 35, wages1 = 40000,
+                ei1 = 40000, n_dep = 3, n_dep_eitc = 3, dep_age1 = 4,
+                dep_age2 = 7, dep_age3 = 10, eitc = 3000),
+           expect = list(st_eitc = 0.09 * (6164 - 0.2106 * (40000 - 20130))),
+           label = 'IN-5 decoupled EIC: two children, no joint bonus')
+  # IN-6: unified tax credit for the elderly, joint both 65+, line 1 income
+  # 5,373 (Table A, $3,000-$9,999 band) -> $80, refundable
+  run_case('IN', 2025,
+           list(agi = 5373, filing_status = 2, age1 = 67, age2 = 71,
+                txbl_pens_dist = 5373),
+           expect = list(st_elderly_credit = 80),
+           label = 'IN-6 unified tax credit for the elderly')
 
   # KY-1: 2025 single at MGI $16,000 is in the 90% family-size-credit band.
   # Tax is ($16,000 - $3,270) x 4% = $509.20; the credit is $458.28.
@@ -6193,6 +6223,10 @@ st_test_unit = function(overrides = list()) {
     # federal childless EITC parameters (TY2022), for the state age-band credit
     eitc.pi_rate_0 = 0.0765, eitc.pi_end_0 = 7320, eitc.po_rate_0 = 0.0765,
     eitc.po_thresh_0 = 9160, eitc.min_age = 25, eitc.max_age = 64, eitc.inv_inc_limit = 10300,
+    # federal 1/2/3+-child EITC parameters (TY2022), for state recomputations
+    eitc.pi_rate_1 = 0.34, eitc.pi_end_1 = 10980, eitc.po_rate_1 = 0.1598,
+    eitc.pi_rate_2 = 0.40, eitc.pi_end_2 = 15410, eitc.po_rate_2 = 0.2106,
+    eitc.pi_rate_3 = 0.45, eitc.pi_end_3 = 15410, eitc.po_rate_3 = 0.2106,
     alimony = 0, other_inc = 0,
     sch_e = 0, part_scorp = 0, trad_contr_ira = 0, keogh_contr = 0, early_penalty = 0,
     alimony_exp = 0, se_health = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,

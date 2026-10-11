@@ -1,5 +1,12 @@
 ---
 # Indiana starts with federal AGI and handles its major exclusions on Schedule 2.
+filing_status_mapper:
+  sub_ui_worksheet_base:
+    '1': ui_base_single
+    '2': ui_base_joint
+    '3': ui_base_separate
+    '4': ui_base_single
+
 start_point:
   value: 1
   reference: 'Indiana IT-40 booklet and Schedule 1/2, 2017-2025; https://www.in.gov/dor/tax-forms/individual/current/'
@@ -22,3 +29,24 @@ sub_us_int:
 ss_sub_share:
   value: 1
   reference: 'Indiana IT-40 Schedule 2, Social Security benefits deduction, 2017-2025'
+
+# Unemployment compensation deduction (IC 6-3-2-10; Schedule 2 line 10),
+# added 2026-10-11: had never been encoded. Taxable unemployment pay for
+# Indiana is the smaller of the benefits and half of federal AGI over a base;
+# the rest is deducted
+sub_ui_worksheet:
+  value: 1
+  reference: 'IT-40 booklet (2024 ed., Schedule 2 line 10, "Unemployment Compensation Worksheet"): line 6 taxable unemployment compensation = the smaller of line 1 (benefits in IT-40 line 1, excluding Railroad Retirement Board benefits) and line 5 (one-half of federal AGI less the base); line 7 = line 1 less line 6 is the deduction. IC 6-3-2-10, in force in every year 2017-2025 (PolicyEngine cites the 2021 Code and the 2023-2025 booklets). Found 2026-10-11: PolicyEngine 2021 record 57026 ($206,047 of benefits), ours $3,331 higher'
+sub_ui_worksheet_net_ss_ref:
+  value: 0
+  reference: 'Worksheet line 2 is federal AGI from Form 1040 line 11, with no reduction for taxable Social Security or state refunds (unlike Wisconsin Schedule SB)'
+ui_base_single:
+  value: 12000
+  reference: 'Worksheet line 3: "Enter $12,000 if single" (head of household files as single on the worksheet)'
+ui_base_joint:
+  value: 18000
+  reference: 'Worksheet line 3: "$18,000 if married filing a joint return"'
+ui_base_separate:
+  value: 0
+  reference: 'Worksheet note: married filing separately and lived with the spouse at any time during the year enter -0-; $12,000 if apart the entire year. Living apart is unobserved, so separate filers take the zero base (same assumption as Wisconsin)'
+
