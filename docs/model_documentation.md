@@ -57,6 +57,8 @@ Current dependencies:
 | **Value-Added-Tax-Model** | Price-level offsets when a VAT scenario is stacked |
 | **Off-Model-Estimates** | Estimates appended to receipts outside the microsimulation |
 | **Wealth-Tax-Simulator / Cost-Recovery-Simulator / Estate-Tax-Distribution** | Companion simulators whose outputs join at post-processing |
+| **State-Weights** | Per-year split of each record's national weight across the 53 jurisdictions (Tax-Data's `main_state_weights.R`); pinned only by state-mode runs, must be fit on the row's Tax-Data vintage (§10.3) |
+| **Affordability-Index** (first producer under the supplemental-inputs contract) | Optional record-level data columns the state calculator may read -- rent paid, tenure, pension source, household resources -- that Tax-Data does not carry; opted into per run with `supplemental_inputs`, no default vintage (§10.6) |
 
 ## 3. Input data: the Tax-Data pipeline
 
@@ -293,10 +295,12 @@ workbooks) land at the vintage root, above the scenario folders.
 
 ## 10. The state income tax module
 
-*Status date: 2026-07-19, branch `state-tax`. Design of record:
-`research/state_tax/plan.md` (seven phases);
-running status: `research/STATUS.md` and
-`research/state_weights/state_weights_phase1_summary.md`.*
+*Status date: 2026-10-13, branch `cross-model-refit-filers`. Design of
+record: `research/state_tax/plan.md`; running status: `research/STATUS.md`
+and the per-state tracker `research/state_tax/state_parameter_rollout.csv`.
+As of this date all 51 jurisdictions are encoded AND enabled (`states = all`),
+30 have closed the cross-model check, and the data gaps are registered in
+`research/state_tax/tax_data_gaps.csv` (decision S43).*
 
 ### 10.1 Architecture
 
@@ -358,11 +362,18 @@ Business Income Deduction and ordered credit stack, and UT's taxpayer tax
 credit. Each state's known modeling gaps are documented in
 `research/state_tax/state_parameter_rollout.csv` (the tracker).
 
-### 10.3 State weights (Phase 1) — decided, not yet in production
+### 10.3 State weights (Phase 1) — in production through the interface, provisional vintage
 
-The production dispatcher **still returns a uniform placeholder split**, so
-state-level *totals are not yet meaningful*; all plumbing and contracts are
-real. The bake-off concluded 2026-07-19
+Since 2026-09-29 the dispatcher `build_state_weights(method = "interface")`
+reads `state_weights_{year}.csv.gz` from the pinned **State-Weights**
+interface, written by Tax-Data; the default vintage is the Phase 4 dry run
+(`dryrun_B_2022_2023`, fitted 2022-23, carried 2024-25) and stays PROVISIONAL
+until Tax-Data P6 publishes the production fit, so the tracker's `aggregate`
+column is `blocked_weights` for every state. A 2026-10-13 full-sample
+`states = all` run (TY2022-25, 27 GB peak per year task) gives state totals
+of the right order -- e.g. TY2023 CA $129bn, NY $63bn, IL $25bn, $523bn over
+all states -- with federal totals byte-identical to a federal-only run. The
+bake-off that chose the method concluded 2026-07-19
 (`research/state_weights/state_weights_phase1_summary.md` has methods, results, and the TPC/OTA
 comparison):
 
@@ -442,9 +453,11 @@ for both external models are drafted in
   one-way; matters most for itemizers near the standard/itemized margin.
 - [ ] **Local income taxes** (NYC, Yonkers, MD counties, OH school districts):
   planned as a second-level weight split using SOI county data (plan §2.6).
-- [ ] **Fixed-date conformity bridges** for CA and SC (frozen-federal-base
-  overlays) — until built, those states are guarded against federal-reform
-  runs.
+- [x] **Fixed-date conformity bridges** (CA, SC, VA; decision S44,
+  2026-10-13): every positive conformity group references the enacted
+  federal baseline, so a federal-reform scenario does not flow into those
+  states; the state YAMLs carry every departure from enacted law explicitly.
+  Lagged adoption by annual conformers is not modeled.
 - [ ] **State EITC take-up**: state credits currently assume full claiming
   among filers; fine for validation, a bias for revenue estimates.
 - [ ] **Behavioral feedback is federal-only**: no migration responses, no
@@ -458,7 +471,30 @@ for both external models are drafted in
 - [ ] `research/STATUS.md` trails the running log; the tracker CSV
   (`research/state_tax/state_parameter_rollout.csv`) is the current source of
   truth for per-state status.
-- [ ] Send the drafted TAXSIM/PolicyEngine issue reports upstream.
+- [ ] Send the drafted TAXSIM (T-series) and PolicyEngine (P-series) issue
+  reports upstream (`research/state_tax/cross_model/external_model_issues.md`).
+
+### 10.6 Data gaps and supplemental inputs (2026-10-13)
+
+Roughly 600 state provisions across 45 jurisdictions cannot be computed as
+written because the Tax-Data file lacks an input (rent paid, tenure, pension
+source, nontaxable household income, disability, dependent detail, ...). They
+are registered one row per (state, provision) in
+`research/state_tax/tax_data_gaps.csv`, with the nearest Tax-Data column and
+its status, the current handling, and the **overlay variable** the provision
+is encoded against; `research/state_tax/notes/state_data_imputation_plan.md`
+keeps the prose rollup (14 items) and the ordered asks of Tax-Data. Under
+decision S43 a data-blocked provision is encoded now against an optional data
+column with a neutral default (`config/interfaces/supplemental_inputs_schema.yaml`;
+`ensure_st_data()`) and switches on when a producer publishes the variable
+through the **supplemental-inputs interface**
+(`research/state_tax/supplemental_inputs_interface.md`): per-producer entries
+in `interface_versions.yaml` under one file contract, a `supplemental_inputs`
+runscript column, pins checked against the row's Tax-Data vintage, columns
+joined only inside the per-state loop so federal output is untouched, and a
+per-run coverage file. Affordability-Index (ACS records matched to Tax-Data
+ids) is the first producer; Tax-Data absorbing a variable natively needs no
+simulator change.
 
 ## 11. Known limitations and open questions — federal model and data
 

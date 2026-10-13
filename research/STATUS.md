@@ -3,13 +3,54 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-09-30
+updated: 2026-10-13
 sot: self
 supersedes: []
 superseded_by: null
 ---
 
 # State income tax workstream — status
+
+## 2026-10-13: all 51 enabled, data gaps registered, overlay interface built
+
+The push to take state income tax as far as it goes on the pinned Tax-Data
+vintage, without new imputations (plan of 2026-10-13; decisions S43-S45):
+
+- **51/51 jurisdictions enabled.** CA, SC and VA join `states = all`: every
+  fixed-date/selective conformity group is ready with the enacted federal
+  baseline as its reference law (S44) -- the state YAMLs already carry each
+  departure from enacted law, so the bridge's job is to keep a federal reform
+  out of a fixed-date state. Verified by a 1% run (CA/SC/VA-2022 byte-identical
+  under a federal reform, CO -18%, VA-2023 rolling +1.7%) and a byte-identical
+  baseline with the groups flipped back.
+- **30 jurisdictions clear the cross-model bar** (OK closed 2026-10-13 with the
+  538-S credit encoded). KS clears the TAXSIM window; MA 2021 and NM moved by
+  10-30 points per cell with the TY2021-22 care credits and the LICTR encoded;
+  re-score after the KS ordering fix and the NM MGI fix pending.
+- **Data gaps are one registry**: `research/state_tax/tax_data_gaps.csv`, 613
+  rows over 45 jurisdictions (state x provision x required variable x Tax-Data
+  column status x overlay variable), checked by
+  `research/state_tax/scripts/check_tax_data_gaps.R`; the imputation plan is
+  rebuilt from it at 51 states with three new items (per-person attribution,
+  prior-year liability, source state) and an ordered list of asks of Tax-Data.
+  Thirty-eight rows name a Tax-Data column that exists but is unused
+  (`trad_contr_er1/2` is all zero in every vintage); none is adopted as a
+  proxy (JI).
+- **Supplemental-inputs interface** (S43): optional data columns for the state
+  calculator, published by another model (Affordability-Index first) under
+  one file contract, opted into per run, pinned to the row's Tax-Data vintage
+  (name-equivalence declared for `2026092720_filer_refit_v2` =
+  `2026100117_review_fixes`), joined per state, reported in a coverage file.
+  The AGI stage's interest-share constants are its first consumers.
+- **Year horizon** (S45): TY2025 floor carried forward by indexation; the
+  tracker's `ty2026_law` column records what is encoded, carried, or
+  UNENCODED (SC ND DC RI NM MT).
+- **Release check**: a full-sample `states = all` run (TY2022-25) completes at
+  27 GB per year task (`slurm_run.sh` memory is now `TAXSIM_SLURM_MEM`) with
+  federal totals byte-identical to a federal-only run.
+
+Open from the plan: the remaining 21 cross-model states (W4), the upstream
+bug reports, and the PR to `main`.
 
 ## 2026-09-30: the comparison runs on the refit records, filers only
 
@@ -55,7 +96,8 @@ then New Jersey (the high-income own-base gradient, `cross_model/results/reports
 **As of 2026-08-24** (branch `state-tax`). Current counts: **ALL 51
 jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
 stubs + DC), **48 enabled** for `states=all` (CA/SC/VA conformity-gated, not
-encoding-gated). **Encoding coverage is complete. Nothing is unstarted.**
+encoding-gated; all 51 enabled since 2026-10-13, S44). **Encoding coverage is
+complete. Nothing is unstarted.**
 
 **THE TRIAGE LOOP CHANGED SHAPE ON 2026-08-22: divergence classes are now
 SWEPT across states rather than re-derived per state.** Per-state triage had

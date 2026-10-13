@@ -12,6 +12,12 @@ Tax-Simulator:
 # Dependency versions
 #---------------------
 
+# NOTE (2026-10-13): the default Tax-Data vintage predates the non-filer
+# rebuild and refit; it cannot run 2021+ (ids outside the random-number id
+# space, Tax-Data S25) and is not the vintage the default State-Weights was
+# fit on. A state-mode row must pin dep.Tax-Data.vintage/.ID to
+# 2026092720_filer_refit_v2 (see config/runscripts/tests/cross_model.csv);
+# federal runscripts keep working on the default.
 Tax-Data:
   type: model_data
   version: 1
