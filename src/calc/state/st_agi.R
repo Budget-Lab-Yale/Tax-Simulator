@@ -46,6 +46,11 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'exempt_int',     # (dbl)  tax-exempt interest income
     'interest_us_share',        # (dbl) optional data; schema default 0.15 (US-obligation share of txbl_int)
     'interest_own_state_share', # (dbl) optional data; schema default 0.75 (own-state share of exempt_int)
+    'pension_public',               # (dbl) optional data; schema default 0 (government pension within txbl_pens_dist)
+    'pension_er_funded_share',      # (dbl) optional data; schema default 1 (employer-funded share of the private remainder)
+    'pension_public_pre1998_share', # (dbl) optional data; schema default 0 (KY Schedule P exempt percentage)
+    'elective_deferral1',           # (dbl) optional data; schema default 0; Tax-Data trad_contr_er1 via tax_data_equivalent
+    'elective_deferral2',           # (dbl) optional data; schema default 0; Tax-Data trad_contr_er2 via tax_data_equivalent
     'state_ref',      # (dbl)  taxable refunds of state/local taxes
     'txbl_ss',        # (dbl)  taxable Social Security benefits (federal)
     'gross_ss',       # (dbl)  gross Social Security benefits received
@@ -96,6 +101,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.start_point',           # (int) 0 own base, 1 fed AGI, 2 fed taxable income
     'st_agi.ob_class_floor',        # (int) floor each own-base class at zero
     'st_agi.ob_comp_share',         # (dbl) own-base share: compensation
+    'st_agi.ob_comp_add_deferrals', # (int) compensation adds elective deferrals (PA)
     'st_agi.ob_int_share',          # (dbl) own-base share: taxable interest
     'st_agi.ob_div_share',          # (dbl) own-base share: dividends
     'st_agi.ob_bus_share',          # (dbl) own-base share: business/pass-through
@@ -137,6 +143,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ss_taxable_gross_cap_share', # (dbl) cap on taxable SS as share of gross (CT 0.25)
     'st_agi.pension_sub_share',     # (dbl) share of pension income subtracted (CT-style)
     'st_agi.ira_sub_share',         # (dbl) share of IRA distributions subtracted (CT-style)
+    'st_agi.pension_sub_er_funded_only', # (int) the share applies to public + employer-funded pensions only (HI)
     'st_agi.pension_excl_under65',  # (dbl) per-person pension exclusion cap, under 65
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
@@ -155,6 +162,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_exempt.dep_amount',         # (dbl)
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
     'st_agi.pension_excl_incl_ira', # (int) whether IRA distributions are eligible (MD 0)
+    'st_agi.pension_excl_public_grandfather', # (int) pre-1998 government service excluded in full (KY)
     'st_agi.pension_excl_agi_limit', # (dbl) AGI cliff for the exclusion (WI)
     'st_agi.pension_excl_po_thresh', # (dbl) linear phase-out FAGI threshold (ME 2025+; Inf = none)
     'st_agi.pension_excl_po_width',  # (dbl) linear phase-out width (ME $100k/$50k MFS)
@@ -342,7 +350,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     pmax(x, -limit)
   }
   st_own_base_v = with(tax_unit,
-    ob_floor(st_agi.ob_comp_share       * (wages1 + wages2)) +
+    ob_floor(st_agi.ob_comp_share       *
+             (wages1 + wages2 +
+              st_agi.ob_comp_add_deferrals *
+                (pmax(0, elective_deferral1) + pmax(0, elective_deferral2)))) +
     ob_floor(st_agi.ob_int_share        * txbl_int) +
     ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
     # ob_bus_split = 1: business/farm, partnership and S-corporation income
@@ -555,8 +566,17 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # qualifying spouses (scalar or age-banded path, computed above).
       # Where SS shares the cap (CO): fully-subtracted SS reduces the cap
       # dollar-for-dollar; otherwise SS claims cap room first
+      # KY Schedule P Part I: government pension income attributable to
+      # pre-1998 service is excluded in full, outside the cap; the rest of
+      # the government pension joins the capped pool. Reads the
+      # pension_public and pension_public_pre1998_share optional data
+      # columns (S43); inert at their defaults
+      st_sub_pens_grand = st_agi.pension_excl_public_grandfather *
+                          pmin(pmax(0, pension_public), pmax(0, txbl_pens_dist)) *
+                          pmin(1, pmax(0, pension_public_pre1998_share)),
       pens_inc  = txbl_pens_dist +
-                  st_agi.pension_excl_incl_ira * txbl_ira_dist,
+                  st_agi.pension_excl_incl_ira * txbl_ira_dist -
+                  st_sub_pens_grand,
       cap1      = cap1_v,
       cap2      = cap2_v,
       pens_cap  = case_when(
@@ -620,7 +640,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                        senior_std_exempt_amt)
       ),
 
-      st_sub_pens = pmax(st_sub_pens_raw, st_senior_std),
+      st_sub_pens = pmax(st_sub_pens_raw, st_senior_std) + st_sub_pens_grand,
       st_sub_ss   = st_sub_ss_full + st_sub_ss_cap,
 
       # Subtraction: senior investment income (MI Schedule 1, MCL
@@ -642,8 +662,20 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # the 2024+ published phase-out table; retire_factor computed above).
       # Military/railroad/teacher pensions have separate CT subtractions but
       # are unobservable subsets of pension income (known-difference)
+      # HI N-11 line 13: where pension_sub_er_funded_only is set the share
+      # applies to public pensions in full plus the employer-funded share of
+      # the private remainder (elective deferrals and employee contributions
+      # stay taxable). Reads pension_public and pension_er_funded_share
+      # (S43); the defaults 0 and 1 reproduce the whole-pool subtraction
+      pens_share_pool = if_else(
+        st_agi.pension_sub_er_funded_only == 1,
+        pmin(pmax(0, pension_public), pmax(0, txbl_pens_dist)) +
+          pension_er_funded_share *
+          pmax(0, txbl_pens_dist - pmax(0, pension_public)),
+        pmax(0, txbl_pens_dist)
+      ),
       st_sub_retire_share = retire_factor *
-        (st_agi.pension_sub_share * pmax(0, txbl_pens_dist) +
+        (st_agi.pension_sub_share * pens_share_pool +
          st_agi.ira_sub_share     * pmax(0, txbl_ira_dist)),
 
       # Broad retirement exclusion (GA-style): each eligible spouse may use a

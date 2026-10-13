@@ -6,9 +6,12 @@
 # never carries forward or back (PA-40 booklet, "Reporting Net Income, Gains,
 # and Losses on Lines 4, 5, and 6 Only", identical 2017-2025). Class shares
 # map PUF concepts:
-#   compensation = wages1 + wages2 (401(k)/403(b)/457 elective deferrals are
-#     PA-taxable compensation when made but unobserved in the PUF, so PA
-#     wages are understated for deferring workers -- known-difference)
+#   compensation = wages1 + wages2 + elective deferrals (401(k)/403(b)/457
+#     deferrals are PA-taxable compensation when made; read from the
+#     elective_deferral1/2 optional data columns, which resolve to Tax-Data
+#     trad_contr_er1/2 -- all zero in every vintage checked, so PA wages
+#     stay understated for deferring workers until Tax-Data fills them;
+#     crosswalk item 4, S43)
 #   business = sole_prop + part_active + part_passive + scorp + farm
 #     (PA-40 line 4 net profits, incl. partnership/PA S-corp shares)
 #   gains = kg_lt + kg_st + other_gains (PA-40 line 5; no preferential rate,
@@ -31,7 +34,10 @@ ob_class_floor:
 
 ob_comp_share:
   value: 1
-  reference: 'PA-40 line 1a compensation; 72 P.S. 7303(a)(1). Elective deferrals PA-taxable when made (2024 booklet p.11, Contributions) but unobserved in the PUF [known-difference]'
+  reference: 'PA-40 line 1a compensation; 72 P.S. 7303(a)(1). Elective deferrals are added by ob_comp_add_deferrals'
+ob_comp_add_deferrals:
+  value: 1
+  reference: '72 P.S. 7301(d) (elective deferrals are compensation); 2024 PA-40 instructions p.10-11 (Box 16 follows PA rules; contributions to 401(k)/403(b)/457 plans taxable when made); reads elective_deferral1/2 (S43), which resolve to Tax-Data trad_contr_er1/2 -- all zero in every vintage checked, so inert until Tax-Data fills them (imputation plan item 4)'
 
 ob_int_share:
   value: 1

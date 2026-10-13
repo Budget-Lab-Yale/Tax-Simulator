@@ -334,7 +334,10 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
 
   # States whose pension exclusion does not cover IRA distributions (see
   # the pension_income note below)
-  PE_IRA_SEPARATE_STATES = c('MD', 'RI')
+  # HI added 2026-10-13: N-11 line 13 taxes IRA distributions (except SEP
+  # IRAs), while PE's Hawaii subtraction reads taxable_pension_income only,
+  # so the fold handed PE an exclusion Hawaii denies
+  PE_IRA_SEPARATE_STATES = c('HI', 'MD', 'RI')
 
   pe_input = map(states, function(st) {
     sampled %>%
@@ -971,6 +974,13 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          n_dep_ge65 = (!is.na(dep_age1) & dep_age1 >= 65) +
                                       (!is.na(dep_age2) & dep_age2 >= 65) +
                                       (!is.na(dep_age3) & dep_age3 >= 65),
+                         # dependents 24+ (never IRC 152(c) qualifying children;
+                         # KY family size) and the Tax-Data elective-deferral
+                         # placeholder (PA compensation; all zero until filled)
+                         n_dep_ge24 = (!is.na(dep_age1) & dep_age1 >= 24) +
+                                      (!is.na(dep_age2) & dep_age2 >= 24) +
+                                      (!is.na(dep_age3) & dep_age3 >= 24),
+                         elective_deferral = trad_contr_er1 + trad_contr_er2,
                          xw_unstripped_salt = salt_inc_sales + salt_pers,
                          xw_unhanded_item   = inv_int_item_ded_potential +
                                               other_item_ded_potential,
@@ -993,7 +1003,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
-                         itemizing, n_dep_ge18, n_dep_ge65, care_exp, kg_st, kg_lt,
+                         itemizing, n_dep_ge18, n_dep_ge65, n_dep_ge24,
+                         elective_deferral, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
                          xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2,

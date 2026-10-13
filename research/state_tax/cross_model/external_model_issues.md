@@ -410,6 +410,16 @@ food credit. TAXSIM-35 nets the food credit against tax before the EITC: head-of
 (2019 records 27516, 66438) show our liability $249-250 above TAXSIM's, the credit TAXSIM applied to tax the EITC had
 absorbed. Effect: TAXSIM understates Kansas tax by up to $125 per qualified exemption for low-income EITC claimants.
 
+### T46. Kentucky combined returns: the standard deduction of a no-income spouse
+
+Form 740 computes a combined return in two columns and floors each column at zero, so a spouse whose column income
+is below the standard deduction ($2,590 in 2019) cannot use the rest of it. TAXSIM-35 grants both spouses' standard
+deductions unconditionally (WASM probe 2026-08-11: a $70,000 one-earner couple returns the same siitax as a
+$40,000/$30,000 couple). The 2026-10-13 re-score puts the class at 541 of 1,368 clean TY2019 mismatches (514 joint
+returns, 81% with spouse earned income under the deduction), a flat 5% x $2,590 = $129.50 of liability. Effect:
+TAXSIM understates Kentucky tax by up to the rate times the standard deduction for every one-earner married
+return, 2017-2024. (Previously annotated as a sub-$100 item; promoted once measured.)
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income

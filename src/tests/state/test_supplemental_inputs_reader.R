@@ -209,7 +209,7 @@ test_supplemental_inputs_invariance = function() {
   #----------------------------------------------------------------------------
 
   law = build_state_tax_law(
-    states  = c('IL', 'MN', 'MT'),
+    states  = c('IL', 'MN', 'MT', 'HI', 'KY', 'PA'),
     years   = 2023,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>% mutate(growth = 0.025)
   )
@@ -235,7 +235,7 @@ test_supplemental_inputs_invariance = function() {
     overlay_default[[paste0(SUP_PREFIX, v)]] = schema$defaults[[v]]
   }
 
-  for (st in c('IL', 'MN', 'MT')) {
+  for (st in c('IL', 'MN', 'MT', 'HI', 'KY', 'PA')) {
     law_st = law %>% filter(state == st, year == 2023)
     run = function(u) {
       u %>%

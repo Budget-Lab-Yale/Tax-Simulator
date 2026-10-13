@@ -86,6 +86,12 @@ replace an existing Tax-Data column — allowed only for the all-zero
 Names are the `overlay_variable` column of the crosswalk. It is the data
 twin of `params_schema.yaml`.
 
+Variables added 2026-10-13 for the data-gap batch: `pension_er_funded_share`
+(share, default 1), `pension_public_pre1998_share`, `spouse_agi_mfs` (gated on
+`has_spouse_agi_mfs`, reset on married-separate half-units) and
+`nontax_support_inc` (the PA Schedule SP concept, distinct from
+`hh_resources_inc`).
+
 The two model-wide constants the AGI stage used to carry — the 0.15
 US-obligation share of taxable interest and the 0.75 own-state share of
 exempt interest — are the first entries, with those values as defaults, so a
@@ -158,7 +164,11 @@ TY2023. Collapse to one vintage at Tax-Data P6 and remove the entry.
 4. Add the worksheet case for the provision with the variable set, and rely
    on the invariance test for the variable unset.
 5. In the cross-model harness the provision stays off (no producer is pinned
-   in harness runs), so no known-differences row changes.
+   in harness runs), so no known-differences row changes -- EXCEPT for a
+   variable with a `tax_data_equivalent`: the resolver reads the native
+   Tax-Data column, so the harness switches the provision on the day
+   Tax-Data fills it (the elective-deferral case). Pre-register that
+   known-difference row with a predicate on the harness record.
 
 ## 8. Affordability-Index bridge (specification, not code)
 

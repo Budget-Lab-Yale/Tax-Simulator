@@ -49,6 +49,8 @@ st_credits_earned_req_vars = c(
   'st_credits.forgive_income_base',
   'st_credits.forgive_add_exempt_int',
   'st_credits.forgive_add_alimony',
+  'st_credits.forgive_add_nontax_support',
+  'st_credits.forgive_add_spouse_mfs',
   'st_credits.eitc_childless_match',
   'st_credits.eitc_childless_cap',
   'st_credits.eitc_ageband_style',
@@ -468,10 +470,20 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # known-differences).
   # Dependent filers are ineligible (a dependent's forgiveness follows the
   # parents' eligibility, unobservable across units). Nonrefundable
+  # The unobserved SP additions read the nontax_support_inc optional data
+  # column (gifts, inheritances, insurance proceeds, educational assistance,
+  # nontaxable military pay, outside-household support -- NOT SS, UC, public
+  # assistance or child support, which SP excludes) and the spouse's
+  # federal AGI for married-separate units (72 P.S. 7304(d)(1) joint
+  # poverty income), both S43 overlays inert at their defaults
   forgive_income = st_income_base(
     tax_unit, tax_unit$st_credits.forgive_income_base
   ) + tax_unit$st_credits.forgive_add_exempt_int * tax_unit$exempt_int +
-      tax_unit$st_credits.forgive_add_alimony * tax_unit$alimony
+      tax_unit$st_credits.forgive_add_alimony * tax_unit$alimony +
+      tax_unit$st_credits.forgive_add_nontax_support *
+        pmax(0, tax_unit$nontax_support_inc) +
+      (tax_unit$filing_status == 3) * tax_unit$st_credits.forgive_add_spouse_mfs *
+        pmax(0, tax_unit$spouse_agi_mfs)
   forgive_limit = tax_unit$st_credits.forgive_base +
                   tax_unit$st_credits.forgive_dep_amount * tax_unit$n_dep
   forgive_share = pmax(

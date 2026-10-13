@@ -44,6 +44,30 @@ from the 2017 Form 740 packet + DOR announcements; see below)
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Form 740 reads Form 2441 line 9 (tentative) in TY2017-2018 and line 11 (claimed) in TY2019-2020 and TY2022+. TY2021: Kentucky did not adopt ARPA section 9631; Form 2441-K recomputes the pre-ARPA credit, limits it by federal tax less the foreign tax credit, and takes 20%. Now encoded by year (`cdctc_fed_base` 1 / 0 / 2 / 0, `cdctc_base_liab_limit` in 2021). Test KY-11. The instructions also let a non-filer who would have had the federal credit claim the Kentucky one; not modeled.
 
+## Data-gap batch (2026-10-13)
+
+- Family-size credit table (Schedule ITC Table C) is now GENERATED for
+  TY2017-2026 by `research/state_tax/scripts/ky_family_size_table.R` from KRS
+  141.066(1)(a),(3)(c): the HHS poverty guideline published in January of the
+  tax year times 100/104/.../130/133 percent, rounded half-up; verified cell
+  for cell against the printed 2018 and 2025 tables (the old file carried the
+  2018 table labelled 2017, 2025 with one slip, and nothing in between).
+- Family size counts qualifying children only (`family_credit_child_max_age`
+  24 as the student proxy; KRS 141.066(1)(b)); a married-separate filer living
+  with the spouse adds the spouse's federal AGI and counts the spouse
+  (`family_credit_mfs_combined` on `spouse_agi_mfs`, gated on
+  `has_spouse_agi_mfs`, off under `living_apart`; inert until published).
+- Pre-1998 government-service pension exemption (Schedule P Part I) on the
+  `pension_public` / `pension_public_pre1998_share` overlays
+  (`pension_excl_public_grandfather`; inert). Tests KY-12a..c, 13a..c, 14a..d.
+- Cross-model: T46 (TAXSIM grants a no-income spouse's standard deduction on
+  combined returns; $129.50 on 541 clean TY2019 records) promoted to exclude;
+  the per-person pension cap on a pooled input (we sum two caps, TAXSIM one;
+  ownership unobserved, crosswalk item 12) excluded as a data proxy; the
+  family-size concept difference (both external models count every member)
+  excluded on dependents 24+.
+- Spec: `research/state_tax/notes/datagap_spec_hi_ky_pa.md` §2-3.
+
 ## Known differences
 
 - Table C uses modified gross income with MFS-spouse income, certain municipal interest, and lump-sum adjustments. The baseline uses federal AGI plus observable state additions; affected records are documented approximation cases.

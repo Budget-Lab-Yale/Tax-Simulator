@@ -80,3 +80,6 @@ documented_not_modeled:
     reference: 'N-11 line 31: $25 refundable for a child passenger restraint purchase (Form N-356 not required). Purchases unobservable; trivially small'
   credit_for_taxes_paid_other_states:
     reference: 'N-105/Schedule CR nonrefundable credit for income taxes paid to other states and countries -- out of scope for the single-state resident calculator (the interaction denying a 21b deduction for the same taxes is inside the SALT component)'
+percap_add_spouse_mfs:
+  value: 1
+  reference: 'N-311 lines 4-6 (2017-2025): married filing separately enters the spouse''s federal AGI for the credit''s income gate and band; reads spouse_agi_mfs (S43), inert at its default'

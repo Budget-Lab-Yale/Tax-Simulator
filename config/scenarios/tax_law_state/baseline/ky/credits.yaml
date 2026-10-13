@@ -4,13 +4,25 @@
 # Family-size tax credit (KRS 141.066; Schedule ITC Section C): a
 # percentage of tax by family size (1-4+) and modified gross income.
 # DENSE TABLE in credit_tables.csv beside this file (credit_id
-# family_size_tax_credit, key_concept = family size, two vintages 2017
-# and 2025 from the Schedule ITC Table C for 2018 and 2025; income
-# rounded to whole dollars before the lookup; the 0% top band is
-# omitted per the zero-outside convention)
+# family_size_tax_credit, key_concept = family size; income rounded to
+# whole dollars before the lookup; the 0% top band is omitted per the
+# zero-outside convention). Since 2026-10-13 the table is GENERATED for
+# TY2017-2026 by research/state_tax/scripts/ky_family_size_table.R from
+# KRS 141.066(1)(a),(3)(c) -- the HHS poverty guideline published in
+# January of the tax year times 100/104/108/112/116/120/124/127/130/133
+# percent, rounded half-up -- verified cell for cell against the printed
+# 2018 and 2025 Schedule ITC Table C (the old file's two vintages, one of
+# them mislabelled 2017, with one transcription slip). TY2027+ carries 2026
+# forward until the next guideline is transcribed (S45)
 family_credit_style:
   value: 1
   reference: 'KRS 141.066; Kentucky Schedule ITC, Section C, 2017-2025'
+family_credit_child_max_age:
+  value: 24
+  reference: 'KRS 141.066(1)(b),(e); 2025 Form 740 instructions p.23: family size is yourself, your spouse if living in the same household, and qualifying children under IRC 152(c) (under 19, or under 24 if a full-time student); 24 proxies the student test (NM precedent); permanently disabled children of any age are not counted [known-difference, de minimis]'
+family_credit_mfs_combined:
+  value: 1
+  reference: 'KRS 141.066(1)(c),(4); 2025 Form 740 MGI worksheet lines (b),(g): married filing separately and living in the same household adds the spouse''s federal AGI and counts the spouse in family size; reads spouse_agi_mfs gated on has_spouse_agi_mfs and switched off by living_apart (S43); inert until published'
 
 # Personal tax credits (Form 740 line 17; 2017 Form 740 Section B, then
 # Schedule ITC Section B from 2018). 2017: $10 per credit box — one regular

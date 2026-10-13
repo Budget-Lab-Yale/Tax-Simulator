@@ -36,4 +36,7 @@ pension_excl_65plus:
   reference: 'Kentucky Form 740 Schedule M pension-income exclusion, 2017-2025'
 pension_excl_min_age:
   value: 0
-  reference: 'Kentucky pension-income exclusion has no general age threshold, subject to source-specific exceptions'
+  reference: 'Kentucky pension-income exclusion has no general age threshold; the pre-1998 government-service exemption is pension_excl_public_grandfather'
+pension_excl_public_grandfather:
+  value: 1
+  reference: 'KRS 141.019(1)(g); Schedule P (2025) Part I lines 1(a)-(b): federal, Kentucky state and Kentucky local government pension income attributable to service credit earned before January 1, 1998 (and Tier 2 railroad benefits) is excluded in full; the remainder joins Part II and takes the lesser of itself or $31,110 (Part III). Reads pension_public and pension_public_pre1998_share (S43); inert at the defaults. The exclusion is per taxpayer; the unit-level pool against per-spouse caps is the existing approximation'

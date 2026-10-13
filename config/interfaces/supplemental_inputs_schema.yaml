@@ -111,6 +111,22 @@ pension_railroad:
   shadow: forbid
   units: dollars
   description: Railroad Retirement Tier 1 and Tier 2 benefits
+pension_er_funded_share:
+  key: unit
+  type: dbl
+  default: 1
+  split: whole
+  shadow: forbid
+  units: share of (txbl_pens_dist - pension_public)
+  description: employer-funded (non-contributory, non-elective) share of private-plan pension distributions; 1 - share is the elective-deferral / employee-contribution share (HI N-11 line 13). Default 1 reproduces the full subtraction, so no has_ gate is needed
+pension_public_pre1998_share:
+  key: unit
+  type: dbl
+  default: 0
+  split: whole
+  shadow: forbid
+  units: share of pension_public
+  description: share of government pension income attributable to service credit earned before 1998-01-01 (KY Schedule P exempt percentage; 1 if retired before 1998); a producer should publish it by birth cohort
 military_pay1:
   key: person
   type: dbl
@@ -168,6 +184,14 @@ living_apart:
   split: whole
   shadow: forbid
   description: married filing separately and lived apart from the spouse all year
+spouse_agi_mfs:
+  key: unit
+  type: dbl
+  default: 0
+  split: whole
+  shadow: forbid
+  units: dollars
+  description: for a married-filing-separately unit, the spouse's own federal AGI (the spouse files a separate return that is not this record); absent for every other status. Provisions gate on has_spouse_agi_mfs because zero is a real value (KY family size counts the spouse; HI N-311 and PA Schedule SP combine incomes)
 
 # --- Elective deferrals (item 4). Tax-Data carries trad_contr_er1/2 but every
 # vintage checked is all zero, so the overlay may shadow them.
@@ -191,6 +215,14 @@ elective_deferral2:
   description: spouse's pre-tax 401(k)/403(b)/457 deferrals
 
 # --- Household resources (item 3)
+nontax_support_inc:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: nontaxable cash support received in the year that a poverty test counts -- gifts, inheritances and insurance proceeds, scholarships and educational assistance, nontaxable military pay, support from persons outside the household -- EXCLUDING Social Security, unemployment, public assistance, child support, workers' compensation and retirement distributions (PA Schedule SP Part III lines 4, 5, 7, 9, 10). Not hh_resources_inc, which is the opposite concept
 hh_resources_inc:
   key: unit
   type: dbl

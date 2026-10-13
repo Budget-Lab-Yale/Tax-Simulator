@@ -67,8 +67,8 @@ history.
 | # | Imputation | Tier | States (rows) | High / medium | Jurisdictions | Main overlay variables |
 |---|---|---|---|---|---|---|
 | 1 | Tenure / rent / property tax (homestead family) | 1 | 23 (31) | 12 / 13 | AR AZ CA CT DC HI IL IN MA ME MI MN MO MT NE NJ NM NY OK RI VT WI WV | property_tax_paid, rent_paid, tenure |
-| 2 | Pension source split (public / military / railroad) | 1 | 36 (70) | 14 / 25 | AL AR AZ CO CT DC DE HI IA ID IN KS KY LA MA MD ME MI MN MO MT NC ND NE NM NY OH OK OR RI SC UT VA VT WI WV | pension_military, pension_public, pension_railroad |
-| 3 | Household-resources income (SSI/TANF/VA/child support/SNAP) | 1 | 12 (13) | 2 / 6 | GA HI ID ME MI MO MT NM OK PA TN VA | hh_resources_inc |
+| 2 | Pension source split (public / military / railroad; HI employer-funded share; KY pre-1998 service share) | 1 | 36 (70) | 14 / 25 | AL AR AZ CO CT DC DE HI IA ID IN KS KY LA MA MD ME MI MN MO MT NC ND NE NM NY OH OK OR RI SC UT VA VT WI WV | pension_military, pension_public, pension_railroad |
+| 3 | Household-resources income (SSI/TANF/VA/child support/SNAP) -- and its opposite, nontaxable SUPPORT income (gifts, inheritances, educational assistance; PA Schedule SP excludes SS/UC/public assistance/child support) | 1 | 12 (13) | 2 / 6 | GA HI ID ME MI MO MT NM OK PA TN VA | hh_resources_inc; nontax_support_inc (PA) |
 | 4 | Elective deferrals (401(k)/403(b)/457) wage-base add-back | 2 | 2 (2) | 1 / 1 | NJ PA | elective_deferral1/2 — **Tax-Data column exists, all zero** |
 | 5 | Dependent detail (>3 slots, student, disabled, first-year) | 2 | 17 (24) | 0 / 3 | AL AR ID IN MA MD ME MN MO MT NJ NM OR SC UT VA WV | dep_disabled_n, dep_age4plus, dep_student_n |
 | 6 | Filer disability status | 2 | 19 (22) | 0 / 1 | AR CO DE GA HI IA IN KS LA MD MI MN MO NE NH NJ OH VA WV | disabled1, disabled2 |
@@ -77,7 +77,7 @@ history.
 | 9 | Expense niches (529/ABLE, LTC, K-12, adoption, premiums, tuition) | 3 | 38 (87) | 0 / 6 | 38 states | contrib_529, tuition_paid, health_premiums, ltc_premiums |
 | 10 | Election features (min-liability passes) | 3 | 4 (4) | 0 / 0 | HI NE UT VA | other:salt_sales_elector (WI Act 15 is encoding, not data) |
 | 11 | Credit take-up | 3 | 2 (2) | 0 / 1 | NE WA | care_provider_approved |
-| 12 | Per-person attribution of unit-level income (pension, SS, unearned, MFS spouse) | 2 | 29 (42) | 1 / 9 | AL AR AZ CA CO DE GA HI IA IN KY LA MD ME MN MO MS MT ND NJ NY OH OK PA RI SC VA WA WI | pension_person1/2, ss_person1/2, living_apart, other:spouse_income_mfs |
+| 12 | Per-person attribution of unit-level income (pension, SS, unearned, MFS spouse) | 2 | 29 (42) | 1 / 9 | AL AR AZ CA CO DE GA HI IA IN KY LA MD ME MN MO MS MT ND NJ NY OH OK PA RI SC VA WA WI | pension_person1/2, ss_person1/2, living_apart, spouse_agi_mfs (HI N-311, KY family size, PA SP; encoded 2026-10-13) |
 | 13 | Prior-year state liability (OR kicker; carryforwards) | 2 | 5 (6) | 1 / 1 | HI IA LA MT OR | prior_year_liab — a lag in sequential runs, not a survey imputation |
 | 14 | Source state / nonresident and other-state credit | 3 | 42 (42) | 0 / 2 | every broad-IIT state | source_state — model-wide (`docs/model_documentation.md` §10.5) |
 | new | Unassigned niches | 3 | 41 (101) | 0 / 12 | — | see `overlay_variable` per row |

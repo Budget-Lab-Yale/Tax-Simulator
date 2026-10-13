@@ -190,6 +190,12 @@ st_split_spouse_unit = function(tax_unit, spouse, law_mfs) {
     col[[v1]] = if (spouse == 1) tax_unit[[v1]] else tax_unit[[v2]]
     col[[v2]] = sup_split$person_empty[[v2]]
   }
+  # A half-unit's spouse is the other half, which the split nets itself:
+  # the spouse's-AGI overlay (and its presence flag) must not ride along
+  if ('spouse_agi_mfs' %in% names(col)) {
+    col$spouse_agi_mfs     = 0
+    col$has_spouse_agi_mfs = FALSE
+  }
 
   if (spouse == 2) {
     for (v in intersect(c('n_dep', 'n_dep_ctc', 'n_dep_eitc'), names(col))) {

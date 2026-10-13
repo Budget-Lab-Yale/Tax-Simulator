@@ -139,6 +139,10 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'disabled2',         # (lgl)  optional data; schema default FALSE
     'hh_resources_inc',  # (dbl)  optional data; schema default 0 (nontaxable household income)
     'dep_disabled_n',    # (int)  optional data; schema default 0 (disabled dependents, care credit)
+    'spouse_agi_mfs',    # (dbl)  optional data; schema default 0 (KY family size, HI N-311, PA SP)
+    'has_spouse_agi_mfs',# (lgl)  whether spouse_agi_mfs was published for the record
+    'living_apart',      # (lgl)  optional data; schema default FALSE
+    'nontax_support_inc',# (dbl)  optional data; schema default 0 (PA Schedule SP nontaxable support)
     'age2',              # (int)  age of secondary filer (NA if none)
     'blind1',            # (bool) whether primary filer is blind
     'blind2',            # (bool) whether secondary filer is blind

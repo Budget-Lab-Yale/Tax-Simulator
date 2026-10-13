@@ -9,6 +9,8 @@ st_credits_household_req_vars = c(
   'st_credits.hh_mfs_half',
   'st_credits.family_credit_style',
   'st_credits.family_credit_income_base',
+  'st_credits.family_credit_child_max_age',
+  'st_credits.family_credit_mfs_combined',
   'st_credits.exempt_credit_style',
   'st_credits.exempt_credit_personal',
   'st_credits.exempt_credit_aged',
@@ -47,6 +49,7 @@ st_credits_household_req_vars = c(
   'st_credits.percap_add_exempt_int',
   'st_credits.percap_add_hh_resources',
   'st_credits.percap_after_eitc',
+  'st_credits.percap_add_spouse_mfs',
   'st_credits.lictr',
   'st_credits.lictr_income_base',
   'st_credits.lictr_add_nontax_ss',
@@ -88,10 +91,28 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # Family-size credit rate (KY Schedule ITC Table C): dense table keyed by
   # family size (one through four-or-more), income rounded to whole dollars
   # per the form before the lookup. States without the table get zero
-  family_size = pmin(4L, 1L + (tax_unit$filing_status == 2) + tax_unit$n_dep)
-  family_income = st_income_base(
+  # Dependents counted by age from the three observed slots (shared by the
+  # family-size and per-person credits); Inf = every dependent
+  dep_ages = cbind(tax_unit$dep_age1, tax_unit$dep_age2, tax_unit$dep_age3)
+  n_dep_under = function(max_age) {
+    if_else(is.infinite(max_age), as.numeric(tax_unit$n_dep),
+            rowSums(dep_ages < max_age, na.rm = TRUE))
+  }
+  # KRS 141.066(1)(b),(e): family size counts qualifying CHILDREN (under 19,
+  # or under 24 if a student -> KY 24), not every dependent; (1)(c),(4): a
+  # married-separate filer living with the spouse counts the spouse and
+  # adds the spouse's federal AGI -- read from the spouse_agi_mfs optional
+  # data column, gated on has_spouse_agi_mfs because zero is a real value,
+  # and switched off by living_apart (S43). Own income floors at zero (MGI
+  # worksheet line (a))
+  mfs_combined = tax_unit$st_credits.family_credit_mfs_combined == 1 &
+                 tax_unit$filing_status == 3 & tax_unit$has_spouse_agi_mfs &
+                 !coalesce(tax_unit$living_apart, FALSE)
+  family_size = pmin(4L, 1L + (tax_unit$filing_status == 2 | mfs_combined) +
+                       n_dep_under(tax_unit$st_credits.family_credit_child_max_age))
+  family_income = pmax(0, st_income_base(
     tax_unit, tax_unit$st_credits.family_credit_income_base
-  )
+  )) + mfs_combined * pmax(0, tax_unit$spouse_agi_mfs)
   family_credit_rate = lookup_state_credit_table(
     floor(family_income + 0.5), family_size, credit_tables,
     'family_size_tax_credit'
@@ -257,6 +278,8 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     tax_unit, tax_unit$st_credits.percap_table_income_base
   )
   percap_income = percap_table_income +
+    (tax_unit$filing_status == 3) * tax_unit$st_credits.percap_add_spouse_mfs *
+      pmax(0, tax_unit$spouse_agi_mfs) +
     tax_unit$st_credits.percap_add_nontax_ss *
       pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
     tax_unit$st_credits.percap_add_exempt_int * tax_unit$exempt_int +
@@ -265,11 +288,6 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     floor(percap_table_income + 0.5), rep(0L, n), credit_tables,
     'percap_credit', filing_status = tax_unit$filing_status
   )
-  dep_ages = cbind(tax_unit$dep_age1, tax_unit$dep_age2, tax_unit$dep_age3)
-  n_dep_under = function(max_age) {
-    if_else(is.infinite(max_age), as.numeric(tax_unit$n_dep),
-            rowSums(dep_ages < max_age, na.rm = TRUE))
-  }
   percap_dep_count = n_dep_under(tax_unit$st_credits.percap_dep_max_age)
   percap_elig =
     tax_unit$age1 >= tax_unit$st_credits.percap_elig_age |

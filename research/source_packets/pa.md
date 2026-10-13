@@ -74,6 +74,25 @@ Checked after New Jersey's business, partnership and S-corporation categories we
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Schedule DC (2022-2025) reads Form 2441 line 9a, the tentative credit; the DOR's $180-$630 range for TY2022 confirms it (30% of the tentative $600-$2,100). Now `cdctc_fed_base` = 1; the header's known difference is resolved. TY2022 refundability confirmed by the DOR press release of 2023-03-21.
 
+## Data-gap batch (2026-10-13)
+
+- Elective deferrals in compensation (72 P.S. 7301(d)) encoded through
+  `ob_comp_add_deferrals` on `elective_deferral1/2`, which resolve to
+  Tax-Data `trad_contr_er1/2` -- all zero in every vintage checked, so inert
+  until Tax-Data fills them, and then live without a runscript opt-in
+  (pre-registered annotate row). Tests PA-8a/b.
+- Tax Forgiveness eligibility income: the unobserved Schedule SP additions
+  read `nontax_support_inc` (gifts, inheritances, insurance proceeds,
+  educational assistance, nontaxable military pay, outside-household
+  support) -- NOT `hh_resources_inc`, since SP excludes Social Security,
+  unemployment, public assistance and child support; married-separate joint
+  eligibility income reads `spouse_agi_mfs`. Both inert. Tests PA-9a/b,
+  PA-10a..c.
+- PolicyEngine exempts PA pensions and IRAs only at age 65 (`is_retired`);
+  the form exempts distributions after qualifying for retirement at any plan
+  age. Noted for a synthetic probe before a row is added.
+- Spec: `research/state_tax/notes/datagap_spec_hi_ky_pa.md` §4.
+
 ## Known differences
 
 - **Wage base**: PA taxes 401(k)-type elective deferrals when made; PUF wages

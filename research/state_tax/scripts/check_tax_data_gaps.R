@@ -63,8 +63,9 @@ for (i in seq_len(nrow(kd_rows))) {
 
 if (file.exists(SCHEMA_PATH)) {
   schema_vars = names(yaml::read_yaml(SCHEMA_PATH))
-  bad = gaps[overlay_variable != 'none' & !grepl('^other:', overlay_variable) &
-             !(overlay_variable %in% schema_vars), unique(overlay_variable)]
+  # a row may name several overlay variables, separated by ';'
+  named = unique(unlist(strsplit(gaps$overlay_variable, ';')))
+  bad = named[named != 'none' & !grepl('^other:', named) & !(named %in% schema_vars)]
   if (length(bad)) fail = c(fail, sprintf('overlay_variable not in schema: %s', paste(bad, collapse = ', ')))
 }
 

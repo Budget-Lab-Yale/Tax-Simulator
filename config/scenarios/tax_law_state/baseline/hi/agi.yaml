@@ -44,17 +44,22 @@ ss_sub_share:
 # elective deferrals (401(k)/457/TSP), early distributions subject to the
 # federal 10% penalty, self-funded annuities and IRAs.
 #
-# DOCUMENTED APPROXIMATION (the pension-source split, imputation plan Tier
-# 1): txbl_pens_dist pools employer-funded DB benefits with elective-
-# deferral DC distributions and employee-contribution portions, which are
-# not separable in the PUF. The full pool is subtracted [overstates the
-# exclusion -- i.e., understates HI tax -- for 401(k)-type distributions
-# and contributory-plan employee shares; TAXSIM and PolicyEngine face the
-# same input and make the same call, so cross-model comparisons are clean].
+# Pension-source split (crosswalk item 2; S43 overlay since 2026-10-13):
+# txbl_pens_dist pools employer-funded DB benefits with elective-deferral
+# DC distributions and employee-contribution portions. The subtraction
+# applies to pension_public in full plus pension_er_funded_share of the
+# private remainder (pension_sub_er_funded_only below); at the overlay
+# defaults (0 and 1) the whole pool is subtracted, as before, which
+# overstates the exclusion for 401(k)-type distributions. PolicyEngine
+# subtracts the whole pool too; TAXSIM applies a partial rule of its own
+# (packet class C), so the TAXSIM cells carry a data-proxy annotation.
 # IRA distributions stay taxable (no ira_sub_share)
 pension_sub_share:
   value: 1
   reference: 'N-11 line 13 "Pensions taxed federally but not taxed by Hawaii"; instructions (2017 booklet p.14, same section every year through the 2025 booklet p.13): public and non-contributory employer plan distributions "by reason of retirement, disability, or death" are excluded; rollovers keep the source plan''s character'
+pension_sub_er_funded_only:
+  value: 1
+  reference: 'N-11 line 13 instructions (2022 booklet p.13; identical 2017-2025): public retirement system distributions excluded in full "unless voluntary contributions were made by an employee under an elective right"; private employer plan distributions excluded "if the employee did not contribute"; 401(k)/SARSEP/TSP/457 deferred compensation and IRAs taxable; HRS 235-7(a)(2)-(3). Reads pension_public and pension_er_funded_share (S43): inert at the defaults, which reproduce the pre-2026-10-13 full subtraction'
 
 documented_not_modeled:
   cola_ers_wage_differences:

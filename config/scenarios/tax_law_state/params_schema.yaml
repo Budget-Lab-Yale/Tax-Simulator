@@ -50,6 +50,11 @@ scalars:
   st_agi.pension_excl_min_age: .inf
   st_agi.pension_cap_incl_ss: 0
   st_agi.pension_excl_incl_ira: 1   # 0 = IRA distributions ineligible (MD)
+  # 1 = pension_public x pension_public_pre1998_share is excluded in full
+  #     outside the per-person cap and the remainder of the government
+  #     pension joins the capped pool (KY Schedule P Parts I-III; KRS
+  #     141.019(1)(g)). Reads the two optional data columns (S43)
+  st_agi.pension_excl_public_grandfather: 0
   st_agi.pension_excl_agi_limit: .inf   # AGI cliff for the exclusion (WI $5k at 65+)
   # Linear phase-out of the pension exclusion on federal AGI (ME 5122(2)(M-3)
   # TY2025+: reduced by (FAGI - threshold)/width to zero); .inf = none
@@ -137,6 +142,12 @@ scalars:
   st_agi.ss_taxable_gross_cap_share: .inf
   st_agi.pension_sub_share: 0
   st_agi.ira_sub_share: 0
+  # 1 = the share applies to pension_public in full plus pension_er_funded_share
+  #     of the private remainder, not to the whole txbl_pens_dist pool (HI N-11
+  #     line 13: public systems and non-contributory employer plans excluded,
+  #     elective deferrals and employee shares taxed). Reads the pension_public
+  #     and pension_er_funded_share optional data columns (S43)
+  st_agi.pension_sub_er_funded_only: 0
   st_agi.age_ded_amount: {default: 0, units: per_person}
   st_agi.age_ded_min_age: .inf
   st_agi.age_ded_no_test_min_age: .inf
@@ -159,6 +170,11 @@ scalars:
   # PA/NJ gross-income-class rule)
   st_agi.ob_class_floor: 0
   st_agi.ob_comp_share: 0
+  # 1 = own-base compensation adds pre-tax elective deferrals (PA 72 P.S.
+  #     7301(d): 401(k)/403(b)/457 deferrals are compensation when made; W-2
+  #     box 16 vs box 1). Reads elective_deferral1/2 (S43; Tax-Data
+  #     trad_contr_er1/2 through tax_data_equivalent)
+  st_agi.ob_comp_add_deferrals: 0
   st_agi.ob_int_share: 0
   st_agi.ob_div_share: 0
   st_agi.ob_bus_share: 0
@@ -677,6 +693,15 @@ scalars:
   st_credits.hh_mfs_half: 0
   st_credits.family_credit_style: 0
   st_credits.family_credit_income_base: 3   # st_income_base enum (KY: AGI + additions)
+  # Family size counts qualifying children only where set (KRS 141.066(1)(b):
+  # IRC 152(c) children, under 19 or under 24 if a student -> KY 24 as the
+  # student proxy); .inf keeps the all-dependents count
+  st_credits.family_credit_child_max_age: .inf
+  # 1 = a married-filing-separately unit living with its spouse counts the
+  #     spouse in family size and adds the spouse's federal AGI (KRS
+  #     141.066(1)(c),(4)); reads spouse_agi_mfs gated on has_spouse_agi_mfs,
+  #     switched off by living_apart (S43)
+  st_credits.family_credit_mfs_combined: 0
   st_credits.exempt_credit_style: 0
   st_credits.exempt_credit_personal: 0
   st_credits.exempt_credit_aged: 0
@@ -762,6 +787,14 @@ scalars:
   st_credits.forgive_income_base: 2   # st_income_base enum (PA: state AGI)
   st_credits.forgive_add_exempt_int: 0   # share of exempt interest added
   st_credits.forgive_add_alimony: 0      # share of alimony received added
+  # share of nontax_support_inc added (PA Schedule SP lines 4, 5, 7, 9, 10:
+  # gifts, inheritances, insurance proceeds, educational assistance,
+  # nontaxable military pay, outside-household support); S43 overlay
+  st_credits.forgive_add_nontax_support: 0
+  # 1 = a married-filing-separately unit adds the spouse's federal AGI to
+  #     eligibility income (72 P.S. 7304(d)(1) joint poverty income); reads
+  #     spouse_agi_mfs (S43)
+  st_credits.forgive_add_spouse_mfs: 0
   # Per-person credit (ID grocery credit): flat amount per taxpayer and
   # dependent, with an aged add-on per 65+ filer
   st_credits.percap_amount: {default: 0, units: per_person}
@@ -815,6 +848,10 @@ scalars:
   # the food sales tax credit against what is left, "cannot be less than
   # zero"), so an EITC that already covers the tax leaves no room for it
   st_credits.percap_after_eitc: 0
+  # 1 = a married-filing-separately unit adds the spouse's federal AGI to the
+  #     per-person credit's income test (HI N-311 lines 4-6); reads
+  #     spouse_agi_mfs (S43)
+  st_credits.percap_add_spouse_mfs: 0
   # Low income comprehensive tax rebate (NM PIT-RC Table 1, NMSA 7-2-14): a
   # refundable per-return amount from a dense table keyed by household
   # "exemptions" (taxpayers + dependents + lictr_aged_exemptions per 65+

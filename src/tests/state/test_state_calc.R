@@ -480,6 +480,37 @@ test_state_calc = function() {
            expect = list(st_family_credit = 509.2 * 0.9,
                          liab_st_iit = 509.2 * 0.1),
            label = 'KY-1 family-size percentage-of-tax credit')
+  # KY-13a..c (2026-10-13): family size counts qualifying children only
+  # (KRS 141.066(1)(b)). A 72-year-old dependent parent does not count (size
+  # 1 -> 90% band, liab 50.92); a 10-year-old does (size 2 -> 100%, liab 0);
+  # a 22-year-old counts under the student proxy
+  run_case('KY', 2025, list(agi = 16000, n_dep = 1, dep_age1 = 72),
+           expect = list(liab_st_iit = 509.2 * 0.1),
+           label = 'KY-13a family size excludes a dependent parent')
+  run_case('KY', 2025, list(agi = 16000, n_dep = 1, dep_age1 = 10),
+           expect = list(liab_st_iit = 0),
+           label = 'KY-13b family size counts a qualifying child')
+  run_case('KY', 2025, list(agi = 16000, n_dep = 1, dep_age1 = 22),
+           expect = list(liab_st_iit = 0),
+           label = 'KY-13c family size counts a student-age child')
+  # KY-14a..d: married-separate living together (KRS 141.066(4)). TY2025 MFS
+  # AGI 12,000, std 3,270, 4% -> tax 349.20. Inert: size 1, 100% -> 0. Live
+  # with spouse AGI 12,000: size 2, MGI 24,000 in the 60% band -> credit
+  # 209.52, liab 139.68. Apart: back to 0. Spouse with no income: size 2 on
+  # MGI 12,000 -> 100% -> 0 (the has_ gate is what makes 14d differ in path)
+  run_case('KY', 2025, list(filing_status = 3, agi = 12000),
+           expect = list(liab_st_iit = 0),
+           label = 'KY-14a MFS family-size credit, overlay absent')
+  run_case('KY', 2025, list(filing_status = 3, agi = 12000, spouse_agi_mfs = 12000),
+           expect = list(st_family_credit = 349.20 * 0.6, liab_st_iit = 139.68),
+           label = 'KY-14b MFS living together combines spouse AGI (overlay live)')
+  run_case('KY', 2025, list(filing_status = 3, agi = 12000, spouse_agi_mfs = 12000,
+                            living_apart = TRUE),
+           expect = list(liab_st_iit = 0),
+           label = 'KY-14c MFS living apart keeps own income')
+  run_case('KY', 2025, list(filing_status = 3, agi = 12000, spouse_agi_mfs = 0),
+           expect = list(liab_st_iit = 0),
+           label = 'KY-14d MFS spouse with no income still counts in family size')
 
   # KY-2: 2017 graduated schedule (2/3/4/5/5.8/6%), single, AGI 50,000.
   # Std ded 2,480 -> taxable 47,520 -> $280 + 5.8% x 39,520 = 2,572.16;
@@ -539,6 +570,25 @@ test_state_calc = function() {
            expect = list(st_agi = 28890,
                          liab_st_iit = (28890 - 2530) * 0.05),
            label = 'KY-8 pension exclusion cap')
+  # KY-12a..c (2026-10-13): Schedule P Part I pre-1998 government service is
+  # excluded in full outside the $31,110 cap, from the pension_public and
+  # pension_public_pre1998_share overlays. 12a: 40,000 public, 25% pre-1998
+  # -> 10,000 exempt + min(30,000, 31,110) -> st_agi 20,000, liab 873.50.
+  # 12b: no pre-1998 service -> the cap only (= KY-8). 12c: plus a 5,000 IRA
+  # -> Part II 35,000 -> 31,110; total 41,110 -> st_agi 23,890, liab 1,068
+  run_case('KY', 2018, list(agi = 60000, txbl_pens_dist = 40000,
+                            pension_public = 40000, pension_public_pre1998_share = 0.25),
+           expect = list(st_agi = 20000, st_sub_pens = 40000,
+                         liab_st_iit = (20000 - 2530) * 0.05),
+           label = 'KY-12a pre-1998 government pension excluded outside the cap (overlay live)')
+  run_case('KY', 2018, list(agi = 60000, txbl_pens_dist = 40000,
+                            pension_public = 40000, pension_public_pre1998_share = 0),
+           expect = list(st_agi = 28890, liab_st_iit = (28890 - 2530) * 0.05),
+           label = 'KY-12b post-1998 government pension takes the cap only')
+  run_case('KY', 2018, list(agi = 65000, txbl_pens_dist = 40000, txbl_ira_dist = 5000,
+                            pension_public = 40000, pension_public_pre1998_share = 0.25),
+           expect = list(st_agi = 23890, liab_st_iit = (23890 - 2530) * 0.05),
+           label = 'KY-12c pre-1998 exemption with an IRA in the capped pool')
 
   # KY-9: 2023 aged credit ($40, Schedule ITC Section B, unchanged from
   # the 2017 four-box system): single 70, AGI 30,000 ->
@@ -1717,6 +1767,19 @@ test_state_calc = function() {
            expect = list(st_forgive_credit = 214.90 * 0.8,
                          liab_st_iit = 214.90 * 0.2),
            label = 'PA-4 forgiveness step-down')
+  # PA-8a/b (2026-10-13): elective deferrals are PA compensation (72 P.S.
+  # 7301(d)), read from the elective_deferral overlays (Tax-Data
+  # trad_contr_er1/2 once filled). 8a: 7,000 + 1,000 -> tax 245.60;
+  # eligibility 8,000 -> 40% forgiveness (SP Table 1) -> liab 147.36.
+  # 8b: joint 20,000 + 10,000 + 2,000 + 500 = 32,500 -> 997.75, no forgiveness
+  run_case('PA', 2024, list(wages1 = 7000, elective_deferral1 = 1000),
+           expect = list(st_agi = 8000, st_forgive_credit = 245.60 * 0.4,
+                         liab_st_iit = 245.60 * 0.6),
+           label = 'PA-8a elective deferral added to compensation (overlay live)')
+  run_case('PA', 2024, list(filing_status = 2, age2 = 40, wages1 = 20000, wages2 = 10000,
+                            elective_deferral1 = 2000, elective_deferral2 = 500),
+           expect = list(st_agi = 32500, liab_st_iit = 997.75),
+           label = 'PA-8b joint deferrals in compensation')
 
   # PA-5: 2024 MFJ, 2 deps, wages 30,000, exempt interest 2,000. Base =
   # 30,000 + 25% x 2,000 (other-state muni share) = 30,500, tax 936.35.
@@ -1727,6 +1790,36 @@ test_state_calc = function() {
                 dep_age2 = 9, wages1 = 30000, exempt_int = 2000),
            expect = list(st_agi = 30500, liab_st_iit = 0),
            label = 'PA-5 forgiveness at exact limit w/ exempt interest')
+  # PA-9a/b: nontaxable support (SP lines 4-10) enters eligibility income
+  # from the nontax_support_inc overlay. 9a: +1,000 -> 33,000, excess 1,000
+  # -> 4 steps -> 60% -> credit 561.81, liab 374.54. 9b: +3,000 -> 35,000,
+  # excess 3,000 > 2,250 -> 0% -> liab 936.35
+  run_case('PA', 2024,
+           list(filing_status = 2, age2 = 40, n_dep = 2, dep_age1 = 5,
+                dep_age2 = 9, wages1 = 30000, exempt_int = 2000,
+                nontax_support_inc = 1000),
+           expect = list(st_forgive_credit = 936.35 * 0.6, liab_st_iit = 936.35 * 0.4),
+           label = 'PA-9a nontaxable support reduces forgiveness (overlay live)')
+  run_case('PA', 2024,
+           list(filing_status = 2, age2 = 40, n_dep = 2, dep_age1 = 5,
+                dep_age2 = 9, wages1 = 30000, exempt_int = 2000,
+                nontax_support_inc = 3000),
+           expect = list(st_forgive_credit = 0, liab_st_iit = 936.35),
+           label = 'PA-9b nontaxable support beyond the table')
+  # PA-10a..c: married-separate joint eligibility income (72 P.S.
+  # 7304(d)(1)) from spouse_agi_mfs. Wages 10,000 -> tax 307.00; Table 2
+  # (0 dependents) 100% at 13,000, 10% column 15,250. Inert: 10,000 ->
+  # full forgiveness. Spouse 10,000 -> 20,000 -> none. Spouse 4,000 ->
+  # 14,000, excess 1,000 -> 60% -> credit 184.20, liab 122.80
+  run_case('PA', 2024, list(filing_status = 3, wages1 = 10000),
+           expect = list(liab_st_iit = 0),
+           label = 'PA-10a MFS forgiveness on own income (overlay absent)')
+  run_case('PA', 2024, list(filing_status = 3, wages1 = 10000, spouse_agi_mfs = 10000),
+           expect = list(st_forgive_credit = 0, liab_st_iit = 307.00),
+           label = 'PA-10b MFS joint eligibility income ends forgiveness (overlay live)')
+  run_case('PA', 2024, list(filing_status = 3, wages1 = 10000, spouse_agi_mfs = 4000),
+           expect = list(st_forgive_credit = 307.00 * 0.6, liab_st_iit = 122.80),
+           label = 'PA-10c MFS joint eligibility income steps forgiveness down')
 
   # PA-6: CDCTC enhancement. MFJ, 1 dep, wages 40,000, federal CDCTC 600:
   # tax 1,228; no forgiveness (40,000 > 22,500 + 2,250). 2023+: 100% match
@@ -3777,6 +3870,34 @@ test_state_calc = function() {
            expect = list(st_agi = 40000, st_exempt = 3432,
                          liab_st_iit = 1592.22),
            label = 'HI-2 2017 schedule, pension/SS exclusions, aged exemption')
+  # HI-9a..c (2026-10-13): N-11 line 13 excludes public pensions in full and
+  # only the employer-funded share of private plans, from the pension_public
+  # and pension_er_funded_share overlays. 9a: 10,000 public + 50% of the
+  # 20,000 private remainder = 20,000 excluded -> HI AGI 50,000, TI 42,168
+  # -> 2,016.00 + 7.2% x 3,768 = 2,287.30. 9b: all public -> = HI-2.
+  # 9c: pure 401(k) -> nothing excluded -> TI 62,168 -> 3,783.97
+  run_case('HI', 2017,
+           list(agi = 80000, filing_status = 2, age1 = 66, age2 = 64,
+                wages1 = 24000, wages2 = 16000, ei1 = 24000, ei2 = 16000,
+                txbl_pens_dist = 30000, txbl_ss = 10000, gross_ss = 12000,
+                pension_public = 10000, pension_er_funded_share = 0.5),
+           expect = list(st_agi = 50000, st_subtractions = 30000,
+                         liab_st_iit = 2287.30),
+           label = 'HI-9a employer-funded share of a mixed pension (overlay live)')
+  run_case('HI', 2017,
+           list(agi = 80000, filing_status = 2, age1 = 66, age2 = 64,
+                wages1 = 24000, wages2 = 16000, ei1 = 24000, ei2 = 16000,
+                txbl_pens_dist = 30000, txbl_ss = 10000, gross_ss = 12000,
+                pension_public = 30000, pension_er_funded_share = 0),
+           expect = list(st_agi = 40000, liab_st_iit = 1592.22),
+           label = 'HI-9b an all-public pension is excluded regardless of the share')
+  run_case('HI', 2017,
+           list(agi = 80000, filing_status = 2, age1 = 66, age2 = 64,
+                wages1 = 24000, wages2 = 16000, ei1 = 24000, ei2 = 16000,
+                txbl_pens_dist = 30000, txbl_ss = 10000, gross_ss = 12000,
+                pension_public = 0, pension_er_funded_share = 0),
+           expect = list(st_agi = 70000, liab_st_iit = 3783.97),
+           label = 'HI-9c a pure 401(k) distribution stays taxable')
 
   # HI-3: 2024 single, wages 100,000 + net LTCG 100,000, standard deduction.
   # TI = 194,456. Regular tax 13,878.60 + 10% x 19,456 = 15,824.20. Alternative

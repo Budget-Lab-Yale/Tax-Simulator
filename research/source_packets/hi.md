@@ -139,6 +139,21 @@ pre-2023 caps; HI-6/6b the SALT disallowance and overall limitation above
 and below their thresholds; HI-7 the Act 46 TY2025 bracket step; HI-8 the
 TY2027 schedule + TY2026 standard deduction (enacted future law).
 
+## Data-gap batch (2026-10-13)
+
+- Employer-funded pension exclusion (N-11 line 13) encoded on the
+  `pension_public` and `pension_er_funded_share` overlays
+  (`pension_sub_er_funded_only`; S43): inert at the defaults, which
+  reproduce the full-pool subtraction. Tests HI-9a..c. The old claim that
+  "TAXSIM and PolicyEngine make the same call" is withdrawn: PolicyEngine
+  subtracts the pool in full, TAXSIM applies a partial rule of its own
+  (class C), now a data-proxy annotation row.
+- N-311 food/excise credit: married filing separately adds the spouse's
+  federal AGI (`percap_add_spouse_mfs` on `spouse_agi_mfs`; inert).
+- Harness: HI added to `PE_IRA_SEPARATE_STATES` -- the fold had PolicyEngine
+  excluding IRA distributions Hawaii taxes.
+- Spec: `research/state_tax/notes/datagap_spec_hi_ky_pa.md` §1.
+
 ## Known differences (documented in the YAML)
 
 Pension source split (decision 6 -- the big one); 10% medical floor (the

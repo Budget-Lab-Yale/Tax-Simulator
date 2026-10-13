@@ -10,9 +10,11 @@
 #     exempt interest (the other 25% is already taxable in the base under
 #     the own-state-muni convention) and alimony received. Gifts, insurance
 #     proceeds, inheritances, outside-household support, nontaxable military
-#     pay, and educational assistance are unobserved (known-difference:
-#     forgiveness is overstated). Applies to tax after the resident credit
-#     (not modeled) and before withholding; nonrefundable in-model.
+#     pay and educational assistance are read from the nontax_support_inc
+#     optional data column, and a married-separate filer's joint eligibility
+#     income from spouse_agi_mfs (both S43, inert until published:
+#     forgiveness is overstated meanwhile). Applies to tax after the resident
+#     credit (not modeled) and before withholding; nonrefundable in-model.
 #   - Child and Dependent Care Enhancement credit (Schedule DC): 30% of the
 #     federal CDCTC for TY2022 (Act 53 of 2022), 100% from TY2023 (Act 34 of
 #     2023), refundable. The statute bases the match on the TENTATIVE federal
@@ -41,7 +43,7 @@ forgive_base_single:
 
 forgive_base_married:
   value: 13000
-  reference: '72 P.S. 7304 ("$13,000 or less"); SP Eligibility Income Table 2 (married, even if filing separately -- joint eligibility income required), 2017-2025. MFS combined-spouse income unobserved; own income used [known-difference]'
+  reference: '72 P.S. 7304 ("$13,000 or less"); SP Eligibility Income Table 2 (married, even if filing separately -- joint eligibility income required), 2017-2025. A married-separate unit adds the spouse''s federal AGI through forgive_add_spouse_mfs'
 
 forgive_dep_amount:
   value: 9500
@@ -66,6 +68,12 @@ forgive_add_exempt_int:
 forgive_add_alimony:
   value: 1
   reference: 'SP Section III line 3: alimony received counts in eligibility income (not child support)'
+forgive_add_nontax_support:
+  value: 1
+  reference: 'PA-40 Schedule SP Part III lines 4 (insurance proceeds and inheritances), 5 (gifts, awards, prizes), 7 (nontaxable military income), 9 (nontaxable educational assistance), 10 (cash received for personal use from outside your home) -- 2024 instructions pp.38-39, identical 2017-2025; 72 P.S. 7301(o.2). Reads nontax_support_inc (S43). NOT hh_resources_inc: SP excludes Social Security, unemployment, public assistance and child support'
+forgive_add_spouse_mfs:
+  value: 1
+  reference: '2024 PA-40 instructions p.37: "If married, whether filing jointly or separately, you must determine your total ... joint Eligibility Income"; 72 P.S. 7304(d)(1) joint poverty income of married claimants. Reads spouse_agi_mfs (S43), the spouse''s federal AGI as a proxy for the spouse''s eligibility income [over-includes spouse SS/UI/retirement that SP excludes; under-includes spouse nontaxable support]'
 
 # Working Pennsylvanians Tax Credit (TY2025+)
 eitc_match:
