@@ -98,3 +98,7 @@ research/**/*.docx
 
 # Agent/analysis working directory: sbatch scripts, probe backups, caches
 /output/
+
+# Python bytecode from the cross-model harness
+__pycache__/
+*.pyc
