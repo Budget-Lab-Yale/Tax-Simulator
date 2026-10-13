@@ -3,7 +3,7 @@ title: "State-tax data extensions and imputations — scoped plan"
 role: notes
 workstream: state_tax
 status: open
-updated: 2026-08-23
+updated: 2026-10-13
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null
@@ -34,6 +34,19 @@ variables these items need to the shared request instead of forking it. Same
 rule as IRS-GEO/IRS-Ind: one store, one manifest, several consumers. Status and
 naming: `research/state_weights/nonfiler_residual_design.md` §4.1.
 
+**Crosswalk (added 2026-10-13, decision S43).** The machine-readable registry
+is now `research/state_tax/tax_data_gaps.csv`: one row per (state, provision)
+that the pinned Tax-Data vintage cannot compute as written, with the required
+variable, the nearest Tax-Data column and its status (`absent`,
+`present_unused`, `present_zero`, `present_capped`, `present_pooled`,
+`present_partial`), the current handling, the rollup item number below, and
+the **overlay variable** name the provision will be gated on once the
+supplemental-inputs interface (W2 of the 2026-10-13 plan) carries it.
+`research/state_tax/scripts/check_tax_data_gaps.R` validates the file. This
+document keeps the prose rollup and the method notes; the per-state detail is
+the CSV, and a packet's "Data limitations" bullet points at its rows rather
+than restating them.
+
 **Maintenance convention (added 2026-08-11):** this file is the single
 registry of encoding-blocked-on-data cases. When a packet documents a
 feature as unencodable because the PUF lacks an input, add or extend the
@@ -43,23 +56,32 @@ picture.
 
 ## Rollup — one line per imputation, states and stakes
 
-Counts as of 2026-08-11 (30 encoded jurisdictions; "R6 joiners" are
-un-started states whose preliminary classification in
-`research/state_tax/STATE_ENCODING_REVIEW_2026_08_11.md` §2.1 adds them to the item).
+Counts as of 2026-10-13, derived from `tax_data_gaps.csv` (613 rows, 45
+jurisdictions with an income or investment-income tax; AK FL NV SD TX WY have
+no rows). "States (rows)" counts jurisdictions with at least one row on the
+item; "High / medium" counts rows at those materiality grades. Items 12–14
+were added on 2026-10-13 because the crosswalk showed recurring gaps the
+original eleven did not name. The 2026-08-11 table (30 states) is in git
+history.
 
-| # | Imputation | Tier | Encoded states affected | R6 joiners | Materiality and direction |
-|---|---|---|---|---|---|
-| 1 | Tenure / rent / property tax | 1 | 6 — WI MI MN (homestead/renter credits) + IL CT (credit inputs) + MD (ded base) | NJ ME NE (+NY DC circuit breakers later) | **HIGH.** Includes the module's one structural on-form gap (MN renter credit 2024+); one-sided against low-income renters/owners |
-| 2 | Pension source split (public/military/RR) | 1 | 12 — MI MD NC ID KY CT AZ OH MN WI + NY (govt full sub) SC (military) — VA's military-benefits ramp and UT's military credit ride the same flag | HI (employer-funded share) MO (public) | **HIGH.** Uniformly overtaxes affected retirees; the military flag alone unlocks most of the list |
-| 3 | Household-resources income (SSI/TANF/VA/child support) | 1 | 4 — PA (forgiveness income; currently UNDERTAXES via overstated forgiveness) MD VA (poverty credits) ID (SNAP proration) | ME (PTFC income concept) | MEDIUM-HIGH; both directions (PA down, MD/VA credits up) |
-| 4 | Elective deferrals (401k/403b/457) | 2 | 1 — PA (largest single PA base gap; shared by TAXSIM/PE so invisible to cross-model) | NJ (taxes 403(b)/457 but NOT 401(k) — different sign per plan type) | MEDIUM; concentrated, one-sided (understates the PA base) |
-| 5 | Dependent detail (>3 slots, student 19-23, disabled, tenure) | 2 | 3 — MN (CTC no child limit; M1CWFC older children) MD (disabled/65+ deps) IN (first-year dep) | — | LOW-MEDIUM; recurring machinery friction |
-| 6 | Filer disability status | 2 | 2+ — MD (under-65 disabled pension excl) MN (M1R) + homestead disabled doors with #1 | — | LOW |
-| 7 | Interest composition (US-obligation / own-state muni shares) | 2 | ALL broad-IIT states (sub_us_int flagged everywhere, subtracted nowhere; 75% own-state muni convention) | all | LOW per record, universal; current treatment overtaxes (no US-int sub) |
-| 8 | Business-side detail (bonus dep/179 stacks, NOLs, SSTB) | 3 | MN ID WI MD OH | MT IA (conformity-era addbacks) | Document-permanently unless triage forces it |
-| 9 | Expense niches (K-12, 529/HSA/MSA/ABLE, LTC, student loans) | 3 | 9+ — MN IL WI PA ID MD UT CT VA ND IN | many | Small aggregates; document |
-| 10 | Election features (WI Act 15 retirement; sales-tax electors) | 3 | WI VA | — | Needs a min-liability election pass, not data |
-| 11 | Credit take-up (all state credits assume 100%) | 3 | all credit states | all | Belongs with behavioral modules, not data imputation |
+| # | Imputation | Tier | States (rows) | High / medium | Jurisdictions | Main overlay variables |
+|---|---|---|---|---|---|---|
+| 1 | Tenure / rent / property tax (homestead family) | 1 | 23 (31) | 12 / 13 | AR AZ CA CT DC HI IL IN MA ME MI MN MO MT NE NJ NM NY OK RI VT WI WV | property_tax_paid, rent_paid, tenure |
+| 2 | Pension source split (public / military / railroad) | 1 | 36 (70) | 14 / 25 | AL AR AZ CO CT DC DE HI IA ID IN KS KY LA MA MD ME MI MN MO MT NC ND NE NM NY OH OK OR RI SC UT VA VT WI WV | pension_military, pension_public, pension_railroad |
+| 3 | Household-resources income (SSI/TANF/VA/child support/SNAP) | 1 | 12 (13) | 2 / 6 | GA HI ID ME MI MO MT NM OK PA TN VA | hh_resources_inc |
+| 4 | Elective deferrals (401(k)/403(b)/457) wage-base add-back | 2 | 2 (2) | 1 / 1 | NJ PA | elective_deferral1/2 — **Tax-Data column exists, all zero** |
+| 5 | Dependent detail (>3 slots, student, disabled, first-year) | 2 | 17 (24) | 0 / 3 | AL AR ID IN MA MD ME MN MO MT NJ NM OR SC UT VA WV | dep_disabled_n, dep_age4plus, dep_student_n |
+| 6 | Filer disability status | 2 | 19 (22) | 0 / 1 | AR CO DE GA HI IA IN KS LA MD MI MN MO NE NH NJ OH VA WV | disabled1, disabled2 |
+| 7 | Interest composition (US-obligation / own-state muni shares) | 2 | 41 (78) | 0 / 1 | every broad-IIT state plus NH TN | interest_us_share, interest_own_state_share — now applied as constants 0.15 / 0.75 in `st_agi.R`, not "flagged, not taken" |
+| 8 | Business-side detail (asset class, situs, NOLs, depreciation) | 3 | 28 (47) | 2 / 4 | AL CA CT DC DE IA ID KS KY LA MD ME MN MO NC NE NM NY OH OK PA RI SC VA VT WA WI WV | other:kg_asset_class_share and kin |
+| 9 | Expense niches (529/ABLE, LTC, K-12, adoption, premiums, tuition) | 3 | 38 (87) | 0 / 6 | 38 states | contrib_529, tuition_paid, health_premiums, ltc_premiums |
+| 10 | Election features (min-liability passes) | 3 | 4 (4) | 0 / 0 | HI NE UT VA | other:salt_sales_elector (WI Act 15 is encoding, not data) |
+| 11 | Credit take-up | 3 | 2 (2) | 0 / 1 | NE WA | care_provider_approved |
+| 12 | Per-person attribution of unit-level income (pension, SS, unearned, MFS spouse) | 2 | 29 (42) | 1 / 9 | AL AR AZ CA CO DE GA HI IA IN KY LA MD ME MN MO MS MT ND NJ NY OH OK PA RI SC VA WA WI | pension_person1/2, ss_person1/2, living_apart, other:spouse_income_mfs |
+| 13 | Prior-year state liability (OR kicker; carryforwards) | 2 | 5 (6) | 1 / 1 | HI IA LA MT OR | prior_year_liab — a lag in sequential runs, not a survey imputation |
+| 14 | Source state / nonresident and other-state credit | 3 | 42 (42) | 0 / 2 | every broad-IIT state | source_state — model-wide (`docs/model_documentation.md` §10.5) |
+| new | Unassigned niches | 3 | 41 (101) | 0 / 12 | — | see `overlay_variable` per row |
+| none | Locality (Phase 7) and law-only rows kept for completeness | — | 26 (42) | 5 / 13 | — | other:locality |
 
 ---
 
@@ -193,6 +215,101 @@ un-started states whose preliminary classification in
   the weights work); modeling take-up belongs with behavioral modules,
   not data imputation.
 
+## Items 12–14 (added 2026-10-13)
+
+### 12. Per-person attribution of unit-level income
+
+Tax-Data carries pensions, Social Security, interest, dividends and capital
+gains at the tax-unit level. Twenty-nine states apply a per-spouse cap,
+per-spouse age test or per-spouse eligibility to one of these, and the
+combined-return and separate-return machinery (`st_split.R`) halves non-wage
+income 50/50 because ownership is unobserved. Item 2 is the *source* of a
+pension; this item is *whose* it is. Overlay: `pension_person1/2`,
+`ss_person1/2`, `living_apart`. Candidate source: CPS ASEC person-level
+retirement and SS receipt, conditioned on the unit's age pair.
+
+### 13. Prior-year state liability
+
+Oregon's kicker (and a handful of carryforward provisions in HI, IA, LA, MT)
+need last year's state liability. In a sequential production run the model
+has it; in a single-year or year-parallel run it does not. This is a lag
+convention to settle in `or_kicker_design_note.md`, not a survey imputation.
+Overlay: `prior_year_liab`.
+
+### 14. Source state and nonresident income
+
+Every record is wholly resident in one state and all its income is sourced
+there, so no state's credit for taxes paid to other states is computed and
+no nonresident return is modeled. Universal, low per-record, concentrated in
+commuter corridors (DE, NJ, DC, NY, MD). Candidate source: LODES
+residence-workplace flows. Overlay: `source_state`.
+
+---
+
+## Columns Tax-Data already carries (candidate first-use — not adopted)
+
+The crosswalk found 38 rows where the YAML or packet calls an input
+"unobserved" but a Tax-Data column exists, and 28 more where the column is
+present but capped or zero. **JI decided on 2026-10-13 not to adopt any of
+these as proxies in the current push**; they are recorded so that the next
+Tax-Data conversation can start from what is already in the file. Status
+`present_unused` rows by column (states):
+
+| Column | What it is | Rows (states) | Provision family |
+|---|---|---|---|
+| `trad_contr_er1/2` | employer-plan pretax contributions — **all zero in every vintage checked** (2026070814, 2026092720_filer_refit_v2) | 5 (MA ME NJ PA) + 2 partial | item 4 deferral add-back; MA/ME public-retirement pick-ups |
+| `early_penalty` | 10% early-distribution penalty, i.e. a flag for the distribution | 4 (ME MS NE PA) | pre-55 carve-outs, NE other tax, PA cost-recovery |
+| `med_exp` | pre-floor medical expenses (itemizers) | 3 (AL AR HI) + 6 partial | state medical floors of 4% / 10% applied to `med_item_ded_potential`, which is post-federal-floor |
+| `sl_int_ded` | student-loan interest deduction | 3 (ME MN) | student-loan credits |
+| `care_exp` | child-care expenses **capped at the federal $3k/$6k** | 2 unused (CO SC) + 10 capped | every state care credit with its own cap or base |
+| `blind1/2` | blind status | 2 (MI NM) | blind exemptions the state YAML zeroed as "not in the PUF" |
+| `se_health`, `old_cred`, `alimony_exp`, `divorce_year`, `other_gains`, `hsa_contr`, `kg_collect`, `aoc_exp`, `nols`, `ot1`, `auto_int_exp`, `first_mort_bal`, `res_energy_cred`, `sole_prop`, `exempt_int`, `dep_age1` | one row each | MO NJ NE VT MS PA MA KY NE AL HI DC UT SC | see the CSV |
+| `c_housing_utilities` | CEX owned-plus-rented housing and utilities, collapsed in Tax-Data `src/cex.R` | 1 (MI home-heating) | the only rent-like field; not rent paid |
+| `value.primary_home`, `value.primary_mortgage` | SCF wealth imputation (59% / 34% non-zero) | not cited by any row yet | the natural tenure proxy for item 1 |
+
+Two more Tax-Data facts the crosswalk relies on: `n_dep_eitc` is zero for
+every separate filer (STATUS.md, "Tax-Data input question"), and the file has
+no state or county column — every `key = state` row depends on the
+State-Weights split, not a record field.
+
+---
+
+## Asks of Tax-Data (ordered by materiality in the crosswalk)
+
+Each ask names the overlay variable it would land in, so that Tax-Data
+absorbing it is zero-code on the simulator side (the resolver in
+`ensure_st_data()` prefers a native column over the overlay).
+
+1. **Fill `trad_contr_er1/2`** (item 4). The column exists and is all zero;
+   SOI W-2 tabulations or NCS give the distribution. Unlocks PA (largest
+   single PA base gap) and NJ; `elective_deferral1/2`.
+2. **Pension source: public / military / railroad shares** (item 2). 36
+   states, 14 high-materiality rows; the military flag alone unlocks most.
+   `pension_public`, `pension_military`, `pension_railroad`, `military_pay`.
+3. **Tenure, rent paid, property tax paid for non-itemizers** (item 1). 23
+   states, 12 high rows: MN renter credit (on-form 2024+), MI/WI/MO/MT
+   homestead, NJ/MA rent deductions, NE PTC. `tenure`, `rent_paid`,
+   `property_tax_paid`. Tax-Data's plan already carries this as groups I/J;
+   Affordability-Index holds reported ACS values per donor id (see the
+   supplemental-inputs interface note).
+4. **Per-person SS and pension amounts** (item 12). `ss_person1/2`,
+   `pension_person1/2`.
+5. **Household-resources income: SSI, TANF, VA, child support, SNAP** (item
+   3). PA forgiveness, NM LICTR, ME/VA/ID credits. `hh_resources_inc`.
+6. **Dependent detail: student 19–23, disabled, slots beyond three, first
+   year** (item 5). `dep_student_n`, `dep_disabled_n`, `dep_age4plus`.
+7. **Filer disability and veteran status** (item 6). `disabled1/2`,
+   `veteran1/2`.
+8. **Uncapped care expenses and provider type** (items 9/11).
+   `care_exp_uncapped`, `care_provider_approved`.
+9. **`n_dep_eitc` for separate filers** — an input question, not an
+   imputation.
+
+Everything in items 8–9 (529/ABLE, LTC, K-12, adoption, asset-class shares)
+stays documented-permanently unless a state's triage forces it.
+
+---
+
 ## Cross-cutting notes
 
 - **County/locality of residence** is deliberately NOT here — it is the
@@ -203,8 +320,25 @@ un-started states whose preliminary classification in
   its own validation note, because the record-level TAXSIM/PE harness
   compares LAW, not imputations — imputed inputs should be off (or
   matched into the external models' inputs) in cross-model runs.
-- **Sequencing:** Tier 1 items depend on nothing but the ACS assets and
-  should follow the Phase 1 weights production swap-in (shared cells,
-  shared validation datasets). Tier 2 items are independent and can ride
-  along with the states that need them (deferral add-back with NJ;
-  dependent extensions with any MN triage push).
+- **Sequencing (amended 2026-10-13, S43):** *encoding* no longer waits on
+  any of this. A data-blocked provision is encoded against its overlay
+  variable with a neutral default, so it is inert until a producer publishes
+  the variable through the supplemental-inputs interface. The *imputation*
+  work keeps its old order: Tier 1 items follow the Phase 1 weights
+  production swap-in (shared cells, shared validation datasets); Tier 2 items
+  are independent and can ride along with the states that need them.
+- **Two producers, one contract:** Tax-Data (native column; preferred) or
+  Affordability-Index (ACS values collapsed to the Tax-Data `donor_id`,
+  published under the supplemental-inputs contract). The simulator does not
+  care which; the coverage file written per run says which variables were
+  live.
+
+---
+
+## Revision history
+
+- **2026-10-13** — Rollup rebuilt from `tax_data_gaps.csv` at 51 states (was
+  30, 2026-08-11); items 12–14 added; "Columns Tax-Data already carries" and
+  "Asks of Tax-Data" sections added; sequencing note amended for S43.
+- **2026-08-23** — Last amendment before the crosswalk (CPS ASEC note,
+  maintenance convention).

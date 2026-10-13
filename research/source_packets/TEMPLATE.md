@@ -95,7 +95,10 @@ Last updated: `YYYY-MM-DD`
 
 ## Known differences
 
-- Data limitations:
+- Data limitations: one bullet per row this state has in
+  `research/state_tax/tax_data_gaps.csv` (provision — overlay variable). The
+  crosswalk holds the detail (required variable, Tax-Data column status, current
+  handling); do not restate it here.
 - Future-year projections:
 - Omitted provisions:
 
