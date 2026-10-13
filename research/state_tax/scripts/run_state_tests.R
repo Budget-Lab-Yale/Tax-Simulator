@@ -7,7 +7,7 @@ suppressPackageStartupMessages(invisible(capture.output(
 return_vars = list()
 list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
   walk(~ if (. != 'main.R' && !startsWith(., 'slurm/')) source(file.path('./src/', .)))
-suites = if ('quick' %in% commandArgs(trailingOnly = TRUE)) 'test_state_tax_law' else c('test_state_tax_law', 'test_state_calc')
+suites = if ('quick' %in% commandArgs(trailingOnly = TRUE)) 'test_state_tax_law' else c('test_state_tax_law', 'test_state_calc', 'test_state_weights_reader', 'test_supplemental_inputs_reader')
 for (f in suites) {
   r = tryCatch({ get(f)(); 'PASS' }, error = function(e) paste('FAIL:', conditionMessage(e)))
   cat(sprintf('RESULT %-22s %s\n', f, r))

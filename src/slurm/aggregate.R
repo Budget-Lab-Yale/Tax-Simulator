@@ -105,6 +105,7 @@ tryCatch({
         state_tax_law_id = scenario_info$state_tax_law_id,
         output_path      = scenario_info$output_path
       )
+      write_supplemental_coverage(output, static_root)
     }
 
     static_totals_pr %>%

@@ -135,6 +135,14 @@ st_split_spouse_unit = function(tax_unit, spouse, law_mfs) {
     col[[v]] = col[[v]] / 2
   }
 
+  # Optional data columns (config/interfaces/supplemental_inputs_schema.yaml)
+  # follow the split class declared with them: `halve` here, `person` with the
+  # wage slots below; `whole` and the has_<v> flags ride whole
+  sup_split = supplemental_split_classes()
+  for (v in intersect(sup_split$halve, names(col))) {
+    col[[v]] = col[[v]] / 2
+  }
+
   # Itemized deductions prorated by each column's share of AGI instead of
   # halved, where the state says so (AR Form AR3 lines 30-33: "you must
   # prorate your itemized deductions between spouses", the share being each
@@ -176,6 +184,12 @@ st_split_spouse_unit = function(tax_unit, spouse, law_mfs) {
   col$ei2    = 0
   col$age2   = NA_real_
   col$blind2 = NA
+  for (base in sup_split$person_bases) {
+    v1 = paste0(base, 1); v2 = paste0(base, 2)
+    if (!all(c(v1, v2) %in% names(col))) next
+    col[[v1]] = if (spouse == 1) tax_unit[[v1]] else tax_unit[[v2]]
+    col[[v2]] = sup_split$person_empty[[v2]]
+  }
 
   if (spouse == 2) {
     for (v in intersect(c('n_dep', 'n_dep_ctc', 'n_dep_eitc'), names(col))) {

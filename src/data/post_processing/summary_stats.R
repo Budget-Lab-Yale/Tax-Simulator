@@ -315,7 +315,8 @@ get_pr_totals = function(tax_units, yr) {
 
 get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
                             detail_path = NULL, state_tax_contexts = list(),
-                            conformity_groups = load_state_conformity_groups()) {
+                            conformity_groups = load_state_conformity_groups(),
+                            supplemental = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates state-level aggregates: runs the state calculator per
@@ -331,6 +332,9 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
   #   - yr (int)            : year
   #   - detail_path (str)   : when non-NULL, path for the per-year state
   #                           detail matrix CSV
+  #   - supplemental (list) : optional data columns from
+  #                           build_supplemental_inputs(), joined per state
+  #                           just before the calculator; NULL = none
   #
   # Returns: tibble long in (year, state, variable) with weighted totals, or
   #          NULL when no state law exists for the year (df | NULL).
@@ -361,8 +365,10 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
       )
 
       # Join this state's law to its rolling or reference federal context,
-      # calculate, and reattach ids and weights.
+      # attach any supplemental data for this state, calculate, and reattach
+      # ids and weights.
       st_results = state_tax_context %>%
+        attach_supplemental_inputs(supplemental, st) %>%
         left_join(law_yr %>%
                     filter(state == st) %>%
                     select(-state),

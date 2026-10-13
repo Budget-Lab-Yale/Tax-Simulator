@@ -237,6 +237,7 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       state_tax_law_id = scenario_info$state_tax_law_id,
       output_path      = scenario_info$output_path
     )
+    write_supplemental_coverage(output, static_root)
   }
 
   static_totals_pr %>%
@@ -417,6 +418,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   state_weights = NULL
   state_conformity_groups = NULL
   state_reference_tax_laws = list()
+  supplemental = NULL
   if (!is.null(scenario_info$states)) {
     state_tax_law = build_state_tax_law(
       states           = scenario_info$states,
@@ -438,6 +440,19 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       states     = scenario_info$states,
       root       = scenario_info$interface_paths$`State-Weights`,
       pct_sample = globals$pct_sample
+    )
+    # Optional data columns for the state calculator (decision S43): read once
+    # per year, joined per state inside get_state_totals(); NULL when the row
+    # did not opt in, so the federal pass never sees them
+    supplemental = build_supplemental_inputs(
+      tax_units     = tax_units,
+      year          = year,
+      variables     = scenario_info$supplemental_inputs,
+      roots         = scenario_info$interface_paths[intersect(supplemental_input_interfaces(),
+                                                              names(scenario_info$interface_paths))],
+      states        = scenario_info$states,
+      state_weights = state_weights,
+      pct_sample    = globals$pct_sample
     )
   }
 
@@ -505,7 +520,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                                                          state_weights, year,
                                                          static_state_detail_path,
                                                          static_state_contexts,
-                                                         state_conformity_groups))
+                                                         state_conformity_groups,
+                                                         supplemental = supplemental),
+                        supplemental_coverage = if (is.null(supplemental)) NULL else
+                                                supplemental$coverage)
 
 
   # --- CONVENTIONAL PASS ---
@@ -577,7 +595,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                                                                  state_weights, year,
                                                                  conv_state_detail_path,
                                                                  conv_state_contexts,
-                                                                 state_conformity_groups))
+                                                                 state_conformity_groups,
+                                                                 supplemental = supplemental))
 
   } else if (scenario_info$ID != 'baseline') {
 

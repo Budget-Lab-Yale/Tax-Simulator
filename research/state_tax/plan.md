@@ -3,7 +3,7 @@ title: "State Individual Income Tax Module — Implementation Plan"
 role: plan
 workstream: state_tax
 status: current
-updated: 2026-08-23
+updated: 2026-10-13
 sot: self
 supersedes: []
 superseded_by: null
@@ -622,7 +622,7 @@ not on the phase track above.
 
 | Note | Status | What it owns, and what unblocks it |
 |---|---|---|
-| `research/state_tax/notes/state_data_imputation_plan.md` | **open** | The 11 data extensions the state calculators need, tiered by materiality. **Tier 1 is the live one**: tenure/rent/property tax (6 encoded states + the module's one structural on-form gap, MN's 2024+ renter credit), the pension source split (12 states; the military flag alone unlocks most of the list), and household-resources income (4 states). All three are one-sided biases, not noise. §6's `salt_inc_sales` risk is the same work seen from the coupled-mode side. Unblocked by nothing — it is scoped and ready. |
+| `research/state_tax/notes/state_data_imputation_plan.md` | **open** | The data extensions the state calculators need, tiered by materiality — 14 items since 2026-10-13, rebuilt from the machine-readable crosswalk `research/state_tax/tax_data_gaps.csv` (613 rows, 45 jurisdictions; decision S43). **Tier 1 is the live one**: tenure/rent/property tax (23 states, 12 high-materiality rows, incl. MN's 2024+ renter credit), the pension source split (36 states; the military flag alone unlocks most), and household-resources income (12 states). Item 4 (elective deferrals) is a Tax-Data FILL, not an imputation: `trad_contr_er1/2` exists and is all zero. Since S43 encoding no longer waits on any of this — a data-blocked provision is encoded against an optional variable in `config/interfaces/supplemental_inputs_schema.yaml` and switched on by a producer through the supplemental-inputs interface (`research/state_tax/supplemental_inputs_interface.md`, `role: method`). §6's `salt_inc_sales` risk is the same work seen from the coupled-mode side. |
 | `research/state_tax/notes/ca_misc_amt_plan.md` | **deferred** (was `open`; changed 2026-08-19 to match the note's own §Sequencing) | CA miscellaneous itemized deductions and CA AMT, in that order — implementing misc without AMT overstates deductions for exactly the high-income itemizers most likely to be in AMT. **Trigger: when top-of-distribution CA output matters** (P1 production use, or CA distributional tables). Not needed for the cross-model bar, which CA already clears. |
 | `research/state_tax/notes/or_kicker_design_note.md` | **open** | The Oregon kicker (ORS 291.349) — a credit equal to a fixed percentage of the taxpayer's own **prior-year** Oregon liability before credits, recurring in odd years and worth roughly $5.6bn in TY2023. The 2026-08-21 OR triage measured it exactly (mode 0.172 in 2019, 0.000 in the other three window years) and excluded it from the harness, which a cross-sectional cell cannot avoid — but **the production model runs years in sequence, so prior-year state liability is reachable**. The one piece with reach beyond Oregon is a prior-year state liability carry through orchestration; design that before writing the credit. **Trigger: when Oregon output matters** (P1 production, an Oregon revenue estimate, Oregon distributional tables). |
 | `research/state_tax/notes/state_interstate_migration_design_note.md` | **deferred** | Interstate migration. No trigger set. |

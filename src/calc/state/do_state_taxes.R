@@ -36,7 +36,7 @@ do_state_taxes = function(tax_units, credit_tables = NULL, law_mfs = NULL) {
   # Returns: tibble of state-calculated variables (df).
   #----------------------------------------------------------------------------
 
-  tax_units %<>% ensure_st_params()
+  tax_units %<>% ensure_st_params() %>% ensure_st_data()
 
   joint = st_pipeline(tax_units, credit_tables)
   # Diagnostic: TRUE where the married-separate election won. Who owns
@@ -152,4 +152,49 @@ ensure_st_params = function(tax_units) {
   }
 
   return(tax_units)
+}
+
+
+
+ensure_st_data = function(tax_units, schema = supplemental_schema()) {
+
+  #----------------------------------------------------------------------------
+  # The data twin of ensure_st_params(): guarantees that every OPTIONAL DATA
+  # column in config/interfaces/supplemental_inputs_schema.yaml exists on the
+  # units, resolved in this order per variable v (decision S43):
+  #   1. an overlay column sup.v is present (attach_supplemental_inputs()):
+  #      v = coalesce(sup.v, default), has_v = !is.na(sup.v); if v already
+  #      existed it is overwritten here, inside the state context only
+  #      (schema `shadow: allow`, the Tax-Data placeholder case);
+  #   2. else v is present natively (Tax-Data absorbed it): untouched, has_v = TRUE;
+  #   3. else v = default, has_v = FALSE.
+  # The sup.* columns are dropped afterwards, so the stages read bare names.
+  # A stage gates on has_v only where the default is not self-evidently
+  # inert; the invariance test requires that with every has_v FALSE the
+  # state outputs equal today's.
+  #
+  # Parameters:
+  #   - tax_units (df) : tibble with one state's law columns joined
+  #
+  # Returns: tibble with all schema data columns and has_<v> flags present (df).
+  #----------------------------------------------------------------------------
+
+  vars = schema$vars
+  for (i in seq_len(nrow(vars))) {
+    v  = vars$variable[i]
+    sv = paste0(SUP_PREFIX, v)
+    hv = paste0('has_', v)
+    default = schema$defaults[[v]]
+    if (sv %in% colnames(tax_units)) {
+      tax_units[[hv]] = !is.na(tax_units[[sv]])
+      tax_units[[v]]  = coalesce(sup_cast(tax_units[[sv]], vars$type[i]), default)
+      tax_units[[sv]] = NULL
+    } else if (v %in% colnames(tax_units)) {
+      tax_units[[hv]] = TRUE
+    } else {
+      tax_units[[v]]  = default
+      tax_units[[hv]] = FALSE
+    }
+  }
+  tax_units
 }

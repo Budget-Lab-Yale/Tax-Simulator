@@ -139,11 +139,16 @@ build_state_weights = function(tax_units, year,
 # vintage records, in the dependencies.csv beside its scenario directory, the
 # Tax-Data vintage it was fit on; every runscript row that reads it must read
 # that same Tax-Data vintage. Called by parse_globals() once the interface
-# paths are known. Returns TRUE invisibly; stops on a mismatch.
+# paths are known. Returns TRUE invisibly; stops on a mismatch. Two vintage
+# NAMES may differ and still match when config/interfaces/
+# tax_data_equivalences.yaml declares them identical for every run year
+# (tax_data_vintages_match(), src/data/supplemental_inputs.R); without year
+# information only identical names match.
 #   dependencies    tibble(ID, interface, version, vintage, scenario), the run's
 #   interface_paths tibble(ID, interface, path)
+#   years_by_id     named list, scenario ID -> run years (int[]); optional
 # -----------------------------------------------------------------------------
-validate_state_weights_pins = function(dependencies, interface_paths) {
+validate_state_weights_pins = function(dependencies, interface_paths, years_by_id = NULL) {
   sw_rows = interface_paths %>% filter(interface == 'State-Weights')
   if (nrow(sw_rows) == 0) return(invisible(TRUE))
   for (i in seq_len(nrow(sw_rows))) {
@@ -158,10 +163,11 @@ validate_state_weights_pins = function(dependencies, interface_paths) {
     reads = dependencies %>%
       filter(ID == sw_rows$ID[i], interface == 'Tax-Data') %>%
       pull(vintage)
-    if (length(fit_on) != 1 || length(reads) != 1 || fit_on != reads) {
+    if (!tax_data_vintages_match(fit_on, reads, years_by_id[[sw_rows$ID[i]]])) {
       stop("Scenario '", sw_rows$ID[i], "' reads Tax-Data ", paste(reads, collapse = ','),
            ' but its State-Weights vintage was fit on Tax-Data ', paste(fit_on, collapse = ','),
-           '. Pin a State-Weights vintage built on the same Tax-Data vintage.')
+           '. Pin a State-Weights vintage built on the same Tax-Data vintage (or declare ',
+           'an equivalence covering the run years in config/interfaces/tax_data_equivalences.yaml).')
     }
   }
   invisible(TRUE)

@@ -44,6 +44,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'agi',            # (dbl)  federal Adjusted Gross Income (post-federal calc)
     'txbl_inc',       # (dbl)  federal taxable income (post-federal calc)
     'exempt_int',     # (dbl)  tax-exempt interest income
+    'interest_us_share',        # (dbl) optional data; schema default 0.15 (US-obligation share of txbl_int)
+    'interest_own_state_share', # (dbl) optional data; schema default 0.75 (own-state share of exempt_int)
     'state_ref',      # (dbl)  taxable refunds of state/local taxes
     'txbl_ss',        # (dbl)  taxable Social Security benefits (federal)
     'gross_ss',       # (dbl)  gross Social Security benefits received
@@ -199,19 +201,20 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.eitc_match_alt'     # (dbl) alternative EITC match (exclusivity choice)
   )
 
-  # Assumed share of tax-exempt interest from own-state bonds for states that
-  # exempt them (unobserved in the PUF; known-difference)
-  OWN_STATE_MUNI_SHARE = 0.75
-
-  # Assumed share of taxable interest from US obligations (Treasuries,
-  # savings bonds, qualifying government-fund distributions), exempt from
-  # state tax under 31 U.S.C. 3124 in every state. Unobserved in the PUF;
-  # conservative constant anchored on household Treasury/government-MMF
-  # holdings relative to total interest-bearing assets (Financial Accounts
-  # of the US, ICI) -- the true share is rate-environment dependent (higher
-  # 2023+). Known-difference: neither TAXSIM nor PolicyEngine takes an
-  # equivalent input, so the subtraction is cross-model unverifiable
-  US_OBLIGATION_INT_SHARE = 0.15
+  # The share of tax-exempt interest from own-state bonds (for states that
+  # exempt them) and the share of taxable interest from US obligations
+  # (Treasuries, savings bonds, qualifying government-fund distributions,
+  # exempt in every state under 31 U.S.C. 3124) are unobserved in the PUF.
+  # Until 2026-10-13 they were the constants OWN_STATE_MUNI_SHARE = 0.75 and
+  # US_OBLIGATION_INT_SHARE = 0.15 here; they are now the optional data
+  # columns interest_own_state_share and interest_us_share with those same
+  # schema defaults (config/interfaces/supplemental_inputs_schema.yaml), so a
+  # producer can publish record-level shares with no code change. The 0.15
+  # is a conservative constant anchored on household Treasury/government-MMF
+  # holdings relative to total interest-bearing assets (Financial Accounts of
+  # the US, ICI); the true share is rate-environment dependent (higher 2023+).
+  # Known-difference: neither TAXSIM nor PolicyEngine takes an equivalent
+  # input, so the subtraction is cross-model unverifiable
 
   # Federal per-year net capital loss limit (IRC 1211(b)), the ceiling on
   # the state cap-loss add-back computed from capped inputs
@@ -465,7 +468,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # the federal overtime deduction where added back (CO 2026+; only
       # applies to a taxable-income start, where the deduction reduced it)
       st_add_muni = st_agi.add_exempt_int * exempt_int *
-                    if_else(st_agi.own_state_exempt == 1, 1 - OWN_STATE_MUNI_SHARE, 1),
+                    if_else(st_agi.own_state_exempt == 1, 1 - interest_own_state_share, 1),
       st_add_ot   = st_agi.add_overtime_ded * ot_ded,
 
       # Addition: federally-allowed net capital loss beyond the state's own
@@ -489,7 +492,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
       # Subtraction: US-obligation interest (31 U.S.C. 3124), as an assumed
       # share of taxable interest -- the source split is unobserved
-      st_sub_us_int = st_agi.sub_us_int * US_OBLIGATION_INT_SHARE *
+      st_sub_us_int = st_agi.sub_us_int * interest_us_share *
                       pmax(0, txbl_int),
 
       # Subtraction: Social Security. Full-subtraction share is the greater

@@ -163,6 +163,12 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript$`dep.State-Weights.ID`[federal_only]      = NA
   }
 
+  # Supplemental inputs (decision S43) are a dependency of rows that OPT IN by
+  # naming variables in `supplemental_inputs`; every other row has its
+  # producer pins blanked the same way. A row that opts in without a pin
+  # stops here (src/data/supplemental_inputs.R).
+  runscript = blank_supplemental_pins(runscript)
+
   # Add nonspecified excess growth scenario
   if (!('excess_growth' %in% colnames(runscript))) {
     runscript$excess_growth = 0
@@ -177,6 +183,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   # Validate cross-row state-mode consistency BEFORE any scenario subsetting
   # (the rule needs visibility into all rows; plan §2.4)
   validate_runscript_states(runscript)
+  validate_runscript_supplemental(runscript)
 
   # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {
@@ -234,7 +241,13 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   # A State-Weights vintage must have been fit on the Tax-Data vintage the row
   # reads (its own dependencies.csv says which): otherwise ids mostly match,
   # the join mostly succeeds, and the split is silently wrong
-  validate_state_weights_pins(dependencies, interface_paths)
+  validate_state_weights_pins(dependencies, interface_paths,
+                              years_by_id = runscript_years_by_id(runscript))
+
+  # Same rule for a supplemental-inputs producer, plus: every requested
+  # variable is in the consumer schema and published by exactly one pinned
+  # producer (src/data/supplemental_inputs.R)
+  validate_supplemental_pins(dependencies, interface_paths, runscript)
 
   # Confirm that user has supplied valid multicore argument
   if (!(multicore %in% c('none', 'scenario', 'year'))) {
@@ -424,6 +437,16 @@ get_scenario_info = function(id) {
     state_weights_method = runscript_items$state_weights_method
   }
 
+  # Supplemental inputs (decision S43): optional data variables for the state
+  # calculator, space-delimited names from supplemental_inputs_schema.yaml;
+  # empty/absent = none (the calculator runs on schema defaults)
+  supplemental_inputs = NULL
+  if (!is.null(runscript_items$supplemental_inputs) &&
+      !is.na(runscript_items$supplemental_inputs)) {
+    supplemental_inputs = parse_supplemental_value(runscript_items$supplemental_inputs)
+    if (length(supplemental_inputs) == 0) supplemental_inputs = NULL
+  }
+
   # State detail output: off by default; when on, one compact per-year
   # liability matrix at detail/state/{year}.csv (plan §5.3)
   state_detail = 0
@@ -448,7 +471,8 @@ get_scenario_info = function(id) {
               states                   = states,
               state_tax_law_id         = state_tax_law_id,
               state_weights_method     = state_weights_method,
-              state_detail             = state_detail))
+              state_detail             = state_detail,
+              supplemental_inputs      = supplemental_inputs))
 }
 
 

@@ -1,0 +1,326 @@
+---
+# supplemental_inputs_schema.yaml
+#
+# The consumer-side contract for OPTIONAL DATA columns the state calculator
+# may read: variables the pinned Tax-Data vintage does not carry (rent paid,
+# tenure, pension source, ...), published by another model through the
+# supplemental-inputs interface. Decision S43; design and producer contract in
+# research/state_tax/supplemental_inputs_interface.md. Parallel to
+# config/scenarios/tax_law_state/params_schema.yaml, which does the same for
+# LAW parameters.
+#
+# Read once per session by supplemental_schema() (src/data/supplemental_inputs.R)
+# and consumed by:
+#   - ensure_st_data()             (do_state_taxes.R: neutral default + has_<v> flag)
+#   - build_supplemental_inputs()  (reader: key / type / collision rules)
+#   - validate_supplemental_pins() (parse time: requested names must be here)
+#   - st_split_spouse_unit()       (married-separate election: split class)
+#
+# Fields per variable:
+#   key      unit | state | person
+#            unit   one value per record, file supplemental_unit_<year>.csv.gz
+#            state  one per (record, state), file supplemental_state_<year>.csv.gz
+#            person unit-keyed but person-indexed (name ends in 1 or 2); the
+#                   spouse split moves it between slots like wages1/wages2
+#   type     dbl | int | lgl
+#   default  the value applied when the record is uncovered or the variable is
+#            not requested. MUST leave every provision at today's output: the
+#            invariance test in src/tests/state/test_supplemental_inputs_reader.R
+#            runs the calculator with no overlay, an all-NA overlay and an
+#            all-default overlay and requires identical state liabilities
+#   split    halve | whole | person -- how st_split_spouse_unit() treats it
+#   shadow   forbid | allow -- whether the overlay may replace a column that is
+#            already on tax_units. Allow only for a Tax-Data placeholder column
+#            known to be unpopulated (trad_contr_er1/2 is the live case)
+#   tax_data_equivalent  (optional) the native Tax-Data column that would make
+#            the overlay unnecessary once populated; ensure_st_data() prefers a
+#            native column over the overlay
+#   units / description  documentation only
+#
+# Names are the overlay_variable column of research/state_tax/tax_data_gaps.csv.
+# Add a variable here when the first crosswalk row is encoded against it.
+
+# --- Interest composition (crosswalk item 7). The two model-wide constants
+# the AGI stage used to carry (st_agi.R) are now data with the same default,
+# so a producer can publish record-level shares without a code change.
+interest_us_share:
+  key: unit
+  type: dbl
+  default: 0.15
+  split: whole
+  shadow: forbid
+  units: share of txbl_int
+  description: share of taxable interest from U.S. obligations (exempt in every state)
+interest_own_state_share:
+  key: state
+  type: dbl
+  default: 0.75
+  split: whole
+  shadow: forbid
+  units: share of exempt_int
+  description: share of tax-exempt interest from the resident state's own bonds
+
+# --- Tenure, rent and property tax (item 1)
+tenure:
+  key: state
+  type: int
+  default: 0
+  split: whole
+  shadow: forbid
+  units: code
+  description: 0 unknown, 1 owner-occupier, 2 renter
+rent_paid:
+  key: state
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars per year
+  description: rent paid on the principal residence
+property_tax_paid:
+  key: state
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars per year
+  description: property tax paid on the principal residence, itemizer or not (salt_prop covers 2015-base itemizers only)
+
+# --- Pension source and military (item 2)
+pension_public:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: federal, state and local government pension distributions within txbl_pens_dist
+pension_military:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: military retirement distributions within txbl_pens_dist
+pension_railroad:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: Railroad Retirement Tier 1 and Tier 2 benefits
+military_pay1:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: forbid
+  units: dollars
+  description: primary filer's active-duty, reserve and National Guard pay within wages1
+military_pay2:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: forbid
+  units: dollars
+  description: spouse's active-duty, reserve and National Guard pay within wages2
+
+# --- Per-person attribution of unit-level income (item 12)
+pension_person1:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: forbid
+  units: dollars
+  description: primary filer's share of txbl_pens_dist
+pension_person2:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: forbid
+  units: dollars
+  description: spouse's share of txbl_pens_dist
+ss_person1:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: forbid
+  units: dollars
+  description: primary filer's share of gross_ss
+ss_person2:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: forbid
+  units: dollars
+  description: spouse's share of gross_ss
+living_apart:
+  key: unit
+  type: lgl
+  default: false
+  split: whole
+  shadow: forbid
+  description: married filing separately and lived apart from the spouse all year
+
+# --- Elective deferrals (item 4). Tax-Data carries trad_contr_er1/2 but every
+# vintage checked is all zero, so the overlay may shadow them.
+elective_deferral1:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: allow
+  tax_data_equivalent: trad_contr_er1
+  units: dollars
+  description: primary filer's pre-tax 401(k)/403(b)/457 deferrals
+elective_deferral2:
+  key: person
+  type: dbl
+  default: 0
+  split: person
+  shadow: allow
+  tax_data_equivalent: trad_contr_er2
+  units: dollars
+  description: spouse's pre-tax 401(k)/403(b)/457 deferrals
+
+# --- Household resources (item 3)
+hh_resources_inc:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: nontaxable household income (SSI, TANF, VA benefits, child support, SNAP) for state income concepts
+
+# --- Dependent detail (item 5)
+dep_student_n:
+  key: unit
+  type: int
+  default: 0
+  split: whole
+  shadow: forbid
+  units: count
+  description: dependents aged 19-23 who are full-time students
+dep_disabled_n:
+  key: unit
+  type: int
+  default: 0
+  split: whole
+  shadow: forbid
+  units: count
+  description: permanently and totally disabled dependents of any age
+dep_age4plus:
+  key: unit
+  type: int
+  default: 0
+  split: whole
+  shadow: forbid
+  units: count
+  description: dependents beyond the three age slots dep_age1-3
+
+# --- Filer status (item 6)
+disabled1:
+  key: person
+  type: lgl
+  default: false
+  split: person
+  shadow: forbid
+  description: primary filer permanently and totally disabled
+disabled2:
+  key: person
+  type: lgl
+  default: false
+  split: person
+  shadow: forbid
+  description: spouse permanently and totally disabled
+veteran1:
+  key: person
+  type: lgl
+  default: false
+  split: person
+  shadow: forbid
+  description: primary filer is a veteran
+veteran2:
+  key: person
+  type: lgl
+  default: false
+  split: person
+  shadow: forbid
+  description: spouse is a veteran
+
+# --- Care expenses (items 9 / 11)
+care_exp_uncapped:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: child and dependent care expenses before the federal $3,000/$6,000 cap on care_exp
+care_provider_approved:
+  key: unit
+  type: lgl
+  default: false
+  split: whole
+  shadow: forbid
+  description: care provider is state-licensed / quality-rated (AR, LA, ME, DC credit tiers)
+
+# --- Expense niches (item 9)
+contrib_529:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: contributions to a 529 / ABLE plan in the year
+ltc_premiums:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: long-term care insurance premiums paid
+health_premiums:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: health insurance premiums paid out of pocket (employee share)
+tuition_paid:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: qualified tuition paid, uncapped (aoc_exp/llc_exp are federally capped)
+student_loan_pay:
+  key: unit
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: student loan principal and interest payments in the year
+
+# --- Prior-year state liability (item 13)
+prior_year_liab:
+  key: state
+  type: dbl
+  default: 0
+  split: halve
+  shadow: forbid
+  units: dollars
+  description: the record's prior-year state income tax liability in this state (OR kicker; carryforwards)

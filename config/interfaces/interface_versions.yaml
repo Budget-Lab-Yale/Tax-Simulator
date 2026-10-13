@@ -66,3 +66,20 @@ State-Weights:
   version: 1
   default_vintage: 'dryrun_B_2022_2023'
   default_id: baseline
+
+# Supplemental inputs (decision S43): optional DATA columns for the state
+# calculator that the pinned Tax-Data vintage does not carry -- rent paid,
+# tenure, pension source, ... -- published by another model under the
+# supplemental-inputs file contract (research/state_tax/
+# supplemental_inputs_interface.md; consumer schema config/interfaces/
+# supplemental_inputs_schema.yaml). One entry per producer, marked by
+# `contract: supplemental_inputs`. Read by build_supplemental_inputs(); pinned
+# only by rows whose `supplemental_inputs` runscript column names a variable
+# (parse_globals blanks the pin otherwise, so no other run depends on it).
+# No default vintage while the producer is provisional: a row that opts in
+# must pin dep.Affordability-Index.vintage/.ID explicitly.
+Affordability-Index:
+  type: model_data
+  version: 1
+  contract: supplemental_inputs
+  default_id: baseline

@@ -1,0 +1,35 @@
+---
+# tax_data_equivalences.yaml
+#
+# Tax-Data vintages declared AMOUNT-IDENTICAL for the purpose of pin checks.
+#
+# Why this exists. A producer that publishes per-record data keyed on the
+# Tax-Data `id` (State-Weights, a supplemental-inputs producer) records in its
+# own dependencies.csv the Tax-Data vintage it was built on, and the simulator
+# refuses to join it onto a different vintage: ids are reused across vintages
+# with different contents, so a mismatched join mostly succeeds and is silently
+# wrong (validate_state_weights_pins, config_parser.R). That check compares
+# vintage NAMES. Two vintages can carry the same records and amounts under
+# different names -- a re-publish that fixed only documentation or weights
+# outside the years in question -- and then the name check refuses a join
+# that is in fact exact.
+#
+# An entry here says: for the listed YEARS, the listed vintages hold the same
+# records with the same amounts, so a producer built on one may be joined to
+# a run reading the other. The declaration is reviewable, dated, and limited
+# to the years it vouches for; tax_data_vintages_match() (src/data/
+# supplemental_inputs.R) applies it and requires every run year to be covered.
+# Remove an entry when the pins converge on one vintage.
+
+equivalences:
+  - vintages: ['2026092720_filer_refit_v2', '2026100117_review_fixes']
+    years: [2019, 2023]
+    reason: >
+      2026100117_review_fixes re-published filer_refit_v2 with documentation
+      fixes; the TY2019 and TY2023 record sets and tax-line amounts are
+      identical (Affordability-Index D82 re-pin check: every TY2019/TY2023 line
+      matches; TY2023 live-row count 377,226 equals the State-Weights 2023
+      manifest n_records). State-Weights dryrun_B_2022_2023 was fit on
+      filer_refit_v2; Affordability-Index is pinned to review_fixes.
+    declared: '2026-10-13'
+    declared_by: JI
