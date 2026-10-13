@@ -173,6 +173,16 @@ test_supplemental_inputs_reader = function() {
               'not in', 'an unknown variable is refused at parse time')
   stopifnot(isTRUE(validate_supplemental_pins(deps_ok, paths %>% filter(interface != 'Affordability-Index'), rs1, producers = producers)))
 
+  # --- resolver: the Tax-Data equivalent column switches a variable on
+  u = tibble(id = 1:2, trad_contr_er1 = c(5000, 0))
+  r = ensure_st_data(u)
+  stopifnot(identical(r$elective_deferral1, c(5000, 0)), all(r$has_elective_deferral1),
+            identical(r$elective_deferral2, c(0, 0)), !any(r$has_elective_deferral2),
+            identical(r$rent_paid, c(0, 0)), !any(r$has_rent_paid))
+  r2 = ensure_st_data(u %>% mutate(sup.elective_deferral1 = c(NA, 7000)))
+  stopifnot(identical(r2$elective_deferral1, c(0, 7000)),        # overlay wins over the equivalent
+            identical(r2$has_elective_deferral1, c(FALSE, TRUE)))
+
   # --- split classes come from the schema
   sc = supplemental_split_classes()
   stopifnot('rent_paid' %in% sc$halve, 'elective_deferral' %in% sc$person_bases,

@@ -392,6 +392,24 @@ distributions qualify from age 59 1/2. TAXSIM-35 applies the exemption only at 6
 single, $20,000 of wages and $20,000 of pension: v32 = 40,000 at ages 59, 60, 62 and 64, and 34,000 at 65 and 66.
 Effect: TAXSIM overstates Arkansas tax for retirees under 65 by up to $6,000 x the rate per taxpayer.
 
+### T44. Kansas food sales tax credit not paid on the age prong
+
+K.S.A. 79-32,271 and the K-40 booklets (2018 and 2020, "Food Sales Tax Credit", lines A-C) grant the $125-per-qualified-
+exemption credit to a full-year resident with federal AGI of $30,615 or less who answers YES to any of three questions:
+55 or older all year, blind or disabled, or a dependent child under 18 living in the home. TAXSIM-35 pays nothing to
+filers who qualify through age alone: in the 2026-10-13 re-score, 114 single and 18 joint clean 2019 records aged 55-63
+with no dependents and AGI between $10,000 and $26,000 carry our $125 or $250 against TAXSIM's zero. Effect: TAXSIM
+overstates Kansas tax by $125 per taxpayer or spouse for childless filers aged 55-64 under the AGI limit, 2017-2024.
+
+### T45. Kansas food sales tax credit applied before the EITC
+
+The K-40 (2018, 2020 and 2022 booklets, lines 16-19) takes the earned income tax credit first -- line 17, limited to the
+line 16 tax balance, with the remainder refunded on line 25 -- then the food sales tax credit on line 18, and line 19
+"cannot be less than zero". A refundable EITC that already covers the tax therefore leaves nothing for the nonrefundable
+food credit. TAXSIM-35 nets the food credit against tax before the EITC: head-of-household EITC claimants with a child
+(2019 records 27516, 66438) show our liability $249-250 above TAXSIM's, the credit TAXSIM applied to tax the EITC had
+absorbed. Effect: TAXSIM understates Kansas tax by up to $125 per qualified exemption for low-income EITC claimants.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income

@@ -2517,6 +2517,11 @@ test_state_calc = function() {
   run_case('KS', 2025, list(age1 = 56, agi = 20000),
            expect = list(st_percap_credit = 0),
            label = 'KS-F5 2025 food credit gone')
+  # KS-F3b: the same childless under-55 single qualifies through the disabled
+  # prong once the disabled1 optional data column is live (S43 overlay)
+  run_case('KS', 2020, list(age1 = 30, agi = 20000, disabled1 = TRUE),
+           expect = list(st_percap_credit = 125),
+           label = 'KS-F3b 2020 food credit: disabled prong live via the overlay')
   # KS-F6: ordering without an EITC -- a 60-year-old single at AGI 20,000
   # (2020 TI 20,000 - 3,000 - 2,250 = 14,750 -> 3.1% x 14,750 = 457.25,
   # i.e. 457.25 of tax) takes the full $125 against tax: 332.25
@@ -2922,6 +2927,11 @@ test_state_calc = function() {
                             sole_prop = -5000, gross_ss = 5000, txbl_ss = 0),
            expect = list(st_lictr = 55),
            label = 'NM-L7 2021 LICTR: losses un-netted and nontaxable SS added to MGI')
+  # NM-L8: TANF/SSI/child support enter MGI once hh_resources_inc is live:
+  # 2024 single, AGI 5,000 + 25,000 of resources = 30,000, one exemption
+  run_case('NM', 2024, list(agi = 5000, wages1 = 5000, ei1 = 5000, hh_resources_inc = 25000),
+           expect = list(st_lictr = 44),
+           label = 'NM-L8 2024 LICTR: household resources live via the overlay')
 
   run_case('NM', 2019,
            list(agi = 28000, wages1 = 28000, ei1 = 28000, std_ded = 12200),
@@ -3295,6 +3305,11 @@ test_state_calc = function() {
   run_case('OK', 2022, list(age1 = 40, agi = 15000, gross_ss = 6000, txbl_ss = 0),
            expect = list(st_percap_credit = 0),
            label = 'OK-S4 2022 sales tax relief: nontaxable Social Security counts')
+  # OK-S5: nontaxable household resources (public assistance, child support)
+  # count once the hh_resources_inc optional column is live: 15,000 + 6,000
+  run_case('OK', 2022, list(age1 = 40, agi = 15000, hh_resources_inc = 6000),
+           expect = list(st_percap_credit = 0),
+           label = 'OK-S5 2022 sales tax relief: household resources live via the overlay')
 
   run_case('OK', 2017, ok_single_100k,
            expect = list(st_txbl_inc = 100000, liab_st_iit = 4811.50),
