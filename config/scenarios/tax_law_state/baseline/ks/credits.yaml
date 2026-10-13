@@ -26,25 +26,54 @@ cdctc_refundable:
   value: 0
   reference: 'K-40 line 14 reduces tax; no refundable line (unlike the EITC)'
 
+# FOOD SALES TAX CREDIT (K.S.A. 79-32,271; K-40 "Food sales tax credit"
+# line, 2017-2024 booklets): $125 per qualified exemption -- taxpayer,
+# spouse and dependents UNDER 18 (no HoH extra exemption) -- NONREFUNDABLE,
+# for full-year residents with federal AGI of $30,615 or less who are (a) 55
+# or older all year, (b) blind or disabled, or (c) have a dependent child
+# under 18 living in the home. Encoded 2026-10-13 on the generic per-person
+# credit with its eligibility gate: percap_income_limit 0 makes eligibility a
+# requirement, the eligible ceiling is the AGI limit, dependents count under
+# 18, and the disabled prong reads the disabled1/2 optional data flag
+# (decision S43; inert until a producer publishes it -- blind is a separate
+# prong and is NOT used as a proxy, so blind-only claimants are missed).
+# Age is year-end age, so "55 all year" is approximated by age >= 55 at
+# year end [small overstatement for filers turning 55 during the year].
+# Ends TY2025 (2025 booklet drops the line; food sales tax fully phased out
+# 1/1/2025 per HB 2106). TAXSIM and PE model it.
+percap_amount:
+  value:
+    '2017': 125
+    '2025': 0
+  reference: 'K.S.A. 79-32,271; K-40 food sales tax credit line and the 2017/2021/2024 booklet worksheets ($125 per qualified exemption); absent from the 2025 booklet'
+percap_refundable:
+  value: 0
+  reference: 'K.S.A. 79-32,271 (2013+): nonrefundable, limited to tax liability; 2017-2024 booklets'
+percap_income_limit:
+  value: 0
+  reference: 'K.S.A. 79-32,271: no credit unless the taxpayer is 55+, blind/disabled, or has a dependent child under 18 (the eligible ceiling below applies to those units; everyone else gets zero)'
+percap_income_limit_elig:
+  value: 30615
+  reference: 'K.S.A. 79-32,271 and the 2017-2024 booklets: federal adjusted gross income of $30,615 or less (fixed in statute, not indexed)'
+percap_elig_age:
+  value: 55
+  reference: 'K.S.A. 79-32,271: "55 years of age or older" (year-end age proxies "all year")'
+percap_elig_child_age:
+  value: 18
+  reference: 'K.S.A. 79-32,271: a dependent child under 18 who resided with the taxpayer the entire year (residence unobserved; dependent status proxies it)'
+percap_elig_disabled:
+  value: 1
+  reference: 'K.S.A. 79-32,271: totally and permanently disabled or blind -- reads the disabled1/2 optional data flag (S43); zero until published'
+percap_dep_max_age:
+  value: 18
+  reference: 'K.S.A. 79-32,271: "qualified exemption" counts dependents under 18 only'
+percap_after_eitc:
+  value: 1
+  reference: 'K-40 (2022 booklet ip22) lines 17-19: line 17 = the Kansas EITC up to the line 16 balance (remainder refunded on line 23), line 18 = food sales tax credit, line 19 = 16 - 17 - 18 "cannot be less than zero"; 79-32,271: taken after all other credits, nonrefundable, no carryforward. Cross-model 2026-10-13: every PE -250/-375 residual was an EITC claimant whose EITC exceeded the tax'
+
 # Documented-not-modeled credits:
-#   - FOOD SALES TAX CREDIT (K.S.A. 79-32,271): $125 per qualified exemption
-#     (taxpayer, spouse, dependents UNDER 18; no HoH extra exemption),
-#     NONREFUNDABLE, full-year residents with federal AGI <= $30,615, gated
-#     on (55+ all year) OR (blind/disabled) OR (dependent child under 18 in
-#     the home). The percap/exempt_credit machinery has no age-55/disabled/
-#     child eligibility gate, and encoding without the gate would wrongly
-#     pay young childless singles (a large low-AGI class) -- omitted.
-#     Materiality: <= $125 x exemptions, capped at remaining liability;
-#     ~O($10M)/yr statewide. Ends TY2025 (2025 booklet drops the line; food
-#     sales tax fully phased out 1/1/2025 per HB 2106). TAXSIM and PE model
-#     it -> pre-registered cross-model wedge 2017-2024.
 #   - Credit for taxes paid to another state (out-of-state income
 #     unobservable); Pregnancy Resource Act credit (2024+); adoption,
 #     historic preservation, community service (K-60), and other Schedule
 #     K-xx business credits.
 documented_not_modeled:
-  food_sales_tax_credit_amount:
-    value:
-      '2017': 125
-      '2025': 0
-    reference: 'K.S.A. 79-32,271; 2017/2021/2024 booklets ($125/exemption, AGI <= $30,615, 55+/disabled/child-under-18 gates, nonrefundable); absent from the 2025 booklet'

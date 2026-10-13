@@ -184,11 +184,14 @@ ignore it, exactly the inert-configuration failure the validator exists to
 prevent. Generalization is ~6 lines (`st_family_matrix` over discovered
 elements + the existing `st_band_index_upper` helper).
 
-`credit_tables.csv` was considered and REJECTED for both the child credit and
-LICTR: `lookup_state_credit_table` is called only for four credit_ids, and
-routing the child credit through `independent_earned_income` would impose an
+`credit_tables.csv` was considered and REJECTED for the child credit:
+routing it through `independent_earned_income` would impose an
 earned-income eligibility gate NM's credit does not have, mislabel the result
-`st_earned_credit`, and key the band on earned income rather than AGI.
+`st_earned_credit`, and key the band on earned income rather than AGI. For
+LICTR the objection was the caller, not the format: since 2026-10-13 the
+rebate IS a dense table (`credit_tables.csv`, credit_id `lictr`) read by its
+own `st_lictr` block in `st_credits_household.R`, modeled on the Maine sales
+tax fairness credit.
 
 ## Worksheet tests drafted (hand-verified)
 
@@ -210,12 +213,21 @@ Ours: the duplicated federal standard deduction (Decision 1); SALT addback
 pro-rating (the form pro-rates capped SALT between property and income taxes,
 we let property fill the cap first — exact whenever total SALT is under the
 cap, i.e. most post-2018 itemizers); the linearized aged-exemption phase-out;
-the omitted $4,000 dependent deduction; child credit tiers 4-7; **LICTR not
-modeled** (up to $819 refundable, keyed to a 25-band MODIFIED GROSS INCOME
-table crossed with exemption count — MGI adds TANF/SSI/general assistance/child
-support/gifts/inheritances/VA benefits/scholarships and forbids loss netting,
-none observable; **expect this to dominate the PE comparison for low-income NM
-records**); the medical care expense DEDUCTION (25/15/10% of unreimbursed
+the omitted $4,000 dependent deduction; child credit tiers 4-7; **LICTR
+ENCODED 2026-10-13** (7-2-14; PIT-RC Table 1 is 23 MGI bands x exemption
+columns 1-6+, not 25 bands, in five vintages -- 2017-20 max $450, 2021-22
+$730 after HB 291 / Laws 2021 ch. 116, then CPI-indexed amounts 2023 $790,
+2024 $819, 2025 $839; transcribed from the TY2017-2025 PIT-RC instructions
+on the NBER mirror and checked cell-by-cell against the statutory tables).
+Modified gross income adds nontaxable Social Security, exempt interest and
+the positive part of every loss (observable) and TANF/SSI/general
+assistance/child support/gifts/VA benefits/scholarships through the
+`hh_resources_inc` optional data column (S43; zero until published, so the
+modeled rebate is OVERSTATED for transfer recipients); the exemption key is
+taxpayers + dependents + 2 per 65+ filer + 1 per blind filer; MFS takes one
+half on an own-return proxy; six-month presence and the inmate rule are
+assumed met. Tests NM-L1..L7. **Expect the remaining PE divergence for
+low-income NM records to be the unobserved MGI items**; the medical care expense DEDUCTION (25/15/10% of unreimbursed
 expenses, 2017-2024, base unobservable); property tax rebate, child day care
 credit, $2,800 65+ medical credit, blind branch of 7-2-5.2, armed-forces
 retirement exemption (2022+ $10k/$20k/$30k), 100-year exemption; own-state muni

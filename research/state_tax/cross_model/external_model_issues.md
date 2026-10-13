@@ -1291,6 +1291,34 @@ rerun (2026-10-09), 2025 record 157169 (head of household, $102,555 of other inc
 miscellaneous income): `ms_agi` 607,494 against federal AGI 710,048 with no Mississippi adjustment. Effect:
 PolicyEngine understates Mississippi tax by the state rate times those incomes.
 
+### P34. Massachusetts household dependent / child and family credit paid to married-filing-separately filers
+
+`ma_child_and_family_credit` (the $180/$360 Household Dependent Tax Credit for TY2021-22; the $310/$440 Child and
+Family Tax Credit from TY2023) counts dependents under 12, 65 or over, or disabled, caps the count at two for 2021-22,
+and takes the greater of that and the Dependent Care Tax Credit -- with no filing-status test. M.G.L. c. 62 s. 6(y), as
+inserted by St. 2021 c. 24 s. 29, allows a married taxpayer the credit only on a joint return or as head of household
+under IRC s. 2(b); the 2021 and 2022 Form 1 instructions for line 46 say "You cannot claim this credit if married
+filing a separate return", and the 2024 booklet (p. 15) bars the CFTC to married filing separately. Record-level
+comparison (2026-10-13): every +180 residual in 2022 (22 records, 15 clean, e.g. 98396, 276512, 40285, 21512, 87632
+with an 80-year-old dependent) is a separate filer with one qualifying dependent; 2021 shows the same pattern (2670,
+342959, 372511) under the Chapter 62F exclusion. Effect: PolicyEngine overpays separate filers by $180 per qualifying
+dependent (max $360) in 2021-22 and by $310/$440 per child from 2023.
+
+### P35. New Mexico modified gross income omits partnership, S-corporation, farm, estate and other income
+
+`nm_modified_gross_income` sums a source list that floors each source at zero (correct: NMSA 7-2-2(L) "undiminished by
+losses", PIT-RC line 8 "If a loss, enter zero") but omits the distributive share of partnership and S-corporation
+income, farm income, estate and trust income and miscellaneous income, all of which 7-2-2(L) and PIT-RC lines 8-12
+include ("all other income"). PolicyEngine therefore understates MGI and overpays the Low Income Comprehensive Tax
+Rebate (7-2-14) for low-income records with those sources, by one or more table bands. Exposed 2026-10-13 when the
+rebate was encoded on our side; record-level pulls in `scratchpad` of that date.
+
+### P36. New Mexico LICTR table, TY2023, five exemptions, $14,501-16,500
+
+`parameters/gov/states/nm/tax/income/rebates/low_income_comprehensive/five_exemptions.yaml` (line 112) carries 305 for
+the TY2023 $14,501-16,500 band; the published PIT-RC Table 1 (PITbook2023) row reads 308. The other 275 cells of every
+2021-2025 vintage match the published tables cell for cell. De minimis.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

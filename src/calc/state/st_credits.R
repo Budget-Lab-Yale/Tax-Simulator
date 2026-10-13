@@ -12,6 +12,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
+                                'st_care_credit', 'st_lictr',
                                 'st_marriage_credit', 'st_twoearner_credit',
                                 'st_item_credit', 'st_char_credit', 'st_stfc',
                                 'st_credits_nonref', 'st_credits_ref')
@@ -134,6 +135,10 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'filing_status',     # (int)  filing status (1 single, 2 MFJ, 3 MFS, 4 HoH)
     'dep_status',        # (bool) whether filer is a dependent
     'age1',              # (int)  age of primary filer
+    'disabled1',         # (lgl)  optional data; schema default FALSE (percap eligibility)
+    'disabled2',         # (lgl)  optional data; schema default FALSE
+    'hh_resources_inc',  # (dbl)  optional data; schema default 0 (nontaxable household income)
+    'dep_disabled_n',    # (int)  optional data; schema default 0 (disabled dependents, care credit)
     'age2',              # (int)  age of secondary filer (NA if none)
     'blind1',            # (bool) whether primary filer is blind
     'blind2',            # (bool) whether secondary filer is blind
@@ -142,6 +147,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'wages1',            # (dbl)  primary wages for zero-income child credits
     'wages2',            # (dbl)  secondary wages for zero-income child credits
     'sole_prop',         # (dbl)  Schedule C income/loss
+    'rent_loss',         # (dbl)  rental loss component (NM LICTR modified gross income)
+    'part_active_loss',  # (dbl)  active partnership loss component (NM LICTR)
+    'part_passive_loss', # (dbl)  passive partnership loss component (NM LICTR)
     'sch_e',             # (dbl)  Schedule E income/loss
     'farm',              # (dbl)  Schedule F income/loss
     'txbl_int',          # (dbl)  taxable interest (earned-credit investment test)
@@ -194,6 +202,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.cdctc_ref_agi_limit',  # (dbl) federal AGI at or below which it is refundable (LA $25,000)
     'st_credits.cdctc_ref_excess_only', # (0/1) only the excess over pre-credit state tax is refundable (MD 21B)
     'st_credits.percap_refundable',
+    'st_credits.lictr_refundable',
     'st_credits.stfc_refundable',
     'st_credits.mc_style',
     'st_credits.mc_min_lesser_income',
@@ -504,6 +513,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_ctc           = child$st_ctc,
     st_dep_credit    = child$st_dep_credit,
     st_cdctc         = care$st_cdctc,
+    st_care_credit   = care$st_care_credit,
     st_family_credit = st_family_credit,
     st_exempt_credit = hh$st_exempt_credit,
     st_earned_credit = earn$st_earned_credit,
@@ -522,13 +532,19 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_item_credit    = st_item_credit,
     st_char_credit    = st_char_credit,
     st_stfc           = hh$st_stfc,
+    st_lictr          = hh$st_lictr,
     st_lic            = st_lic,
     st_kg_credit      = st_kg_credit,
     st_step_credit    = st_step_credit,
     st_pov_credit     = earn$st_pov_credit,
     st_elderly_credit = st_elderly_credit,
 
-    st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
+    # Nonrefundable credits other than the per-person credit, which may be
+    # ordered AFTER the EITC (percap_after_eitc; KS K-40 lines 17-19): it then
+    # takes only the tax left after every other nonrefundable credit and the
+    # EITC, so a refundable EITC that already covers the tax leaves it nothing
+    st_credits_nonref_other =
+                        hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
                         earn$st_cli + hh$st_ded_credit + senior$st_age_credit +
                         senior$st_retire_credit + senior$st_senior_credit +
@@ -536,16 +552,26 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_twoearner_credit + st_item_credit +
                         st_char_credit + st_lic + st_kg_credit + st_step_credit +
                         earn$st_pov_credit +
-                        hh$st_percap_credit *
-                          (1 - tax_unit$st_credits.percap_refundable) +
                         hh$st_stfc *
                           (1 - tax_unit$st_credits.stfc_refundable) +
+                        care$st_care_credit *
+                          (1 - tax_unit$st_credits.care_credit_refundable) +
+                        hh$st_lictr * (1 - tax_unit$st_credits.lictr_refundable) +
                         st_eitc * (1 - earn$st_eitc_ref_share) +
                         child$st_ctc *
                           (1 - tax_unit$st_credits.ctc_refundable) +
                         earn$st_earned_credit *
                           (1 - tax_unit$st_credits.earned_credit_refundable) +
                         cdctc_nonref_part,
+    st_percap_nonref  = if_else(
+                          tax_unit$st_credits.percap_after_eitc == 1,
+                          pmin(hh$st_percap_credit *
+                                 (1 - tax_unit$st_credits.percap_refundable),
+                               pmax(0, tax_unit$st_tax_pre_credit -
+                                       st_credits_nonref_other - st_eitc)),
+                          hh$st_percap_credit *
+                            (1 - tax_unit$st_credits.percap_refundable)),
+    st_credits_nonref = st_credits_nonref_other + st_percap_nonref,
     st_credits_ref    = st_eitc * earn$st_eitc_ref_share +
                         child$st_ctc * tax_unit$st_credits.ctc_refundable +
                         earn$st_earned_credit *
@@ -554,7 +580,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         cdctc_ref_part + st_elderly_credit +
                         hh$st_percap_credit *
                           tax_unit$st_credits.percap_refundable +
-                        hh$st_stfc * tax_unit$st_credits.stfc_refundable
+                        hh$st_stfc * tax_unit$st_credits.stfc_refundable +
+                        care$st_care_credit * tax_unit$st_credits.care_credit_refundable +
+                        hh$st_lictr * tax_unit$st_credits.lictr_refundable
   ) %>%
     select(all_of(return_vars$calc_st_credits)) %>%
     return()

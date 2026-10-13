@@ -62,8 +62,9 @@ echo ""
 SBATCH_COMMON="--partition=day -c 1"
 # Memory per year-task (Phases 1-2) and per aggregation task (3a-4). The
 # defaults suit a federal-only subsample; a full-sample states=all run OOM-
-# killed at 16G (2026-10-13), so override from the environment, e.g.
-#   TAXSIM_SLURM_MEM=96G bash slurm_run.sh ...
+# killed at 16G (2026-10-13); the measured peak for a full-sample, 51-state
+# year task was 27 GB (sacct MaxRSS, TY2022-25), so 48G is a safe override:
+#   TAXSIM_SLURM_MEM=48G bash slurm_run.sh ...
 MEM_WORKER="${TAXSIM_SLURM_MEM:-16G}"
 MEM_AGG="${TAXSIM_SLURM_MEM_AGG:-16G}"
 

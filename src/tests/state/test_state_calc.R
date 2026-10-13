@@ -724,14 +724,20 @@ test_state_calc = function() {
   # the selected schedule into the per-state calculator.
   ca_law = law %>% filter(state == 'CA')
   attr(ca_law, 'credit_tables') = credit_tables
+  ca_unit = st_test_unit(list(
+    id = 1, year = 2025, agi = 9825, ei1 = 9825, n_dep = 2,
+    n_dep_eitc = 2, dep_age1 = 7, dep_age2 = 8
+  ))
+  # CA's conformity group 2 is ready (S44) and references the enacted
+  # federal baseline, so under baseline law its reference context IS the
+  # scenario context: hand the unit in as the group-2 context, as run.R
+  # would after build_state_reference_contexts()
   ca_total = get_state_totals(
-    tax_units_calc = st_test_unit(list(
-      id = 1, year = 2025, agi = 9825, ei1 = 9825, n_dep = 2,
-      n_dep_eitc = 2, dep_age1 = 7, dep_age2 = 8
-    )),
+    tax_units_calc = ca_unit,
     state_tax_law = ca_law,
     state_weights = tibble(id = 1, state = 'CA', weight = 1),
-    yr = 2025
+    yr = 2025,
+    state_tax_contexts = list('2' = ca_unit)
   )
   stopifnot(
     'CA-7 aggregate table integration failed' =
@@ -2487,6 +2493,37 @@ test_state_calc = function() {
   # KS-1: 2017 SB 30 retroactive schedule, single top bracket. TI =
   # 40,000 - 3,000 - 2,250 = 34,750 -> 1,170 + 5.2% x 4,750 = 1,417
   # (2017 worksheet: 5.2% x 34,750 - 390 = 1,417)
+  # KS-F1..F4 (2026-10-13): food sales tax credit (79-32,271) on the generic
+  # per-person credit with the eligibility gate. F1: 2020 MFJ, filer 60, one
+  # dependent aged 10, AGI 25,000 -> 3 qualified exemptions x $125 = 375,
+  # nonrefundable. F2: the same couple at AGI 30,616 is $1 over the ceiling.
+  # F3: a childless 30-year-old single at AGI 20,000 fails the gate. F4: a
+  # dependent aged 19 does not count (under-18 rule) but a 56-year-old filer
+  # still qualifies; and TY2025 pays nothing.
+  run_case('KS', 2020, list(filing_status = 2, age1 = 60, age2 = 58, agi = 25000,
+                            n_dep = 1, dep_age1 = 10),
+           expect = list(st_percap_credit = 375),
+           label = 'KS-F1 2020 food sales tax credit, 3 exemptions')
+  run_case('KS', 2020, list(filing_status = 2, age1 = 60, age2 = 58, agi = 30616,
+                            n_dep = 1, dep_age1 = 10),
+           expect = list(st_percap_credit = 0),
+           label = 'KS-F2 2020 food credit: AGI one dollar over $30,615')
+  run_case('KS', 2020, list(age1 = 30, agi = 20000),
+           expect = list(st_percap_credit = 0),
+           label = 'KS-F3 2020 food credit: childless under-55 single ineligible')
+  run_case('KS', 2020, list(age1 = 56, agi = 20000, n_dep = 1, dep_age1 = 19),
+           expect = list(st_percap_credit = 125),
+           label = 'KS-F4 2020 food credit: 56-year-old qualifies, 19-year-old dependent does not count')
+  run_case('KS', 2025, list(age1 = 56, agi = 20000),
+           expect = list(st_percap_credit = 0),
+           label = 'KS-F5 2025 food credit gone')
+  # KS-F6: ordering without an EITC -- a 60-year-old single at AGI 20,000
+  # (2020 TI 20,000 - 3,000 - 2,250 = 14,750 -> 3.1% x 14,750 = 457.25,
+  # i.e. 457.25 of tax) takes the full $125 against tax: 332.25
+  run_case('KS', 2020, list(age1 = 60, agi = 20000),
+           expect = list(st_percap_credit = 125, liab_st_iit = 332.25),
+           label = 'KS-F6 2020 food credit nets against tax when no EITC precedes it')
+
   run_case('KS', 2017, list(agi = 40000),
            expect = list(st_agi = 40000, st_txbl_inc = 34750,
                          liab_st_iit = 1417.00),
@@ -2515,7 +2552,11 @@ test_state_calc = function() {
   # KS-4/KS-4b: 2021 HoH SS $75k cliff pair + 17% refundable EITC.
   # Under: AGI 25,000 -> subtract taxable SS 5,000; TI = 20,000 - 6,000 -
   # (4,500 HoH base+addl + 2 x 2,250) = 5,000 -> 77.50 + 3.1% x 2,500 =
-  # 155; EITC 17% x 5,000 = 850 refundable -> -695.
+  # 155; EITC 17% x 5,000 = 850 refundable -> -695. The food sales tax
+  # credit (3 exemptions x $125 = 375, nonrefundable) is computed but
+  # ORDERED AFTER the EITC (K-40 lines 17-19): the EITC already covers the
+  # 155 of tax, so the food credit applies to nothing and the refund stays
+  # 850 - 155 = 695.
   # Over: AGI 76,000 -> no subtraction; TI = 61,000 -> 1,252.50 + 5.7% x
   # 31,000 = 3,019.50
   run_case('KS', 2021,
@@ -2523,8 +2564,8 @@ test_state_calc = function() {
                 gross_ss = 6000, n_dep = 2, dep_age1 = 8, dep_age2 = 10,
                 ei1 = 20000, wages1 = 20000, eitc = 5000),
            expect = list(st_agi = 20000, st_txbl_inc = 5000, st_eitc = 850,
-                         liab_st_iit = -695.00),
-           label = 'KS-4 2021 HoH: SS subtraction under the cliff + 17% EITC')
+                         st_percap_credit = 375, liab_st_iit = -695.00),
+           label = 'KS-4 2021 HoH: SS subtraction under the cliff + 17% EITC; food credit ordered after')
   run_case('KS', 2021,
            list(filing_status = 4, agi = 76000, txbl_ss = 5000,
                 gross_ss = 6000, n_dep = 2, dep_age1 = 8, dep_age2 = 10),
@@ -2848,6 +2889,40 @@ test_state_calc = function() {
   # one exemption. Taxable 28,000 - 12,200 - 1,300 = 14,500, on the four-bracket
   # 2017-2020 schedule: 5,500 x 1.7% = 93.50, 5,500 x 3.2% = 176.00,
   # 3,500 x 4.7% = 164.50
+  # NM-L1..L6 (2026-10-13): Low Income Comprehensive Tax Rebate (7-2-14),
+  # PIT-RC Table 1, values transcribed from the TY2017-2025 instructions.
+  # L1: 2024 single, MGI 5,000, one exemption -> 246. L2: 2024 MFJ with two
+  # dependents (four exemptions), MGI 20,000 -> 185. L3: 2024 single aged 70
+  # (1 + 2 aged exemptions), MGI 5,000 -> 454. L4: married filing separately
+  # takes one-half of L1. L5: MGI above the $36,000 ceiling -> 0. L6: 2017
+  # vintage, single, MGI 5,000 -> 125; nontaxable Social Security and a
+  # Schedule C loss count toward MGI (2021 MFJ: federal AGI 20,000 already
+  # nets a 5,000 Schedule C loss, which MGI adds back, plus 5,000 nontaxable
+  # SS -> MGI 30,000, two exemptions -> 55).
+  run_case('NM', 2024, list(agi = 5000, wages1 = 5000, ei1 = 5000),
+           expect = list(st_lictr = 246),
+           label = 'NM-L1 2024 LICTR single, one exemption')
+  run_case('NM', 2024, list(filing_status = 2, age2 = 40, agi = 20000, wages1 = 20000, ei1 = 20000,
+                            n_dep = 2, n_dep_ctc = 2, dep_age1 = 4, dep_age2 = 9),
+           expect = list(st_lictr = 185),
+           label = 'NM-L2 2024 LICTR joint with two dependents')
+  run_case('NM', 2024, list(age1 = 70, agi = 5000, txbl_pens_dist = 5000),
+           expect = list(st_lictr = 454),
+           label = 'NM-L3 2024 LICTR aged filer adds two exemptions')
+  run_case('NM', 2024, list(filing_status = 3, agi = 5000, wages1 = 5000, ei1 = 5000),
+           expect = list(st_lictr = 123.0),
+           label = 'NM-L4 2024 LICTR married filing separately takes half')
+  run_case('NM', 2024, list(agi = 40000, wages1 = 40000, ei1 = 40000),
+           expect = list(st_lictr = 0),
+           label = 'NM-L5 2024 LICTR above the ceiling')
+  run_case('NM', 2017, list(agi = 5000, wages1 = 5000, ei1 = 5000),
+           expect = list(st_lictr = 125),
+           label = 'NM-L6 2017 LICTR pre-HB 291 table')
+  run_case('NM', 2021, list(filing_status = 2, age2 = 40, agi = 20000, wages1 = 25000, ei1 = 25000,
+                            sole_prop = -5000, gross_ss = 5000, txbl_ss = 0),
+           expect = list(st_lictr = 55),
+           label = 'NM-L7 2021 LICTR: losses un-netted and nontaxable SS added to MGI')
+
   run_case('NM', 2019,
            list(agi = 28000, wages1 = 28000, ei1 = 28000, std_ded = 12200),
            expect = list(st_exempt = 1300, st_txbl_inc = 14500,
@@ -2970,12 +3045,14 @@ test_state_calc = function() {
   # senior provisions bite at once: the SS cliff exempts all 6,000, and the
   # aged deduction pays 8,000 - (24,000 - 20,500) = 4,500. st_agi
   # 24,000 - 6,000 - 4,500 = 13,500. LMI 2,500 - 0.15 x 4,000 = 1,900.
-  # Taxable 13,500 - 12,950 - 1,900 floors at zero
+  # Taxable 13,500 - 12,950 - 1,900 floors at zero. Since 2026-10-13 the
+  # LICTR pays too: MGI 24,000 + 1,000 nontaxable SS = 25,000 with three
+  # exemptions (one plus two for age 65+) -> $115 refundable (2021-22 table)
   run_case('NM', 2022,
            list(age1 = 68, agi = 24000, wages1 = 18000, ei1 = 18000,
                 txbl_ss = 6000, gross_ss = 7000, std_ded = 12950),
            expect = list(st_agi = 13500, st_exempt = 1900, st_txbl_inc = 0,
-                         liab_st_iit = 0),
+                         st_lictr = 115, liab_st_iit = -115),
            law_overrides = list(st_ded.std_amount = 12950),
            label = 'NM-5 2022 SS cliff and aged deduction ramp together')
 
@@ -3200,6 +3277,25 @@ test_state_calc = function() {
   # $4,562 (2022-2025) and -- for the not-yet-published 2026 schedule -- an
   # expected $4,285
   ok_single_100k = list(agi = 107350, wages1 = 107350, ei1 = 107350)
+  # OK-S1..S4 (2026-10-13): sales tax relief credit (68 O.S. 5011) on the
+  # generic per-person credit. S1: single, 30, AGI 15,000 -> $40 refundable.
+  # S2: AGI 25,000 with no dependent exceeds the $20,000 base ceiling. S3:
+  # the same AGI with one dependent uses the $50,000 ceiling -> 2 x $40.
+  # S4: nontaxable Social Security counts toward household income (AGI
+  # 15,000 + 6,000 nontaxable SS = 21,000 > 20,000 for a 40-year-old).
+  run_case('OK', 2022, list(age1 = 30, agi = 15000),
+           expect = list(st_percap_credit = 40),
+           label = 'OK-S1 2022 sales tax relief credit, single')
+  run_case('OK', 2022, list(age1 = 30, agi = 25000),
+           expect = list(st_percap_credit = 0),
+           label = 'OK-S2 2022 sales tax relief: over $20,000 without a dependent')
+  run_case('OK', 2022, list(filing_status = 4, age1 = 30, agi = 25000, n_dep = 1, dep_age1 = 6),
+           expect = list(st_percap_credit = 80),
+           label = 'OK-S3 2022 sales tax relief: $50,000 ceiling with a dependent')
+  run_case('OK', 2022, list(age1 = 40, agi = 15000, gross_ss = 6000, txbl_ss = 0),
+           expect = list(st_percap_credit = 0),
+           label = 'OK-S4 2022 sales tax relief: nontaxable Social Security counts')
+
   run_case('OK', 2017, ok_single_100k,
            expect = list(st_txbl_inc = 100000, liab_st_iit = 4811.50),
            label = 'OK-1 2017 single schedule reproduces the $4,812 constant')
@@ -3319,11 +3415,14 @@ test_state_calc = function() {
   # nothing (7,000 - 6,350 - 1,000 floors at zero), so the 5% of a 500 federal
   # credit is worth nothing in 2019 and pays out in 2022
   ok_eitc_unit = list(agi = 7000, wages1 = 7000, ei1 = 7000, eitc = 500)
+  # Since 2026-10-13 the $40 sales tax relief credit (538-S, refundable,
+  # household income under $20,000) also pays on this unit
   run_case('OK', 2019, ok_eitc_unit,
-           expect = list(st_eitc = 25, st_txbl_inc = 0, liab_st_iit = 0),
-           label = 'OK-7 2019 EITC nonrefundable, worth nothing at zero tax')
+           expect = list(st_eitc = 25, st_txbl_inc = 0, st_percap_credit = 40,
+                         liab_st_iit = -40),
+           label = 'OK-7 2019 EITC nonrefundable, worth nothing at zero tax; 538-S pays $40')
   run_case('OK', 2022, ok_eitc_unit,
-           expect = list(st_eitc = 25, liab_st_iit = -25),
+           expect = list(st_eitc = 25, st_percap_credit = 40, liab_st_iit = -65),
            label = 'OK-7b 2022 HB 2962 restored refundability')
 
   # OK-8 Social Security comes out in full, with no age or income test. A
@@ -5092,6 +5191,38 @@ run_case('AR', 2024,
                 n_dep = 1, dep_age1 = 5, care_exp = 5000),
            expect = list(st_ded = 2000),
            label = 'MA-13 2021 care deductions no longer exist')
+
+  # MA-14..MA-18 (2026-10-13): TY2021-22 Dependent Care Tax Credit (line 45)
+  # and Household Dependent Tax Credit (line 46), refundable, exclusive per
+  # return. MA-14: HoH, one child aged 5, $1,000 expenses, earned income
+  # 30,000 -> DCTC min(1000, 240, 30000) = 240 beats HDTC 180. MA-15: no
+  # expenses -> HDTC 180. MA-16: two children (5, 8), $5,000 expenses ->
+  # 480. MA-17: married filing separately barred. MA-18: a 70-year-old
+  # dependent counts for the HDTC; gone in 2023.
+  run_case('MA', 2021, list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 1000),
+           expect = list(st_care_credit = 240),
+           label = 'MA-14 2021 dependent care credit, one child')
+  run_case('MA', 2021, list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 0),
+           expect = list(st_care_credit = 180),
+           label = 'MA-15 2021 household dependent credit without expenses')
+  run_case('MA', 2022, list(filing_status = 2, age2 = 38, agi = 80000, wages1 = 50000, wages2 = 30000,
+                            ei1 = 50000, ei2 = 30000, n_dep = 2, n_dep_ctc = 2,
+                            dep_age1 = 5, dep_age2 = 8, care_exp = 5000),
+           expect = list(st_care_credit = 480),
+           label = 'MA-16 2022 dependent care credit, two children')
+  run_case('MA', 2021, list(filing_status = 3, agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 1000),
+           expect = list(st_care_credit = 0),
+           label = 'MA-17 2021 care credits barred to married filing separately')
+  run_case('MA', 2022, list(agi = 30000, wages1 = 30000, ei1 = 30000, n_dep = 1, dep_age1 = 70),
+           expect = list(st_care_credit = 180),
+           label = 'MA-18 2022 household dependent credit for a dependent aged 65+')
+  run_case('MA', 2023, list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 1000),
+           expect = list(st_care_credit = 0),
+           label = 'MA-19 2023 care credits replaced by the CFTC')
 
   #--------------------------------------------------------------------------
   # Oregon (Form OR-40)

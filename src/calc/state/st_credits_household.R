@@ -37,6 +37,25 @@ st_credits_household_req_vars = c(
   'st_credits.percap_amount',
   'st_credits.percap_aged_addl',
   'st_credits.percap_table_income_base',
+  'st_credits.percap_income_limit',
+  'st_credits.percap_income_limit_elig',
+  'st_credits.percap_elig_age',
+  'st_credits.percap_elig_child_age',
+  'st_credits.percap_elig_disabled',
+  'st_credits.percap_dep_max_age',
+  'st_credits.percap_add_nontax_ss',
+  'st_credits.percap_add_exempt_int',
+  'st_credits.percap_add_hh_resources',
+  'st_credits.percap_after_eitc',
+  'st_credits.lictr',
+  'st_credits.lictr_income_base',
+  'st_credits.lictr_add_nontax_ss',
+  'st_credits.lictr_add_exempt_int',
+  'st_credits.lictr_add_hh_resources',
+  'st_credits.lictr_unnet_losses',
+  'st_credits.lictr_aged_exemptions',
+  'st_credits.lictr_blind_exemptions',
+  'st_credits.lictr_mfs_share',
   'st_credits.stfc_income_base',
   'st_credits.stfc_add_nontax_ss',
   'st_credits.stfc_add_exempt_int'
@@ -227,16 +246,43 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # rows. The banded amount counts PERSONS -- self, spouse, dependents --
   # so the aged add-on does not multiply it (HI counts people, not
   # exemptions; the flat percap_aged_addl remains ID-only)
+  #
+  # Eligibility gate and income ceilings (KS food sales tax credit, OK sales
+  # tax relief credit; params_schema.yaml percap_* comment). The income
+  # concept adds nontaxable Social Security, exempt interest and the
+  # hh_resources_inc optional data column to the enum base where a state
+  # says so (OK's "gross household income"); dependents count only under
+  # percap_dep_max_age, from the observed age slots
   percap_table_income = st_income_base(
     tax_unit, tax_unit$st_credits.percap_table_income_base
   )
+  percap_income = percap_table_income +
+    tax_unit$st_credits.percap_add_nontax_ss *
+      pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
+    tax_unit$st_credits.percap_add_exempt_int * tax_unit$exempt_int +
+    tax_unit$st_credits.percap_add_hh_resources * tax_unit$hh_resources_inc
   percap_table_amt = lookup_state_credit_table(
     floor(percap_table_income + 0.5), rep(0L, n), credit_tables,
     'percap_credit', filing_status = tax_unit$filing_status
   )
-  st_percap_credit = (tax_unit$dep_status != 1) * (
+  dep_ages = cbind(tax_unit$dep_age1, tax_unit$dep_age2, tax_unit$dep_age3)
+  n_dep_under = function(max_age) {
+    if_else(is.infinite(max_age), as.numeric(tax_unit$n_dep),
+            rowSums(dep_ages < max_age, na.rm = TRUE))
+  }
+  percap_dep_count = n_dep_under(tax_unit$st_credits.percap_dep_max_age)
+  percap_elig =
+    tax_unit$age1 >= tax_unit$st_credits.percap_elig_age |
+    (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) &
+       tax_unit$age2 >= tax_unit$st_credits.percap_elig_age) |
+    n_dep_under(tax_unit$st_credits.percap_elig_child_age) > 0 |
+    (tax_unit$st_credits.percap_elig_disabled == 1 &
+       (coalesce(tax_unit$disabled1, FALSE) | coalesce(tax_unit$disabled2, FALSE)))
+  percap_limit = if_else(percap_elig, tax_unit$st_credits.percap_income_limit_elig,
+                                      tax_unit$st_credits.percap_income_limit)
+  st_percap_credit = (tax_unit$dep_status != 1) * (percap_income <= percap_limit) * (
     (tax_unit$st_credits.percap_amount + percap_table_amt) *
-      (n_taxpayers + tax_unit$n_dep) +
+      (n_taxpayers + percap_dep_count) +
     tax_unit$st_credits.percap_aged_addl * n_aged
   )
 
@@ -262,6 +308,49 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     'stfc', filing_status = tax_unit$filing_status
   )
 
+  #--------------------------------------------------------------------
+  # Low income comprehensive tax rebate from a dense table (NM PIT-RC
+  # Table 1, NMSA 7-2-14; params_schema.yaml lictr_* comment)
+  #--------------------------------------------------------------------
+
+  # Modified gross income: every household member's income from whatever
+  # source, undiminished by losses, taxable or not. The observable part is
+  # the enum base plus nontaxable Social Security, exempt interest and the
+  # positive part of each loss; public assistance, child support, gifts
+  # and the like come from the hh_resources_inc optional data column (S43;
+  # zero until published, which OVERSTATES eligibility for transfer
+  # recipients -- documented per state). The exemption key counts
+  # taxpayers, dependents and the per-65+/per-blind add-ons; the lookup
+  # caps the key at the table's "6 or more" column and returns zero above
+  # the top band. Negative MGI uses the first row (7-2-14(E))
+  lictr_opt_col = function(name) {
+    if (name %in% colnames(tax_unit)) coalesce(tax_unit[[name]], 0) else rep(0, n)
+  }
+  lictr_income = st_income_base(tax_unit, tax_unit$st_credits.lictr_income_base) +
+    tax_unit$st_credits.lictr_add_nontax_ss *
+      pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
+    tax_unit$st_credits.lictr_add_exempt_int * tax_unit$exempt_int +
+    tax_unit$st_credits.lictr_add_hh_resources * tax_unit$hh_resources_inc +
+    # "undiminished by losses" and with no deductions: add back each loss
+    # (the capital loss only to the $3,000 federal AGI actually nets) and
+    # the above-the-line adjustments. S-corp losses and above_ded are read
+    # optionally so synthetic test units without them still compute
+    tax_unit$st_credits.lictr_unnet_losses * (
+      pmax(0, -tax_unit$sole_prop) + pmax(0, -tax_unit$farm) +
+      pmin(3000, pmax(0, -(tax_unit$kg_lt + tax_unit$kg_st))) +
+      pmax(0, tax_unit$rent_loss) + pmax(0, tax_unit$part_active_loss) +
+      pmax(0, tax_unit$part_passive_loss) +
+      pmax(0, lictr_opt_col('scorp_active_loss')) +
+      pmax(0, lictr_opt_col('scorp_passive_loss')) +
+      pmax(0, lictr_opt_col('above_ded')))
+  lictr_key = as.integer(n_taxpayers + tax_unit$n_dep +
+                         tax_unit$st_credits.lictr_aged_exemptions * n_aged +
+                         tax_unit$st_credits.lictr_blind_exemptions * n_blind)
+  st_lictr = tax_unit$st_credits.lictr * (tax_unit$dep_status != 1) *
+    if_else(tax_unit$filing_status == 3, tax_unit$st_credits.lictr_mfs_share, 1) *
+    lookup_state_credit_table(floor(pmax(0, lictr_income) + 0.5), lictr_key,
+                              credit_tables, 'lictr')
+
   list(
     st_hh_credit       = st_hh_credit,
     st_exempt_credit   = st_exempt_credit,
@@ -270,6 +359,7 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     pct_credit_rate    = pct_credit_rate,
     prop_credit        = prop_credit,
     st_percap_credit   = st_percap_credit,
-    st_stfc            = st_stfc
+    st_stfc            = st_stfc,
+    st_lictr           = st_lictr
   )
 }

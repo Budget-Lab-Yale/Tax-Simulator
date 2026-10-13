@@ -297,6 +297,24 @@ scalars:
   st_ded.care_hh_member_amt: 0
   st_ded.care_hh_member_age_limit: -1
   st_ded.care_ded_mfs_ineligible: 0
+  # CARE CREDIT, the credit-side twin of the care deduction block above (MA
+  # TY2021-22 Dependent Care Tax Credit, c. 62 s. 6(x), and Household
+  # Dependent Tax Credit, s. 6(y); credits.yaml): expenses capped per
+  # qualifying child (age <= care_credit_age_limit, plus dep_disabled_n)
+  # and by the lesser earner's earned income, versus a flat amount per
+  # household member (under care_credit_hh_member_age_limit, or aged >=
+  # care_credit_hh_aged_min, or disabled), each count capped, the return
+  # taking the larger; married filing separately barred where flagged
+  st_credits.care_credit: 0
+  st_credits.care_credit_per_dep_cap: 0
+  st_credits.care_credit_dep_limit: 0
+  st_credits.care_credit_age_limit: -1
+  st_credits.care_credit_hh_member_amt: 0
+  st_credits.care_credit_hh_member_age_limit: -1
+  st_credits.care_credit_hh_aged_min: .inf
+  st_credits.care_credit_hh_limit: 0
+  st_credits.care_credit_mfs_ineligible: 0
+  st_credits.care_credit_refundable: 1
   # Employee payroll and self-employment taxes added to the state itemized
   # base (MO-A Part 2 lines 2-7)
   st_ded.item_add_payroll: 0
@@ -767,6 +785,56 @@ scalars:
   # The table amount adds to the flat percap_amount; a state without table
   # rows gets zero from the lookup
   st_credits.percap_table_income_base: 1
+  # Per-person credit ELIGIBILITY GATE and INCOME CEILINGS (KS food sales tax
+  # credit 79-32,271; OK sales tax relief credit 68 O.S. 5010-5012). A unit is
+  # "eligible" when a filer is at least percap_elig_age, or a dependent is
+  # under percap_elig_child_age (Inf = any dependent), or percap_elig_disabled
+  # is on and the disabled1/2 optional data flag is set. The ceiling on the
+  # percap income concept (percap_table_income_base plus the add-backs below)
+  # is percap_income_limit_elig for eligible units and percap_income_limit
+  # otherwise -- so a state whose credit REQUIRES eligibility (KS) sets
+  # percap_income_limit to 0 and the eligible ceiling to its AGI limit, and a
+  # state with a higher ceiling for the aged/dependents (OK) sets both.
+  # Dependents count only while under percap_dep_max_age (KS: 18); ages
+  # beyond the three dep_age slots are unobserved and such dependents do not
+  # count when a cap is set. The add-backs build a "household income" concept:
+  # nontaxable Social Security, exempt interest, and the hh_resources_inc
+  # optional data column (SSI/TANF/VA/child support; zero until a producer
+  # publishes it, decision S43)
+  st_credits.percap_income_limit: .inf
+  st_credits.percap_income_limit_elig: .inf
+  st_credits.percap_elig_age: .inf
+  st_credits.percap_elig_child_age: 0
+  st_credits.percap_elig_disabled: 0
+  st_credits.percap_dep_max_age: .inf
+  st_credits.percap_add_nontax_ss: 0
+  st_credits.percap_add_exempt_int: 0
+  st_credits.percap_add_hh_resources: 0
+  # Ordering: 1 = the nonrefundable per-person credit is taken AFTER the
+  # state EITC has been applied to tax (KS K-40 lines 17-19: EITC first,
+  # the food sales tax credit against what is left, "cannot be less than
+  # zero"), so an EITC that already covers the tax leaves no room for it
+  st_credits.percap_after_eitc: 0
+  # Low income comprehensive tax rebate (NM PIT-RC Table 1, NMSA 7-2-14): a
+  # refundable per-return amount from a dense table keyed by household
+  # "exemptions" (taxpayers + dependents + lictr_aged_exemptions per 65+
+  # filer + lictr_blind_exemptions per blind filer) and MODIFIED GROSS
+  # INCOME -- the enum base plus nontaxable Social Security, exempt
+  # interest, the hh_resources_inc optional data column, and, where the
+  # statute says income is "undiminished by losses", the positive part of
+  # every loss (lictr_unnet_losses). credit_tables.csv credit_id lictr;
+  # income above the top band returns zero (the form's cliff). Married
+  # filing separately takes lictr_mfs_share of the table amount
+  st_credits.lictr: 0
+  st_credits.lictr_income_base: 1
+  st_credits.lictr_add_nontax_ss: 0
+  st_credits.lictr_add_exempt_int: 0
+  st_credits.lictr_add_hh_resources: 0
+  st_credits.lictr_unnet_losses: 0
+  st_credits.lictr_aged_exemptions: 0
+  st_credits.lictr_blind_exemptions: 0
+  st_credits.lictr_mfs_share: 1
+  st_credits.lictr_refundable: 1
   # Combined child + working-family credit (MN M1CWFC, 2023+): CTC per
   # young child + a small earned-income component + fixed older-child
   # amounts, with ONE joint phase-out on max(earned income, AGI)

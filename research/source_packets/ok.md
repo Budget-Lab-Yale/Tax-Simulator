@@ -167,6 +167,15 @@ number, the fifth increment, from $2,400 to $4,600. Note the married column is
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. Child care / child tax credit cite corrected to 68 O.S. 2357(B)(2) (2357.43 is the EITC section). The base is the claimed federal credit ("Your allowed federal credit cannot exceed the amount of your federal tax", Form 511 2017-2020), as encoded.
 
+## Cross-model status (2026-10-13)
+
+CLOSED. With the 538-S sales tax relief credit encoded (above), every
+canonical-window cell clears the 0.95 bar on the clean subset: TAXSIM
+2017-2020 0.985 / 0.984 / 0.985 / 0.987; PolicyEngine 2021-2025 0.964 /
+0.980 / 0.966 / 0.978 / 0.983 (from 0.895-0.926 before). The remaining
+documented omissions (538-H, frozen-TY2020 EITC base, 511-F/G proration,
+military retirement) stay as known differences below.
+
 ## Known differences (direction and magnitude)
 
 - **Military retirement exclusion omitted -- the largest single item.** OK
@@ -176,9 +185,16 @@ Federal base sweep (does the state credit read the federal credit before or afte
   ~40,000 OK resident returns at ~$28,000 average retired pay: ~$550/return
   (~$22M/yr) pre-2022 and ~$855/return (~$34M/yr) from TY2022, i.e. roughly
   0.6-1.0% of OK individual income tax receipts. Both TAXSIM and PE model it.
-- **Sales tax relief credit omitted**: understates refunds by up to $40 x
-  (filers + dependents), ~$30-40M/yr statewide. Both models grant it -> expect
-  point masses at $40 multiples on low-income units in every year.
+- **Sales tax relief credit ENCODED 2026-10-13** (was omitted): $40 refundable
+  per household member on the generic per-person credit, ceilings $20,000 /
+  $50,000 (dependent, 65+, or disabled). Data limitations: gross HOUSEHOLD
+  income is approximated by federal AGI + nontaxable Social Security +
+  exempt interest + the `hh_resources_inc` optional data column (S43; zero
+  until published), so eligibility is overstated for households with public
+  assistance, child support or non-unit members; TANF disqualification and
+  the disabled prong (`disabled1/2` optional flag) are unobserved. Expect the
+  encoded credit to pay MORE than the ~$36M actual until the household-income
+  inputs exist. See `tax_data_gaps.csv` (OK, sales tax relief credit).
 - **Frozen-TY2020 EITC base ignored (TY2022+)**: we overstate the OK EITC.
   Plateau wedge = 5% x (current max - 2020 max):
 

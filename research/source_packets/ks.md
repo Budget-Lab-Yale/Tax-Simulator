@@ -95,10 +95,15 @@ Last updated: `2026-08-12`
 
 ## Known differences
 
-- Food sales tax credit omitted (2017-2024): overstates liability for
-  eligible low-AGI units by <= $125 x exemptions (capped at remaining
-  liability); ~O($10M)/yr statewide. TAXSIM and PE both model it ->
-  expected cross-model point masses at $125 multiples. Gone TY2025.
+- Food sales tax credit ENCODED 2026-10-13 (was omitted): $125 per qualified
+  exemption on the generic per-person credit with its eligibility gate (55+
+  / dependent child under 18 / disabled), AGI <= $30,615, nonrefundable,
+  gone TY2025. Data limitations: the disabled prong reads the `disabled1/2`
+  optional data flag (S43; zero until published), so disabled-only claimants
+  under 55 without a child are missed; "55 all year" and "child resided all
+  year" are year-end-age and dependent-status proxies; dependents beyond the
+  three age slots do not count. See `tax_data_gaps.csv` (KS, food sales tax
+  credit).
 - KPERS: retiree benefit subtraction (A13) and employee contribution
   ADDBACK (A2) both unobservable; omitted in offsetting directions.
 - US-obligation interest subtraction flagged, not subtracted (model-wide).

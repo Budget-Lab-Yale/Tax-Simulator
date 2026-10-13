@@ -1,6 +1,6 @@
 # Cross-model validation: RI
 
-Class: broad | Generated: 2026-08-22 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-10-13 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,71 +10,24 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16659|    6559|   0.7313|    0.8827|         0.9671|          0.9803|          0.1342|          0.2519|     47.9280|
-| 2017|taxsim       |  3854|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16539|    8827|   0.7285|    0.8793|         0.9394|          0.9796|          0.1321|          0.3076|     37.2046|
-| 2018|taxsim       |  3976|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16358|    8771|   0.7253|    0.8777|         0.9354|          0.9792|          0.1330|          0.4800|     49.1821|
-| 2019|taxsim       |  4156|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16359|    8449|   0.7235|    0.8760|         0.9344|          0.9780|          0.1323|          0.3555|     33.3179|
-| 2020|taxsim       |  4154|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |   889|     239|   0.4781|    0.6839|         0.9205|          0.9707|          0.0945|         17.3607|   1031.5173|
-| 2021|policyengine |   647|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     424|   0.6039|    0.7204|         0.9458|          0.9623|          0.1297|          0.8023|    447.1435|
-| 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1157|     468|   0.5869|    0.7113|         0.9338|          0.9487|          0.1348|          2.0907|    477.9293|
-| 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|     460|   0.5939|    0.6991|         0.9457|          0.9696|          0.1304|          2.1577|    -56.7413|
-| 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-
-## Mismatch stage diagnosis (TAXSIM |diff| > $15)
-
-| year|fed_aligned |stage           |    n|
-|----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     |  300|
-| 2017|TRUE        |2 exemptions    |   11|
-| 2017|TRUE        |3 deductions    |   11|
-| 2017|TRUE        |6 other credits |   40|
-| 2017|TRUE        |7 rate/rounding |    7|
-| 2017|FALSE       |1 state AGI     | 6292|
-| 2017|FALSE       |2 exemptions    |  131|
-| 2017|FALSE       |3 deductions    |  267|
-| 2017|FALSE       |5 state EITC    | 1049|
-| 2017|FALSE       |6 other credits |   20|
-| 2017|FALSE       |7 rate/rounding |   20|
-| 2018|TRUE        |1 state AGI     |  806|
-| 2018|TRUE        |2 exemptions    |   62|
-| 2018|TRUE        |3 deductions    |   11|
-| 2018|TRUE        |6 other credits |   51|
-| 2018|TRUE        |7 rate/rounding |   17|
-| 2018|FALSE       |1 state AGI     | 5936|
-| 2018|FALSE       |2 exemptions    |   67|
-| 2018|FALSE       |3 deductions    |  270|
-| 2018|FALSE       |5 state EITC    | 1031|
-| 2018|FALSE       |6 other credits |   14|
-| 2018|FALSE       |7 rate/rounding |   11|
-| 2019|TRUE        |1 state AGI     |  855|
-| 2019|TRUE        |2 exemptions    |   59|
-| 2019|TRUE        |3 deductions    |    5|
-| 2019|TRUE        |6 other credits |   40|
-| 2019|TRUE        |7 rate/rounding |   13|
-| 2019|FALSE       |1 state AGI     | 6037|
-| 2019|FALSE       |2 exemptions    |   55|
-| 2019|FALSE       |3 deductions    |  262|
-| 2019|FALSE       |5 state EITC    | 1078|
-| 2019|FALSE       |6 other credits |    5|
-| 2019|FALSE       |7 rate/rounding |    7|
-| 2020|TRUE        |1 state AGI     |  825|
-| 2020|TRUE        |2 exemptions    |   61|
-| 2020|TRUE        |3 deductions    |    7|
-| 2020|TRUE        |6 other credits |   36|
-| 2020|TRUE        |7 rate/rounding |   16|
-| 2020|FALSE       |1 state AGI     | 6156|
-| 2020|FALSE       |2 exemptions    |   77|
-| 2020|FALSE       |3 deductions    |  270|
-| 2020|FALSE       |5 state EITC    | 1014|
-| 2020|FALSE       |6 other credits |   10|
-| 2020|FALSE       |7 rate/rounding |    7|
+| 2017|taxsim       | 16268|    6138|   0.7485|    0.8831|         0.9593|          0.9757|          0.0870|          0.2534|     35.4422|
+| 2017|taxsim       |  4233|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 16243|    8680|   0.7421|    0.8748|         0.9369|          0.9779|          0.0853|          0.3160|     46.4895|
+| 2018|taxsim       |  4259|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 16135|    8643|   0.7348|    0.8742|         0.9320|          0.9776|          0.0848|          0.5083|     42.4178|
+| 2019|taxsim       |  4367|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 16087|    8290|   0.7382|    0.8758|         0.9338|          0.9797|          0.0865|          0.3563|     45.7180|
+| 2020|taxsim       |  4409|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |   860|     238|   0.5314|    0.7023|         0.9370|          0.9748|          0.0837|         12.4872|    337.2547|
+| 2021|policyengine |   675|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  1140|     443|   0.5991|    0.7167|         0.9594|          0.9774|          0.1070|          1.1998|   -235.8483|
+| 2022|policyengine |   387|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  1101|     452|   0.5867|    0.7257|         0.9447|          0.9801|          0.1163|          2.0128|    439.0157|
+| 2023|policyengine |   429|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  1123|     462|   0.5850|    0.7061|         0.9394|          0.9740|          0.1238|          2.1575|    638.7944|
+| 2024|policyengine |   404|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2025|policyengine |  1131|     118|   0.5535|    0.7109|         0.9746|          0.9831|          0.1158|          6.3584|   -224.8821|
+| 2025|policyengine |   395|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Known differences applied
 
@@ -87,6 +40,14 @@ defined (federally aligned records; see README).
 |ALL   |taxsim       |     2017|     2024|input-coverage   |annotate |TAXSIM-35 has no state-refund input, so state-mode crosswalk omits state_ref entirely (states subtract their own refunds); TAXSIM federal AGI runs low by state_ref, handled inside the fed_aligned flag                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 |ALL   |taxsim       |     2017|     2024|federal-side     |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 |RI    |policyengine |     2021|     2021|transfer-netting |exclude  |PE books Rhode Island's one-time 2022 child tax rebate ($250 per child, maximum 3, federal AGI at or below $100,000 single / $200,000 joint; FY2023 budget H 7123) into TAX YEAR 2021 via ri_child_tax_rebate -- the year the eligibility return was filed. The rebate was paid as a MAILED CHECK from October 2022 and is not a line on RI-1040, so it is outside our liability concept. Predicted before the run from the package source and CONFIRMED on the first pass: 72 of ~100 clean mismatches sit at exactly +250/+500/+750, and the 2021 cell reads 0.681 against 0.930-0.942 in 2022-2024. Same class as issues-doc P5. Excluded via predicate on the exported credit                        |
-|ALL   |both         |     2017|     2024|structural       |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding                                                                |
+|ALL   |both         |     2017|     2025|structural       |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding                                                                |
 |RI    |taxsim       |     2017|     2020|data-proxy       |exclude  |TAXSIM grants the RI property-tax relief credit (Form RI-1040H, R.I.G.L. 44-33) and we structurally cannot: it is a Tier-1-blocked class because rent is not in the PUF and the RI-1040H household-income concept is not reconstructible, so ri/credits.yaml leaves it unmodelled and the omission understates RI refunds to low-income aged claimants. Verified 2026-08-22: on the clean subset the signed difference equals TAXSIM's own v37_state_property_tax_credit to the dollar on 84 of 85 records in 2017 and 62 of 64 in 2020, at the statutory maximum ($350 in 2017, $400 in 2020). Excluded rather than annotated because the input the credit depends on does not exist in our data at all |
+|RI    |policyengine |     2021|     2025|data-proxy       |exclude  |The PolicyEngine twin of the existing TAXSIM row: PE grants the Rhode Island property-tax relief credit (Form RI-1040H, R.I.G.L. 44-33) and we structurally cannot, because rent is not in the PUF -- the same Tier-1-blocked class already excluded on the TAXSIM leg for 2017-2020 via v37. Missed until 2026-08-22 because RI's PE window was never triaged for it: the RI 2023 cell carried records with a difference of exactly 650.00 where our liability is 0 and PE's is -650, which is the RI-1040H maximum. Keyed on PE's own credit variable, mirroring how the TAXSIM row keys on v37                                                                                                        |
+|ALL   |taxsim       |     2017|     2020|federal-side     |exclude  |Federal income tax disagreement leaking through a state deduction for federal tax (AL, IA, LA, MO, MT, OR). The clean subset conditions on federal AGI, taxable income and the EITC, not on federal tax itself, so where TAXSIM's federal tax differs from ours (education and foreign tax credits it has no input for, AMT, special-rate gains -- including our own unrecaptured section 1250 / collectibles slicing bug in tax.R, under repair) the state deduction differs by the same amount. Documented, not triaged, under the federal-divergence policy. Keyed where the gap at a 5% rate exceeds $100; fires only in states with a nonzero federal tax deduction                                 |
+|ALL   |policyengine |     2021|     2025|federal-side     |exclude  |Federal income tax disagreement leaking through a state deduction for federal tax (AL, IA, LA, MO, MT, OR): the PolicyEngine twin of the TAXSIM row. Compares PolicyEngine's income_tax_before_refundable_credits (exported as pe_fed_income_tax) with our liab_iit. Includes the unrecaptured section 1250 slicing bug in our tax.R (2021 record 177113: our federal tax $378,073, PolicyEngine's $571,926; Iowa deduction gap $194,000), under repair. Keyed where the gap at a 5% rate exceeds $100                                                                                                                                                                                                   |
+|ALL   |both         |     2017|     2025|input-coverage   |exclude  |Nonrefundable education credits in states that deduct federal income tax (AL, IA, LA, MO, MT, OR): the deduction is federal tax after nonrefundable credits, so an American Opportunity / lifetime learning credit shrinks it, and neither crosswalk has an education-expense input. Generalizes the Iowa finding (2019: 28 TAXSIM misses at exactly the $1,500 credit). Keyed where the credit at a 6% rate exceeds $100                                                                                                                                                                                                                                                                                |
+|ALL   |both         |     2017|     2025|input-coverage   |exclude  |Federal foreign tax credit in states that deduct federal income tax (AL, IA, LA, MO, MT, OR): the credit shrinks federal tax after nonrefundable credits, and neither TAXSIM-35 nor the PolicyEngine crosswalk has a foreign-tax input. Generalizes the Alabama and Iowa rows. Keyed where the credit at a 6% rate exceeds $100                                                                                                                                                                                                                                                                                                                                                                          |
+|ALL   |both         |     2017|     2025|structural       |exclude  |Child and dependent care credit take-up: the federal calculator draws 90% take-up for the care credit (cdctc.R, calibrated to 2019 claims) and every state care credit shares the draw (JI 2026-10-08); TAXSIM and PolicyEngine assume full take-up. A family with care expenses drawn as a non-taker gets no state care credit from us and the full credit from them; where federal tax is zero either way the record stays federally aligned. Keyed on care expenses with the draw at zero (in a state without a care credit the hits match and drop out harmlessly)                                                                                                                                   |
+|ALL   |policyengine |     2021|     2025|federal-side     |exclude  |Our federal child and dependent care credit (src/calc/functions/credits/cdctc.R) has no bar on married-filing-separately returns; IRC 21(e)(2) denies the credit to separate filers unless the spouses lived apart for the last six months (treated as unmarried), which the PUF does not identify. PolicyEngine pays such filers nothing federally (probe 2026-10-09, MD 2024 records 40953, 48820, 42620: cdcc 0), so every state credit built on the federal one (MD 502CR Part B here) diverges by the state credit. Federal-side: documented, not fixed in the state workstream                                                                                                                     |
+|ALL   |policyengine |     2021|     2025|input-coverage   |exclude  |PolicyEngine twin of the per-state TAXSIM crosswalk rows: the PolicyEngine input carries property tax, mortgage interest and charitable gifts but no investment interest or other itemized deductions (Schedule A lines 9 and 16, our inv_int_item_ded_potential + other_item_ded_potential = xw_unhanded_item), so a state itemized deduction built from federal Schedule A is short by them in PolicyEngine. Found on IA 2022 records 220684 and 163276: PolicyEngine's Iowa itemized deductions are lower than ours by exactly other_item_exp ($7,819 and $848)                                                                                                                                       |
 

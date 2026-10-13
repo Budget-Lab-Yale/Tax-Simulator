@@ -59,6 +59,75 @@ eitc_refundable:
   reference: '2024 booklet p.15: "If the credit due the taxpayer exceeds the amount of the total income tax payable for the year by the taxpayer, the excess amount of the credit will be refunded to the taxpayer without interest"'
 
 #-----------------------------------------------------------------------
+# Dependent Care Tax Credit (Form 1 line 45; c. 62 s. 6(x), St. 2021 c. 24
+# s. 29) and Household Dependent Tax Credit (line 46; s. 6(y)), TY2021-2022
+# only, both refundable, exclusive per return; struck by St. 2023 c. 50
+# s. 21 when the Child and Family Tax Credit replaced them. Encoded
+# 2026-10-13 on the generic care credit (the credit-side twin of the
+# 2017-2020 deduction block in ded.yaml). The 65+ dependent prong of the
+# HDTC is observed through the dependent age slots; the disabled prong of
+# both credits reads the dep_disabled_n optional data column (S43; zero
+# until published). Federal CDCTC take-up is NOT applied, as for the
+# deductions. Sources: 2021/2022 Form 1 and instructions (NBER mirror),
+# 2021 inst p.3, p.16-17; 2022 inst p.17.
+#-----------------------------------------------------------------------
+
+care_credit:
+  value:
+    '2017': 0
+    '2021': 1
+    '2023': 0
+  reference: 'St. 2021 c. 24 ss. 29, 141 (effective TY2021); St. 2023 c. 50 ss. 21, 49 (struck for TY2023+)'
+care_credit_per_dep_cap:
+  value:
+    '2017': 0
+    '2021': 240
+    '2023': 0
+  reference: 'c. 62 s. 6(x): "shall not exceed a total of $240 if there is 1 qualifying individual ... or $480 if there are not less than 2"; 2021 inst p.16 worksheet line 1 ("Do not enter more than $240 for one qualifying person or $480 for two or more")'
+care_credit_dep_limit:
+  value:
+    '2017': 0
+    '2021': 2
+    '2023': 0
+  reference: 'c. 62 s. 6(x): the $480 ceiling is for two or more'
+care_credit_age_limit:
+  value:
+    '2017': -1
+    '2021': 12
+    '2023': -1
+  reference: 'Form 1 line 45 "Child under age 13, or disabled dependent/spouse credit"; IRC s. 21 qualifying individual'
+care_credit_hh_member_amt:
+  value:
+    '2017': 0
+    '2021': 180
+    '2023': 0
+  reference: 'c. 62 s. 6(y): "$180 if there is 1 such dependent ... or $360 if there are not less than 2"; Form 1 line 46a "Not more than two x $180"; 2021 inst p.17'
+care_credit_hh_member_age_limit:
+  value:
+    '2017': -1
+    '2021': 11
+    '2023': -1
+  reference: 'c. 62 s. 6(y)(i): "at least 1 individual under the age of 12"; Form 1 line 46 "under age 12"'
+care_credit_hh_aged_min:
+  value:
+    '2017': .inf
+    '2021': 65
+    '2023': .inf
+  reference: 'c. 62 s. 6(y)(ii): a dependent "not less than 65 years of age or who is disabled"; Form 1 line 46 "dependent(s) age 65 or over (not you or your spouse)"'
+care_credit_hh_limit:
+  value:
+    '2017': 0
+    '2021': 2
+    '2023': 0
+  reference: 'Form 1 line 46a: "Not more than two"'
+care_credit_mfs_ineligible:
+  value: 1
+  reference: '2021 inst p.16 (DCTC barred if "married filing a separate U.S. Form 1040") and p.17 (HDTC "only if single, head of household or married filing jointly"); c. 62 s. 6(y)'
+care_credit_refundable:
+  value: 1
+  reference: 'c. 62 s. 6(x)-(y): "treat the excess as an overpayment and shall pay the taxpayer the entire amount"; Form 1 refundable-credits block (2022 line 48 adds lines 43-47)'
+
+#-----------------------------------------------------------------------
 # Child and Family Tax Credit (Form 1 line 46), TY2023+, refundable.
 #-----------------------------------------------------------------------
 
@@ -86,8 +155,6 @@ documented_not_modeled:
     reference: 'The Child and Family Tax Credit reaches three kinds of qualifying individual, and only the first is modeled: a dependent under 13; a qualifying individual under IRC s.21, which includes a dependent OR THE SPOUSE who is physically or mentally incapable of self-care; and a dependent aged 65 or over or disabled (2023 booklet p.4). From TY2024 a noncustodial parent may also claim it for a child aged 13 or older who is incapable of self-care. Disability status is not a model input and dependent ages above the tracked slots are limited [understates the credit for households with a disabled member or an elderly dependent -- at $440 per individual with no cap, this is not a small omission]'
   cftc_and_eitc_mfs_exclusion:
     reference: 'The CFTC is barred to married filing separately (2024 booklet p.15) and is not gated here [overstates the CFTC for separate filers with young children]. The earned income credit is NOT barred where the federal credit reaches a separate filer: "Massachusetts adopts the expansion of the federal EIC in calculating the Massachusetts EIC" (Form 1 instructions TY2021 and TY2024; the Form 1 line 43 note bars separate filers "unless you qualify for an exception"), so it follows the federal credit (IRC 32(d)(2) from 2021). Massachusetts adds a domestic-abuse exception for separate filers outside the federal rule, which is unobservable. Corrected 2026-10-07: this note had said the EITC was barred'
-  dependent_care_credits_2021_2022:
-    reference: 'For TY2021 and TY2022 Massachusetts had small refundable dependent care ($240 for one qualifying individual, $480 for two or more) and household dependent ($180 per dependent, $360 maximum) credits, which the Child and Family Tax Credit replaced from TY2023. Neither is encoded [understates credits for those two years; the TY2017-2020 predecessor DEDUCTIONS, which were far larger, are documented in ded.yaml]'
   senior_circuit_breaker:
     reference: 'Form 1 line 44 and Schedule CB give filers aged 65 or over a REFUNDABLE credit equal to the amount by which property tax paid -- or 25% of rent for a renter -- exceeds 10% of total income, capped at an indexed maximum that MORE THAN DOUBLED in TY2023 (about $1,200 to $2,590) by a statutory base doubling rather than indexation. Blocked on assessed value, property tax paid and rent, all Tier 1 imputation targets [understates Massachusetts refunds for elderly homeowners and renters -- the largest data-blocked item in the state]'
   limited_income_credit_ordering:

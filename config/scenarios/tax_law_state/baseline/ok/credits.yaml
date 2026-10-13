@@ -66,10 +66,54 @@ cdctc_cap_amount:
   value: 0
   reference: 'Zero above the threshold -- with cdctc_cap_po_rate also zero this is a cliff, not a phase-out, matching the statute'
 
+# SALES TAX RELIEF CREDIT (68 O.S. 5010-5012; Form 538-S; Form 511
+# "Oklahoma sales tax relief credit"): $40 REFUNDABLE per household member
+# (taxpayer, spouse, dependents) when gross HOUSEHOLD income is $20,000 or
+# less, or $50,000 or less for a household with a dependent, a member 65 or
+# older, or a disabled member. Encoded 2026-10-13 on the generic per-person
+# credit (decision S43). The income measure -- "the total amount of gross
+# income received by ALL persons living in the same household whether the
+# income was taxable or not", including public assistance, child support,
+# workers' comp, VA disability, gross Social Security and dependents' income
+# -- is approximated by federal AGI plus nontaxable Social Security plus
+# exempt interest plus the hh_resources_inc optional data column (SSI/TANF/
+# VA/child support; zero until a producer publishes it), so eligibility is
+# OVERSTATED for households with nontaxable income and with non-unit
+# household members [data-proxy; the crosswalk row carries it]. TANF
+# receipt in any month disqualifies (unobserved). The disabled prong reads
+# the disabled1/2 optional flag. Both external models grant the credit.
+percap_amount:
+  value: 40
+  reference: '68 O.S. 5011: "Forty Dollars ($40.00) per exemption"; Form 538-S'
+percap_refundable:
+  value: 1
+  reference: '68 O.S. 5011: refundable; Form 511 refundable-credits section'
+percap_income_limit:
+  value: 20000
+  reference: '68 O.S. 5011: gross household income of $20,000 or less'
+percap_income_limit_elig:
+  value: 50000
+  reference: '68 O.S. 5011: $50,000 or less if the taxpayer can claim a dependent, or is 65 or older, or is disabled'
+percap_elig_age:
+  value: 65
+  reference: '68 O.S. 5011: "sixty-five (65) years of age or older"'
+percap_elig_child_age:
+  value: .inf
+  reference: '68 O.S. 5011: any dependent qualifies for the $50,000 ceiling (no age limit)'
+percap_elig_disabled:
+  value: 1
+  reference: '68 O.S. 5011: "disabled" -- reads the disabled1/2 optional data flag (S43)'
+percap_add_nontax_ss:
+  value: 1
+  reference: 'Form 538-S instructions, gross household income includes Social Security payments (total including Medicare); the taxable part is already in AGI'
+percap_add_exempt_int:
+  value: 1
+  reference: 'Form 538-S instructions: interest income whether taxable or not'
+percap_add_hh_resources:
+  value: 1
+  reference: 'Form 538-S instructions: public assistance, child support, workers compensation, VA disability -- the hh_resources_inc optional data column (S43)'
+
 documented_not_modeled:
-  sales_tax_relief_credit_538s:
-    value: 40
-    reference: '68 O.S. 5010-5012; Form 538-S. A $40 refundable credit per household member. THREE blockers: (a) st_credits.percap_* has no income test at all; (b) the measure is gross HOUSEHOLD income -- "the total amount of gross income received by ALL persons living in the same household whether the income was taxable or not", explicitly including public assistance, child support, workers'' compensation, scholarships, VA disability, gross Social Security including Medicare, dependents'' income and the EIC received, with negative amounts prohibited -- which matches no st_income_base enum and is not a tax-unit concept; (c) the $50,000 tier needs a dependent / 65+ / disability gate and TANF receipt in any month disqualifies. Encoding percap_amount = 40 without the test would pay roughly $95M/yr against about $36M actual [understates Oklahoma refunds by up to $40 x (filers + dependents), roughly $30-40M/yr; BOTH external models grant it, so expect point masses at $40 multiples on low-income units in every year]. The Kansas food-sales-tax-credit precedent'
   property_tax_relief_credit_538h:
     value: 200
     reference: '68 O.S. 2904-2911; Form 538-H. Refundable, up to $200, for filers 65 or older or disabled with gross household income of $12,000 or less. Same household-gross-income measure as 538-S [understates Oklahoma refunds for low-income seniors; PolicyEngine models it]'

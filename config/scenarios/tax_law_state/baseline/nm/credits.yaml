@@ -77,3 +77,54 @@ ctc_tier_amounts:
 documented_not_modeled:
   child_credit_mfs_halving:
     reference: 'NMSA 7-2-18.34(E): married taxpayers filing separately may each claim only half the credit. No per-status scaling exists on the tier amounts, and MFS returns with dependents are rare [overstates the credit for MFS filers with children by half]'
+
+#-----------------------------------------------------------------------
+# Low Income Comprehensive Tax Rebate (LICTR; NMSA 7-2-14; PIT-RC Section
+# I and Table 1; PIT-1 line 24 via PIT-RC line 25). Encoded 2026-10-13 from
+# the TY2017-2025 PIT-RC instructions (NBER mirror) and HB 291 / Laws 2021
+# ch. 116. The table (credit_tables.csv, credit_id lictr) has five
+# vintages -- 2017-2020 (max $450, ceiling $22,000), 2021-2022 (max $730,
+# ceiling $36,000; the 2022 CPI ratio is 1), 2023 ($790), 2024 ($819),
+# 2025 ($839) -- 23 MGI bands x exemption columns 1-6+; later years carry
+# the last vintage forward until the TY2026 PIT-RC is transcribed (S45).
+# Modified gross income (7-2-2(L)): the observable part is federal AGI +
+# nontaxable Social Security + exempt interest + the positive part of each
+# loss ("undiminished by losses"); public assistance, child support, gifts,
+# scholarships and VA benefits come from the hh_resources_inc optional data
+# column (S43; zero until published, OVERSTATING eligibility for transfer
+# recipients). Six-month physical presence, the inmate rule and the MFS
+# combined-household key are unobserved: full-year residents are assumed
+# present, and MFS filers take one-half of the amount looked up on their
+# own return.
+#-----------------------------------------------------------------------
+
+lictr:
+  value: 1
+  reference: 'NMSA 7-2-14(A)-(B); PIT-RC Section I statements A-D and Table 1, TY2017-2025 instructions'
+lictr_income_base:
+  value: 1
+  reference: 'PIT-RC lines 4-12 modified gross income starts from all taxable income (federal AGI proxies the taxable part)'
+lictr_add_nontax_ss:
+  value: 1
+  reference: 'PIT-RC line 5: gross Social Security before Medicare deductions; 7-2-2(L)'
+lictr_add_exempt_int:
+  value: 1
+  reference: 'PIT-RC line 12 "all other income": interest including US and municipal bond interest'
+lictr_add_hh_resources:
+  value: 1
+  reference: 'PIT-RC lines 7-12: public assistance (TANF, general assistance, SSI), child support, gifts, scholarships, VA benefits -- the hh_resources_inc optional data column (S43)'
+lictr_unnet_losses:
+  value: 1
+  reference: '7-2-2(L) "undiminished by losses"; PIT-RC line instructions: net business/farm/rental profit with losses entered as zero and gross capital gains with no loss offset'
+lictr_aged_exemptions:
+  value: 2
+  reference: 'PIT-RC line 3 and 7-2-14(C): two additional exemptions for each taxpayer or spouse 65 or older'
+lictr_blind_exemptions:
+  value: 1
+  reference: 'PIT-RC line 3 and 7-2-14(C): one additional exemption for each blind taxpayer or spouse'
+lictr_mfs_share:
+  value: 0.5
+  reference: '7-2-14(D) and PIT-RC line 14 instructions: married filing separately claims one-half of the rebate (combined-household MGI and exemption count unobserved; own-return proxy)'
+lictr_refundable:
+  value: 1
+  reference: '7-2-14(G): refundable; PIT-RC line 25 to PIT-1 line 24'

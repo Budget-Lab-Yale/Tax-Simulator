@@ -55,10 +55,14 @@ Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-21`
   `care_ded_mfs_ineligible` barring both to married filing separately. Every
   one of these goes to zero in 2021
 - Known approximations: public-retirement contributions are not a model input;
-  the rental deduction and the TY2021-TY2022 dependent-care *credits* are
-  documented but not modelled; line 13 members qualifying by age 65-plus or by
-  disability are not counted (the same unobserved-qualifier limit the Virginia
-  care deduction carries)
+  the rental deduction is documented but not modelled; line 13 members
+  qualifying by age 65-plus or by disability are not counted in the
+  2017-2020 deductions (the same unobserved-qualifier limit the Virginia
+  care deduction carries). The TY2021-TY2022 dependent-care and household
+  dependent CREDITS are encoded since 2026-10-13 on the generic care credit
+  (`credits.yaml` care_credit_*; tests MA-14..MA-19): 65+ dependents are
+  counted from the age slots, disabled qualifying individuals read the
+  `dep_disabled_n` optional data column (S43; zero until published)
 
 ### `exempt.yaml`
 
@@ -162,8 +166,12 @@ separate-filer bar stands as documented.
   data-blocked Massachusetts item.
 - **The rental deduction is not modeled** (50% of rent, capped at $3,000 rising
   to $4,000), a Tier 1 target reaching roughly a third of Massachusetts filers.
-- **The TY2017-2022 dependent-care deductions and credits are not modeled**,
-  the largest year-specific gap.
+- **The TY2017-2020 dependent-care deductions and the TY2021-2022 credits
+  are modeled** (the deductions since the first encoding; the credits since
+  2026-10-13 -- DCTC $240/$480 on expenses capped by earned income, HDTC
+  $180/$360 flat, exclusive per return, MFS barred, refundable; St. 2021
+  c. 24 s. 29, struck by St. 2023 c. 50 s. 21). Disabled qualifying
+  individuals remain a data gap (`dep_disabled_n` overlay).
 - Massachusetts' own capital-loss netting, its shared $2,000 cap against
   interest and dividends, and its indefinite carryforward are not reproduced;
   the model carries federally capped net gains.

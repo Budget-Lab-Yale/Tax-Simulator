@@ -30,7 +30,17 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_cap_thresh',
   'st_credits.cdctc_cap_po_rate',
   'st_credits.cdctc_cap_per_return',      # (int) the cap is per return, not per child (LA $25)
-  'st_credits.cdctc_style_switch_agi'     # (dbl) above this federal AGI, use style 1 (LA $25,000)
+  'st_credits.cdctc_style_switch_agi',    # (dbl) above this federal AGI, use style 1 (LA $25,000)
+  'st_credits.care_credit',               # (int) care credit on (MA 2021-22 DCTC/HDTC)
+  'st_credits.care_credit_per_dep_cap',   # (dbl) expense cap per qualifying child
+  'st_credits.care_credit_dep_limit',     # (int) qualifying-child count cap
+  'st_credits.care_credit_age_limit',     # (int) qualifying child age <= this
+  'st_credits.care_credit_hh_member_amt', # (dbl) flat amount per household member
+  'st_credits.care_credit_hh_member_age_limit', # (int) member age <= this
+  'st_credits.care_credit_hh_aged_min',   # (int) or dependent age >= this
+  'st_credits.care_credit_hh_limit',      # (int) member count cap
+  'st_credits.care_credit_mfs_ineligible',# (int) married filing separately barred
+  'st_credits.care_credit_refundable'     # (int) refundable
 )
 
 
@@ -201,5 +211,38 @@ st_credits_care = function(tax_unit) {
                     lowinc_amt > regular_benefit
   st_cdctc = if_else(st_cdctc_lowinc, lowinc_amt, st_cdctc)
 
-  list(st_cdctc = st_cdctc, st_cdctc_lowinc = st_cdctc_lowinc)
+  #------------------------------------------------------------------------
+  # Care credit (MA TY2021-22): the credit-side twin of the st_ded.R care
+  # deduction block. Dependent Care Tax Credit = employment-related expenses
+  # capped at per_dep_cap per qualifying individual (at most dep_limit) and
+  # by the lesser earner's earned income (Form 2441 lines 4-5); Household
+  # Dependent Tax Credit = hh_member_amt per member under the age limit, or
+  # aged >= hh_aged_min, or disabled, at most hh_limit. The two are
+  # exclusive per return ("you may claim an amount in line 46 only if there
+  # is no entry in line 45"), so the unit takes the larger. Disabled
+  # qualifying individuals come from the dep_disabled_n optional data
+  # column (zero until published, S43); 65+ dependents from the age slots
+  #------------------------------------------------------------------------
+  dep_age = cbind(tax_unit$dep_age1, tax_unit$dep_age2, tax_unit$dep_age3)
+  care_credit_n_qual = pmin(
+    rowSums(dep_age <= tax_unit$st_credits.care_credit_age_limit, na.rm = TRUE) +
+      tax_unit$dep_disabled_n,
+    tax_unit$st_credits.care_credit_dep_limit)
+  care_credit_ei_limit = pmax(0, if_else(tax_unit$filing_status == 2,
+                                         pmin(tax_unit$ei1, tax_unit$ei2),
+                                         tax_unit$ei1))
+  care_credit_hh_n = pmin(
+    rowSums(dep_age <= tax_unit$st_credits.care_credit_hh_member_age_limit |
+            dep_age >= tax_unit$st_credits.care_credit_hh_aged_min, na.rm = TRUE) +
+      tax_unit$dep_disabled_n,
+    tax_unit$st_credits.care_credit_hh_limit)
+  st_care_credit = tax_unit$st_credits.care_credit * (tax_unit$dep_status != 1) *
+    pmax(pmin(tax_unit$care_exp,
+              care_credit_n_qual * tax_unit$st_credits.care_credit_per_dep_cap,
+              care_credit_ei_limit),
+         care_credit_hh_n * tax_unit$st_credits.care_credit_hh_member_amt) *
+    (1 - tax_unit$st_credits.care_credit_mfs_ineligible * (tax_unit$filing_status == 3))
+
+  list(st_cdctc = st_cdctc, st_cdctc_lowinc = st_cdctc_lowinc,
+       st_care_credit = st_care_credit)
 }
