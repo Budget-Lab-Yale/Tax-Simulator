@@ -109,7 +109,7 @@ The generic implementation now stores row data keyed by state, tax year, inclusi
 
 ## P1 readiness
 
-See [California parameter analysis](research/state_tax/notes/ca_parameter_analysis.md) and [California P1 readiness analysis](research/state_tax/notes/ca_p1_readiness_analysis.md). A generic conformity gate now prevents invalid federal-reform results, but the required reference-law mechanism, material Schedule CA adjustments, and CalEITC/YCTC eligibility inputs remain release blockers. California should not be included in a production `states = all` run until those blockers are closed or a generic release gate excludes it.
+See [California parameter analysis](research/state_tax/notes/ca_parameter_analysis.md) and [California P1 readiness analysis](research/state_tax/notes/ca_p1_readiness_analysis.md). The reference-law mechanism for groups 1 and 2 is in place since 2026-10-13 (S44): both reference the enacted federal baseline, so a federal-reform scenario keeps CA's federal inputs at enacted law, and CA is enabled in `states=all`. Material Schedule CA adjustments and CalEITC/YCTC eligibility inputs remain documented data gaps (`research/state_tax/tax_data_gaps.csv`). California should not be included in a production `states = all` run until those blockers are closed or a generic release gate excludes it.
 
 ## Triage 2026-08-22 — the PolicyEngine dependent-age cliff
 

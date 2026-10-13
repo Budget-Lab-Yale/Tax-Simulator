@@ -1,0 +1,17 @@
+---
+# Companion to std.yaml in this overlay: removes the SALT cap from TY2022 so
+# the itemized-deduction components a state reads also move.
+
+salt_limit_married:
+  value:
+    '2014': Inf
+    '2018': 10000
+    '2022': Inf
+
+salt_floor:
+  value:
+    '2014': 0
+
+salt_floor_thresh:
+  value:
+    '2014': Inf

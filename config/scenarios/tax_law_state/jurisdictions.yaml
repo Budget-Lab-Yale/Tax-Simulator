@@ -16,15 +16,13 @@ AR:
 AZ:
   profile: broad_iit
   enabled: true
-# CA is calculated correctly under the federal baseline, but its fixed/selective
-# conformity groups (1, 2) have no reference-law bridge yet
-# (conformity_groups.yaml: ready=false), so validate_state_federal_conformity()
-# hard-stops any federal-reform run that requests CA. Excluded from `states=all`
-# until the reference overlays land, per research/state_tax/notes/ca_p1_readiness_analysis.md. Direct
-# `states=CA` selection still works for baseline-law runs.
+# CA: fixed/selective conformity (groups 1 and 2). Since 2026-10-13 (S44) the
+# groups are ready with the enacted federal baseline as their reference law,
+# so a federal-reform run keeps CA's federal inputs at enacted law and CA is
+# in `states=all`. Cross-model: every cell >= 0.965 (closed 2026-08-15).
 CA:
   profile: broad_iit
-  enabled: false
+  enabled: true
 CO:
   profile: broad_iit
   enabled: true
@@ -214,13 +212,12 @@ PA:
 RI:
   profile: broad_iit
   enabled: true
-# SC uses fixed-date IRC conformity (updated annually; conformity_group 3,
-# ready=false). Like CA, its reference-law bridge is not built, so it is
-# excluded from states=all and blocked for federal-reform runs until the
-# overlay lands. states=SC still works for baseline-law runs.
+# SC: fixed-date IRC conformity re-set annually (group 3). Ready since
+# 2026-10-13 (S44) with the enacted federal baseline as reference law; the
+# one-year adoption lag is not modeled. In `states=all`.
 SC:
   profile: broad_iit
-  enabled: false
+  enabled: true
 SD:
   profile: zero
   enabled: true
@@ -245,12 +242,11 @@ WI:
   enabled: true
 # VA was fixed-date annual conformity through TY2022 (group 3), rolling for
 # TY2023-2025 (group 0), and re-fixed at Dec 31, 2025 by the 2026 GA (group
-# 4). Groups 3/4 have no reference-law bridge, so VA is excluded from
-# states=all and guarded for federal-reform runs (like SC/CA). Direct
-# states=VA selection works for baseline-law runs.
+# 4). Groups 3/4 are ready since 2026-10-13 (S44) with the enacted federal
+# baseline as reference law. In `states=all`.
 VA:
   profile: broad_iit
-  enabled: false
+  enabled: true
 # VT conformity is FIXED-DATE (32 V.S.A. 5824, re-set nearly every session),
 # modeled as rolling (group 0): Vermont conformed explicitly to CARES and to
 # the ARPA unemployment exclusion, so it has not sat out a PUF-material

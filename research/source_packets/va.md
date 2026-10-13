@@ -75,7 +75,9 @@ pease_thresh maps HoH separately.
   more", calculator tests strict greater-than).
 - **Conformity:** group 3 (fixed-date annual) 2017–2022; group 0 (rolling)
   2023–2025; group 4 (fixed Dec 31, 2025 + extenders; new group) 2026+.
-  enabled:false in jurisdictions.yaml (no reference-law bridge), like SC/CA.
+  Groups 3 and 4 are ready since 2026-10-13 (S44) with the enacted federal
+  baseline as reference law: a federal-reform scenario flows into VA only in
+  the rolling years 2023–2025. enabled:true; in `states=all`.
 
 ## Triage 2026-08-22 — closed; two TAXSIM-side causes
 

@@ -51,10 +51,12 @@ probe now agrees within $10 everywhere, incl. retirees at $0)
 
 ## Known differences / approximations
 
-- **Fixed-date conformity** modeled as reference-group 3 (ready=false): SC is
-  excluded from `states=all` and blocked for federal-reform runs until a
-  reference-law overlay is built (same treatment as CA). Baseline-law runs use
-  current-law federal values (SC's ~1-year conformity lag is a known-difference).
+- **Fixed-date conformity** modeled as reference-group 3. Ready since
+  2026-10-13 (S44): the group's reference law is the enacted federal baseline,
+  so a federal-reform scenario does not flow into SC's base; baseline-law runs
+  are unchanged (current-law federal values). SC's ~1-year conformity lag --
+  adopting a federal change the following year if the legislature re-conforms
+  -- is not modeled and is a known-difference. SC is in `states=all`.
 - **Age-65 deduction** ($15,000/person, reduced by the retirement deduction;
   12-6-1170(B)): **ENCODED 2026-08-11** via the generic aged-deduction
   machinery + a new `age_ded_less_pension_sub` offset flag (elderly survey

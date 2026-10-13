@@ -35,6 +35,7 @@ test_state_tax_law = function() {
   test_special_state_values()
   test_state_credit_tables()
   test_state_conformity_groups()
+  test_state_horizon_2026_2035()
   test_state_reference_law_builder()
   test_state_reference_context_builder()
   test_state_conformity_context_routing()
@@ -86,18 +87,22 @@ test_state_federal_conformity_guard = function() {
 
   #----------------------------------------------------------------------------
   # Fixed/selective states must not silently consume a federal reform's AGI
-  # until the shared reference-law context is available. Rolling states remain
-  # eligible for those calculations.
+  # while their reference-law group is not ready. With the shipped registry
+  # every group is ready (S44), so CA passes; the guard itself is exercised
+  # with an in-memory registry that marks CA's group not ready. Rolling
+  # states are never blocked.
   #----------------------------------------------------------------------------
 
   indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
     mutate(growth = 0.025)
   ca_law = build_state_tax_law('CA', 2025, indexes)
   il_law = build_state_tax_law('IL', 2025, indexes)
+  unready = load_state_conformity_groups() %>%
+    mutate(ready = if_else(conformity_group == 2, FALSE, ready))
 
   blocked = tryCatch(
     {
-      validate_state_federal_conformity(ca_law, 'tests/federal_reform')
+      validate_state_federal_conformity(ca_law, 'tests/federal_reform', unready)
       FALSE
     },
     error = function(e) str_detect(conditionMessage(e), 'fixed/selective') &&
@@ -107,9 +112,11 @@ test_state_federal_conformity_guard = function() {
   stopifnot(
     'baseline federal law should be permitted for fixed states' =
       isTRUE(validate_state_federal_conformity(ca_law, 'baseline')),
-    'fixed-conformity state did not block a federal reform' = blocked,
+    'a ready fixed-conformity state was blocked for a federal reform' =
+      isTRUE(validate_state_federal_conformity(ca_law, 'tests/federal_reform')),
+    'an unready fixed-conformity state did not block a federal reform' = blocked,
     'rolling-conformity state was incorrectly blocked' =
-      isTRUE(validate_state_federal_conformity(il_law, 'tests/federal_reform'))
+      isTRUE(validate_state_federal_conformity(il_law, 'tests/federal_reform', unready))
   )
 
   message('test_state_federal_conformity_guard: PASSED')
@@ -118,12 +125,44 @@ test_state_federal_conformity_guard = function() {
 
 
 
+test_state_horizon_2026_2035 = function() {
+
+  #----------------------------------------------------------------------------
+  # Year-horizon convention (decision S45, 2026-10-13): encoded state law
+  # stops at TY2025 except where a packet cites an enacted later-year step,
+  # and every enabled jurisdiction's law must BUILD for TY2026-2035 by
+  # carrying its last encoded year forward under the YAML indexation rules.
+  # A state whose series ends early or whose indexation needs a series the
+  # run lacks fails here rather than at the first production run past 2025.
+  #----------------------------------------------------------------------------
+
+  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    mutate(growth = 0.025)
+  enabled = get_enabled_state_jurisdictions()
+  law = build_state_tax_law(enabled, 2026:2035, indexes)
+  built = law %>% distinct(state, year) %>% count(state)
+
+  stopifnot(
+    'every enabled jurisdiction must build for 2026-2035' =
+      setequal(built$state, enabled) && all(built$n == 10),
+    'a 2035 rate schedule must exist for every broad-income-tax state' =
+      law %>% filter(year == 2035, st_programs.broad_iit == 1) %>%
+        pull(st_ord.rates1) %>% is.na() %>% any() %>% isFALSE()
+  )
+
+  message('test_state_horizon_2026_2035: PASSED (', length(enabled), ' jurisdictions)')
+  invisible(TRUE)
+}
+
+
+
 test_state_conformity_groups = function() {
 
   #----------------------------------------------------------------------------
-  # Locks the shared numeric-group contract and California's two dated group
-  # assignments. The groups remain intentionally unavailable until their
-  # selective-adoption overlays are researched and validated.
+  # Locks the shared numeric-group contract, California's two dated group
+  # assignments, and the S44 bridge: every positive group is ready and
+  # references the enacted federal baseline, so a mixed list builds exactly
+  # one reference law per group present.
   #----------------------------------------------------------------------------
 
   indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
@@ -149,15 +188,21 @@ test_state_conformity_groups = function() {
     'rolling group is malformed' =
       nrow(filter(groups, conformity_group == 0, ready)) == 1,
     'California 2017-2024 group wrong' =
-      ca_2017$conformity_group == 1 && !ca_2017$ready,
+      ca_2017$conformity_group == 1 && ca_2017$ready,
     'California 2025+ group wrong' =
-      ca_2025$conformity_group == 2 && !ca_2025$ready,
+      ca_2025$conformity_group == 2 && ca_2025$ready,
+    'positive groups must all reference the enacted baseline (S44)' =
+      all(groups$reference_tax_law_id[groups$conformity_group > 0] == 'baseline') &&
+      all(groups$ready),
     'IL in a mixed list must resolve to rolling group 0' =
       mixed$conformity_group[mixed$state == 'IL'] == 0,
     'CA in a mixed list must keep its declared group' =
       mixed$conformity_group[mixed$state == 'CA'] == 2,
-    'mixed-list reference build must not error and skips unready CA' =
-      length(mixed_refs) == 0
+    'mixed-list reference build must yield one law for CA group 2' =
+      identical(names(mixed_refs), '2'),
+    'reference law must be the enacted federal baseline' =
+      isTRUE(all.equal(mixed_refs[['2']],
+                       build_tax_law_from_id('baseline', 2025, indexes)))
   )
 
   message('test_state_conformity_groups: PASSED')

@@ -48,10 +48,15 @@ At runtime, the model calculates one reference federal context per ready group
 and per year, then `get_state_totals()` chooses that context for every state in
 the group. Conventional contexts reuse post-behavior tax-unit inputs and do not
 run behavioral feedback again. Never add state-name branches for conformity.
-Mark a group `ready: false` until its full statutory/selective-adoption overlay
-and form cases are validated; federal-reform runs then fail clearly for states
-using that group. California's groups 1 and 2 are registered but intentionally
-not ready pending those legal bridges.
+Mark a group `ready: false` until its reference law is settled; federal-reform
+runs then fail clearly for states using that group. Since 2026-10-13 (decision
+S44) every positive group is ready and references `baseline`, the enacted
+federal law: each fixed-conformity state's YAML already encodes its departures
+from enacted federal law explicitly, so the reference law's job is to hold the
+federal context at enacted law when a counterfactual federal reform runs. When
+the federal baseline itself comes to carry a change enacted after a group's
+conformity date, that group's reference becomes an overlay backing the change
+out (see the header of `conformity_groups.yaml`).
 
 ## Component Ledger
 
