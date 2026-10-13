@@ -48,7 +48,7 @@ echo ""
 echo "Phase 0: Running setup..."
 # setup.R prints KEY=VALUE lines for eval, but sourcing src/ also prints test
 # chatter (a test file reports at source time), so keep only assignments
-METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "$@" | grep -E "^[A-Z_]+=")
+METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "$@" | grep -E "^[A-Z_0-9]+=")
 eval "$METADATA"
 
 echo "  Staging dir: ${STAGING_DIR}"
