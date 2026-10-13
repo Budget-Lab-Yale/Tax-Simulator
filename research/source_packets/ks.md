@@ -93,6 +93,16 @@ Last updated: `2026-08-12`
 - KS-4/KS-4b: 2021 HoH 17% EITC + SS $75k cliff pair (granted/denied).
 - KS-5: 2018 itemized component phase-in (50% mortgage/property).
 
+## Cross-model status (2026-10-13)
+
+CLOSED. With the food sales tax credit encoded (ordered after the EITC per
+K-40 lines 17-19) and two TAXSIM deviations excluded -- T44 (TAXSIM pays
+nothing on the age-55 prong) and T45 (TAXSIM applies the credit before the
+EITC) -- every canonical-window cell clears the 0.95 bar on the clean
+subset: TAXSIM 2017-2020 0.985 / 0.980 / 0.987 / 0.984; PolicyEngine
+2021-2025 0.986 / 0.975 / 0.973 / 0.973 / 0.992 (from 0.900-0.941 before the
+credit was encoded).
+
 ## Known differences
 
 - Food sales tax credit ENCODED 2026-10-13 (was omitted): $125 per qualified
