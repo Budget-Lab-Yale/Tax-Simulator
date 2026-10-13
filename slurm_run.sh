@@ -30,7 +30,7 @@ if [ "$#" -lt 9 ]; then
   exit 1
 fi
 
-module load R/4.4.1-foss-2022b
+module load R/4.4.2-gfbf-2024a
 
 # Resolve repository root (directory containing this script)
 REPO_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -46,7 +46,9 @@ echo ""
 #-------------------------------------------
 
 echo "Phase 0: Running setup..."
-METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "$@")
+# setup.R prints KEY=VALUE lines for eval, but sourcing src/ also prints test
+# chatter (a test file reports at source time), so keep only assignments
+METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "$@" | grep -E "^[A-Z_]+=")
 eval "$METADATA"
 
 echo "  Staging dir: ${STAGING_DIR}"
@@ -71,7 +73,7 @@ if [ "$N_PHASE1" -gt 0 ]; then
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
     --job-name=taxsim-baseline \
     --output="${STAGING_DIR}/logs/p1_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
             Rscript src/slurm/worker.R ${STAGING_DIR} 1")
   echo "  Job ID: ${P1}"
   P1_DEP="--dependency=afterok:${P1}"
@@ -89,7 +91,7 @@ if [ "$N_PHASE2" -gt 0 ]; then
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
     --job-name=taxsim-cf \
     --output="${STAGING_DIR}/logs/p2_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
             Rscript src/slurm/worker.R ${STAGING_DIR} 2")
   echo "  Job ID: ${P2}"
   P2_DEP="--dependency=afterok:${P2}"
@@ -118,7 +120,7 @@ if [ "$N_AGG" -gt 0 ]; then
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
     --job-name=taxsim-agg \
     --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
             Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
   echo "  Job ID: ${P3A}"
   P3A_DEP="--dependency=afterok:${P3A}"
@@ -134,7 +136,7 @@ if [ "$N_AGG" -gt 0 ]; then
       ${SBATCH_COMMON} --time=1:00:00 --mem=16G \
       --job-name=taxsim-postproc \
       --output="${STAGING_DIR}/logs/p3b_%A_%a.log" \
-      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
               Rscript src/slurm/aggregate.R ${STAGING_DIR} 3b")
     echo "  Job ID: ${P3B}"
 
@@ -149,7 +151,7 @@ if [ "$N_AGG" -gt 0 ]; then
         ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
         --job-name=taxsim-stacked \
         --output="${STAGING_DIR}/logs/p4.log" \
-        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+        --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
                 Rscript src/slurm/aggregate.R ${STAGING_DIR} 4")
       echo "  Job ID: ${P4}"
     fi
