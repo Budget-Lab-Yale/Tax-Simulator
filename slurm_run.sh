@@ -60,6 +60,12 @@ echo ""
 
 # Common sbatch flags
 SBATCH_COMMON="--partition=day -c 1"
+# Memory per year-task (Phases 1-2) and per aggregation task (3a-4). The
+# defaults suit a federal-only subsample; a full-sample states=all run OOM-
+# killed at 16G (2026-10-13), so override from the environment, e.g.
+#   TAXSIM_SLURM_MEM=96G bash slurm_run.sh ...
+MEM_WORKER="${TAXSIM_SLURM_MEM:-16G}"
+MEM_AGG="${TAXSIM_SLURM_MEM_AGG:-16G}"
 
 
 #-------------------------------------------
@@ -70,7 +76,7 @@ P1_DEP=""
 if [ "$N_PHASE1" -gt 0 ]; then
   echo "Phase 1: Submitting ${N_PHASE1} baseline year jobs..."
   P1=$(sbatch --parsable --array=1-${N_PHASE1} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_COMMON} --time=2:00:00 --mem=${MEM_WORKER} \
     --job-name=taxsim-baseline \
     --output="${STAGING_DIR}/logs/p1_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
@@ -88,7 +94,7 @@ P2_DEP=""
 if [ "$N_PHASE2" -gt 0 ]; then
   echo "Phase 2: Submitting ${N_PHASE2} counterfactual year jobs..."
   P2=$(sbatch --parsable --array=1-${N_PHASE2} ${P1_DEP} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_COMMON} --time=2:00:00 --mem=${MEM_WORKER} \
     --job-name=taxsim-cf \
     --output="${STAGING_DIR}/logs/p2_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
@@ -117,7 +123,7 @@ if [ "$N_AGG" -gt 0 ]; then
 
   echo "Phase 3a: Submitting ${N_AGG} aggregation jobs..."
   P3A=$(sbatch --parsable --array=1-${N_AGG} ${ALL_DEPS} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_COMMON} --time=1:00:00 --mem=${MEM_AGG} \
     --job-name=taxsim-agg \
     --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
@@ -133,7 +139,7 @@ if [ "$N_AGG" -gt 0 ]; then
   if [ "$N_SCENARIOS" -gt 0 ]; then
     echo "Phase 3b: Submitting ${N_SCENARIOS} post-processing jobs..."
     P3B=$(sbatch --parsable --array=1-${N_SCENARIOS} ${P3A_DEP} \
-      ${SBATCH_COMMON} --time=1:00:00 --mem=16G \
+      ${SBATCH_COMMON} --time=1:00:00 --mem=${MEM_AGG} \
       --job-name=taxsim-postproc \
       --output="${STAGING_DIR}/logs/p3b_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
@@ -148,7 +154,7 @@ if [ "$N_AGG" -gt 0 ]; then
     if [ "$STACKED" == "1" ]; then
       echo "Phase 4: Submitting stacked post-processing job..."
       P4=$(sbatch --parsable --dependency=afterok:${P3B} \
-        ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
+        ${SBATCH_COMMON} --time=0:30:00 --mem=${MEM_AGG} \
         --job-name=taxsim-stacked \
         --output="${STAGING_DIR}/logs/p4.log" \
         --wrap="cd ${REPO_DIR} && module load R/4.4.2-gfbf-2024a && \
