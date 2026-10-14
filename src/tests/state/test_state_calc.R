@@ -3050,6 +3050,13 @@ test_state_calc = function() {
   run_case('NM', 2024, list(agi = 5000, wages1 = 5000, ei1 = 5000, hh_resources_inc = 25000),
            expect = list(st_lictr = 44),
            label = 'NM-L8 2024 LICTR: household resources live via the overlay')
+  # NM-L9 (2026-10-14): a net operating loss is added back to MGI (7-2-2(L),
+  # "undiminished by losses"): AGI -50,000 made of a 50,000 NOL and nothing
+  # else gives MGI 0 under the old concept (first band) but 0 + 50,000 = 50,000
+  # once the NOL is added back, above the $36,000 ceiling -> no rebate
+  run_case('NM', 2024, list(agi = -50000, other_inc = -50000),
+           expect = list(st_lictr = 0),
+           label = 'NM-L9 2024 LICTR adds back a net operating loss')
 
   run_case('NM', 2019,
            list(agi = 28000, wages1 = 28000, ei1 = 28000, std_ded = 12200),

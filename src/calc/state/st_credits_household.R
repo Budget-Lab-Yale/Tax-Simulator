@@ -56,6 +56,7 @@ st_credits_household_req_vars = c(
   'st_credits.lictr_add_exempt_int',
   'st_credits.lictr_add_hh_resources',
   'st_credits.lictr_unnet_losses',
+  'st_credits.lictr_add_nol',
   'st_credits.lictr_aged_exemptions',
   'st_credits.lictr_blind_exemptions',
   'st_credits.lictr_mfs_share',
@@ -364,8 +365,11 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
       pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
     tax_unit$st_credits.lictr_add_exempt_int * tax_unit$exempt_int +
     tax_unit$st_credits.lictr_add_hh_resources * tax_unit$hh_resources_inc +
-    # "undiminished by losses" and with no deductions (shared add-back above)
-    tax_unit$st_credits.lictr_unnet_losses * unnetted_losses
+    # "undiminished by losses" and with no deductions (shared add-back above);
+    # a net operating loss carried into the year (negative other income in
+    # the PUF) is a deduction, not income, so it is added back too
+    tax_unit$st_credits.lictr_unnet_losses * unnetted_losses +
+    tax_unit$st_credits.lictr_add_nol * pmax(0, -tax_unit$other_inc)
   lictr_key = as.integer(n_taxpayers + tax_unit$n_dep +
                          tax_unit$st_credits.lictr_aged_exemptions * n_aged +
                          tax_unit$st_credits.lictr_blind_exemptions * n_blind)

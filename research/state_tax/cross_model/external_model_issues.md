@@ -434,6 +434,32 @@ The credit phases out by $7.50 per $1,000 of Maine AGI over $200,000 ($400,000 j
 threshold. TAXSIM-35 pays it in full at any income: joint returns with $1.6M-$5.9M of AGI carry TAXSIM credits of
 exactly $300 per dependent. Effect: TAXSIM understates Maine tax by $300 per dependent above the phase-out.
 
+### T49. Vermont: an unallocated flat $111 credit
+
+TAXSIM-35 reports a Vermont credit of exactly $111.00 inside v40 (total state credits) that appears in none of the
+component columns v37 (property tax), v38 (child care) or v39 (EITC). A synthetic probe (2026-10-14,
+`output/probe/vt_111_probe.R`) finds it in every year 2017-2020, identical for single and joint filers, unaffected by
+rent paid, paid at wages up to $22,500 (under 65) or $27,500 (65 or older) and zero above. No Vermont credit on Form
+IN-111 or in Title 32 has that shape; the renter rebate and the property tax adjustment are separate claims keyed on
+rent and property tax, which do not move it. It carried roughly 63% of the clean Vermont TAXSIM mismatches. Effect:
+TAXSIM understates Vermont tax by $111 for low-income returns.
+
+### T50. Vermont charitable contribution credit not modeled
+
+Act 11 of the 2018 special session (32 V.S.A. 5822(d)) gives a nonrefundable credit of 5% of the first $20,000 of
+charitable contributions, up to $1,000, from TY2018. TAXSIM-35 does not compute it: in the 2026-10-14 re-score
+2,197-2,361 clean records a year carry the credit on our side and 84-85% of them differ from TAXSIM by exactly that
+amount. Effect: TAXSIM overstates Vermont tax by up to $1,000 for donors, 2018 onward.
+
+### T51. Vermont capital gains exclusion applied to all gains
+
+Vermont's exclusion (32 V.S.A. 5811(21)(B)(ii); Schedule IN-153) is the larger of a flat $5,000 and 40% of gain on
+assets held over three years that are not publicly traded securities, real estate or depreciable property (capped at
+$350,000), never more than 40% of federal taxable income. TAXSIM-35 applies the 40% branch to all net capital gains,
+over-excluding securities gains; records with net gains above $12,500 match at 0.17-0.38 in 2017-2020. Effect:
+TAXSIM understates Vermont tax on securities gains. (The qualifying subset is unobservable in the PUF either way; we
+and PolicyEngine apply the flat branch.)
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income

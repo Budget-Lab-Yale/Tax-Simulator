@@ -896,6 +896,7 @@ scalars:
   st_credits.lictr_add_exempt_int: 0
   st_credits.lictr_add_hh_resources: 0
   st_credits.lictr_unnet_losses: 0
+  st_credits.lictr_add_nol: 0     # 1 = add back a net operating loss (negative other_inc) to MGI
   st_credits.lictr_aged_exemptions: 0
   st_credits.lictr_blind_exemptions: 0
   st_credits.lictr_mfs_share: 1

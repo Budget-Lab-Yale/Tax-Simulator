@@ -116,6 +116,9 @@ lictr_add_hh_resources:
 lictr_unnet_losses:
   value: 1
   reference: '7-2-2(L) "undiminished by losses"; PIT-RC line instructions: net business/farm/rental profit with losses entered as zero and gross capital gains with no loss offset'
+lictr_add_nol:
+  value: 1
+  reference: '7-2-2(L): modified gross income is all income "undiminished by losses"; a net operating loss carried into the year is a deduction, not an income source, so it is added back (PUF NOLs sit in negative other income). Cross-model 2026-10-14: negative-AGI records carried by an NOL drew a first-band rebate from us and none from PolicyEngine'
 lictr_aged_exemptions:
   value: 2
   reference: 'PIT-RC line 3 and 7-2-14(C): two additional exemptions for each taxpayer or spouse 65 or older'

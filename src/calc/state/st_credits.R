@@ -151,6 +151,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'wages1',            # (dbl)  primary wages for zero-income child credits
     'wages2',            # (dbl)  secondary wages for zero-income child credits
     'sole_prop',         # (dbl)  Schedule C income/loss
+    'other_inc',         # (dbl)  other income; negative = NOL carried in (NM LICTR add-back)
     'rent_loss',         # (dbl)  rental loss component (NM LICTR modified gross income)
     'part_active_loss',  # (dbl)  active partnership loss component (NM LICTR)
     'part_passive_loss', # (dbl)  passive partnership loss component (NM LICTR)

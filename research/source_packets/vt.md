@@ -176,6 +176,23 @@ one-signed, so encoding without them would have guaranteed a large residual:
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. The refundable Low Income Child and Dependent Care Credit (32 V.S.A. 5828c through TY2021) is now MODELED (2026-10-08): 50% of the federal credit (Form 2441 line 11 in TY2017-2020, line 10 -- the full ARPA credit -- in TY2021), refundable, for federal AGI of $30,000 or less ($40,000 joint), taken instead of the 24% credit when it pays more (new generic `cdctc_lowinc_*`). Care must be from a provider accredited by the Agency of Human Services, which is unobserved; the ASSUMPTION is that all care qualifies (`cdctc_lowinc_qual_share` = 1), as in TAXSIM and PolicyEngine. Tests VT-6 (updated), VT-6c, VT-6d. VT PE 2021 cell 0.956 -> 0.970. The 24% and 72% credits read the claimed federal credit (Form 2441 line 11), as encoded.
 
+## Cross-model status (2026-10-14)
+
+CLOSED. Clean match within $100: TAXSIM 2017-2020 0.960 / 0.973 / 0.975 /
+0.975; PolicyEngine 2021-2025 0.978 / 0.955 / 0.975 / 0.976 / 0.974. The
+encoding did not change; the TAXSIM window was three TAXSIM issues:
+
+- T49: the long-open "+$111" is a flat $111.00 credit TAXSIM reports in
+  total credits but in no component, every year 2017-2020, single and joint
+  alike, unaffected by rent, at wages up to $22,500 (under 65) or $27,500
+  (65+). No Vermont credit has that shape (probe:
+  `output/probe/vt_111_probe.R`).
+- T50: TAXSIM does not model the 5% charitable contribution credit
+  (32 V.S.A. 5822(d), TY2018+).
+- T51: TAXSIM applies the 40% capital gains exclusion to all gains; the
+  40% branch reaches only non-securities assets held over three years, so we
+  (and PolicyEngine) apply the flat $5,000.
+
 ## Known differences (beyond the two machinery gaps)
 
 3%-of-AGI **minimum tax** over $150,000 AGI (77-2715-analogue 5822(a)(6); no
