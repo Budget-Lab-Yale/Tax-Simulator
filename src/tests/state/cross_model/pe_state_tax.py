@@ -174,6 +174,14 @@ OUTPUT_VARS = {
     "pe_mi_home_heating": ["mi_home_heating_credit"],
     "pe_mo_property_tax_credit": ["mo_property_tax_credit"],
     "pe_or_kicker": ["or_kicker"],
+    # Maine's 2025 affordability payment ($300 per person, H.P. 1491 Part T):
+    # a direct payment from a special revenue fund, not a tax credit, which PE
+    # nets into me_refundable_credits for TY2025 (P5 class). 2026-10-13
+    "pe_me_affordability_payment": ["me_affordability_payment"],
+    # Maine property tax fairness credit (36 M.R.S. 5219-KK): PE pays it on
+    # real_estate_taxes = salt_prop with no rent input; ours is documented-
+    # not-modeled pending the rent / property-tax overlays (crosswalk item 1)
+    "pe_me_ptfc": ["me_property_tax_fairness_credit"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],

@@ -836,6 +836,9 @@ scalars:
   st_credits.stfc_income_base: 1
   st_credits.stfc_add_nontax_ss: 0
   st_credits.stfc_add_exempt_int: 0
+  # 1 = the STFC total-income concept adds back losses (capital loss to the
+  #     $3,000 netted) and above-the-line adjustments (ME 5213-A total income)
+  st_credits.stfc_unnet_losses: 0
   st_credits.stfc_refundable: 1
   # Income base for the BANDED per-person amount published as a dense table
   # (HI Form N-311 food/excise credit: per-exemption amount by federal-AGI

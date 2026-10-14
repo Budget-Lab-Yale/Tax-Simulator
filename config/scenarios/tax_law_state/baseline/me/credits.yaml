@@ -43,8 +43,8 @@ ctc_young_age_limit:
   value: 5
   reference: 'The 2025 doubled amount reaches children under 6 at year-end; before 2025 both tiers carry the same amount so the split is inert'
 ctc_max_child_age:
-  value: 23
-  reference: 'Qualifying children AND dependents claimed for the federal CTC or credit for other dependents (1040ME line 13a). Tracked dependent ages run to 23 in the data; older adult dependents are missed [understates the credit for units with elderly dependents]'
+  value: 150
+  reference: '36 M.R.S. 5219-SS(1): the credit is for each dependent for whom the federal child tax credit OR credit for other dependents is claimed (1040ME line 13a) -- no age limit; an adult dependent parent qualifies through the ODC. 150 = no limit over the three tracked age slots (fixed 2026-10-13: the previous cap of 23 dropped dependents aged 24+, the whole PE 2024 +300 class; dependents beyond the third slot remain uncounted)'
 ctc_young_amount:
   value:
     '2017': 0
@@ -147,13 +147,14 @@ stfc_add_nontax_ss:
 stfc_add_exempt_int:
   value: 1
   reference: 'Total income includes non-taxable interest'
+stfc_unnet_losses:
+  value: 1
+  reference: 'Schedule PTFC/STFC total income (36 M.R.S. 5213-A(1)(B), 5219-KK(1)(D)): net business, capital, rental and farm losses and the federal above-the-line deductions (educator, HSA, SE tax, SEP/SIMPLE, SE health, alimony, IRA, student loan interest) are added back. Encoded 2026-10-13 (was documented-not-modeled): the 2022-2024 PolicyEngine residual paid us the credit on negative-AGI records that total income disqualifies'
 stfc_refundable:
   value: 1
   reference: '5213-A: the credit is refundable, all years'
 
 documented_not_modeled:
-  stfc_loss_and_deduction_addbacks:
-    reference: 'The Schedule PTFC/STFC "total income" concept also adds back net losses (business/capital/rental/farm) and most federal above-the-line deductions (educator, HSA, SE tax, SEP/SIMPLE, SE health, alimony, IRA, student loan interest). These add-backs are not applied [overstates the STFC for units with losses or large above-the-line deductions]'
   detc_indexation:
     reference: 'The DETC amount is indexed for tax years after 2024 and its 2025 thresholds after 2025; published values are carried flat pending each year''s worksheet'
   quality_child_care_50pct:

@@ -61,7 +61,8 @@ st_credits_household_req_vars = c(
   'st_credits.lictr_mfs_share',
   'st_credits.stfc_income_base',
   'st_credits.stfc_add_nontax_ss',
-  'st_credits.stfc_add_exempt_int'
+  'st_credits.stfc_add_exempt_int',
+  'st_credits.stfc_unnet_losses'
 )
 
 
@@ -317,10 +318,27 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # NONTAXABLE Social Security and exempt interest, approximating ME's
   # broad "total income" (loss and above-the-line add-backs are
   # documented approximations)
+  # Losses and above-the-line adjustments that a "total income" concept adds
+  # back to federal AGI (ME 5213-A/5219-KK total income; NM 7-2-2(L)
+  # "undiminished by losses"): each loss (the capital loss only to the $3,000
+  # federal AGI actually nets) and the above-the-line deductions. S-corp
+  # losses and above_ded are read optionally so synthetic test units without
+  # them still compute
+  opt_col = function(name) {
+    if (name %in% colnames(tax_unit)) coalesce(tax_unit[[name]], 0) else rep(0, n)
+  }
+  unnetted_losses = pmax(0, -tax_unit$sole_prop) + pmax(0, -tax_unit$farm) +
+    pmin(3000, pmax(0, -(tax_unit$kg_lt + tax_unit$kg_st))) +
+    pmax(0, tax_unit$rent_loss) + pmax(0, tax_unit$part_active_loss) +
+    pmax(0, tax_unit$part_passive_loss) +
+    pmax(0, opt_col('scorp_active_loss')) +
+    pmax(0, opt_col('scorp_passive_loss')) +
+    pmax(0, opt_col('above_ded'))
   stfc_income = st_income_base(tax_unit, tax_unit$st_credits.stfc_income_base) +
     tax_unit$st_credits.stfc_add_nontax_ss *
       pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
-    tax_unit$st_credits.stfc_add_exempt_int * tax_unit$exempt_int
+    tax_unit$st_credits.stfc_add_exempt_int * tax_unit$exempt_int +
+    tax_unit$st_credits.stfc_unnet_losses * unnetted_losses
   st_stfc = (tax_unit$dep_status != 1) * lookup_state_credit_table(
     floor(stfc_income + 0.5), pmin(tax_unit$n_dep, 3L), credit_tables,
     'stfc', filing_status = tax_unit$filing_status
@@ -341,26 +359,13 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # taxpayers, dependents and the per-65+/per-blind add-ons; the lookup
   # caps the key at the table's "6 or more" column and returns zero above
   # the top band. Negative MGI uses the first row (7-2-14(E))
-  lictr_opt_col = function(name) {
-    if (name %in% colnames(tax_unit)) coalesce(tax_unit[[name]], 0) else rep(0, n)
-  }
   lictr_income = st_income_base(tax_unit, tax_unit$st_credits.lictr_income_base) +
     tax_unit$st_credits.lictr_add_nontax_ss *
       pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
     tax_unit$st_credits.lictr_add_exempt_int * tax_unit$exempt_int +
     tax_unit$st_credits.lictr_add_hh_resources * tax_unit$hh_resources_inc +
-    # "undiminished by losses" and with no deductions: add back each loss
-    # (the capital loss only to the $3,000 federal AGI actually nets) and
-    # the above-the-line adjustments. S-corp losses and above_ded are read
-    # optionally so synthetic test units without them still compute
-    tax_unit$st_credits.lictr_unnet_losses * (
-      pmax(0, -tax_unit$sole_prop) + pmax(0, -tax_unit$farm) +
-      pmin(3000, pmax(0, -(tax_unit$kg_lt + tax_unit$kg_st))) +
-      pmax(0, tax_unit$rent_loss) + pmax(0, tax_unit$part_active_loss) +
-      pmax(0, tax_unit$part_passive_loss) +
-      pmax(0, lictr_opt_col('scorp_active_loss')) +
-      pmax(0, lictr_opt_col('scorp_passive_loss')) +
-      pmax(0, lictr_opt_col('above_ded')))
+    # "undiminished by losses" and with no deductions (shared add-back above)
+    tax_unit$st_credits.lictr_unnet_losses * unnetted_losses
   lictr_key = as.integer(n_taxpayers + tax_unit$n_dep +
                          tax_unit$st_credits.lictr_aged_exemptions * n_aged +
                          tax_unit$st_credits.lictr_blind_exemptions * n_blind)

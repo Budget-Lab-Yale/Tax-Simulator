@@ -5972,6 +5972,22 @@ run_case('AR', 2024,
   # ME-1: 2024 single, wages 50,000, standard deduction (= federal 14,600),
   # exemption 5,000. TI = 30,400 -> 1,510.90 + 6.75% x 4,350 = 1,804.53
   # (continuous schedule; the printed base rounds to 1,511)
+  # ME-10 (2026-10-13): the dependent exemption tax credit reaches every
+  # dependent claimed for the federal CTC or the credit for other dependents
+  # (36 M.R.S. 5219-SS), so a 70-year-old dependent parent earns $300 in 2024
+  # (refundable from TY2024)
+  run_case('ME', 2024, list(agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 1, dep_age1 = 70),
+           expect = list(st_ctc = 300),
+           label = 'ME-10 2024 DETC for an adult dependent (ODC)')
+  # ME-11 (2026-10-13): the sales tax fairness credit's total income adds
+  # back losses (5213-A(1)(B)): wages 35,000 less a 30,000 Schedule C loss is
+  # AGI 5,000 but total income 35,000, past the 2023 single phase-out
+  # (140 at 23,300, $10 per $500) -> no credit
+  run_case('ME', 2023, list(agi = 5000, wages1 = 35000, ei1 = 35000, sole_prop = -30000),
+           expect = list(st_stfc = 0),
+           label = 'ME-11 2023 STFC total income adds back a business loss')
+
   run_case('ME', 2024, list(agi = 50000, wages1 = 50000, ei1 = 50000),
            expect = list(st_agi = 50000, liab_st_iit = 1804.53),
            label = 'ME-1 2024 basic single')

@@ -420,6 +420,20 @@ returns, 81% with spouse earned income under the deduction), a flat 5% x $2,590 
 TAXSIM understates Kentucky tax by up to the rate times the standard deduction for every one-earner married
 return, 2017-2024. (Previously annotated as a sub-$100 item; promoted once measured.)
 
+### T47. Maine dependent exemption tax credit only for child tax credit children
+
+36 M.R.S. 5219-SS gives $300 for each dependent for whom the federal child tax credit OR the credit for other dependents
+is claimed (1040ME line 13a, TY2018+). TAXSIM-35 counts only CTC children: in the 2026-10-13 re-score 335 clean TY2019
+records sit at -$300 and 63 at -$600 (ours lower), e.g. a joint return with three dependents, two aged 18+, gets TAXSIM
+credits of $300 against our $900. Effect: TAXSIM overstates Maine tax by $300 per 17-year-old, adult student or
+dependent parent, 2018-2020.
+
+### T48. Maine dependent exemption tax credit not phased out
+
+The credit phases out by $7.50 per $1,000 of Maine AGI over $200,000 ($400,000 joint), gone $40,000 above the
+threshold. TAXSIM-35 pays it in full at any income: joint returns with $1.6M-$5.9M of AGI carry TAXSIM credits of
+exactly $300 per dependent. Effect: TAXSIM understates Maine tax by $300 per dependent above the phase-out.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1346,6 +1360,13 @@ rebate was encoded on our side; record-level pulls in `scratchpad` of that date.
 `parameters/gov/states/nm/tax/income/rebates/low_income_comprehensive/five_exemptions.yaml` (line 112) carries 305 for
 the TY2023 $14,501-16,500 band; the published PIT-RC Table 1 (PITbook2023) row reads 308. The other 275 cells of every
 2021-2025 vintage match the published tables cell for cell. De minimis.
+
+### P37. Maine 2025 affordability payment netted into liability
+
+`me_refundable_credits` for 2025 includes `me_affordability_payment` ($300 per person; H.P. 1491 Part T Sec. T-1),
+whose own parameter note calls it a direct payment from a Special Revenue Fund, not a tax credit. In the 2026-10-13
+re-score 82 of 95 clean TY2025 mismatches sit at +$300 or +$600 (PE lower), each with the payment present. The same
+one-time-rebate class as P5. Effect: PolicyEngine understates Maine TY2025 liability by $300 per person.
 
 ## Corroboration worth passing along
 

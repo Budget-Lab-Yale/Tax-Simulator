@@ -136,6 +136,25 @@ deduction phase-out; ME-7 the 2022 credit stack (25% EITC, nonrefundable
 DETC, capped-refundable care credit, STFC from the table); ME-8 the 2025
 DETC restructure ($500 steps); ME-9 the STFC alone mid-phase-out.
 
+## Cross-model status (2026-10-13)
+
+CLOSED. Clean match within $100: TAXSIM 2017-2020 0.962 / 0.956 / 0.961 /
+0.958; PolicyEngine 2022-2025 0.959 / 0.957 / 0.951 / 1.000. TY2021 stays a
+dropped cell (the P5 row for the 2022 relief payment removes 84% of it).
+What closed it:
+
+- Our side: the dependent exemption tax credit reaches every dependent
+  claimed for the federal CTC or the credit for other dependents (5219-SS;
+  the old age cap of 23 dropped dependents 24+). The sales tax fairness
+  credit's total income adds back losses and above-the-line deductions
+  (5213-A(1)(B); `stfc_unnet_losses`), which removed the credit from
+  negative-AGI records.
+- TAXSIM: T47 (the DETC only for CTC children) and T48 (no DETC phase-out).
+- PolicyEngine: P37 (the TY2025 $300 affordability payment, a direct
+  payment, netted into liability) and the property tax fairness credit,
+  paid on `salt_prop` with no rent input (ours waits on the rent and
+  property-tax overlays).
+
 ## Known differences (documented in the YAML)
 
 Military pension full exemption (decision 5); PTFC (property tax/rent --
