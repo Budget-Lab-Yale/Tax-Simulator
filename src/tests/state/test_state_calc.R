@@ -632,6 +632,12 @@ test_state_calc = function() {
            expect = list(st_exempt = 5800, st_eitc = 300,
                          liab_st_iit = (50000 - 5800) * 0.0425 - 300),
            label = 'MI-1 exemption and refundable EITC')
+  # MI-12 (2026-10-13): blind special exemption (MI-1040 line 9b, $3,400 in
+  # 2025) from the Tax-Data blind1 column: exemption 5,800 + 3,400 = 9,200
+  run_case('MI', 2025, list(agi = 50000, eitc = 1000, blind1 = 1),
+           expect = list(st_exempt = 9200,
+                         liab_st_iit = (50000 - 9200) * 0.0425 - 300),
+           label = 'MI-12 blind special exemption')
 
   # MI-2: 2019 Tier 1 (born before 1946 = age 74+): single 75, pension
   # 60,000 capped at the Form 4884 maximum 52,808; senior investment cap
@@ -644,6 +650,21 @@ test_state_calc = function() {
            expect = list(st_agi = 65000 - 52808 - 750,
                          liab_st_iit = (65000 - 52808 - 750 - 4400) * 0.0425),
            label = 'MI-2 Tier 1 pension cap')
+  # MI-11a/b (2026-10-13): Tier 1 public pensions are unlimited (MCL
+  # 206.30(9)(a); Form 4884 Section A) from the pension_public overlay. 11a:
+  # all 60,000 public -> subtracted in full -> st_agi 4,250 -> no tax. 11b:
+  # 30,000 public + private up to the cap less public = 52,808 (= MI-2)
+  run_case('MI', 2019,
+           list(agi = 65000, age1 = 75, txbl_pens_dist = 60000,
+                txbl_int = 5000, pension_public = 60000),
+           expect = list(st_sub_pens = 60000, st_agi = 4250, liab_st_iit = 0),
+           label = 'MI-11a Tier 1 all-public pension unlimited (overlay live)')
+  run_case('MI', 2019,
+           list(agi = 65000, age1 = 75, txbl_pens_dist = 60000,
+                txbl_int = 5000, pension_public = 30000),
+           expect = list(st_agi = 65000 - 52808 - 750,
+                         liab_st_iit = (65000 - 52808 - 750 - 4400) * 0.0425),
+           label = 'MI-11b Tier 1 mixed pension: the cap bounds public plus private')
 
   # MI-3: 2019 Tier 2 (born 1946-1952 = ages 67-73): single 68, pension
   # 30,000 capped at 20,000 (the 67+ Michigan Standard Deduction amount,
@@ -651,6 +672,10 @@ test_state_calc = function() {
   run_case('MI', 2019, list(agi = 40000, age1 = 68, txbl_pens_dist = 30000),
            expect = list(st_agi = 20000),
            label = 'MI-3 Tier 2 $20k cap')
+  run_case('MI', 2019, list(agi = 40000, age1 = 68, txbl_pens_dist = 30000,
+                            pension_public = 30000),
+           expect = list(st_agi = 20000),
+           label = 'MI-11c Tier 2 gets no unlimited public pension')
 
   # MI-4: 2019 Tier 3 (born after 1952, under 67): no retirement
   # subtraction at all
@@ -5382,6 +5407,37 @@ run_case('AR', 2024,
                          st_std_ded = 2745, st_txbl_inc = 51255,
                          st_exempt_credit = 249, liab_st_iit = 3934.81),
            label = 'OR-1 2024 single, full federal tax subtraction')
+  # OR-12 (2026-10-13): other states' bond interest addition (ORS 316.680(2)(a))
+  # at the 25% out-of-state convention: exempt_int 4,000 -> +1,000 ->
+  # st_agi 61,000; TI 52,255 -> 4,271.31 - 249 = 4,022.31
+  run_case('OR', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000,
+                exempt_int = 4000),
+           expect = list(st_additions = 1000, st_agi = 61000, liab_st_iit = 4022.31),
+           label = 'OR-12 other states bond interest added')
+  # OR-11a..c: retirement income credit (ORS 316.157), 9% of the lesser of
+  # the eligible spouses' pension income and the base less gross SS less
+  # household income over the threshold. 11a: single 70, pension 12,000, SS
+  # 6,000 -> base 7,500 - 6,000 = 1,500 -> credit 135; tax 457.71 - 249 -
+  # 135 = 73.71. 11b: household income 30,000 -> excess 15,000 wipes the
+  # base -> 0; tax 1,891.31 - 249 = 1,642.31. 11c: joint 64/58, pension
+  # 16,000 (half eligible), SS 2,000 -> credit 9% x 8,000 = 720, more than
+  # the 39.09 of tax left after exemption credits -> 0 (nonrefundable)
+  run_case('OR', 2024,
+           list(age1 = 70, agi = 12000, txbl_pens_dist = 12000, gross_ss = 6000,
+                txbl_ss = 0, liab_bc = 0),
+           expect = list(st_retire_credit = 135, liab_st_iit = 73.71),
+           label = 'OR-11a retirement income credit, SS reduces the base')
+  run_case('OR', 2024,
+           list(age1 = 65, wages1 = 10000, ei1 = 10000, agi = 30000,
+                txbl_pens_dist = 20000, liab_bc = 1000),
+           expect = list(st_retire_credit = 0, liab_st_iit = 1642.31),
+           label = 'OR-11b retirement income credit killed by household income')
+  run_case('OR', 2024,
+           list(filing_status = 2, age1 = 64, age2 = 58, agi = 16000,
+                txbl_pens_dist = 16000, gross_ss = 2000, txbl_ss = 0, liab_bc = 0),
+           expect = list(st_retire_credit = 720, liab_st_iit = 0),
+           label = 'OR-11c retirement income credit, one eligible spouse, nonrefundable')
 
   # OR-2: the AGI-banded CAP. Same year, AGI 132,000 lands in the third band
   # ($130,000-$135,000), where the allowance is $4,950 rather than $8,250 --
@@ -5799,6 +5855,39 @@ run_case('AR', 2024,
            expect = list(st_retire_exempt = 3000, st_fed_tax_ded = 375,
                          liab_st_iit = 257.56),
            label = 'MO-9 2023 private pension exemption partially reduced')
+  # MO-15a..d (2026-10-13): MO-A Section A public pension exemption from the
+  # pension_public overlay. 15a = MO-8 with the 20,000 pension public:
+  # min(20,000, 44,683) less the 10,000 SS exemption = 10,000, limit income
+  # 80,000 < 85,000 -> st_retire_exempt 20,000; TI 54,650 -> 2,520.95.
+  # 15b = MO-10b (2024, no income limit) with a 25,000 public pension: 25,000
+  # - 15,000 SS = 10,000 -> st_retire_exempt 25,000 -> 3,537.87. 15c = MO-10a
+  # (2023, limit income 105,000) with 30,000 public: 30,000 - 0 - 20,000 =
+  # 10,000 -> 4,434.12. 15d = MO-9 with 12,000 of the 20,000 public: Section
+  # A 12,000; Section B private 8,000 -> min(8,000, 6,000) - 3,000 = 3,000 ->
+  # st_retire_exempt 15,000 -> no tax
+  run_case('MO', 2023,
+           list(agi = 90000, age1 = 70, wages1 = 60000, ei1 = 60000,
+                txbl_ss = 10000, txbl_pens_dist = 20000, std_ded = 13850,
+                liab_bc = 10000, pension_public = 20000),
+           expect = list(st_retire_exempt = 20000, liab_st_iit = 2520.95),
+           label = 'MO-15a public pension exemption net of the SS exemption (overlay live)')
+  run_case('MO', 2024,
+           list(agi = 120000, age1 = 70, wages1 = 80000, ei1 = 80000,
+                txbl_ss = 15000, txbl_pens_dist = 25000, std_ded = 16550,
+                liab_bc = 20000, pension_public = 25000),
+           expect = list(st_retire_exempt = 25000, liab_st_iit = 3537.87),
+           label = 'MO-15b public pension exemption without the income limit (2024)')
+  run_case('MO', 2023,
+           list(agi = 120000, age1 = 70, wages1 = 80000, ei1 = 80000,
+                txbl_ss = 15000, txbl_pens_dist = 30000, std_ded = 15700,
+                liab_bc = 20000, pension_public = 30000),
+           expect = list(st_retire_exempt = 10000, liab_st_iit = 4434.12),
+           label = 'MO-15c public pension exemption reduced by the 2023 income limit')
+  run_case('MO', 2023,
+           list(agi = 28000, age1 = 70, txbl_pens_dist = 20000,
+                std_ded = 15700, liab_bc = 1500, pension_public = 12000),
+           expect = list(st_retire_exempt = 15000, liab_st_iit = 0),
+           label = 'MO-15d public exemption with a private remainder')
 
   # MO-10a / MO-10b: SB 190 removed the income limit on the Social Security
   # exemption from TY2024 -- and ONLY on that one. The same unit is run

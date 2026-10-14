@@ -31,6 +31,24 @@ Last updated: `2026-07-13`
 
 - 2025 single filer with a $5,800 exemption and $1,000 federal EITC: verifies the 30 percent refundable state EITC.
 
+## Data-gap batch (2026-10-13)
+
+- Tier-1 (born before 1946) unlimited public pension subtraction (MCL
+  206.30(9)(a); Form 4884 Section A) encoded on the `pension_public`
+  overlay (`pension_excl_public_uncapped_min_age`, the born-before-1946 age
+  series; S43): inert until a producer publishes it. Tests MI-11a..c.
+- Blind special exemption (MI-1040 line 9b): law fix from the Tax-Data
+  `blind1/2` columns, amounts transcribed from each year's form ($2,600
+  2017 to $3,400 2025); deaf/disabled filers and blind dependents remain
+  unobserved. Test MI-12. Both external models tax the amount (exclude row).
+- Homestead property tax credit (MI-1040CR): waits on the generic
+  refundable circuit breaker (decision S46(a), JI review); meanwhile the
+  harness excludes PolicyEngine's and TAXSIM's homestead credits, both
+  computed on `salt_prop` with no rent. Home heating credit (MI-1040CR-7):
+  OUT of liability by decision S46(b); PolicyEngine's input-free payment is
+  excluded.
+- Spec: `research/state_tax/notes/datagap_spec_mi_mo_or.md` §1-2.
+
 ## Known differences
 
 - The retirement subtraction is ENCODED as of 2026-07-23 (elderly survey follow-up; full research in [research/raw/mi_retirement_research.md](research/raw/mi_retirement_research.md)): per-return age bands on the older spouse (new `pension_excl_band_*` family) expressing the birth-year tiers (Tier 1 born <1946: indexed Form 4884 cap, $50,509/$101,019 in 2017 to $65,897/$131,794 in 2025; Tier 2 born 1946-52: $20,000/$40,000) and the PA 4 of 2023 phase-in (25/50/75/100% of the cap for the expanding born-1946-to-1958/-62/-66 windows, printed amounts $15,380/$32,020/$49,423 single; everyone from 2026, floored at age 59 for the IRA-59.5/plan-retirement rules). The senior investment income subtraction (MCL 206.30(1)(p), born <1946, $11,259 to $14,688 single) is also encoded, reduced by the retirement subtraction taken. The Tier-2/3 67+ Michigan Standard Deduction is ALSO properly encoded (same date) as an all-income deduction via the new `senior_std_*` params: $20,000/$40,000 for 67+ older-spouse returns born after 1945, full for Tier-2 ages, netted by taxable SS (suspended 2026-2028 per PA 4) and exemption amounts for Tier-3 ages per the Worksheet 2 netting, mutually exclusive with the Form 4884 subtraction (calculator takes the better). Motivated by cross-model point masses at +$850/+$1,700 (= 20k/40k x 4.25%) on 67+ no-pension records. Tests MI-2..MI-10. Remaining known-differences: public pensions (unlimited for Tier 1) treated as private/capped — source unobservable; 457/TSP/unmatched-401(k) amounts would not qualify but sit in the PUF pension concept; military-pay/military-retirement reductions to the caps and standard deduction unobserved; SSA-exempt add-ons, fire/police (2023+), and surviving-spouse elections unobservable; 2026+ caps carry 2025 published values (CPI-indexed in law).

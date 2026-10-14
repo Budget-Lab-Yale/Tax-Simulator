@@ -164,6 +164,16 @@ OUTPUT_VARS = {
     # TAXSIM leg as a Tier-1-blocked class (no rent in the PUF); PE models it
     # too and had no equivalent row until 2026-08-22.
     "pe_ri_property_tax_credit": ["ri_property_tax_credit"],
+    # MI-1040CR homestead credit and MI-1040CR-7 home heating credit, the MO
+    # property tax credit (all paid by PE on real_estate_taxes = salt_prop
+    # with no rent input; ours read the S43 overlays and are inert in the
+    # harness; home heating is outside our concept, S46), and the OR kicker
+    # guard (PE's prior-year base is an input the driver never passes, so it
+    # pays zero; the provision is deferred on our side, S46). 2026-10-13
+    "pe_mi_homestead": ["mi_homestead_property_tax_credit"],
+    "pe_mi_home_heating": ["mi_home_heating_credit"],
+    "pe_mo_property_tax_credit": ["mo_property_tax_credit"],
+    "pe_or_kicker": ["or_kicker"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],

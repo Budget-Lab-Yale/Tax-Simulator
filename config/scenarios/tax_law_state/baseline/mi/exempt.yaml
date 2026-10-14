@@ -23,10 +23,17 @@ dep_amount:
   reference: 'Michigan MI-1040 instructions and Tax Year Information pages, 2017-2025'
 aged_addl:
   value: 0
-  reference: 'Michigan special exemptions require disability, stillbirth, veteran, or other status inputs not in the baseline PUF'
+  reference: 'Michigan has no age-based special exemption 2017-2025 (repealed by 2011 PA 38); line 9b covers deaf/blind/disabled only'
 blind_addl:
-  value: 0
-  reference: 'Michigan special exemptions require disability, stillbirth, veteran, or other status inputs not in the baseline PUF'
+  value:
+    '2017': 2600
+    '2018': 2700
+    '2020': 2800
+    '2022': 2900
+    '2023': 3100
+    '2024': 3300
+    '2025': 3400
+  reference: 'MI-1040 line 9b special exemption amount, read from each year''s form (NBER mirror MI/2017-2025): $2,600 / $2,700 / $2,700 / $2,800 / $2,800 / $2,900 / $3,100 / $3,300 / $3,400; MCL 206.30(3)(a) ($1,800 in statute, indexed by Treasury). Blind filer and spouse only: blind1/blind2 are Tax-Data columns; deaf/disabled filers and blind dependents are unobserved [understates the exemption for them; the disabled1/2 overlay could add a st_exempt.disabled_addl later]. 2026+ carries 2025 [S45]'
 po_thresh:
   value: .inf
   reference: 'Michigan personal exemption has no broad AGI phaseout, 2017-2025'

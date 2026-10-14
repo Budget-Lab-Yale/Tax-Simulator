@@ -23,23 +23,25 @@ ss_full_sub_allages:
 
 sub_us_int:
   value: 1
-  reference: 'OR-17 2025 "Interest and dividends on U.S. bonds and notes" subtraction (p.77); 31 U.S.C. 3124. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken -- see documented_not_modeled'
+  reference: 'OR-17 2025 "Interest and dividends on U.S. bonds and notes" subtraction (p.77); 31 U.S.C. 3124. The U.S.-obligation share of txbl_int is the interest_us_share optional data column (S43), default 0.15, so the calculator subtracts 15% of taxable interest [the true share is unobserved]'
+add_exempt_int:
+  value: 1
+  reference: 'ORS 316.680(2)(a); OR-17 2025 p.63 "Interest and dividends on government bonds of other states" [addition code 158], Schedule OR-ASC Section A; 2017-2025'
+own_state_exempt:
+  value: 1
+  reference: 'Oregon and Oregon-subdivision obligations are not added (ORS 316.680(2)(a) reaches other states only); the Oregon share of exempt_int is the interest_own_state_share optional data column, default 0.75 (S43)'
 
 sub_state_ref:
   value: 1
   reference: 'OR-17 2025 "Oregon income tax refund" subtraction (p.79). Oregon''s own itemized deduction removes state and local income tax (see ded.yaml salt_addback), so a refund of it was never deducted for Oregon purposes and is subtracted back out'
 
 documented_not_modeled:
-  us_obligation_interest_share:
-    reference: 'The subtraction reaches interest and dividends on U.S. bonds and notes, but the U.S.-obligation share of txbl_int is not observable in the PUF, so no amount is actually subtracted [overstates Oregon tax for Treasury holders] -- the Hawaii convention'
   federal_pension_pre_1991_service:
     reference: 'OR-17 "Federal pension income" subtraction: the share of a federal pension attributable to service before October 1 1991 is subtractable, computed as months of service before that date over total months of service. Neither the service history nor the federal-vs-private character of a pension is in the PUF [overstates Oregon tax for long-serving federal retirees]'
   special_oregon_medical_subtraction:
     reference: 'ORS 316.693, subtraction code 351: an age-based special medical subtraction for filers (or spouses) at or above the qualifying age, on medical and dental expenses not already deducted, with its own AGI floor. The model carries only the federal post-7.5%-floor itemized medical amount, so the Oregon-specific base cannot be rebuilt [overstates Oregon tax for older filers with medical expenses]. Interacts with itemizing -- see ded.yaml'
   oregon_529_and_able:
     reference: 'Oregon subtracted contributions to its 529 and ABLE plans, then replaced the 529 subtraction with a credit. Contributions are unobserved in the PUF'
-  out_of_state_muni_interest:
-    reference: 'OR-17 "State and local government bond interest" ADDITION (p.85): interest on other states'' municipal bonds is taxable in Oregon while federal AGI excludes it. exempt_int is available but its own-state share is unobservable, and Oregon''s addition is not encoded here [understates Oregon income for holders of other states'' bonds]'
   first_time_home_buyer_savings:
     reference: 'A first-time home buyer savings account subtraction, extended from January 1 2025 to accounts opened for a designated beneficiary (Form OR-HOME). Contributions are unobserved'
   narrow_subtractions:

@@ -50,8 +50,10 @@ ss_sub_share:
 #              carried forward (CPI-indexed in law; published amounts
 #              transcribed through 2025) [known-difference].
 #
-# Known-differences (documented in mi.md): public pensions (unlimited for
-# Tier 1) treated as private/capped -- source unobservable; 457/TSP and
+# Known-differences (documented in mi.md): the Tier-1 unlimited public
+# pension subtraction reads the pension_public optional data column
+# (pension_excl_public_uncapped_min_age; S43) and is inert until a producer
+# publishes it, so public pensions are capped as private meanwhile; 457/TSP and
 # unmatched-401(k) amounts in the PUF pension concept would not qualify;
 # military/railroad cap reductions unobserved (offsetting: military
 # retirement is also not separately exempted); SSA-exempt, fire/police
@@ -147,6 +149,28 @@ senior_inv_min_age:
     '2034': 89
     '2035': 90
   reference: 'MCL 206.30(1)(p): not available to a senior citizen born after 1945; expressed as older-spouse age = year - 1945'
+pension_excl_public_uncapped_min_age:
+  value:
+    '2017': 72
+    '2018': 73
+    '2019': 74
+    '2020': 75
+    '2021': 76
+    '2022': 77
+    '2023': 78
+    '2024': 79
+    '2025': 80
+    '2026': 81
+    '2027': 82
+    '2028': 83
+    '2029': 84
+    '2030': 85
+    '2031': 86
+    '2032': 87
+    '2033': 88
+    '2034': 89
+    '2035': 90
+  reference: 'MCL 206.30(9)(a) (born before 1946: no limitation on the subsection (1)(f)(i) public benefits); Form 4884 Section A lines 9-16 (2025): private benefits limited to the cap less public benefits claimed. Older-spouse age = year - 1945. Reads pension_public (S43); inert at its default 0. Military/railroad reductions to the cap (line 10) stay unobserved; other states'' public pensions are private (206.30(1)(f)(ii)) and would need a producer to publish only MI/federal amounts in pension_public'
 
 senior_inv_cap_single:
   value:

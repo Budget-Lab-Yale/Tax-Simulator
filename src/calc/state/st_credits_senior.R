@@ -21,6 +21,13 @@ st_credits_senior_req_vars = c(
   'st_credits.ss_age_credit_exclusive',
   'st_credits.retire_credit_income_limit',
   'st_credits.retire_credit_income_base',
+  'st_credits.retire_inc_credit_rate',
+  'st_credits.retire_inc_credit_min_age',
+  'st_credits.retire_inc_credit_base',
+  'st_credits.retire_inc_credit_hh_thresh',
+  'st_credits.retire_inc_credit_income_base',
+  'st_credits.retire_inc_credit_add_exempt_int',
+  'st_credits.retire_inc_credit_add_hh_resources',
   'st_credits.senior_credit_amount',
   'st_credits.senior_credit_one65_amount',
   'st_credits.senior_credit_min_age',
@@ -98,6 +105,29 @@ st_credits_senior = function(tax_unit) {
       (rc_test_income < tax_unit$st_credits.retire_credit_income_limit)
     st_retire_credit[is.na(st_retire_credit)] = 0
   }
+
+  # Rate-style retirement income credit (OR ORS 316.157): rate x the lesser
+  # of the eligible spouses' pension + IRA income and a filing-status base
+  # reduced by GROSS Social Security received and by household income over
+  # a threshold. Per-spouse attribution of the pension pool is unobserved, so
+  # the eligible share is the fraction of spouses at or above the age (the
+  # MO SS convention); household income excludes Social Security by statute
+  # and the gross benefits reduce the base instead. Nontaxable household
+  # items come from the hh_resources_inc optional data column (S43)
+  ric_n_elig = (tax_unit$age1 >= tax_unit$st_credits.retire_inc_credit_min_age) +
+               (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) &
+                tax_unit$age2 >= tax_unit$st_credits.retire_inc_credit_min_age)
+  ric_n_tp   = 1 + (tax_unit$filing_status == 2)
+  ric_pension = pmax(0, tax_unit$txbl_pens_dist + tax_unit$txbl_ira_dist) *
+                ric_n_elig / ric_n_tp
+  ric_hh_income = st_income_base(tax_unit, tax_unit$st_credits.retire_inc_credit_income_base) +
+    tax_unit$st_credits.retire_inc_credit_add_exempt_int * tax_unit$exempt_int +
+    tax_unit$st_credits.retire_inc_credit_add_hh_resources * tax_unit$hh_resources_inc
+  ric_base = pmax(0, pmax(0, tax_unit$st_credits.retire_inc_credit_base -
+                             pmax(0, tax_unit$gross_ss)) -
+                     pmax(0, ric_hh_income - tax_unit$st_credits.retire_inc_credit_hh_thresh))
+  st_retire_credit = st_retire_credit +
+    tax_unit$st_credits.retire_inc_credit_rate * pmin(ric_pension, ric_base)
 
   # Per-return senior citizen credit (OH 5747.055(F)): flat amount when
   # either filer is at or above the minimum age, denied at or above the

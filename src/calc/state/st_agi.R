@@ -148,6 +148,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
     'st_agi.pension_excl_band_per_return', # (int) banded caps per return, older-spouse age
+    'st_agi.pension_excl_public_uncapped_min_age', # (dbl) unlimited public pension at/above this age (MI Tier 1)
     'st_agi.pension_excl_tier_min_age', # (dbl) minimum age for the income-banded exclusion (NJ 62)
     'st_agi.pension_excl_orie',      # (int) unclaimed-exclusion component allowed (NJ line 28b Part I)
     'st_agi.pension_excl_orie_earned_max', # (dbl) earned-income ceiling for it (NJ $3,000)
@@ -317,6 +318,19 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       cap2_v
     )
   }
+  # Unlimited public pension at or above the Tier-1 age (MI MCL 206.30(9)(a);
+  # Form 4884 Section A lines 12-16): public benefits come out in full and
+  # the private remainder takes the cap, i.e. the effective cap is
+  # max(cap, public). Older-spouse age where the bands are per return; own
+  # age otherwise. Reads pension_public (S43); inert at .inf / 0
+  public_pool = pmin(pmax(0, tax_unit$pension_public), pmax(0, tax_unit$txbl_pens_dist))
+  tier1_age   = if_else(tax_unit$st_agi.pension_excl_band_per_return == 1,
+                        pmax(tax_unit$age1,
+                             if_else(tax_unit$filing_status == 2 & !is.na(tax_unit$age2),
+                                     tax_unit$age2, tax_unit$age1)),
+                        tax_unit$age1)
+  cap1_v = if_else(tier1_age >= tax_unit$st_agi.pension_excl_public_uncapped_min_age,
+                   pmax(cap1_v, public_pool), cap1_v)
 
   # Own-base starting point (start_point 0): class shares times PUF income
   # concepts, each class floored at zero after the share where

@@ -149,6 +149,25 @@ Last updated: `2026-08-21`
   because Schedule OR-A removes state and local income tax, many Oregon filers
   itemize for Oregon while taking the federal standard deduction.
 
+## Data-gap batch (2026-10-13)
+
+- Retirement income credit (ORS 316.157; OR-17 2025 pp.106-107, code 811)
+  ENCODED -- law, not data: 9% of the lesser of the eligible (62+) spouses'
+  pension and IRA income and the $7,500 / $15,000 base less gross Social
+  Security and household income over $15,000 / $30,000; household income is
+  federal AGI without Social Security plus exempt interest and the
+  `hh_resources_inc` overlay. Tests OR-11a..c. PolicyEngine models it on
+  the same inputs; TAXSIM unknown (annotate row to be measured).
+- Other states' bond interest addition (ORS 316.680(2)(a), code 158)
+  encoded at the 0.75 own-state convention (`add_exempt_int`,
+  `own_state_exempt`); exclude row with a materiality bound, since neither
+  external model adds it. Test OR-12.
+- The `sub_us_int` strings were wrong: the calculator DOES subtract 15% of
+  taxable interest (the `interest_us_share` overlay default); corrected.
+- Kicker: DEFERRED by decision S46(c) (prior-year liability); PolicyEngine
+  guard row added (`pe_or_kicker`, pays zero today).
+- Spec: `research/state_tax/notes/datagap_spec_mi_mo_or.md` §4.
+
 ## Known differences
 
 - **The kicker is not modeled, and it is Oregon's largest gap.** The surplus

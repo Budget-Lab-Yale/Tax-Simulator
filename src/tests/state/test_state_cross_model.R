@@ -981,6 +981,9 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                                       (!is.na(dep_age2) & dep_age2 >= 24) +
                                       (!is.na(dep_age3) & dep_age3 >= 24),
                          elective_deferral = trad_contr_er1 + trad_contr_er2,
+                         # blind filers (MI line 9b special exemption; neither
+                         # external model receives blindness)
+                         blind_n = coalesce(blind1, 0) + coalesce(blind2, 0),
                          xw_unstripped_salt = salt_inc_sales + salt_pers,
                          xw_unhanded_item   = inv_int_item_ded_potential +
                                               other_item_ded_potential,
@@ -1004,7 +1007,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          ui, txbl_int, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          itemizing, n_dep_ge18, n_dep_ge65, n_dep_ge24,
-                         elective_deferral, care_exp, kg_st, kg_lt,
+                         elective_deferral, blind_n, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
                          xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2,

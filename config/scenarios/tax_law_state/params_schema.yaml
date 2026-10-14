@@ -76,6 +76,11 @@ scalars:
   st_agi.retirement_excl_65plus: {default: 0, units: per_person}
   st_agi.retirement_excl_earned_cap: {default: 0, units: per_person}
   st_agi.pension_excl_band_per_return: 0   # band amounts per return, older-spouse age (MI)
+  # Age (older spouse where band_per_return = 1, else own age) at or above
+  # which government pension income is subtracted without limit and only the
+  # private remainder takes the cap (MI Tier 1, MCL 206.30(9)(a); Form 4884
+  # Section A). Reads pension_public (S43); .inf = off
+  st_agi.pension_excl_public_uncapped_min_age: .inf
   # Income-banded pension exclusion (NJ-1040 line 28a): in each band the
   # exclusion is min(cap, share x eligible pension income), tested on TOTAL
   # income before the exclusion itself
@@ -352,6 +357,15 @@ scalars:
   st_ded.retire_exempt_priv_cap: {default: 0, units: per_person}
   st_ded.retire_exempt_priv_limit: {default: .inf, units: per_return}
   st_ded.retire_exempt_less_ss: 0
+  # Public pension exemption taken as a DEDUCTION after state AGI (MO-A Part 3
+  # Section A; RSMo 143.124.1-.2): per spouse the lesser of public pension
+  # income and retire_exempt_pub_cap, less the Social Security exemption
+  # taken, less income over retire_exempt_pub_limit. Reads pension_public
+  # (S43); inert at retire_exempt_pub 0 and pension_public 0
+  st_ded.retire_exempt_pub: 0
+  st_ded.retire_exempt_pub_cap: {default: 0, units: per_person}
+  st_ded.retire_exempt_pub_limit: {default: .inf, units: per_return}
+  st_ded.retire_exempt_pub_less_ss: 0
   # Federal income tax deduction (MO/OR/AL). The deductible base is federal
   # tax after nonrefundable credits but before other taxes (1040 line 22 =
   # liab_bc - nonref), so AMT and excess APTC repayment are IN and
@@ -734,6 +748,17 @@ scalars:
   st_credits.ss_age_credit_exclusive: 0
   st_credits.retire_credit_income_limit: .inf
   st_credits.retire_credit_income_base: 1   # st_income_base enum
+  # Rate-style retirement income credit (OR ORS 316.157): rate x the lesser
+  # of the eligible spouses' pension + IRA income and a filing-status base
+  # reduced by GROSS Social Security received and by household income over
+  # a threshold; nonrefundable, folded into st_retire_credit
+  st_credits.retire_inc_credit_rate: 0
+  st_credits.retire_inc_credit_min_age: .inf
+  st_credits.retire_inc_credit_base: {default: 0, units: per_return}
+  st_credits.retire_inc_credit_hh_thresh: {default: .inf, units: per_return}
+  st_credits.retire_inc_credit_income_base: 5   # st_income_base enum (OR: federal AGI less taxable SS)
+  st_credits.retire_inc_credit_add_exempt_int: 0
+  st_credits.retire_inc_credit_add_hh_resources: 0   # hh_resources_inc (S43)
   st_credits.senior_credit_amount: {default: 0, units: per_return}
   st_credits.senior_credit_one65_amount: null   # NA: falls back to senior_credit_amount (MD joint one-spouse-65 tier)
   st_credits.senior_credit_min_age: 65

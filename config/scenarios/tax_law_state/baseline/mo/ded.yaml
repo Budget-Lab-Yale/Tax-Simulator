@@ -28,6 +28,11 @@ filing_status_mapper:
     '2': priv_limit_combined
     '3': priv_limit_mfs
     '4': priv_limit_single
+  retire_exempt_pub_limit:
+    '1': retire_limit_pub_single
+    '2': retire_limit_pub_combined
+    '3': retire_limit_pub_single
+    '4': retire_limit_pub_single
 
 #-----------------------------------------------------------------------
 # Standard deduction: Missouri adopts the FEDERAL amount by reference, so
@@ -122,9 +127,10 @@ fed_tax_ded_band_share:
 
 #-----------------------------------------------------------------------
 # Pension and Social Security exemption (MO-1040 line 8; MO-A Part 3).
-# Only the pieces that survive the PUF's inability to tell a public
-# pension from a private one are encoded here; see agi.yaml
-# documented_not_modeled for the public pension exemption itself.
+# Section A (public pensions) reads the pension_public optional data
+# column (S43; encoded 2026-10-13, inert until a producer publishes it, in
+# which case the whole pool stays private as before); Sections B and C are
+# fully observable.
 #-----------------------------------------------------------------------
 
 retire_exempt_ss:
@@ -160,9 +166,36 @@ priv_limit_mfs:
   value: 16000
   reference: 'MO-A Part 3 Section B income limit, married filing separate, every booklet 2017-2025'
 
+retire_exempt_pub:
+  value: 1
+  reference: 'MO-A Part 3 Section A; RSMo 143.124.1-.2. Public pension (federal, state, local) exempt per spouse up to the maximum Social Security benefit, net of the Section C exemption and (through TY2023) of income over the limit. Reads pension_public (S43); inert at its default 0, in which case the whole pool stays private (Section B). Per-spouse attribution unobserved: two caps against the pooled public amount, the Section B convention'
+retire_exempt_pub_cap:
+  value:
+    '2017': 37089
+    '2018': 37720
+    '2019': 38437
+    '2020': 39014
+    '2021': 39365
+    '2022': 41373
+    '2023': 44683
+    '2024': 46381
+    '2025': 47633
+  reference: 'MO-A Part 3 Section A line 7 (2017-2023) / line 2 (2024-2025) "maximum social security benefit", transcribed from each year''s form (NBER mirror MO-A_2017 .. MO-A_2024; 2025 MO-1040 instructions). PolicyEngine carries 48,216 for 2025, which the form contradicts. 2026+ carries 2025 [S45]'
+retire_limit_pub_single:
+  value:
+    '2017': 85000
+    '2024': 999999999999.0
+  reference: 'Section A line 4, 2017-2023 ($85,000 single/HoH/MFS/QW); removed from TY2024 by SB 190 (2023) -- the 2024 Section A has no income lines'
+retire_limit_pub_combined:
+  value:
+    '2017': 100000
+    '2024': 999999999999.0
+  reference: 'Section A line 4, married filing combined $100,000, 2017-2023; removed TY2024'
+retire_exempt_pub_less_ss:
+  value: 1
+  reference: 'Section A line 8 (line 3 from 2024): subtract the Section C Social Security exemption amount for the spouse; the model nets the unit''s computed SS exemption (post-limit where the SS limit binds, per the Section A instruction)'
+
 documented_not_modeled:
-  public_pension_exemption_placement:
-    reference: 'The public pension exemption (MO-A Part 3 Section A) is not modeled at all -- see baseline/mo/agi.yaml documented_not_modeled.public_pension_exemption for the rule, the reason and the direction of the bias. Its absence also removes the Section A offset by which the Social Security exemption reduces the public pension exemption, which is moot while Section A is unmodeled'
   per_spouse_retirement_worksheet:
     reference: 'MO-A Part 3 runs per spouse: each spouse''s own pension income against an own $6,000 cap, and taxable Social Security allocated between spouses by each one''s share of benefits received (Worksheet for Lines 4 and 5). The PUF has neither split, so the private cap is applied as two caps against the couple''s pooled pension income and the taxable Social Security that qualifies is prorated by how many spouses meet the age test [right in total for couples who both qualify; approximate where only one spouse has pension income or reaches 62]'
   itemized_salt_convention:

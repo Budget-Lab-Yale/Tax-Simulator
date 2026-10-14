@@ -146,6 +146,23 @@ Form MO-WFTC excludes married filing separately ("Do you have a filing status of
 ... Yes - STOP", 2024 MO-1040 instructions). It binds because the federal EITC reaches separated spouses with
 a qualifying child from TY2021. Now encoded (`st_credits.eitc_mfs_barred` = 1); test MO-1b.
 
+## Data-gap batch (2026-10-13)
+
+- Public pension exemption (MO-A Part 3 Section A; RSMo 143.124.1-.2)
+  encoded as a deduction on the `pension_public` overlay
+  (`retire_exempt_pub*`): per spouse the lesser of public pension income
+  and the year's maximum Social Security benefit -- $37,089 (2017), $37,720,
+  $38,437, $39,014, $39,365, $41,373, $44,683, $46,381, $47,633 (2025),
+  transcribed from each year's form -- net of the Section C exemption and,
+  through TY2023, of income over $85,000 / $100,000 (removed by SB 190).
+  Inert until published; the private exemption then applies to the
+  remainder. PolicyEngine's 2025 figure (48,216) contradicts the form.
+  Tests MO-15a..d.
+- Property tax credit (MO-PTS/PTC): waits on the generic circuit breaker
+  (S46(a)); PolicyEngine's credit on `salt_prop` and any TAXSIM v37 are
+  excluded meanwhile.
+- Spec: `research/state_tax/notes/datagap_spec_mi_mo_or.md` §1, §3.
+
 ## Known differences
 
 - **Public pension exemption NOT MODELED** (largest Missouri gap). MO-A Part 3

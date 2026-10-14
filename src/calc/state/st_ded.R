@@ -194,6 +194,11 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.retire_exempt_priv_cap', # (dbl) per-person private pension exemption (MO $6,000)
     'st_ded.retire_exempt_priv_limit', # (dbl) private pension income limit (mapped)
     'st_ded.retire_exempt_less_ss',  # (int) the limit income measure nets taxable SS (MO)
+    'st_ded.retire_exempt_pub',      # (int) public pension exemption on (MO-A Section A)
+    'st_ded.retire_exempt_pub_cap',  # (dbl) per-person public cap (MO: maximum SS benefit)
+    'st_ded.retire_exempt_pub_limit', # (dbl) public exemption income limit (mapped; Inf = none)
+    'st_ded.retire_exempt_pub_less_ss', # (int) net the SS exemption taken from the public exemption
+    'pension_public',                # (dbl) optional data; schema default 0 (government pension within txbl_pens_dist)
     'st_ded.fed_tax_ded',            # (int) whether federal income tax is deductible (MO/OR/AL)
     'st_ded.fed_tax_ded_add_niit',   # (int) net investment income tax added to the base (AL)
     'st_ded.fed_tax_ded_less_eitc',  # (int) earned income credit reduces the base (MO/AL)
@@ -646,15 +651,30 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         pmax(0, pmax(0, txbl_ss) * (n_retire_age / pmax(1, n_taxpayers_ded)) -
                 pmax(0, retire_limit_income - st_ded.retire_exempt_ss_limit)),
 
+      # Public pension exemption (MO-A Part 3 Section A): the government
+      # share of the pension pool, per-spouse capped at the year's maximum
+      # Social Security benefit, net of the SS exemption taken and of income
+      # over its own limit (removed by SB 190 from TY2024). Reads
+      # pension_public (S43); the private exemption below then applies to
+      # the remainder of the pool
+      retire_pub_pool = pmin(pmax(0, pension_public), pmax(0, txbl_pens_dist)),
+      st_retire_pub_exempt = st_ded.retire_exempt_pub * pmax(
+        0,
+        pmin(retire_pub_pool, n_taxpayers_ded * st_ded.retire_exempt_pub_cap) -
+          st_ded.retire_exempt_pub_less_ss * st_retire_ss_exempt -
+          pmax(0, retire_limit_income - st_ded.retire_exempt_pub_limit)
+      ),
+
       # Private pension/annuity/IRA exemption, per person, against the
-      # observable taxable pension and IRA distribution pool
+      # observable taxable pension and IRA distribution pool less the public
+      # share
       st_retire_priv_exempt = pmax(
         0,
-        pmin(pmax(0, txbl_pens_dist + txbl_ira_dist),
+        pmin(pmax(0, txbl_pens_dist - retire_pub_pool + txbl_ira_dist),
              n_taxpayers_ded * st_ded.retire_exempt_priv_cap) -
           pmax(0, retire_limit_income - st_ded.retire_exempt_priv_limit)
       ),
-      st_retire_exempt = st_retire_ss_exempt + st_retire_priv_exempt,
+      st_retire_exempt = st_retire_ss_exempt + st_retire_pub_exempt + st_retire_priv_exempt,
 
       # Deduction of the filer's own payroll and government-retirement
       # contributions, capped PER PERSON (MA Form 1 lines 11a/11b: Social
