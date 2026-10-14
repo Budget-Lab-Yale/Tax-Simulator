@@ -126,9 +126,9 @@ std_dependent_earned_add:
   reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml dep_earned_bonus; IRC 63(c)(5)(B) amount added to a dependent filer''s earned income'
 
 # Itemized deductions: NM has no schedule of its own. Line 12 is whatever the
-# federal return claimed, so the election is coupled in both directions, and
-# the state amount is rebuilt from the federal components with the SALT
-# INCOME/SALES tax portion left out (it is added back on PIT-1 line 10).
+# federal return claimed, so the election is coupled in both directions. Line
+# 12 takes the federal itemized amount as claimed; the SALT income/sales-tax
+# share is then added back on PIT-1 line 10 (salt_addback_prorate below).
 item_allowed:
   value:
     '2017': 0
@@ -138,11 +138,14 @@ item_coupling:
   value: 1
   reference: 'PIT-1 line 12 is the federal amount, so a state-level election does not exist -- the federal choice governs in both directions'
 item_component_style:
-  value: 1
-  reference: 'Components are selected rather than taking the federal total, so the income/sales-tax portion can be dropped (PIT-1 line 10 addback)'
+  value: 2
+  reference: 'PIT-1 line 12 is the federal itemized amount as claimed (Schedule A line 17); the income/sales-tax share comes back on line 10, not by dropping a component. The item_include_* switches below are inert under style 2 and kept as the component map'
 salt_addback:
   value: 1
   reference: 'PIT-1 line 10 "state and local tax deduction addback"; NMSA 7-2-2(S). The addback is the income/sales-tax share of the SALT deduction claimed'
+salt_addback_prorate:
+  value: 1
+  reference: 'PIT-1 instructions, line 10 worksheet (2018-2025 booklets): Schedule A line 5a / line 5d gives the income-or-sales share; times line 5e (the capped deduction claimed); limited to the federal itemized amount in excess of the federal standard deduction. Replaces the 2026-08 property-fills-the-cap approximation, which over-deducted for itemizers above the SALT cap'
 item_include_medical:
   value: 1
   reference: 'Federal Schedule A line 4, unmodified by New Mexico'
@@ -174,15 +177,9 @@ item_include_income_sales_tax:
   value: 0
   reference: 'PIT-1 line 10 adds back the income/sales-tax portion of the SALT deduction, so it is excluded here'
 
-# SALT-CAP INTERACTION, a documented approximation. PIT-1 pro-rates the CAPPED
-# SALT deduction between the property and income/sales legs and adds back the
-# income/sales share. We instead let property fill the cap first. The two are
-# IDENTICAL whenever total SALT is at or under the cap (most post-2018
-# itemizers): pro-rating $X of uncapped SALT by the property share returns
-# exactly the property amount. Above the cap we deduct
-# min(prop + pers, cap) where the form allows cap x property_share, so we
-# over-deduct and understate NM tax for itemizers with large state income tax
-# on top of already-capped property tax.
+# SALT cap series: used by item_prop_tax_cap under the component map only
+# (inert at item_component_style 2). The pro-rated line 10 addback reads the
+# federal capped SALT deduction directly.
 salt_cap_single:
   value:
     '2017': .inf

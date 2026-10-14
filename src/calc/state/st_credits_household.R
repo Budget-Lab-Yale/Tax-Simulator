@@ -367,8 +367,11 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     tax_unit$st_credits.lictr_add_hh_resources * tax_unit$hh_resources_inc +
     # "undiminished by losses" and with no deductions (shared add-back above);
     # a net operating loss carried into the year (negative other income in
-    # the PUF) is a deduction, not income, so it is added back too
-    tax_unit$st_credits.lictr_unnet_losses * unnetted_losses +
+    # the PUF) is a deduction, not income, so it is added back too. Form 4797
+    # ordinary losses (other_gains) are un-netted here, outside the shared
+    # helper, so the ME STFC income (validated without them) is unchanged
+    tax_unit$st_credits.lictr_unnet_losses *
+      (unnetted_losses + pmax(0, -opt_col('other_gains'))) +
     tax_unit$st_credits.lictr_add_nol * pmax(0, -tax_unit$other_inc)
   lictr_key = as.integer(n_taxpayers + tax_unit$n_dep +
                          tax_unit$st_credits.lictr_aged_exemptions * n_aged +

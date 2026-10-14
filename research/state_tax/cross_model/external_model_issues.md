@@ -1394,6 +1394,29 @@ whose own parameter note calls it a direct payment from a Special Revenue Fund, 
 re-score 82 of 95 clean TY2025 mismatches sit at +$300 or +$600 (PE lower), each with the payment present. The same
 one-time-rebate class as P5. Effect: PolicyEngine understates Maine TY2025 liability by $300 per person.
 
+### P38. New Mexico net capital gains deduction halved twice for separate filers
+
+`nm_net_capital_gains_deduction` divides the whole deduction by two for a married-filing-separately return, computed on
+that filer's own gains. NMSA 7-2-34 gives each separate filer "one-half of the deduction ... that would have been allowed
+on the joint return" -- half of a deduction computed on the couple's combined gain. On own gains the faithful reading
+halves the flat $1,000 ($2,500 from 2025) floor and leaves the 40% share alone (exact when spouses' gains are equal);
+halving 40% of own gains takes the separate filer to 20%. Effect: PolicyEngine overstates New Mexico tax for separate
+filers with gains by 5.9% x 20% of the gain (2026-10-14 probe: 195026, 326212, 363293 at $4,200-$4,950).
+
+### P39. New Mexico net capital gains deduction includes short-term gain
+
+The same variable is computed on `capital_gains`, which includes net short-term gain. 7-2-34 defines net capital gain by
+IRC 1222(11): net long-term gain less net short-term loss. A filer with only short-term gain gets no deduction (record
+409524, $170,644 of short-term gain and no long-term gain: PolicyEngine deducts $34,129). Effect: PolicyEngine
+understates New Mexico tax by 5.9% x 40% of short-term gain through 2024, and up to $148 from 2025.
+
+### P40. Washington Working Families Tax Credit paid for TY2021
+
+PolicyEngine pays `wa_working_families_tax_credit` in 2021. RCW 82.08.0206 (ESHB 1297, Laws 2021 ch.195) first made the
+credit available for tax year 2022; the Department of Revenue opened applications on 1 February 2023. Effect:
+PolicyEngine understates TY2021 Washington liability by the full credit ($300-$1,200) for every eligible filer (90 of 90
+clean TY2021 mismatches in the 2026-10-14 re-score).
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

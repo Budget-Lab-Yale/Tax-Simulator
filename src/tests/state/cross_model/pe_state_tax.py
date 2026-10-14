@@ -182,6 +182,17 @@ OUTPUT_VARS = {
     # real_estate_taxes = salt_prop with no rent input; ours is documented-
     # not-modeled pending the rent / property-tax overlays (crosswalk item 1)
     "pe_me_ptfc": ["me_property_tax_fairness_credit"],
+    # New Mexico child day care credit (7-2-18.1): documented-not-modeled on
+    # our side (provider-payment base), refundable in PE. 2026-10-14
+    "pe_nm_cdcc": ["nm_cdcc"],
+    # New Mexico LICTR (7-2-14), so the MGI-class rows key on the rebate gap
+    "pe_nm_lictr": ["nm_low_income_comprehensive_tax_rebate"],
+    # Benefits PE SIMULATES from the household inputs. They enter New
+    # Mexico's LICTR modified gross income (7-2-2(L)); ours reads them from
+    # the hh_resources_inc overlay, unpublished. One SPM unit per record, so
+    # the spm_unit array is in record order like the tax-unit arrays
+    "pe_tanf": ["tanf"],
+    "pe_ssi": ["ssi"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],

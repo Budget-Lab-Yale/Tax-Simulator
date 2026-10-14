@@ -7,6 +7,7 @@
 
 # Law parameters this family reads (assembled into calc_st_credits req_vars)
 st_credits_child_req_vars = c(
+  'st_credits.ctc_mfs_share',
   'st_credits.dep_credit_style',
   'st_credits.dep_credit_young_amount',
   'st_credits.dep_credit_other_amount',
@@ -330,7 +331,10 @@ st_credits_child = function(tax_unit, st_eitc) {
     )
   }
 
-  st_ctc = ctc_il + ctc_ny + ctc_co + fatc + cwfc
+  # Married filing separately may take only a share of the child credit
+  # (NM 7-2-18.34(E): one-half each); 1 everywhere else
+  st_ctc = (ctc_il + ctc_ny + ctc_co + fatc + cwfc) *
+    if_else(tax_unit$filing_status == 3, tax_unit$st_credits.ctc_mfs_share, 1)
 
   # Dependent credit: separate qualifying-child and other-dependent
   # amounts, then a common percentage-point reduction for each $1,000 of

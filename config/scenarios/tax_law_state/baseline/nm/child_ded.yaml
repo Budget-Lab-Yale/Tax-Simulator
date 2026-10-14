@@ -33,6 +33,9 @@ count_offset:
     '2017': 0
     '2019': 1
   reference: 'NMSA 7-2-39(A): "$4,000 for each dependent ... in excess of one". The PIT-1 worksheet says to subtract 1 from total dependents'
+count_all_dependents:
+  value: 1
+  reference: 'NMSA 7-2-39(A): the deduction is for "each dependent", not only federal child-tax-credit children; PIT-1 line 13 worksheet counts the dependents listed on PIT-1 (adults included). Fixed 2026-10-14: counting n_dep_ctc dropped adult and 17-year-old dependents -- the $4,000 / $8,000 taxable-income gap on 331 clean TY2019 TAXSIM records'
 agi_bounds:
   value: [.inf, .inf, .inf, .inf, .inf, .inf, .inf]
   reference: 'NMSA 7-2-39 has no income limitation -- the deduction is a flat amount per eligible dependent at any income'

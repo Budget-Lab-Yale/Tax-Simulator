@@ -58,6 +58,7 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_ageband_max_age',
   'st_credits.eitc_ageband_share',
   'st_credits.eitc_childless_min_age_disregard',
+  'st_credits.eitc_childless_min_age',
   'st_credits.eitc_mfs_barred',
   'st_credits.eitc_rc',
   'st_credits.eitc_rc_max_kids',
@@ -310,7 +311,8 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     tax_unit$st_credits.eitc_childless_min_age_disregard == 1 &
       coalesce(tax_unit$n_dep_eitc, 0L) == 0 & tax_unit$eitc <= 0 &
       tax_unit$dep_status != 1 & tax_unit$filing_status != 3 &
-      st_head_or_spouse_in_age_band(tax_unit, 0, tax_unit$eitc.max_age) &
+      st_head_or_spouse_in_age_band(tax_unit, tax_unit$st_credits.eitc_childless_min_age,
+                                    tax_unit$eitc.max_age) &
       earned_credit_inv_inc <= tax_unit$eitc.inv_inc_limit,
     childless_fed_credit_no_age,
     eitc_state_base

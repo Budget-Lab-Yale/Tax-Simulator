@@ -19,6 +19,16 @@ eitc_match:
 eitc_refundable:
   value: 1
   reference: 'NMSA 7-2-18.15(C): the excess over liability "shall be refunded"'
+eitc_childless_min_age_disregard:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'NMSA 7-2-18.15(A) as amended by Laws 2021 ch.63: a filer without a qualifying child qualifies at 18 rather than the federal minimum age; the credit is the federal childless credit recomputed without the federal age test (PIT-1 instructions 2021-2025, Working Families Tax Credit). Encoded 2026-10-14 (the PE 2022-2025 residual paid childless 18-24-year-olds a WFTC we did not)'
+eitc_childless_min_age:
+  value:
+    '2017': 0
+    '2021': 18
+  reference: 'NMSA 7-2-18.15(A) (Laws 2021 ch.63): minimum age 18 for a filer without a qualifying child'
 
 # Child income tax credit (NMSA 7-2-18.34, TY2023+, refundable). SEVEN
 # published AGI bands, which is why the calculator's tier selector was
@@ -44,6 +54,9 @@ ctc_max_child_age:
   value: 23
   reference: 'NMSA 7-2-18.34(F) defines a qualifying child by reference to IRC 152(c) -- under 19, or a student under 24. Age 23 proxies the student test (the IN precedent); 19-23 dependents in the PUF are student-dominated by the federal qualifying-child rules. If the harness shows a positive child-credit wedge for families with 19-23-year-old dependents, drop to 18'
 
+ctc_mfs_share:
+  value: 0.5
+  reference: 'NMSA 7-2-18.34(E): married taxpayers filing separately may each claim only one-half of the credit. Encoded 2026-10-14 (was documented-not-modeled); PolicyEngine halves too'
 ctc_tier1_bound:
   value: 25000
   reference: 'NMSA 7-2-18.34(A) band 1 ("not over $25,000"); PIT-RC child income tax credit table 2023-2025'
@@ -75,8 +88,6 @@ ctc_tier_amounts:
   reference: 'NMSA 7-2-18.34(A) statutory amounts (TY2023) and the indexed amounts in the PIT-RC child income tax credit tables for TY2024 and TY2025'
 
 documented_not_modeled:
-  child_credit_mfs_halving:
-    reference: 'NMSA 7-2-18.34(E): married taxpayers filing separately may each claim only half the credit. No per-status scaling exists on the tier amounts, and MFS returns with dependents are rare [overstates the credit for MFS filers with children by half]'
 
 #-----------------------------------------------------------------------
 # Low Income Comprehensive Tax Rebate (LICTR; NMSA 7-2-14; PIT-RC Section

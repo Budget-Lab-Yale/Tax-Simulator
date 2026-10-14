@@ -118,6 +118,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.item_fed_gate',   # (int) federal itemizers only, best-of election (MD)
     'st_ded.salt_addback',    # (int) whether state income tax is excluded/added back
     'st_ded.salt_addback_agi_thresh', # (dbl) FAGI at/above which the exclusion applies (HI; -Inf = always)
+    'st_ded.salt_addback_prorate', # (int) 1 = addback is the income/sales SHARE of capped SALT claimed (NM PIT-1 line 10)
     'st_ded.item_component_style', # (int) 1 = select components; 2 = federal amount
     'st_ded.item_include_medical',
     'st_ded.item_include_mortgage',
@@ -724,9 +725,19 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # State income tax addback for federal itemizers: income-tax component
       # of the (capped) SALT deduction, limited to the itemized-over-standard
       # excess
-      salt_inc_component = pmax(0, salt_item_ded - salt_prop - salt_pers),
+      # Ordering default: property taxes fill the capped deduction first.
+      # Pro-rated (NM PIT-1 line 10 worksheet): the capped deduction claimed
+      # times the income/sales share of total SALT paid; this form starts from
+      # the federal itemized amount, so it applies with item_allowed == 1 too
+      salt_paid_total = salt_inc_sales + salt_prop + salt_pers,
+      salt_inc_component = if_else(
+        st_ded.salt_addback_prorate == 1,
+        if_else(salt_paid_total > 0,
+                salt_item_ded * salt_inc_sales / salt_paid_total, 0),
+        pmax(0, salt_item_ded - salt_prop - salt_pers)),
       st_addback_salt = if_else(st_ded.salt_addback == 1 & itemizing == 1 &
-                                  st_ded.item_allowed == 0,
+                                  (st_ded.item_allowed == 0 |
+                                     st_ded.salt_addback_prorate == 1),
                                 pmin(salt_inc_component,
                                      pmax(0, item_ded - std_ded)),
                                 0),

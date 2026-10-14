@@ -458,9 +458,12 @@ cross_model_compare = function(ours, theirs, model, known_diffs = NULL,
 
   records = ours %>%
     mutate(
+      # Excise states (WA) are compared NET of the Working Families Tax
+      # Credit: PE's state_income_tax nets wa_working_families_tax_credit
+      # into the excise, as our liab_st_individual_net does
       our_liab = case_when(
         state %in% classes$narrow ~ liab_st_narrow_iit,
-        state %in% classes$excise ~ liab_st_ltcg_excise,
+        state %in% classes$excise ~ liab_st_ltcg_excise - st_refund_wftc,
         TRUE                      ~ liab_st_iit
       )
     ) %>%

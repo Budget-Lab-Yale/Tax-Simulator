@@ -39,7 +39,7 @@ add_exempt_int:
   reference: 'PIT-ADJ line 1 "Interest received on U.S. Government obligations" is a SUBTRACTION; NMSA 7-2-2(S) starts from federal taxable/AGI, which already excludes all municipal interest, so out-of-state interest is added back. PIT-ADJ instructions, 2017-2025'
 own_state_exempt:
   value: 1
-  reference: 'NMSA 7-2-2(S); New Mexico obligations remain exempt. The own-state share of exempt_int is unobserved -- the model applies the uniform 75% out-of-state convention (documented approximation, all states)'
+  reference: 'NMSA 7-2-2(S); New Mexico obligations remain exempt. The own-state share of exempt_int is unobserved -- the model applies the uniform OWN_STATE_MUNI_SHARE = 75% own-state convention, so 25% is added back (documented approximation, all states)'
 sub_us_int:
   value: 1
   reference: 'PIT-ADJ line 1: interest on U.S. Government obligations is subtracted. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates NM tax for holders of Treasuries]'
@@ -70,11 +70,21 @@ cap_gains_excl_share:
     '2019': 0.40
     '2025': 0.0
   reference: 'NMSA 7-2-34; PIT-ADJ instructions 2017/2018 ("50% of the net capital gain"), 2019-2024 ("40%"), 2025 (40% retained only for the sale of a New Mexico business, HB 547 Laws 2023 ch.211 s.4)'
-cap_gains_excl_flat:
+# cap_gains_excl_flat is supplied by the filing_status_mapper below. 7-2-34
+# gives a separate filer "one-half of the deduction ... that would have been
+# allowed on the joint return". Only the filer's own gains are observed, so
+# the flat floor is halved and the 40% share is applied to own gains as is --
+# exact when the spouses' gains are equal, which is the neutral assumption.
+cap_gains_flat_full:
   value:
     '2017': 1000
     '2025': 2500
   reference: 'NMSA 7-2-34(A)(1): the taxpayer may deduct the greater of the flat amount or the percentage. $1,000 through TY2024, $2,500 from TY2025 (HB 547); PIT-ADJ instructions each year'
+cap_gains_flat_mfs:
+  value:
+    '2017': 500
+    '2025': 1250
+  reference: 'NMSA 7-2-34 (separate-return clause, in force since Laws 2000): married individuals filing separately who could have filed jointly may each claim only one-half of the deduction allowed on the joint return'
 
 # Aged exemption (7-2-5.2): $8,000 per taxpayer 65 or older, allowed on a
 # NINE-BAND AGI table that is bit-identical in the 2017, 2019 and 2025
@@ -100,6 +110,11 @@ age_ded_po_base:
   reference: 'NMSA 7-2-5.2 Table 2 is keyed to federal adjusted gross income'
 
 filing_status_mapper:
+  cap_gains_excl_flat:
+    '1': cap_gains_flat_full
+    '2': cap_gains_flat_full
+    '3': cap_gains_flat_mfs
+    '4': cap_gains_flat_full
   ss_allages_agi_limit:
     '1': ss_limit_single
     '2': ss_limit_joint

@@ -98,7 +98,11 @@ Full exemption of federally taxable SS at/below federal AGI `$100,000` single /
 Greater of 100% of gain up to a dollar floor, or a share:
 2017-2018 **50%**; 2019-2024 **40%**; 2025 `$2,500` flat with the 40% surviving
 only for sales of a New Mexico business (unobservable → share 0). The
-`$1,000`/`$2,500` floors have no machinery (<= $2,500 of base ~ $118).
+`$1,000`/`$2,500` floors are encoded as the greater-of alternative
+(`cap_gains_excl_flat`). Net capital gain is IRC 1222(11) (long-term gain less
+net short-term loss; short-term gain earns nothing). A separate filer takes
+"one-half of the deduction ... allowed on the joint return": on own gains we
+halve the floor ($500/$1,250) and keep the share (test NM-9, 2026-10-14).
 
 ### Aged exemption (7-2-5.2) — $8,000 per taxpayer 65+, 9 AGI bands
 
@@ -234,6 +238,29 @@ retirement exemption (2022+ $10k/$20k/$30k), 100-year exemption; own-state muni
 75% convention; US-obligation interest flagged not taken; MFS halving of the
 child credit; capital-gain floors; the 2021/2022/2023 one-time rebates
 (mailed checks — P5 class, PE books them, pre-register).
+
+## Cross-model triage 2026-10-14 (PolicyEngine window)
+
+A PE probe (`output/probe/nm_pe_dig.py`: PE's own New Mexico intermediates on
+every clean mismatch) split the 109 residual records by stage:
+
+- **Our fix -- SALT addback (PIT-1 line 10).** The worksheet pro-rates the
+  CAPPED SALT deduction by the income/sales share of SALT paid and limits the
+  addback to the itemized-over-standard excess. We had let property tax fill
+  the cap first (the 2026-08 documented approximation), which over-deducted
+  for every itemizer above the cap. Now `item_component_style 2` (the federal
+  amount) plus the generic `st_ded.salt_addback_prorate`; tests NM-8, NM-8b.
+- **Our fix -- LICTR income** un-nets Form 4797 ordinary losses
+  (`other_gains`), "undiminished by losses" (7-2-2(L)).
+- **Our fix -- capital-gain floor** halved for separate filers (above).
+- **PE: P38** (deduction halved twice for separate filers), **P39** (short-term
+  gain counted), **P35 widened** (MGI drops other/pass-through income; also the
+  negative-AGI records), out-of-state municipal interest (PE adds back none).
+- **Data: LICTR transfers** -- PE simulates TANF/SSI into MGI, ours reads the
+  unpublished `hh_resources_inc` overlay (input-coverage row, keyed on the new
+  `pe_tanf`/`pe_ssi` exports).
+- **Ours omitted: child day care credit** (7-2-18.1), PE pays it on
+  `childcare_expenses`; keyed on the new `pe_nm_cdcc` export.
 
 ## PolicyEngine disagreements (primary wins in all three; report upstream)
 

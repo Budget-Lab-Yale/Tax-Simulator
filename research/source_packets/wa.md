@@ -60,6 +60,16 @@ Reviewed against two State-EITC-Align flags:
   actual application status are not observed.
 - WFTC is recorded as a standalone refundable transfer, not as broad IIT.
 
+## Cross-model status, 2026-10-14 (CLOSED)
+
+PolicyEngine's `wa_income_tax` is the excise NET of the Working Families Tax
+Credit; the harness had compared our excise alone, so every WFTC recipient
+missed by the full credit. The harness now compares `liab_st_ltcg_excise -
+st_refund_wftc` (what `liab_st_individual_net` already reports); the credit
+amounts themselves matched PE to the dollar. TY2021: PE pays a credit that
+did not exist until TY2022 (P40, excluded). PE cells 2021-2025:
+1.000 / 0.998 / 0.985 / 0.972 / 0.973. TAXSIM does not model Washington.
+
 ## Next Validation
 
 - Spot-check recent capital-gains and WFTC results against Washington DOR

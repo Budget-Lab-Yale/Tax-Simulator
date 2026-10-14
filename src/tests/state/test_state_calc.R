@@ -3051,10 +3051,10 @@ test_state_calc = function() {
            expect = list(st_lictr = 44),
            label = 'NM-L8 2024 LICTR: household resources live via the overlay')
   # NM-L9 (2026-10-14): a net operating loss is added back to MGI (7-2-2(L),
-  # "undiminished by losses"): AGI -50,000 made of a 50,000 NOL and nothing
-  # else gives MGI 0 under the old concept (first band) but 0 + 50,000 = 50,000
-  # once the NOL is added back, above the $36,000 ceiling -> no rebate
-  run_case('NM', 2024, list(agi = -50000, other_inc = -50000),
+  # "undiminished by losses"): wages 40,000 less a 50,000 NOL is AGI -10,000,
+  # which floored to MGI 0 drew the first-band $218; with the NOL added back
+  # MGI is 40,000, above the $36,000 ceiling -> no rebate
+  run_case('NM', 2024, list(agi = -10000, wages1 = 40000, ei1 = 40000, other_inc = -50000),
            expect = list(st_lictr = 0),
            label = 'NM-L9 2024 LICTR adds back a net operating loss')
 
@@ -3117,6 +3117,59 @@ test_state_calc = function() {
            expect = list(st_child_ded = 0),
            law_overrides = list(st_ded.std_amount = 13850),
            label = 'NM-2c dependent deduction denied to single filers')
+  # NM-2d (2026-10-14): the deduction counts every dependent, not only CTC
+  # children -- a joint return with one child and one 19-year-old student
+  # gets 4,000 x (2 - 1) = 4,000
+  run_case('NM', 2023,
+           list(filing_status = 2, age2 = 38, agi = 45000, wages1 = 45000, ei1 = 45000,
+                n_dep = 2, n_dep_ctc = 1, dep_age1 = 8, dep_age2 = 19, std_ded = 27700),
+           expect = list(st_child_ded = 4000),
+           law_overrides = list(st_ded.std_amount = 27700),
+           label = 'NM-2d dependent deduction counts an adult dependent')
+  # NM-6c (2026-10-14): married filing separately takes half the child income
+  # tax credit (7-2-18.34(E)): one child, AGI 20,000 -> band 1 $600 -> $300
+  run_case('NM', 2023, list(filing_status = 3, agi = 20000, wages1 = 20000, ei1 = 20000,
+                            n_dep = 1, n_dep_ctc = 1, dep_age1 = 8),
+           expect = list(st_ctc = 300),
+           label = 'NM-6c child income tax credit halved for married filing separately')
+  # NM-7 (2026-10-14): the Working Families Tax Credit reaches a childless
+  # filer aged 18-24 (7-2-18.15(A), 2021+) on the federal childless credit
+  # recomputed without the federal age test: TY2023 single aged 22, earned
+  # income 6,000 -> federal childless credit 7.65% x 6,000 = 459 -> 25% = 114.75
+  run_case('NM', 2023, list(age1 = 22, agi = 6000, wages1 = 6000, ei1 = 6000, eitc = 0,
+                            eitc.pi_rate_0 = 0.0765, eitc.pi_end_0 = 7840,
+                            eitc.po_rate_0 = 0.0765, eitc.po_thresh_0 = 9800,
+                            eitc.min_age = 25, eitc.max_age = 64, eitc.inv_inc_limit = 11000),
+           expect = list(st_eitc = 114.75),
+           label = 'NM-7 WFTC for a childless 22-year-old')
+  # NM-8 (2026-10-14): PIT-1 line 10 SALT addback is PRO-RATED, not
+  # property-first. TY2023 single itemizer: income tax 20,000 + property tax
+  # 5,000 = 25,000 paid, 10,000 claimed under the cap; line 12 is the federal
+  # itemized 25,000 (SALT 10,000 + mortgage 15,000). Addback = 10,000 x
+  # 20,000/25,000 = 8,000, inside the 25,000 - 13,850 excess
+  nm8_unit = list(agi = 200000, wages1 = 200000, ei1 = 200000, itemizing = 1,
+                  mort_int_item_ded = 15000, salt_prop = 5000, salt_inc_sales = 20000,
+                  salt_item_ded = 10000, item_ded = 25000, item_ded_ex_limits = 25000,
+                  std_ded = 13850)
+  run_case('NM', 2023, nm8_unit,
+           expect = list(st_ded = 25000, st_addback = 8000),
+           label = 'NM-8 SALT addback pro-rated on the capped deduction')
+  # NM-8b: the addback is limited to the itemized-over-standard excess:
+  # income tax 19,000 + property 1,000, 10,000 claimed + charity 5,000 =
+  # 15,000 itemized. Share 9,500 > excess 15,000 - 13,850 = 1,150 -> 1,150
+  run_case('NM', 2023, list(agi = 200000, wages1 = 200000, ei1 = 200000, itemizing = 1,
+                            char_item_ded = 5000, salt_prop = 1000, salt_inc_sales = 19000,
+                            salt_item_ded = 10000, item_ded = 15000,
+                            item_ded_ex_limits = 15000, std_ded = 13850),
+           expect = list(st_ded = 15000, st_addback = 1150),
+           label = 'NM-8b SALT addback limited to the excess over the standard deduction')
+  # NM-9 (2026-10-14): a separate filer takes half the joint deduction
+  # (7-2-34): the $1,000 floor is $500. TY2023 MFS, 800 of long-term gain ->
+  # greater of 500 and 40% x 800 = 320 -> 500
+  run_case('NM', 2023, list(filing_status = 3, agi = 50000, wages1 = 49200, ei1 = 49200,
+                            kg_lt = 800),
+           expect = list(st_sub_capgain = 500),
+           label = 'NM-9 capital gains floor halved for married filing separately')
 
   # NM-3 TY2025 MFJ both aged 70, FAGI 72,000 including 22,000 of federally
   # taxable Social Security. THE CASE THAT JUSTIFIES start_point 1. The SS

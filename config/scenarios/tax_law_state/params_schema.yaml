@@ -235,6 +235,12 @@ scalars:
   # deduction is denied only at FAGI >= 100k/150k/200k). -.inf = the
   # exclusion is unconditional, preserving every other salt_addback state
   st_ded.salt_addback_agi_thresh: -.inf
+  # 1 = the addback is the income/sales-tax SHARE of the capped SALT deduction
+  # claimed (salt_item_ded x income-sales / total SALT paid), limited to the
+  # itemized-over-standard excess, and applies on top of a federal-amount
+  # itemized base (item_component_style 2). NM PIT-1 line 10 worksheet. 0 =
+  # property taxes fill the cap first, addback only where item_allowed == 0
+  st_ded.salt_addback_prorate: 0
   st_ded.item_component_style: 0   # 0 default rebuild, 1 components, 2 federal potential, 3 federal total less full income tax (NE)
   st_ded.item_include_medical: 0
   st_ded.item_include_mortgage: 0
@@ -428,6 +434,7 @@ scalars:
   # per-dependent deduction reaches only the SECOND and later dependents
   # (NM 7-2-39: "Subtract 1 from total dependents")
   st_child_ded.count_offset: 0
+  st_child_ded.count_all_dependents: 0   # 1 = every dependent (NM), 0 = CTC children (NC)
 
   # ord.yaml (recapture, spouse tax adjustment)
   st_ord.rates1: 0
@@ -544,6 +551,8 @@ scalars:
   # 1 = a childless filer below the federal EITC minimum age gets the state
   # EITC on the federal credit recomputed without the age test (MD 10-704(b)(3))
   st_credits.eitc_childless_min_age_disregard: 0
+  # the state's own minimum age for that recomputed childless credit (NM 18; 0 = none, MD)
+  st_credits.eitc_childless_min_age: 0
   # 1 = separate filers get no state EITC match even where the federal EITC
   # reaches them (IRC 32(d)(2), 2021+); 0 = follow the federal credit
   st_credits.eitc_mfs_barred: 0
@@ -637,6 +646,7 @@ scalars:
   st_credits.ctc_po_round_up: 0
   st_credits.ctc_refundable: 1   # UT CTC is nonrefundable
   st_credits.ctc_mfs_eligible: 1   # 0 = separate filers barred from the tiered CTC (NJ-1040 line 65)
+  st_credits.ctc_mfs_share: 1      # share of the child credit a married-separate filer takes (NM 0.5)
   st_credits.ctc_pct_of_eitc: 0
   st_credits.ctc_max_age: 16
   st_credits.cdctc_match: 0
