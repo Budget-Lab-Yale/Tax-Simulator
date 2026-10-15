@@ -219,6 +219,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.twoearner_rate',
     'st_credits.twoearner_max',
     'st_credits.item_credit_rate',
+    'st_credits.item_credit_flat',   # (dbl) flat credit per taxpayer for a state itemizer (GA Form 500 line 19)
     'st_credits.char_credit_rate',     # (dbl) rate on capped charitable contributions (VT 0.05)
     'st_credits.char_credit_base_cap', # (dbl) contribution base cap (VT $20,000)
     'char_cash',         # (dbl) cash charitable contributions (char credit base)
@@ -410,7 +411,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       tax_unit$st_credits.item_credit_incl_casualty *
         tax_unit$casualty_item_ded_potential -
       tax_unit$st_std_ded
-  )
+  ) +
+    # Flat itemizer credit (GA Resident Itemizer Tax Credit, Form 500 line
+    # 19, TY2024+: "up to $300 per taxpayer" for residents who itemize;
+    # nonrefundable, so the cap at tax comes with the nonrefundable total)
+    tax_unit$st_credits.item_credit_flat * (tax_unit$st_itemizing == 1) *
+      (1 + (tax_unit$filing_status == 2))
 
   # Charitable contribution CREDIT (VT 32 V.S.A. 5822(d)(3)): a rate on the
   # first char_credit_base_cap of contributions, available to EVERY filer

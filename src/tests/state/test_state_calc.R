@@ -315,6 +315,23 @@ test_state_calc = function() {
   # First broad-IIT rollout states
   #--------------------------------------------------------------------------
 
+  # AZ-X1 (2026-10-15): the age-65 exemption ($2,100 per taxpayer/spouse,
+  # Form 140 line 8) survives the TY2019 repeal of personal exemptions.
+  # TY2019 MFJ both 70, no other exemptions: st_exempt = 2 x 2,100
+  run_case('AZ', 2019,
+           list(filing_status = 2, age1 = 70, age2 = 70, agi = 60000,
+                txbl_pens_dist = 60000),
+           expect = list(st_exempt = 4200),
+           label = 'AZ-X1 age-65 exemption after the personal-exemption repeal')
+  # AZ-X2 (2026-10-15): TY2018 joint return with two dependents: personal
+  # exemption $6,600 (the with-dependents tier) + 2 x $2,300 (Form 140 line
+  # 41) = 11,200, TAXSIM's v33 exactly
+  run_case('AZ', 2018,
+           list(filing_status = 2, age1 = 40, age2 = 40, agi = 60000,
+                wages1 = 60000, ei1 = 60000, n_dep = 2, dep_age1 = 5, dep_age2 = 8),
+           expect = list(st_exempt = 11200),
+           label = 'AZ-X2 joint-with-dependents personal exemption + $2,300 dependents')
+
   # AZ-1: 2025 single, AGI 100,000. Standard deduction is 15,750, leaving
   # 84,250 at the 2.5% flat rate.
   run_case('AZ', 2025, list(agi = 100000),
@@ -336,6 +353,16 @@ test_state_calc = function() {
            expect = list(st_dep_credit = 118.75,
                          liab_st_iit = (201000 - 15750) * 0.025 - 118.75),
            label = 'AZ-3 dependent-credit phaseout')
+
+  # GA-IT1 (2026-10-15): Resident Itemizer Tax Credit, $300 per taxpayer for a
+  # Georgia itemizer from TY2024 (Form 500 line 19). TY2024 MFJ itemizing ->
+  # st_item_credit 600
+  run_case('GA', 2024,
+           list(filing_status = 2, agi = 300000, wages1 = 300000, ei1 = 300000,
+                itemizing = 1, item_ded = 40000, item_ded_ex_limits = 40000,
+                mort_int_item_ded = 30000, char_item_ded = 10000, char_cash = 10000),
+           expect = list(st_item_credit = 600),
+           label = 'GA-IT1 Resident Itemizer Tax Credit, two taxpayers')
 
   # GA-1: age-66 single with $5,000 wages and $60,000 pension income. The
   # $65,000 exclusion takes earned income first, then pension income. Taxable
@@ -511,6 +538,18 @@ test_state_calc = function() {
                 txbl_pens_dist = 5373),
            expect = list(st_elderly_credit = 80),
            label = 'IN-6 unified tax credit for the elderly')
+
+  # KY-15 (2026-10-15): from TY2018 Schedule A is mortgage/investment
+  # interest, contributions and gambling/other -- no taxes, no medical -- and
+  # a federal NON-itemizer may itemize. TY2023 single, AGI 60,000, mortgage
+  # interest 6,000 + charity 1,000 + property tax 4,000 (not deductible):
+  # itemized 7,000 > the 2,980 standard deduction
+  run_case('KY', 2023,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, itemizing = 0,
+                mort_int_item_ded = 6000, char_item_ded = 1000, char_cash = 1000,
+                salt_prop = 4000),
+           expect = list(st_itemizing = 1, st_item_ded = 7000),
+           label = 'KY-15 post-2018 Schedule A components and independent election')
 
   # KY-1: 2025 single at MGI $16,000 is in the 90% family-size-credit band.
   # Tax is ($16,000 - $3,270) x 4% = $509.20; the credit is $458.28.

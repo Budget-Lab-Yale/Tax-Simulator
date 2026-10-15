@@ -10,3 +10,12 @@ cdctc_match:
 cdctc_refundable:
   value: 0
   reference: 'Georgia Form IND-CR 202, 2022-2025 (credit is limited to current-year income tax liability)'
+
+# Georgia Resident Itemizer Tax Credit (O.C.G.A. 48-7-29.23; Form 500 line
+# 19), TY2024+: full- and part-year residents who itemize get "up to $300 per
+# taxpayer", no more than the tax, no carryforward. Encoded 2026-10-15
+item_credit_flat:
+  value:
+    '2017': 0
+    '2024': 300
+  reference: '2024 IT-511 booklet (What''s New, and Form 500 line 19 instructions): "you itemized on your returns you are allowed up to $300 per taxpayer as a credit. This amount cannot be greater than your tax liability from Line 16"; 2025 IT-511 booklet p.18; O.C.G.A. 48-7-29.23'

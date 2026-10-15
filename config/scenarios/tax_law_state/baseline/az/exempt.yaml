@@ -2,6 +2,12 @@
 # Personal/dependent exemptions ended after TY2018.  The pre-repeal Head of
 # Household amount has special married-filer allocations that cannot be
 # identified in the PUF; the common unmarried-HoH amount is encoded.
+# The OTHER exemptions survived the repeal and run through the window: $2,100
+# for each taxpayer/spouse 65 or over and $1,500 for each who is blind (Form
+# 140 lines 8-9). The $10,000 qualifying-parent/grandparent exemption (line
+# 11a) turns on relationship and support tests that are not observable and
+# is documented, not modelled. Added 2026-10-15 (TAXSIM gap exactly $2,100
+# per 65+ person on ~90 TY2019 records)
 
 filing_status_mapper:
   personal_amount:
@@ -30,7 +36,23 @@ personal_head:
   reference: 'Arizona Form 140 booklets 2017-2019 (unmarried Head of Household personal exemption)'
 dep_amount:
   value:
+    '2017': 2300
+    '2019': 0
+  reference: 'Arizona Form 140 page 2: 2017 line 40 / 2018 line 41 "Dependents: Multiply the number in box 10 by $2,300" (corrected 2026-10-15 from 2,150 / 2,200, the single personal amounts); A.R.S. 43-1023 repeal effective TY2019'
+joint_dep_addl:
+  value:
     '2017': 2150
     '2018': 2200
     '2019': 0
-  reference: 'Arizona Form 140 booklets 2017-2019; A.R.S. 43-1023 repeal effective TY2019'
+  reference: 'Arizona Form 140 booklet "Personal Exemption Amounts Adjusted for Inflation": married filing a joint return claiming at least one dependent $6,450 (2017) / $6,600 (2018) against $4,300 / $4,400 with no dependents -- the difference, on top of the two per-spouse amounts'
+aged_addl:
+  value: 2100
+  reference: 'Arizona Form 140 line 8 ("Age 65 or over (you and/or spouse)... Multiply the number in box 8 by $2,100"), 2012-2025 forms incl. 2019 Form 140A and 2023 Form 140; A.R.S. 43-1023'
+blind_addl:
+  value: 1500
+  reference: 'Arizona Form 140 line 9 ("Blind (you and/or spouse)... Multiply the number in box 9 by $1,500"), same forms; A.R.S. 43-1023'
+documented_not_modeled:
+  qualifying_parent_exemption:
+    value: 10000
+    reference: 'Form 140 line 11a: $10,000 per qualifying parent or grandparent (lived with the taxpayer, 65 or over, taxpayer paid over one-fourth of their care) -- relationship and support unobservable'
+

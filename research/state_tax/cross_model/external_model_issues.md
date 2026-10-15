@@ -511,6 +511,22 @@ TY2018 records 436084, 297193, 426393).
 TAXSIM applies both from 65: filers and spouses aged 60-64 get $110 less credit and only the under-60 $2,000 exclusion
 (couples aged 60-64 with pensions: a -$21,000 state-AGI gap = 2 x ($12,500 - $2,000)).
 
+
+### T58. Georgia retirement income exclusion applied only from 65
+
+O.C.G.A. 48-7-27(a)(5) and Form 500 Schedule 1 grant the retirement income exclusion from age 62 ($35,000 at 62-64,
+including up to $4,000 of earned income; $65,000 at 65+). TAXSIM applies none of it before 65. Probe (single, $30,000
+of wages, TY2019): Georgia AGI 30,000 at ages 61 and 63, 26,000 at 66; with $20,000 of pension, 50,000 / 50,000 /
+26,000. Effect: TAXSIM overstates Georgia tax for filers aged 62-64 with wages or retirement income.
+
+
+### T59. Arizona itemized deduction carries TAXSIM's own state income tax
+
+TAXSIM's Arizona itemized amount (v35) includes its iterated state income tax inside the SALT component -- exactly the
+federal $10,000 cap on high-income federal non-itemizers with no property tax -- although Arizona Schedule A subtracts
+state income taxes. Concentrated in TY2018 (289 clean records); TAXSIM's deduction used then exceeds the form's by
+$1,000 or more.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income

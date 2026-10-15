@@ -20,12 +20,52 @@ std_regular:
 item_allowed:
   value: 1
   reference: 'Kentucky Form 740 Schedule A, standard or itemized deduction election, 2017-2025'
+# From TY2018 (HB 487) Schedule A is its own short list -- interest (home
+# mortgage, points, investment interest), contributions, gambling losses and
+# a few listed miscellaneous items; no taxes, no medical -- and the election
+# is independent of the federal one. TY2017 keeps the federal-amount proxy
+# (no 2017 form re-read; the TAXSIM 2017 cell clears on it). Fixed
+# 2026-10-15: the federal total had been carrying SALT and medical
 item_coupling:
-  value: 1
-  reference: 'Kentucky Form 740 Schedule A follows the federal itemized-election proxy in this baseline'
+  value:
+    '2017': 1
+    '2018': 0
+  reference: '2023 Form 740 Schedule A instructions: "You may itemize your deductions for Kentucky even if you do not itemize for federal purposes" (married couples must both itemize or both not); 2017 retains the earlier federal-election proxy'
 item_component_style:
-  value: 2
-  reference: 'Kentucky Form 740 Schedule A starts from federal itemized deductions; state-specific adjustments are documented in KY.md'
+  value:
+    '2017': 2
+    '2018': 1
+  reference: 'Form 740 Schedule A 2018-2025 (2023 form re-read 2026-10-15): lines 1-6 interest, 7-11 contributions, 12-14 gambling losses and other miscellaneous -- components, not the federal total'
+item_include_medical:
+  value: 0
+  reference: 'Schedule A 2018-2025 has no medical line'
+item_include_mortgage:
+  value: 1
+  reference: 'Schedule A lines 1-3 (home mortgage interest and points)'
+item_include_investment:
+  value: 1
+  reference: 'Schedule A line 5 (investment interest, federal Form 4952)'
+item_include_charity:
+  value: 1
+  reference: 'Schedule A lines 7-11 (contributions)'
+item_include_casualty:
+  value: 0
+  reference: 'Schedule A 2018-2025 has no casualty line'
+item_include_misc:
+  value: 0
+  reference: 'Line 13 allows only the listed miscellaneous expenses, not the pre-TCJA 2%-floor class'
+item_include_other:
+  value: 1
+  reference: 'Schedule A line 12 (gambling losses to the extent of winnings) and line 13 listed items -- the federal Schedule A line 16 class'
+item_include_prop_tax:
+  value: 0
+  reference: 'Schedule A 2018-2025 has no taxes section'
+item_include_pers_tax:
+  value: 0
+  reference: 'Schedule A 2018-2025 has no taxes section'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'Schedule A 2018-2025 has no taxes section'
 salt_addback:
   value: 0
   reference: 'Kentucky Schedule A adjustments are not separately observable in the PUF and no generic salt addback is imposed'

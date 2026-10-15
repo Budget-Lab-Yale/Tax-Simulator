@@ -54,6 +54,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.dep_aged_min_age', # (dbl) minimum age for that extra dependent exemption
     'st_exempt.aged_addl',       # (dbl) additional exemption per person 65+
     'st_exempt.blind_addl',      # (dbl) additional exemption per blind person
+    'st_exempt.joint_dep_addl',  # (dbl) extra personal exemption for a joint return claiming a dependent (AZ)
     'st_exempt.aged_blind_addl_excl_eitc', # (int) add-ons forgone with EITC/CLI (VA)
     'st_exempt.po_thresh',       # (dbl) AGI disallowance threshold (mapped)
     'st_exempt.po_type',         # (int) 0 = cliff, 1 = stepped reduction
@@ -156,7 +157,11 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
                          (n_dep + n_dep_aged_v) * st_dep_v +
                          n_dep_child_v * st_exempt.dep_child_addl +
                          n_aged      * st_exempt.aged_addl * addl_factor +
-                         n_blind     * st_exempt.blind_addl * addl_factor),
+                         n_blind     * st_exempt.blind_addl * addl_factor +
+                         # AZ Form 140 exemption table: a joint return
+                         # claiming at least one dependent takes a higher
+                         # personal amount ($6,600 against $4,400 in 2018)
+                         (filing_status == 2 & n_dep > 0) * st_exempt.joint_dep_addl),
 
       # High-income disallowance: cliff (po_type 0) or stepped reduction of
       # po_reduction_per_step per po_step, or fraction thereof, of income

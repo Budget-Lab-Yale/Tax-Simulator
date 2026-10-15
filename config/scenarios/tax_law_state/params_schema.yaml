@@ -425,6 +425,9 @@ scalars:
   st_exempt.dep_amount: {default: 0, units: per_dependent}
   st_exempt.aged_addl: {default: 0, units: per_instance}
   st_exempt.blind_addl: {default: 0, units: per_instance}
+  # Extra personal exemption for a joint return claiming at least one
+  # dependent (AZ Form 140 table: $6,450 / $6,600 against $4,300 / $4,400)
+  st_exempt.joint_dep_addl: 0
   st_exempt.aged_blind_addl_excl_eitc: 0
   st_exempt.po_thresh: .inf
   st_exempt.po_type: 0
@@ -587,6 +590,9 @@ scalars:
   # Itemized-deduction credit (WI 71.07(5)): rate x the excess of the
   # component sum (flags below) over the state standard deduction
   st_credits.item_credit_rate: 0
+  # Flat credit per taxpayer (two on a joint return) for a state itemizer
+  # (GA Resident Itemizer Tax Credit, $300 from TY2024); nonrefundable
+  st_credits.item_credit_flat: 0
   st_credits.item_credit_incl_medical: 0
   st_credits.item_credit_incl_mortgage: 0
   st_credits.item_credit_incl_investment: 0
