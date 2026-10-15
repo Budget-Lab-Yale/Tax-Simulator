@@ -194,6 +194,11 @@ OUTPUT_VARS = {
     # West Virginia Homestead Excess Property Tax Credit (11-21-23),
     # refundable, documented-not-modeled on our side. 2026-10-14
     "pe_wv_heptc": ["wv_homestead_excess_property_tax_credit"],
+    # Hawaii: the N-311 flat amount for minor children supported by public
+    # agencies (unobserved on our side), and PE's own-tax SALT deduction
+    # (its simulated withholding; ours is the liability fixed point). 2026-10-15
+    "pe_hi_food_minor_child": ["hi_food_excise_credit_minor_child_amount"],
+    "pe_hi_salt": ["hi_salt_deduction"],
     "pe_tanf": ["tanf"],
     "pe_ssi": ["ssi"],
     # PE's own federal results, used by the harness's clean-subset metrics

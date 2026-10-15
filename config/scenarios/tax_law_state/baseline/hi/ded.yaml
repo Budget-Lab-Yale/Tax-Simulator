@@ -77,6 +77,9 @@ item_coupling:
 salt_addback:
   value: 1
   reference: 'Worksheet A-2 (line 21b): the state-income-tax deduction is denied above the thresholds below, so the exclusion is threshold-gated'
+salt_own_tax_impute:
+  value: 1
+  reference: 'Worksheet A-2 line 1 (state and local income taxes paid, deductible below the thresholds below) on the independent Hawaii election. The data observe taxes paid only for federal itemizers; for federal non-itemizers the unit''s own Hawaii tax after nonrefundable credits stands in (JI 2026-10-15; the convention TAXSIM and PolicyEngine both use)'
 salt_thresh_single:
   value: 100000
   reference: 'Worksheet A-2 note (2017 booklet pp.18/38; identical 2024 booklet p.16 and 2025 booklet): state and local, and foreign, income taxes deductible only if federal AGI is under $100,000 for single or married filing separately, "for taxable years beginning after December 31, 2010" -- permanent, all years'

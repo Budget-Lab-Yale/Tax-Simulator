@@ -477,6 +477,16 @@ SPOUSE WHO MEETS THE ELIGIBILITY REQUIREMENTS QUALIFIES"). TAXSIM grants $8,000 
 (record 101833, TY2020: the 69-year-old primary earns $19,378, the 70-year-old spouse has no income; TAXSIM subtracts
 $16,000, the form $8,000). Effect: TAXSIM understates tax for couples where a 65+ spouse has little own income.
 
+
+### T54. Hawaii EITC limited by refundable credits applied first
+
+TAXSIM applies Hawaii's refundable credits (child and dependent care, food/excise) against the tax before the
+nonrefundable EITC (HRS 235-55.75; Form N-356), so the EITC is capped at whatever tax they leave. On Form N-11
+nonrefundable credits reduce the tax first and refundable credits are payments. Probe (HoH, two children, TY2019):
+`v39_state_eitc` falls 294 -> 0 -> 0 at $20,000 of wages as care expenses go $0 -> $3,000 -> $6,000, and 704 -> 257 -> 0
+at $30,000. Effect: TAXSIM overstates Hawaii tax for low-income working families with care expenses by up to the full
+EITC (TY2018-2020; 291-351 clean records a year).
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income

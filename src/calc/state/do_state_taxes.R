@@ -39,6 +39,26 @@ do_state_taxes = function(tax_units, credit_tables = NULL, law_mfs = NULL) {
   tax_units %<>% ensure_st_params() %>% ensure_st_data()
 
   joint = st_pipeline(tax_units, credit_tables)
+
+  # Own-state income tax as an itemized deduction (st_ded.salt_own_tax_impute;
+  # HI Worksheet A-2, an election independent of the federal one). State
+  # income tax paid is observed only for federal itemizers; for everyone else
+  # it is taken to be the unit's own state tax after nonrefundable credits
+  # (payments in the year ~ liability, as TAXSIM and PolicyEngine assume).
+  # The deduction lowers the tax it is based on, so the pipeline is re-run
+  # to a fixed point -- three further passes; each shrinks the gap by the
+  # marginal state rate (HI 8.25%: $23 after two, under $2 after three)
+  if (any(tax_units$st_ded.salt_own_tax_impute == 1)) {
+    impute = tax_units$st_ded.salt_own_tax_impute == 1 & tax_units$itemizing == 0
+    for (pass in 1:3) {
+      tax_units$salt_inc_sales = if_else(
+        impute,
+        pmax(0, joint$st_tax_pre_credit - joint$st_credits_nonref),
+        tax_units$salt_inc_sales
+      )
+      joint = st_pipeline(tax_units, credit_tables)
+    }
+  }
   # Diagnostic: TRUE where the married-separate election won. Who owns
   # non-wage income is unobserved and the split halves it, so cross-model
   # predicates need to see which couples the convention moved

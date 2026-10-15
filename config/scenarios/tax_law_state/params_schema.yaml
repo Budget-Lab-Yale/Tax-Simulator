@@ -245,6 +245,12 @@ scalars:
   # itemized base (item_component_style 2). NM PIT-1 line 10 worksheet. 0 =
   # property taxes fill the cap first, addback only where item_allowed == 0
   st_ded.salt_addback_prorate: 0
+  # 1 = a federal non-itemizer's state income tax paid (unobserved in the data)
+  # is taken to be the unit's own state tax after nonrefundable credits, so a
+  # state that lets its own tax be deducted on an independent itemized
+  # election (HI Worksheet A-2) can grant it; solved by re-running the
+  # pipeline to a fixed point in do_state_taxes()
+  st_ded.salt_own_tax_impute: 0
   st_ded.item_component_style: 0   # 0 default rebuild, 1 components, 2 federal potential, 3 federal total less full income tax (NE)
   st_ded.item_include_medical: 0
   st_ded.item_include_mortgage: 0

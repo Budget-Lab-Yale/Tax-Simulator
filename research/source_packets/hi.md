@@ -250,6 +250,36 @@ Two corrections to earlier readings, recorded so they are not repeated:
   v35 > 0)` form in the known-difference predicates is a deliberately broad
   *exposure* test, not an election claim.
 
+### Triage 2026-10-15 (TAXSIM window closed)
+
+Re-classifying the TAXSIM misses by stage (Hawaii AGI vs v32, taxable income
+vs v36) gave three classes:
+
+- **Own Hawaii tax as an itemized deduction (our gap, now MODELLED).**
+  Worksheet A-2 deducts state income taxes paid on the independent Hawaii
+  election below $100k / $150k / $200k of federal AGI, and the standard
+  deduction is tiny. Taxes paid are observed only for federal itemizers, so
+  federal non-itemizers never itemized here; TAXSIM and PolicyEngine both
+  deduct the unit's own computed tax. JI 2026-10-15: model it. Generic
+  `st_ded.salt_own_tax_impute`: non-itemizers' salt_inc_sales = own state
+  tax after nonrefundable credits, solved to a fixed point in
+  do_state_taxes() (three passes). Test HI-10 (fixed point 7,592.09 by hand);
+  HI-1/3b/5/7 pinned to the standard deduction; continuity allowance 450
+  for the A-2 cliff. ~1,000 records a year.
+- **T54:** TAXSIM nets refundable credits before the nonrefundable EITC.
+- **Pension source split:** the data-proxy row now EXCLUDES (close rule).
+
+TAXSIM 2017-2020: 0.978 / 0.975 / 0.974 / 0.967 (from 0.770 / 0.712 / 0.697 /
+0.709).
+
+PolicyEngine window (same day): with the own-tax deduction modelled, the
+residual was (a) the size of that deduction for federal non-itemizers --
+ours the liability fixed point, PE its simulated wage withholding
+(hi_salt_deduction), keyed on a >$100 gap via the new `pe_hi_salt` export;
+and (b) N-311's flat $110 per minor child supported by public agencies,
+which PE infers from simulated benefits (`pe_hi_food_minor_child`). Both
+input-coverage. PE 2022-2025: 0.974 / 0.981 / 0.973 / 1.000. CLOSED.
+
 ## Aggregate validation notes
 
 - HT2 HI total tax once weights land; DOTAX annual individual income tax

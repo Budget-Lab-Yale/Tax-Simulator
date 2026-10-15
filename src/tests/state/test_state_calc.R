@@ -3988,7 +3988,9 @@ test_state_calc = function() {
   # (single gate $30,000)
   run_case('HI', 2018, list(agi = 60000, wages1 = 60000, ei1 = 60000),
            expect = list(st_agi = 60000, liab_st_iit = 3927.72),
-           label = 'HI-1 2018 twelve-bracket schedule, standard deduction')
+           label = 'HI-1 2018 twelve-bracket schedule, standard deduction',
+           # schedule case: own-tax itemizing (HI-10) switched off
+           law_overrides = list(st_ded.salt_own_tax_impute = 0))
 
   # HI-2: 2017 nine-bracket year, MFJ 66/64, wages 40,000 + pension 30,000 +
   # taxable SS 10,000 (FAGI 80,000). Pension and SS fully subtracted -> HI
@@ -4003,6 +4005,19 @@ test_state_calc = function() {
            expect = list(st_agi = 40000, st_exempt = 3432,
                          liab_st_iit = 1592.22),
            label = 'HI-2 2017 schedule, pension/SS exclusions, aged exemption')
+  # HI-10 (2026-10-15): Worksheet A-2 deducts state income taxes paid on the
+  # independent Hawaii election; for a federal non-itemizer the unit's own
+  # Hawaii tax stands in (st_ded.salt_own_tax_impute). TY2019 MFJ, wages
+  # 120,000, nothing else deductible: without the deduction taxable income is
+  # 120,000 - 4,400 - 2 x 1,144 = 113,312 and tax 7,855.44 (8.25% bracket).
+  # Itemizing its own tax x: T = 7,855.44 - 0.0825 x (113,312 - (117,712 - x))
+  # = 8,218.44 - 0.0825x, and x = T gives x = 8,218.44 / 1.0825 = 7,592.09
+  run_case('HI', 2019,
+           list(filing_status = 2, agi = 120000, wages1 = 120000, ei1 = 120000,
+                itemizing = 0),
+           expect = list(st_itemizing = 1, liab_st_iit = 7592.09),
+           tol = 1, label = 'HI-10 own Hawaii tax deducted on the independent election')
+
   # HI-9a..c (2026-10-13): N-11 line 13 excludes public pensions in full and
   # only the employer-funded share of private plans, from the pension_public
   # and pension_er_funded_share overlays. 9a: 10,000 public + 50% of the
@@ -4052,7 +4067,8 @@ test_state_calc = function() {
            list(agi = 50000, wages1 = 20000, ei1 = 20000, kg_lt = 30000,
                 kg_pref = 30000, txbl_kg = 30000),
            expect = list(liab_st_iit = 2836.66),
-           label = 'HI-3b alternative tax with the $24,000 ordinary floor')
+           label = 'HI-3b alternative tax with the $24,000 ordinary floor',
+           law_overrides = list(st_ded.salt_own_tax_impute = 0))
 
   # HI-4: 2023 single, one dependent, wages 18,000, federal EITC 3,000. TI
   # = 18,000 - 2,200 - 2,288 = 13,512 -> 374.40 + 6.4% x 3,912 = 624.77
@@ -4087,7 +4103,8 @@ test_state_calc = function() {
                 wages2 = 30000, ei1 = 60000, ei2 = 30000, n_dep = 2,
                 dep_age1 = 3, dep_age2 = 5, care_exp = 12000),
            expect = list(st_cdctc = 1800, liab_st_iit = 3444.10),
-           label = 'HI-5 refundable care credit at the 15% floor, Act 163 caps')
+           label = 'HI-5 refundable care credit at the 15% floor, Act 163 caps',
+           law_overrides = list(st_ded.salt_own_tax_impute = 0))
 
   # HI-5b: the sliding rate one band in. 2019 single, HI AGI 27,500 -> rate
   # 25% - 1 x 1% = 24%; cap 2,400 (one qualifying person) -> credit 576.
@@ -4135,7 +4152,8 @@ test_state_calc = function() {
   # 74,456 -> 2,539.20 + 7.6% x 26,456 = 4,549.86 (continuous)
   run_case('HI', 2025, list(agi = 80000, wages1 = 80000, ei1 = 80000),
            expect = list(liab_st_iit = 4549.86),
-           label = 'HI-7 Act 46 TY2025 bracket step')
+           label = 'HI-7 Act 46 TY2025 bracket step',
+           law_overrides = list(st_ded.salt_own_tax_impute = 0))
 
   # HI-8: 2027 -- the second Act 46 bracket step plus the TY2026 standard-
   # deduction step ($8,000 single). TI = 80,000 - 8,000 - 1,144 = 70,856
@@ -6568,10 +6586,13 @@ run_case('AR', 2024,
                 #   guideline -- $300 in 2017, $460 in 2024 across the $15,000 -> $15,500 step (tax at
                 #   $15,060 less the 50% EIC). Was 130 for the banded
                 #   exemption steps at $100k/$125k/$150k. Pinned by MD-12
-    HI = 160,   # N-311 food-credit band edges (published cliffs: the single
-                #   table ends at $40,000 in the 2023-2027 vintage, dropping
-                #   $110 for the one-person sweep unit, plus the bracket
-                #   slope; the 2017 vintage's largest edge is $55 at $30,000)
+    HI = 450,   # Worksheet A-2 CLIFF at $100,000 single: the whole state
+                #   income tax deduction (the unit's own Hawaii tax, ~$5,300 at
+                #   that income, against a $2,200 standard deduction) is denied
+                #   in one step -- $421 in 2017 for the sweep unit including the
+                #   8.25% bracket slope (raised from 160 on 2026-10-15 with
+                #   st_ded.salt_own_tax_impute; HI-10). The N-311 food-credit
+                #   band edges ($110 at most) sit well inside it
     AR = 150,   # recapture-tail cliffs: through TY2021 the DFA bracket memo's
                 #   minus adjustment drops $100 at each tail-row boundary, so a
                 #   $500 sweep step spanning one boundary jumps $100 plus
