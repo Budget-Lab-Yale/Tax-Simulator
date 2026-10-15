@@ -2751,6 +2751,27 @@ test_state_calc = function() {
   # separate filing, 20%-nonrefundable/4.5%-refundable EITC election
   #--------------------------------------------------------------------------
 
+  # DE-R1 (2026-10-15): the 60+ exclusion's eligible retirement income is
+  # dividends, net gains, interest, net rental income from real property and
+  # qualified plans (PIT-RES Line 6) -- not passive pass-through income.
+  # TY2019 MFJ aged 61/62, wages 69,000 + 12,500 of passive partnership
+  # income and nothing eligible: no exclusion
+  run_case('DE', 2019,
+           list(filing_status = 2, age1 = 61, age2 = 62, agi = 81500,
+                wages1 = 69000, ei1 = 69000, part_passive = 12500),
+           expect = list(st_retirement_excl = 0),
+           label = 'DE-R1 passive pass-through income is not eligible retirement income')
+  # DE-E1 (2026-10-15): the 20% nonrefundable EITC option can only absorb the
+  # tax left AFTER the $110 personal credits. TY2021 single, one dependent,
+  # federal EITC 3,621: tax 237.95, personal credits 220 leave 17.95, so the
+  # 20% option is worth 17.95 against 4.5% x 3,621 = 162.94 refundable ->
+  # the refundable option: 237.95 - 220 - 162.94 = -144.99 (PE agrees)
+  run_case('DE', 2021,
+           list(agi = 12659, wages1 = 12659, ei1 = 12659, eitc = 3621,
+                n_dep = 1, dep_age1 = 5),
+           expect = list(st_eitc = 162.94, liab_st_iit = -144.99),
+           label = 'DE-E1 EITC option valued after the personal credits')
+
   # DE-1: 2024 single, AGI 50,000, two dependents. Std 3,250 -> taxable
   # 46,750 in the 5.55% band: 1,001 + 5.55% x 21,750 = 2,208.125; less
   # three $110 personal credits

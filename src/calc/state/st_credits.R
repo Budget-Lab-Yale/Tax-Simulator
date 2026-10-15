@@ -244,7 +244,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   # Credit-family modules (cross-family inputs passed explicitly)
   hh     = st_credits_household(tax_unit, credit_tables)
-  earn   = st_credits_earned(tax_unit, hh$st_hh_credit, credit_tables)
+  earn   = st_credits_earned(tax_unit, hh$st_hh_credit, credit_tables,
+                             st_exempt_credit = hh$st_exempt_credit)
   child  = st_credits_child(tax_unit, earn$st_eitc)
   care   = st_credits_care(tax_unit)
   senior = st_credits_senior(tax_unit)

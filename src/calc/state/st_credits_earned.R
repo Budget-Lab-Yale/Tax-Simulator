@@ -75,7 +75,8 @@ st_credits_earned_req_vars = c(
 )
 
 
-st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
+st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL,
+                             st_exempt_credit = 0) {
 
   #----------------------------------------------------------------------------
   # Calculates the earned-income credit family on a parsed tax unit tibble.
@@ -86,6 +87,9 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   #   - tax_unit (df)        : parsed tax unit tibble (see calc_st_credits)
   #   - st_hh_credit (dbl[]) : household credit (st_credits_household)
   #   - credit_tables (df)   : dense schedules (see build_state_credit_tables)
+  #   - st_exempt_credit (dbl[]) : personal/exemption credits already applied
+  #                          against the tax (caps the nonrefundable EITC
+  #                          option's benefit in the alternative-option choice)
   #
   # Returns: list of per-row vectors --
   #   - st_earned_credit (dbl)  : independent earned-income credit
@@ -341,10 +345,16 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # unit takes whichever option yields the larger benefit, keeping the
   # main option on ties. Per-unit refundability follows the chosen option
   st_eitc_alt_amt = tax_unit$st_credits.eitc_match_alt * eitc_state_base
+  # The nonrefundable option can only absorb the tax LEFT after the
+  # personal credits that precede it on the form (DE PIT-RES: the $110
+  # personal credits on Line 27 before the Line 34 EITC choice) -- valuing
+  # it against the whole pre-credit tax picked the 20% option for filers
+  # whose tax the personal credit had already nearly cleared
   st_eitc_benefit_main = if_else(tax_unit$st_credits.eitc_refundable == 1,
                                  st_eitc_main,
                                  pmin(st_eitc_main,
-                                      pmax(0, tax_unit$st_tax_pre_credit)))
+                                      pmax(0, tax_unit$st_tax_pre_credit -
+                                              st_exempt_credit)))
   st_eitc_benefit_alt  = if_else(tax_unit$st_credits.eitc_refundable_alt == 1,
                                  st_eitc_alt_amt,
                                  pmin(st_eitc_alt_amt,

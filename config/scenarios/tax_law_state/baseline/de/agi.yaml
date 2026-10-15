@@ -106,6 +106,9 @@ retirement_excl_under65:
 retirement_excl_65plus:
   value: 12500
   reference: 'PIT-RES Line 6 worksheet line 4 ($12,500; DE has no separate age-65 cap), constant 2017-2025'
+retirement_excl_incl_passthru:
+  value: 0
+  reference: 'PIT-RES Line 6: eligible retirement income is "dividends, capital gains net of capital losses, interest, net rental income from real property and qualified retirement plans" -- passive partnership/S-corporation income and other income are not on the list (2026-10-15: record 108303, $12,559 of pass-through income, was being excluded)'
 retirement_excl_earned_cap:
   value: 0
   reference: 'PIT-RES Line 6: eligible retirement income is "dividends, capital gains net of capital losses, interest, net rental income from real property and qualified retirement plans" -- earned income is NOT eligible'

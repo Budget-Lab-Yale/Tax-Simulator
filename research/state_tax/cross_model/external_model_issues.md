@@ -503,6 +503,14 @@ federal AGI over the threshold (the federal construction; PolicyEngine implement
 AGI alone, so a childless worker whose losses pull AGI below earnings keeps a credit the form takes away ($100-$500;
 TY2018 records 436084, 297193, 426393).
 
+
+### T57. Delaware age-60 rules applied from 65
+
+30 Del. C. 1110(b)(2) grants an additional $110 personal credit to each resident 60 or over (PIT-RES Line 27b), and
+1106(b)(3) raises the pension exclusion to $12,500 with eligible retirement income at 60 or over (PIT-RES Line 6).
+TAXSIM applies both from 65: filers and spouses aged 60-64 get $110 less credit and only the under-60 $2,000 exclusion
+(couples aged 60-64 with pensions: a -$21,000 state-AGI gap = 2 x ($12,500 - $2,000)).
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1476,6 +1484,13 @@ to an individual "who is eligible for an earned income tax credit" under IRC 32,
 to file jointly (the ARPA separated-spouse exception needs a qualifying child); the 2019 D-40 booklet also states the
 credit is not allowed if married filing separately. Effect: D.C. tax understated by up to the childless maximum for
 childless separate filers (about 10 clean records a year, 2021-2024).
+
+### P43. Delaware additional standard deduction granted for aged dependents
+
+`de_additional_standard_deduction` is computed for every person aged 65+ or blind, and `de_standard_deduction_joint`
+sums it onto the head, so a filer claiming an elderly parent as a dependent receives an extra $2,500. 30 Del. C. 1108(b)
+limits the additional amount to the taxpayer and spouse. Effect: Delaware tax understated by $2,500 x the marginal rate
+per aged dependent (probe 2026-10-15: records 324233, 41551, 88133 at 5,750 against the 3,250 base).
 
 ## Corroboration worth passing along
 

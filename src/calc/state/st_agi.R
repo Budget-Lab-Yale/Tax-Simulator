@@ -198,6 +198,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.age_ded_less_pension_sub', # (int) aged deduction reduced by the pension/retirement subtraction taken (SC)
     'st_agi.age_ded_less_ss_sub',    # (int) aged deduction reduced by the Social Security subtraction taken (WV)
     'st_agi.age_ded_own_income_cap', # (int) each person's aged amount capped at that person's own income (WV line 47 box (c))
+    'st_agi.retirement_excl_incl_passthru', # (int) style-1 eligible base includes passive pass-through and other income (GA 1; DE 0)
     'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
@@ -702,10 +703,14 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_retir_n = 1 + (filing_status == 2),
       st_retir_other_earned = sole_prop + (part_active - part_active_loss) +
                               scorp + farm,
+      # Passive pass-through and other income count where the state's list
+      # reaches them (GA "retirement income"); DE's eligible retirement
+      # income stops at dividends, net gains, interest, net rental income from
+      # real property and qualified plans (retirement_excl_incl_passthru 0)
       st_retir_unearned = txbl_int + div_ord + div_pref + kg_lt + kg_st +
-                          net_rent + (part_passive - part_passive_loss) +
-                          txbl_pens_dist + txbl_ira_dist +
-                          other_inc,
+                          net_rent + txbl_pens_dist + txbl_ira_dist +
+                          st_agi.retirement_excl_incl_passthru *
+                            ((part_passive - part_passive_loss) + other_inc),
       st_retir_cap1 = if_else(age1 >= st_agi.retirement_excl_min_age,
                                if_else(age1 >= 65,
                                        st_agi.retirement_excl_65plus,

@@ -153,6 +153,28 @@ primary documents. FOUR vintage disagreements, primary wins in each:
    the 59.5-59 cohort with penalty-free distributions arguably qualifies
    (bounded by $2,000 x 6.6% = $132).
 
+## Cross-model status 2026-10-15 (CLOSED)
+
+TAXSIM 2017-2020: 0.979 / 0.979 / 0.980 / 0.976. PolicyEngine 2021-2025:
+0.973 / 0.963 / 0.970 / 0.951 / 0.989.
+
+- **Resolved, our side right:** the 60+ $12,500 exclusion reaches dividends,
+  interest, capital gains and net rents (Delaware DOR FAQ; PIT-RES Line 6).
+- **Our fix -- eligible retirement income:** the shared style-1 base also
+  counted passive pass-through and other income; Delaware's list stops at
+  dividends, net gains, interest, net rents and qualified plans
+  (`retirement_excl_incl_passthru` 0; GA keeps 1). Test DE-R1.
+- **Our fix -- EITC option choice:** the 20% nonrefundable option was valued
+  against the whole pre-credit tax; it can only absorb what the $110
+  personal credits leave, so low-income filers now take the 4.5% refundable
+  option where it pays more (generic, st_credits_earned.R). Test DE-E1
+  (-144.99, PE agrees). VA/MD unchanged.
+- **TAXSIM:** T57 (age-60 credit and exclusion tier applied from 65); T12 now
+  excluded ($2,000 exclusion on early IRA / no retirement income).
+- **PolicyEngine:** P43 (aged additional standard deduction granted for 65+
+  dependents); P32 Delaware leg (2025 SALT cap without the phase-down);
+  crosswalk class (unhanded itemized items); the harness IRA fold under 60.
+
 ## Cross-model and aggregate validation
 
 - TAXSIM 2017-2020 / PolicyEngine 2021-2024. Pre-register the four PE vintage
