@@ -338,8 +338,15 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
                 cs_extra * cs_item_shr1,
       cs_ded2 = if_else(st_itemizing, st_item_ded * (1 - cs_item_shr1), cs_std_col) +
                 cs_extra * (1 - cs_item_shr1),
-      cs_tax  = sched_tax_at(pmax(0, cs_share1 - cs_ded1 - sta_pe1)) +
-                sched_tax_at(pmax(0, cs_share2 - cs_ded2 - sta_pe2)),
+      # Column exemptions: each spouse's own personal (and aged/blind)
+      # amount plus half of everything else the return claims -- above all
+      # the dependents' exemptions, which the couple allocates between the
+      # columns (DC Calculation J). The two columns sum to st_exempt exactly,
+      # so a phase-out that has trimmed the joint total is shared evenly.
+      # Zero remainder where st_exempt is just the two personal amounts
+      cs_ex_rem = st_exempt - sta_pe1 - sta_pe2,
+      cs_tax  = sched_tax_at(pmax(0, cs_share1 - cs_ded1 - sta_pe1 - cs_ex_rem / 2)) +
+                sched_tax_at(pmax(0, cs_share2 - cs_ded2 - sta_pe2 - cs_ex_rem / 2)),
       st_tax_pre_credit = if_else(
         st_ord.combined_sep == 1 & filing_status == 2,
         pmin(st_tax_pre_credit, cs_tax),

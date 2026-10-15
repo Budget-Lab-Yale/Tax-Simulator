@@ -38,6 +38,15 @@ ss_sub_share:
   value: 1
   reference: 'D-40 Schedule I, Calculation B: "Taxable social security and tier I railroad retirement included in federal gross income". No age test, no income test, all years 2017-2025'
 
+# Unemployment insurance excluded from District gross income from TY2021
+# (all of it, any source); fully taxable 2017-2020 -- the T14 TAXSIM row
+# rests on exactly this boundary
+sub_ui_share:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'D-40 booklet 2021 "What''s New": "For taxable years beginning January 1, 2021, unemployment insurance benefits provided by the federal government, District of Columbia, and any other state, are excluded in the computation of District gross income"; D-40 Schedule I subtraction 2021-2025. Booklets 2017-2020 print all unemployment compensation as taxable'
+
 documented_not_modeled:
   unincorporated_business_carveout_d30:
     value: 12000

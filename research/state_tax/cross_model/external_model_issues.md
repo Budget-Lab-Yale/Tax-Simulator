@@ -487,6 +487,22 @@ nonrefundable credits reduce the tax first and refundable credits are payments. 
 at $30,000. Effect: TAXSIM overstates Hawaii tax for low-income working families with care expenses by up to the full
 EITC (TY2018-2020; 291-351 clean records a year).
 
+
+### T55. D.C. childless EITC paid outside the federal age band
+
+TAXSIM grants the D.C. childless-worker EITC (D.C. Code 47-1806.04(f)(1)(C)) to childless filers aged 18-24 (and 65+),
+usually at the full maximum ($529 in TY2019). The D.C. credit builds on federal childless eligibility, which requires
+age 25-64; PolicyEngine applies that test too. Effect: TAXSIM understates D.C. tax for young childless workers by up to
+the childless maximum (171-206 clean records a year, TY2017-2020).
+
+
+### T56. D.C. childless EITC phased out on AGI instead of the greater of earnings or AGI
+
+The D.C. childless-worker credit is reduced by its phase-out rate times the excess of the greater of earned income or
+federal AGI over the threshold (the federal construction; PolicyEngine implements it the same way). TAXSIM uses federal
+AGI alone, so a childless worker whose losses pull AGI below earnings keeps a credit the form takes away ($100-$500;
+TY2018 records 436084, 297193, 426393).
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1452,6 +1468,14 @@ addback to be "reduced by any state income tax deduction from Schedule A of your
 back on line 2". PolicyEngine therefore adds the state income tax back twice for itemizers above $300,000 of AGI.
 Effect: Colorado liability overstated by 4.4% (4.25% in 2024) of the line 2 addback (2026-10-14: records 80184,
 291197, 157169, $154-$435).
+
+### P42. D.C. EITC paid to childless married-filing-separately filers
+
+PolicyEngine pays the D.C. EITC to childless separate filers. D.C. Code 47-1806.04(f)(1)(C) grants the childless credit
+to an individual "who is eligible for an earned income tax credit" under IRC 32, and 32(d) requires married individuals
+to file jointly (the ARPA separated-spouse exception needs a qualifying child); the 2019 D-40 booklet also states the
+credit is not allowed if married filing separately. Effect: D.C. tax understated by up to the childless maximum for
+childless separate filers (about 10 clean records a year, 2021-2024).
 
 ## Corroboration worth passing along
 

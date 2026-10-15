@@ -199,6 +199,17 @@ OUTPUT_VARS = {
     # (its simulated withholding; ours is the liability fixed point). 2026-10-15
     "pe_hi_food_minor_child": ["hi_food_excise_credit_minor_child_amount"],
     "pe_hi_salt": ["hi_salt_deduction"],
+    # D.C. Schedule H property tax credit (47-1806.06) and Keep Child Care
+    # Affordable credit (47-1806.15): refundable, omitted on our side (rent /
+    # licensed-facility expenses unobserved). 2026-10-15
+    "pe_dc_ptc": ["dc_ptc"],
+    "pe_dc_kccatc": ["dc_kccatc"],
+    # D.C. EITC, for the separate-filer rows (47-1806.04(f) follows IRC 32
+    # eligibility, which bars childless separate filers). 2026-10-15
+    "pe_dc_eitc": ["dc_eitc"],
+    # D.C. addback of pass-through losses above $12,000 (paired with the D-30
+    # unincorporated business carve-out), omitted on our side, modelled by PE
+    "pe_dc_loss_addback": ["dc_self_employment_loss_addition"],
     "pe_tanf": ["tanf"],
     "pe_ssi": ["ssi"],
     # PE's own federal results, used by the harness's clean-subset metrics

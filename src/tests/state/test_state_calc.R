@@ -3696,6 +3696,26 @@ test_state_calc = function() {
   # which is why DC needs no base_amounts family.
   #--------------------------------------------------------------------------
 
+  # DC-J1 (2026-10-15): Calculation J (married filing separately on the same
+  # return) lets the couple allocate the dependents' exemptions between the
+  # columns. TY2017, two earners at 23,064 / 23,063, three children: joint
+  # taxable 26,977 -> 1,418.62. Each column: 23,063.50 - 5,137.50 (half the
+  # 10,275 std) - 1,775 (own) - 2,662.50 (half of 3 x 1,775) = 13,488.50 ->
+  # 400 + 6% x 3,488.50 = 609.31; two columns 1,218.62, so J wins
+  run_case('DC', 2017,
+           list(filing_status = 2, agi = 46127, wages1 = 23064, wages2 = 23063,
+                ei1 = 23064, ei2 = 23063, n_dep = 3, dep_age1 = 3, dep_age2 = 6,
+                dep_age3 = 9),
+           expect = list(st_tax_pre_credit = 1218.62),
+           label = 'DC-J1 Calculation J allocates dependent exemptions')
+  # DC-U1/U2 (2026-10-15): unemployment insurance is excluded from District
+  # gross income from TY2021 and fully taxable before. Single, wages 30,000 +
+  # UI 10,000: DC AGI 30,000 in 2021, 40,000 in 2020
+  run_case('DC', 2021, list(agi = 40000, wages1 = 30000, ei1 = 30000, ui = 10000),
+           expect = list(st_agi = 30000), label = 'DC-U1 UI excluded from TY2021')
+  run_case('DC', 2020, list(agi = 40000, wages1 = 30000, ei1 = 30000, ui = 10000),
+           expect = list(st_agi = 40000), label = 'DC-U2 UI taxable through TY2020')
+
   # DC-1 TY2019 single, AGI 60,000, standard deduction 12,200 (federal
   # conformity years), no exemptions after TCJA. Taxable 47,800:
   # 10,000 x 4% + 30,000 x 6% + 7,800 x 6.5% = 400 + 1,800 + 507 = 2,707

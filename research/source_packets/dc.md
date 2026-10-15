@@ -152,6 +152,28 @@ every 2017-2025 booklet). **The real risk in DC is entirely on our side.**
 
 Federal base sweep (does the state credit read the federal credit before or after the federal tax-liability limit, Form 2441 line 9/9c vs line 11?), each read from the state's forms and statute. D.C. Code 47-1806.04(c)(1): 32% of the federal credit "regardless of the amount of the credit actually used to offset federal tax liability"; D-40 reads Form 2441 line 9 (2017), line 10 or 11 (2021, the ARPA credit), line 9c (2024-2025). Now the tentative base (`cdctc_fed_base` = 1); the former documented known difference is retired. Test DC-9b.
 
+## Cross-model status 2026-10-15 (CLOSED)
+
+TAXSIM 2017-2020: 0.963 / 0.950 / 0.954 / 0.956. PolicyEngine 2021-2025:
+0.968 / 0.959 / 0.958 / 0.955 / 0.971.
+
+- **Our fix -- Calculation J dependent exemptions.** The combined-separate
+  columns (st_tax.R) gave each spouse only the personal exemption, so the
+  dependents' exemptions vanished and the split never beat joint filing.
+  Each column now takes its personal amount plus half of the rest of
+  st_exempt (columns sum to the joint total). Test DC-J1 (1,418.62 joint ->
+  1,218.62 split, TAXSIM's figure). KY/IA cells unchanged; DE PE +1-2pp.
+- **Our fix -- UI excluded from TY2021** (2021 booklet "What's New"; all
+  sources; taxable 2017-2020). Tests DC-U1/U2.
+- **TAXSIM:** T55 (childless EITC outside the federal 25-64 band -- the
+  D.C. credit requires section 32 eligibility), T56 (childless phase-out on
+  AGI instead of the greater of earnings or AGI).
+- **PolicyEngine:** P42 (childless separate filers paid the D.C. EITC;
+  section 32(d) bars them); separate filers with children (Tax-Data
+  n_dep_eitc = 0 for separate filers); Schedule H and KCCATC (omitted on
+  our side; pe_dc_ptc, pe_dc_kccatc); the >$12,000 loss addback paired with
+  the D-30 carve-out (pe_dc_loss_addback); out-of-state municipal interest.
+
 ## Known differences (largest first)
 
 1. **Unincorporated business carve-out (D-30) not modeled -- largest single
