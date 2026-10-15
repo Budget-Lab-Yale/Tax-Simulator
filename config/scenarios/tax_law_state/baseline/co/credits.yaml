@@ -1,10 +1,13 @@
 ---
 # Colorado: credits (DR 0104CR, DR 0104CN)
-# TODO(Phase 2 follow-up): the CO child care expenses credit (DR 0347,
-# percentage of federal CDCTC by AGI tier) and the low-income child care
-# credit were not covered in the 2026-07-12 research pass -- research and
-# encode before Phase 5 validation. HB24-1134 also consolidates child-care
-# credits for 2026.
+# Child care expenses credits (DR 0347), encoded 2026-10-14 from the 2017,
+# 2019, 2022 and 2024 forms: Part III (39-22-119) is a share of the federal
+# credit as claimed (Form 2441 line 11) by federal AGI, nothing above
+# $60,000; Part IV (39-22-119.5, low income) replaces it where federal tax
+# before credits is zero and federal AGI is $25,000 or less. Both refundable
+# (DR 0104CR line 1). HB24-1134 restructures the credit from TY2026
+# (70% of the uncapped federal credit) -- recorded in the tracker, not
+# encoded (S45).
 
 filing_status_mapper:
   ctc_tier1_bound:
@@ -37,7 +40,20 @@ filing_status_mapper:
 # 10% (2017-2021) -> 20% (2022) -> 50% (2023-2025, via HB23B-1002/HB24-1134
 # incl. the met 2025 trigger) -> 25% (2026+, DOR-published; statutory
 # triggers to 30-50% exist but were not met). ITIN-filer eligibility from
-# TY2020 and childless 18-24 from TY2022 are data-limited (known-differences)
+# TY2020 is data-limited (known-differences). From TY2022 a childless filer
+# under 25 who fails only the federal age test qualifies (encoded below on
+# the non-student path, minimum age 19; students and former foster or
+# homeless youth from 18 follow rules on unobserved status)
+eitc_childless_min_age_disregard:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'C.R.S. 39-22-123.5 as amended by HB21-1311 (TY2022+); DOR Income Tax Topics: Earned Income Tax Credit (Apr 2025): residents under 25 without a qualifying child who do not qualify for the federal EITC may claim the Colorado credit; DR 0104TN instructions 2023-2025'
+eitc_childless_min_age:
+  value:
+    '2017': 0
+    '2022': 19
+  reference: 'DOR ITT EITC Apr 2025: non-specified students 19-24 (former foster or homeless youth 18-24 and specified students follow status tests that are unobserved -- the non-student path is encoded)'
 eitc_match:
   value:
     '2017': 0.10
@@ -184,7 +200,10 @@ fatc_po_start_joint:
   reference: 'DR 0104CN 2024'
 fatc_po_step:
   value: 5000
-  reference: 'DR 0104CN 2024 ($5,000 AGI steps, linear decline)'
+  reference: 'DR 0104CN 2024 and DOR ITT FATC 2025 tables: $5,000 AGI bands'
+fatc_po_rate:
+  value: 0.06875
+  reference: 'DR 0104CN 2024 tables (3,200 -> 2,980 -> 2,760 ...; 2,400 -> 2,235 ...) and DOR ITT FATC Jan 2026 2025 tables (3,273 -> 3,048; 2,455 -> 2,286): each started $5,000 band removes 6.875% of the full amount; the 80,001-85,000 band pays $120 / $90'
 fatc_po_zero_single:
   value: 85000
   reference: 'DR 0104CN 2024/2025 (credit 0 above 85,000 single)'
@@ -194,3 +213,69 @@ fatc_po_zero_joint:
     '2024': 95000
     '2025': 96000
   reference: 'DR 0104CN 2024; DOR FATC publication 2025'
+
+# ----------------------------------------------------------------------------
+# Child care expenses credit (39-22-119; DR 0347 Part III). Table A on the
+# 2017 form: more than $0 to $25,000 -> .50, to $35,000 -> .30, to $60,000 ->
+# .10; from TY2019 a single .50 up to $60,000 (2019 form line 7). Bands are
+# closed below / open above, so each "not more than" bound sits a cent above
+# the dollar amount
+# ----------------------------------------------------------------------------
+cdctc_style:
+  value: 1
+  reference: 'DR 0347 line 9 (2017-2025): line 8 (federal Form 2441 line 11) times the line 7 decimal'
+cdctc_fed_base:
+  value: 0
+  reference: 'DR 0347 line 8: "Enter the amount from line 11 of IRS form 2441" -- the federal credit as claimed, after the tax-liability limit'
+cdctc_share_income_base:
+  value: 1
+  reference: 'DR 0347 line 4: "adjusted gross income from your federal income tax return"'
+cdctc_share_agi_bounds:
+  value: [-1.0e+12, 25000.01, 35000.01, 60000.01, 1.0e+12, 1.0e+13]
+  reference: 'DR 0347 Table A (2017) / line 7 (2019-2025); "If the amount of line 4 is greater than $60,000 STOP"'
+cdctc_share_start:
+  value:
+    '2017': [0.50, 0.30, 0.10, 0, 0, 0]
+    '2019': [0.50, 0.50, 0.50, 0, 0, 0]
+  reference: 'DR 0347 2017 Table A (.50/.30/.10, carried to TY2018: the 2018 form was not opened, PolicyEngine agrees); DR 0347 2019, 2022 and 2024 line 7 (0.50 at $60,000 or less)'
+cdctc_share_end:
+  value:
+    '2017': [0.50, 0.30, 0.10, 0, 0, 0]
+    '2019': [0.50, 0.50, 0.50, 0, 0, 0]
+  reference: 'Step table: each band holds its decimal (same sources as cdctc_share_start)'
+cdctc_refundable:
+  value: 1
+  reference: 'DR 0104CR line 1 (refundable credits); 39-22-119(1) excess credit refunded'
+
+# ----------------------------------------------------------------------------
+# Low-income child care expenses credit (39-22-119.5; DR 0347 Part IV):
+# 25% of line 3 (the smallest of qualified expenses and each earner's earned
+# income), at most $500 for one qualifying child under 13 and $1,000 for two
+# or more (Table A), where line 6 federal tax is $0 and federal AGI is
+# $25,000 or less. Not available for TY2017 (2017 form instructions);
+# available 2018-2025. No separate filers
+# ----------------------------------------------------------------------------
+cdctc_lowinc_rate:
+  value:
+    '2017': 0
+    '2018': 0.25
+  reference: 'DR 0347 2019, 2022, 2024 line 10 (0.25); 2017 instructions: the low-income credit is not available for income tax year 2017'
+cdctc_lowinc_expense_base:
+  value: 1
+  reference: 'DR 0347 line 11: line 3 (smallest of line 2(e) expenses, 2(f) and 2(g) earned income) times line 10'
+cdctc_lowinc_cap1:
+  value: 500
+  reference: 'DR 0347 Table A: one qualifying child $500'
+cdctc_lowinc_cap2:
+  value: 1000
+  reference: 'DR 0347 Table A: two or more qualifying children $1,000'
+cdctc_lowinc_agi_limit:
+  value: 25000
+  reference: 'DR 0347 Part IV: line 4 federal AGI $25,000 or less; 39-22-119.5'
+cdctc_lowinc_agi_limit_joint:
+  value: 25000
+  reference: 'Same limit for joint returns (DR 0347 Part IV)'
+cdctc_lowinc_no_fed_tax:
+  value: 1
+  reference: 'DR 0347 line 6 (federal tax) and Part IV: "Complete this part if line 6 is $0 AND line 4 is $25,000 or less" (2024 wording; 2019: "If you have no federal tax on line 6")'
+

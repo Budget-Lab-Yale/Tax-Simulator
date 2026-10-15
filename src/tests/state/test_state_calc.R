@@ -233,6 +233,42 @@ test_state_calc = function() {
            expect = list(st_agi = 44900, liab_st_iit = 44900 * 0.0425),
            label = 'CO-1 charitable subtraction + 2024 TABOR rate')
 
+  # CO-C1..C3 (2026-10-14): child care expenses credits, DR 0347.
+  # C1: 2019 HoH, federal AGI 30,000, federal credit as claimed 600 ->
+  # line 7 .50 (flat from 2019) -> 300, refundable
+  run_case('CO', 2019,
+           list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                n_dep = 1, dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600,
+                liab_bc = 1500),
+           expect = list(st_cdctc = 300),
+           label = 'CO-C1 child care credit, 50% of the federal credit')
+  # C2: the same unit in 2018 sits in the 2017-2018 Table A band
+  # $25,001-35,000 -> .30 -> 180
+  run_case('CO', 2018,
+           list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                n_dep = 1, dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600,
+                liab_bc = 1500),
+           expect = list(st_cdctc = 180),
+           label = 'CO-C2 child care credit, 2018 Table A .30 band')
+  # C3: low-income credit (Part IV): 2019 HoH, AGI 15,000, no federal tax, one
+  # child, expenses 3,000 -> 25% x min(3,000, 15,000) = 750 -> Table A $500
+  run_case('CO', 2019,
+           list(filing_status = 4, agi = 15000, wages1 = 15000, ei1 = 15000,
+                n_dep = 1, dep_age1 = 5, care_exp = 3000, cdctc_nonref = 0,
+                liab_bc = 0),
+           expect = list(st_cdctc = 500),
+           label = 'CO-C3 low-income child care credit, one-child cap')
+  # CO-F1 (2026-10-14): Family Affordability credit steps down 6.875% of the
+  # full amount per started $5,000 band over $15,000 (DOR ITT FATC 2025
+  # table: $20,001-25,000 -> $2,117 for a child 6-16). 2025 HoH, AGI
+  # 20,452, one child aged 10 (no CO CTC above age 5): 2,455 x (1 - 2 x
+  # 0.06875) = 2,117.44
+  run_case('CO', 2025,
+           list(filing_status = 4, agi = 20452, wages1 = 20452, ei1 = 20452,
+                n_dep = 1, dep_age1 = 10),
+           expect = list(st_ctc = 2455 * (1 - 2 * 0.06875)),
+           label = 'CO-F1 family affordability credit stepped phase-out')
+
   # CO-2: 2023 MFJ itemizer, AGI 500,000, fed taxable 460,000, itemized
   # 40,000 (SALT 10,000 = 3,000 income + 7,000 property), fed std 27,700.
   # Line 2 addback: min(3,000, 12,300) = 3,000. Line 4 (Prop FF): 40,000 -
@@ -264,13 +300,15 @@ test_state_calc = function() {
   # CO-4: 2024 MFJ, AGI 30,000, fed taxable 8,800, deps ages 3 and 7,
   # federal EITC 6,000. Tax = 8,800 x 4.25% = 374. EITC = 50% x 6,000 =
   # 3,000. CTC (style 2, tier 1 joint <= 35,000): 1,200 x 1 under-6.
-  # FATC: (3,200 + 2,400) x (95,000-30,000)/(95,000-25,000) = 5,200.
-  # Liab = 374 - (3,000 + 1,200 + 5,200) = -9,026
+  # FATC: the DR 0104CN joint table's $25,001-30,000 band, one started
+  # $5,000 step over $25,000: 2,980 (under 6) + 2,235 (6-16) = 5,215
+  # (corrected 2026-10-14 from a linear 5,200).
+  # Liab = 374 - (3,000 + 1,200 + 5,215) = -9,041
   run_case('CO', 2024,
            list(agi = 30000, txbl_inc = 8800, filing_status = 2, n_dep = 2,
                 dep_age1 = 3, dep_age2 = 7, eitc = 6000),
-           expect = list(st_eitc = 3000, st_ctc = 1200 + 5200,
-                         liab_st_iit = 8800 * 0.0425 - 9400),
+           expect = list(st_eitc = 3000, st_ctc = 1200 + 2980 + 2235,
+                         liab_st_iit = 8800 * 0.0425 - 9415),
            label = 'CO-4 EITC/CTC/FATC')
 
   #--------------------------------------------------------------------------
@@ -2930,6 +2968,16 @@ test_state_calc = function() {
            expect = list(st_agi = 42500, st_txbl_inc = 38500,
                          liab_st_iit = 1507.50),
            label = 'WV-5 2019 senior citizen modification, 8,000 x 2')
+  # WV-5c (2026-10-14): box (c) caps each qualifying spouse's $8,000 at that
+  # spouse's OWN income. Same couple, but all 60,000 is the primary's wages:
+  # the spouse has no income, so the modification is 8,000, not 16,000.
+  # st_agi 52,000; taxable 48,000 -> 900 + 4.5% x 15,000 + 6% x 8,000 = 2,055
+  run_case('WV', 2019,
+           list(filing_status = 2, age1 = 70, age2 = 68, agi = 60000,
+                wages1 = 60000, ei1 = 60000),
+           expect = list(st_agi = 52000, st_txbl_inc = 48000,
+                         liab_st_iit = 2055),
+           label = 'WV-5c senior modification capped at the spouse\'s own income')
 
   # WV-5b: the SS NETTING that age_ded_less_ss_sub exists for. Same couple in
   # 2023 with taxable SS 20,000. Schedule M line 47 box (d) nets each spouse's

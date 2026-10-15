@@ -110,6 +110,9 @@ age_ded_amount:
 age_ded_min_age:
   value: 65
   reference: 'Line 47: "Taxpayers MUST be at least age 65 OR certified as permanently and totally disabled"; the under-65 disability route is unobservable [known-difference: understates the modification for disabled filers under 65]'
+age_ded_own_income_cap:
+  value: 1
+  reference: 'Schedule M line 47 box (c): each qualifying person enters his or her OWN income included in federal AGI, "NOT TO EXCEED $8000" ("ONLY THE INCOME OF THE SPOUSE WHO MEETS THE ELIGIBILITY REQUIREMENTS QUALIFIES"); 2017-2025 booklets. Earned income is attributed per spouse; other income is split evenly on a joint return (unobserved attribution, documented convention)'
 age_ded_less_ss_sub:
   value: 1
   reference: 'Schedule M line 47 box (d) reduces each person''s $8,000 by that person''s lines 29-34, which INCLUDE the Social Security subtraction (line 34); the deduction is box (c) less box (d), floored at zero. W. Va. Code 11-21-12(c)(9)'

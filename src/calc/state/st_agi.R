@@ -58,6 +58,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'txbl_ira_dist',  # (dbl)  taxable IRA distributions
     'wages1',         # (dbl)  primary filer wages
     'wages2',         # (dbl)  secondary filer wages
+    'ei1',            # (dbl)  primary earned income (own-income cap on the aged deduction)
+    'ei2',            # (dbl)  secondary earned income
     'ui',             # (dbl)  unemployment benefits (in federal AGI)
     'eitc',           # (dbl)  federal EITC (post-federal calc)
     'blind1',         # (bool) whether primary filer is blind
@@ -195,6 +197,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.age_ded_po_base',       # (int) reduction income base (st_income_base enum)
     'st_agi.age_ded_less_pension_sub', # (int) aged deduction reduced by the pension/retirement subtraction taken (SC)
     'st_agi.age_ded_less_ss_sub',    # (int) aged deduction reduced by the Social Security subtraction taken (WV)
+    'st_agi.age_ded_own_income_cap', # (int) each person's aged amount capped at that person's own income (WV line 47 box (c))
     'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
@@ -746,10 +749,26 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_age_gf1 = st_age_q1 & age1 >= st_agi.age_ded_no_test_min_age,
       st_age_gf2 = st_age_q2 & age2 >= st_agi.age_ded_no_test_min_age,
       st_age_po_income = st_age_po_income_v,
-      st_sub_age_pot = st_agi.age_ded_amount * (st_age_gf1 + st_age_gf2) +
-                       pmax(0, st_agi.age_ded_amount *
-                               ((st_age_q1 & !st_age_gf1) +
-                                (st_age_q2 & !st_age_gf2)) -
+
+      # Own-income cap (WV Schedule M line 47 box (c): "ONLY THE INCOME OF
+      # THE SPOUSE WHO MEETS THE ELIGIBILITY REQUIREMENTS QUALIFIES", up to
+      # the per-person amount). Earned income is observed per spouse; the
+      # rest of federal AGI is not attributable, so a joint return splits it
+      # evenly (documented convention)
+      st_age_other_inc = pmax(0, agi - pmax(0, ei1) -
+                                 if_else(filing_status == 2, pmax(0, ei2), 0)),
+      st_age_own1 = pmax(0, ei1) +
+                    if_else(filing_status == 2, st_age_other_inc / 2, st_age_other_inc),
+      st_age_own2 = pmax(0, ei2) + st_age_other_inc / 2,
+      st_age_amt1 = if_else(st_agi.age_ded_own_income_cap == 1,
+                            pmin(st_agi.age_ded_amount, st_age_own1),
+                            st_agi.age_ded_amount),
+      st_age_amt2 = if_else(st_agi.age_ded_own_income_cap == 1,
+                            pmin(st_agi.age_ded_amount, st_age_own2),
+                            st_agi.age_ded_amount),
+      st_sub_age_pot = st_age_amt1 * st_age_gf1 + st_age_amt2 * st_age_gf2 +
+                       pmax(0, st_age_amt1 * (st_age_q1 & !st_age_gf1) +
+                               st_age_amt2 * (st_age_q2 & !st_age_gf2) -
                                pmax(0, st_age_po_income -
                                        st_agi.age_ded_po_thresh)),
 

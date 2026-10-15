@@ -17,6 +17,10 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_lowinc_agi_limit',
   'st_credits.cdctc_lowinc_agi_limit_joint',
   'st_credits.cdctc_lowinc_qual_share',
+  'st_credits.cdctc_lowinc_expense_base', # (int) 1 = low-income credit on capped expenses, not the federal credit (CO)
+  'st_credits.cdctc_lowinc_cap1',         # (dbl) low-income cap, one qualifying child
+  'st_credits.cdctc_lowinc_cap2',         # (dbl) low-income cap, two or more
+  'st_credits.cdctc_lowinc_no_fed_tax',   # (int) 1 = only where federal tax before credits is zero (CO)
   'st_credits.cdctc_ref_qual_share',
   'st_credits.cdctc_rate_max',
   'st_credits.cdctc_rate_floor',
@@ -198,8 +202,24 @@ st_credits_care = function(tax_unit) {
   # for federal AGI at or below the limit -- "instead of" the regular credit,
   # so the unit keeps whichever pays more. Provider status is unobserved:
   # cdctc_lowinc_qual_share is an assumption, documented per state
-  lowinc_amt = tax_unit$st_credits.cdctc_lowinc_rate * cdctc_fed *
-               tax_unit$st_credits.cdctc_lowinc_qual_share
+  # Expense-based variant (CO 39-22-119.5, DR 0347 Part IV): the rate times
+  # the smallest of care expenses and each earner's earned income (line 3),
+  # capped by the qualifying-child count (Table A), never for a separate
+  # filer, and only where federal tax before credits is zero (line 6)
+  lowinc_exp = pmin(tax_unit$care_exp, pmax(0, tax_unit$ei1),
+                    if_else(tax_unit$filing_status == 2,
+                            pmax(0, tax_unit$ei2), Inf)) * tax_unit$cdctc_takeup
+  lowinc_cap = if_else(n_care_v >= 2, tax_unit$st_credits.cdctc_lowinc_cap2,
+                       tax_unit$st_credits.cdctc_lowinc_cap1)
+  lowinc_amt = if_else(
+    tax_unit$st_credits.cdctc_lowinc_expense_base == 1,
+    if_else(n_care_v > 0 & tax_unit$filing_status != 3,
+            pmin(tax_unit$st_credits.cdctc_lowinc_rate * lowinc_exp, lowinc_cap), 0),
+    tax_unit$st_credits.cdctc_lowinc_rate * cdctc_fed *
+      tax_unit$st_credits.cdctc_lowinc_qual_share
+  )
+  lowinc_amt = if_else(tax_unit$st_credits.cdctc_lowinc_no_fed_tax == 1 &
+                         tax_unit$liab_bc > 0, 0, lowinc_amt)
   lowinc_limit = if_else(tax_unit$filing_status == 2,
                          tax_unit$st_credits.cdctc_lowinc_agi_limit_joint,
                          tax_unit$st_credits.cdctc_lowinc_agi_limit)

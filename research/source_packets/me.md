@@ -139,8 +139,9 @@ DETC restructure ($500 steps); ME-9 the STFC alone mid-phase-out.
 ## Cross-model status (2026-10-13)
 
 CLOSED. Clean match within $100: TAXSIM 2017-2020 0.962 / 0.956 / 0.961 /
-0.958; PolicyEngine 2022-2025 0.959 / 0.957 / 0.951 / 1.000. TY2021 stays a
-dropped cell (the P5 row for the 2022 relief payment removes 84% of it).
+0.958; PolicyEngine 2022-2025 0.959 / 0.957 / 0.951 / 1.000. TY2021: the P5 row for the 2022 relief payment
+removes 84% of the cell; the 66 records left were triaged 2026-10-14 (below)
+rather than treated as dropped.
 What closed it:
 
 - Our side: the dependent exemption tax credit reaches every dependent
@@ -167,6 +168,21 @@ care credit; student loan repayment credit (5217-E); 529 subtraction
 (2023+); MainePERS pick-ups; bonus-depreciation add-back (model-wide);
 MFS same-method and no-income-spouse rules; 4-decimal worksheet-ratio
 rounding (~$1.50 max).
+
+## Cross-model follow-up 2026-10-14
+
+The 7 remaining TY2021 misses (all above the relief payment's income limits)
+were two classes, both excluded, both present in every PE year:
+
+- **Out-of-state municipal interest.** We add back 25% of exempt interest
+  (the 75% own-state convention); PE's `me_additions` is zero on every
+  probed record (339465: $24,375 x 7.15% = the $1,711 gap).
+- **Pension deduction spousal attribution** (data-proxy). The worksheet nets
+  each spouse's own Social Security against that spouse's cap; attribution is
+  unobserved, so we net combined benefits against the combined cap, while the
+  harness gives PE the pension split evenly and all SS on the primary.
+
+PE cells now 1.000 / 0.984 / 0.979 / 0.972 / 1.000 (2021-2025).
 
 ## Uncertainties
 

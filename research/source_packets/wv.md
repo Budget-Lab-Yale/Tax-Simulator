@@ -187,6 +187,22 @@ liability.** Test WV-5b now passes at the form-true $1,097.90.
   indexation -- letting 2025 rates carry forward would be a material
   misstatement. Drop the '2026' keys if the window is held strictly to TY2025.
 
+## Cross-model status 2026-10-14 (CLOSED)
+
+TAXSIM 2017-2020: 0.999 / 0.999 / 1.000 / 0.970. PolicyEngine 2021-2025:
+0.994 / 0.982 / 0.986 / 0.957 / 0.991.
+
+- **Our fix:** Schedule M line 47 box (c) caps each qualifying person's
+  $8,000 senior modification at that person's own income. New generic
+  `st_agi.age_ded_own_income_cap`: earned income per spouse, other AGI split
+  evenly (documented convention). Test WV-5c.
+- **TAXSIM:** T52 (Family Tax Credit income measured after the senior
+  modification -> 100% forgiveness for $15-17k single seniors); T53 (no
+  own-income cap on the senior modification).
+- **PolicyEngine:** pays the Homestead Excess Property Tax Credit (omitted on
+  our side; `pe_wv_heptc` export) including at the cap on negative-income
+  records; adds back no out-of-state municipal interest.
+
 ## Uncertainties
 
 1. Every rate vintage is pinned to a published schedule; there is no rate in

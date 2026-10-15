@@ -93,6 +93,31 @@ that Colorado has no live PolicyEngine cell to cross-check against: all four
 are excluded by the TABOR-netting row, so the TAXSIM window is the only
 evidence.
 
+## Cross-model status 2026-10-14 (CLOSED)
+
+TAXSIM 2017-2020: 0.996 / 0.988 / 0.984 / 0.983. PolicyEngine 2025: 0.979
+(2021-2024 stay excluded by TABOR refund netting).
+
+- **Encoded (law-only, from the DR 0347 forms 2017/2019/2022/2024):** the
+  child care expenses credit (39-22-119; share of the federal credit as
+  claimed, .50/.30/.10 by AGI through 2018, .50 to $60,000 from 2019) and
+  the low-income child care credit (39-22-119.5; 25% of the smallest of
+  expenses and earned incomes, $500 / $1,000, AGI <= $25,000, zero federal
+  tax, 2018-2025) on the generic care family (new expense-based low-income
+  switches). Tests CO-C1..C3.
+- **Encoded:** the TY2022+ EITC for childless filers 19-24 (non-student path;
+  generic childless min-age disregard).
+- **Fixed:** the Family Affordability credit phases down 6.875% of the full
+  amount per STARTED $5,000 band (DR 0104CN tables), not linearly; CO-4
+  corrected (5,200 -> 5,215), CO-F1 added.
+- **TAXSIM:** T19 widened to 55-64 Social Security; new input-coverage row --
+  TAXSIM has no charity input, so it cannot apply the non-itemizer
+  charitable subtraction (39-22-104(4)(p)).
+- **PolicyEngine:** P41 (federal deduction addback not netted of the line 2
+  state addback; the 2024 Book says it must be); line 2 addback input gap
+  (PE reads its own simulated withholding, the DOR worksheet orders property
+  tax first exactly as we do).
+
 ## Known differences
 
 - The child-care-expenses and low-income child-care credits are not encoded.

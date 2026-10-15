@@ -460,6 +460,23 @@ over-excluding securities gains; records with net gains above $12,500 match at 0
 TAXSIM understates Vermont tax on securities gains. (The qualifying subset is unobservable in the PUF either way; we
 and PolicyEngine apply the flat branch.)
 
+
+### T52. West Virginia Family Tax Credit income measured after the senior modification
+
+Schedule FTC-1 lines 1-3 measure income as federal AGI plus the increasing modifications plus tax-exempt interest
+(11-21-22a(d)); no decreasing modification is subtracted. TAXSIM appears to test the poverty-guideline table on income
+after the $8,000 senior citizen modification: single filers 65+ with $15,000-$17,000 of federal AGI (120-135% of the
+guideline, a 0-30% credit on the form) receive 100% forgiveness (v40 equal to the whole pre-credit tax). Effect:
+TAXSIM understates West Virginia tax for low-income seniors by up to the full liability ($110-$280 in the 2026-10-14
+re-score; 73 TY2019 records).
+
+### T53. West Virginia senior citizen modification not capped at the spouse's own income
+
+Schedule M line 47 box (c) limits each qualifying person's $8,000 to that person's own income ("ONLY THE INCOME OF THE
+SPOUSE WHO MEETS THE ELIGIBILITY REQUIREMENTS QUALIFIES"). TAXSIM grants $8,000 to every spouse aged 65+ regardless
+(record 101833, TY2020: the 69-year-old primary earns $19,378, the 70-year-old spouse has no income; TAXSIM subtracts
+$16,000, the form $8,000). Effect: TAXSIM understates tax for couples where a 65+ spouse has little own income.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1416,6 +1433,15 @@ PolicyEngine pays `wa_working_families_tax_credit` in 2021. RCW 82.08.0206 (ESHB
 credit available for tax year 2022; the Department of Revenue opened applications on 1 February 2023. Effect:
 PolicyEngine understates TY2021 Washington liability by the full credit ($300-$1,200) for every eligible filer (90 of 90
 clean TY2021 mismatches in the 2026-10-14 re-score).
+
+### P41. Colorado federal deduction addback does not net the state income tax addback
+
+`co_federal_deduction_addback` returns the federal itemized or standard deduction less the $12,000 / $16,000 exemption,
+and `co_additions` adds it to `co_state_addback`. The 2024 Colorado 104 Book (line 4 instructions) requires the deduction
+addback to be "reduced by any state income tax deduction from Schedule A of your federal return that is already added
+back on line 2". PolicyEngine therefore adds the state income tax back twice for itemizers above $300,000 of AGI.
+Effect: Colorado liability overstated by 4.4% (4.25% in 2024) of the line 2 addback (2026-10-14: records 80184,
+291197, 157169, $154-$435).
 
 ## Corroboration worth passing along
 

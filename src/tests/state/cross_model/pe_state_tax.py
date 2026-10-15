@@ -191,6 +191,9 @@ OUTPUT_VARS = {
     # Mexico's LICTR modified gross income (7-2-2(L)); ours reads them from
     # the hh_resources_inc overlay, unpublished. One SPM unit per record, so
     # the spm_unit array is in record order like the tax-unit arrays
+    # West Virginia Homestead Excess Property Tax Credit (11-21-23),
+    # refundable, documented-not-modeled on our side. 2026-10-14
+    "pe_wv_heptc": ["wv_homestead_excess_property_tax_credit"],
     "pe_tanf": ["tanf"],
     "pe_ssi": ["ssi"],
     # PE's own federal results, used by the harness's clean-subset metrics

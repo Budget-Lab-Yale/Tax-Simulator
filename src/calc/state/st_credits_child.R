@@ -36,6 +36,8 @@ st_credits_child_req_vars = c(
   'st_credits.fatc_max_child_age',
   'st_credits.fatc_po_start',
   'st_credits.fatc_po_zero',
+  'st_credits.fatc_po_step',
+  'st_credits.fatc_po_rate',
   'st_credits.cwfc_style',
   'st_credits.cwfc_ctc_amount',
   'st_credits.cwfc_ctc_max_age',
@@ -253,19 +255,26 @@ st_credits_child = function(tax_unit, st_eitc) {
   ctc_co = if_else(tax_unit$filing_status == 3 &
                      tax_unit$st_credits.ctc_mfs_eligible == 0, 0, ctc_co)
 
-  # CO Family Affordability credit: per-child amounts with a linear
-  # phase-out between fatc_po_start and fatc_po_zero
+  # CO Family Affordability credit: per-child amounts phased out between
+  # fatc_po_start and fatc_po_zero. With fatc_po_rate set, the reduction is
+  # that share of the full amount per STARTED fatc_po_step of AGI over the
+  # start (DR 0104CN tables: $3,200 -> $2,980 for $15,001-20,000, i.e.
+  # 6.875% per $5,000 band); otherwise linear
   n_fatc_young = st_n_dep_in(tax_unit, 0,
                              tax_unit$st_credits.fatc_young_age_limit)
   n_fatc_old   = st_n_dep_in(tax_unit,
                              tax_unit$st_credits.fatc_young_age_limit + 1,
                              tax_unit$st_credits.fatc_max_child_age)
-  fatc_factor  = if_else(
-    tax_unit$st_credits.fatc_po_zero > tax_unit$st_credits.fatc_po_start,
-    pmin(1, pmax(0, (tax_unit$st_credits.fatc_po_zero - agi) /
-                    (tax_unit$st_credits.fatc_po_zero -
-                     tax_unit$st_credits.fatc_po_start))),
-    1
+  fatc_steps   = ceiling(pmax(0, agi - tax_unit$st_credits.fatc_po_start) /
+                         tax_unit$st_credits.fatc_po_step)
+  fatc_factor  = case_when(
+    tax_unit$st_credits.fatc_po_zero <= tax_unit$st_credits.fatc_po_start ~ 1,
+    agi > tax_unit$st_credits.fatc_po_zero ~ 0,
+    tax_unit$st_credits.fatc_po_rate > 0 ~
+      pmax(0, 1 - fatc_steps * tax_unit$st_credits.fatc_po_rate),
+    TRUE ~ pmin(1, pmax(0, (tax_unit$st_credits.fatc_po_zero - agi) /
+                           (tax_unit$st_credits.fatc_po_zero -
+                            tax_unit$st_credits.fatc_po_start)))
   )
   fatc = (tax_unit$st_credits.fatc_young_amount * n_fatc_young +
           tax_unit$st_credits.fatc_old_amount   * n_fatc_old) * fatc_factor
