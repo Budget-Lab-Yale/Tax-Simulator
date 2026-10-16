@@ -6,7 +6,7 @@
 #
 #   module load R/4.4.2-gfbf-2024a
 #   Rscript research/state_tax/cross_model/run_cross_model.R \
-#     --states IL --years 2019 --models taxsim [--n 20000] [--n-pe 1500] \
+#     --states IL --years 2019 --models taxsim [--n 20000] [--n-pe 10000] \
 #     [--chunk-size 10000] [--force-prepare] \
 #     [--pe-python /path/to/venv/bin/python] [--runscript tests/cross_model]
 #
@@ -91,7 +91,7 @@ years = years_raw %>%
 
 models        = get_arg('--models', c('taxsim', 'policyengine'))
 n             = as.integer(get_arg('--n', '20000'))
-n_pe          = as.integer(get_arg('--n-pe', '1500'))
+n_pe          = as.integer(get_arg('--n-pe', '10000'))
 chunk_size    = as.integer(get_arg('--chunk-size', '10000'))
 force_prepare = isTRUE(get_arg('--force-prepare', FALSE))
 venv_python   = get_arg('--pe-python')

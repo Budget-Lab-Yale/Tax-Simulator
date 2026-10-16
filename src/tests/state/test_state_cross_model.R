@@ -20,6 +20,13 @@
 #-----------------------------------------------------------------------------
 
 
+# Clean-subset cells smaller than this are reported as underpowered rather
+# than read against the 95% bar; their match rate carries a Wilson interval
+# at this confidence level
+CROSS_MODEL_MIN_CLEAN = 100
+CROSS_MODEL_CI_LEVEL  = 0.90
+
+
 # Harness assets that live with this test rather than in research/. They are
 # executable dependencies and machine-read fixtures, so their paths must be
 # stable under the archiving and reorganizing that research/ exists to do.
@@ -128,7 +135,8 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
 }
 
 
-cross_model_sample = function(tax_units_calc, n = 20000, seed = 76) {
+cross_model_sample = function(tax_units_calc, n = 20000,
+                              allocation = c('proportional', 'equal')) {
 
   #----------------------------------------------------------------------------
   # Draws a stratified sample of calculated tax units for cross-model
@@ -136,16 +144,26 @@ cross_model_sample = function(tax_units_calc, n = 20000, seed = 76) {
   # deciles, top 1%) x has-dependents. The same sampled records are reused
   # for every state (record x state x year design).
   #
+  # Within a stratum the records taken are those with the smallest id-keyed
+  # draw (draw_by_id(), stream 'cross_model'), so membership depends on the
+  # record and its stratum, not on the rest of the file. The seeded
+  # slice_sample() this replaces re-drew ~65% of the PolicyEngine sample when
+  # four federal calculator fixes moved a few records across AGI strata
+  # (2026-10-16): every later stratum's draw shifted, and cells crossed the
+  # 95% bar on different records rather than on different law.
+  #
   # Parameters:
   #   - tax_units_calc (df) : post-federal-calculator tax units
   #   - n (int)             : target sample size
-  #   - seed (int)          : RNG seed (default mirrors globals$random_seed)
+  #   - allocation (str)    : 'proportional' (n by stratum size, floor of
+  #                           25; the TAXSIM window) or 'equal' (n / number
+  #                           of strata each; the PolicyEngine window)
   #
   # Returns: tibble of sampled records with stratum labels and stratum_pop,
   #          the stratum's eligible-record count (for design weights) (df)
   #----------------------------------------------------------------------------
 
-  set.seed(seed)
+  allocation = match.arg(allocation)
 
   # Dependent filers excluded in v1: TAXSIM mstat-8 semantics (dependent
   # standard deduction, kiddie tax) differ enough to swamp state signal.
@@ -176,21 +194,26 @@ cross_model_sample = function(tax_units_calc, n = 20000, seed = 76) {
                       sep = '_')
     )
 
-  # Allocate n proportionally with a floor of 25 records per stratum
+  # Allocate n proportionally with a floor of 25 records per stratum, or
+  # equally across strata; never more than a stratum holds
   counts = stratified %>%
     count(stratum, name = 'n_stratum') %>%
     mutate(
-      n_take = pmax(25, round(n * n_stratum / sum(n_stratum))),
+      n_take = if (allocation == 'proportional')
+                 pmax(25, round(n * n_stratum / sum(n_stratum)))
+               else ceiling(n / n()),
       n_take = pmin(n_take, n_stratum)
     )
 
   stratified %>%
+    mutate(draw = draw_by_id(id, 'cross_model')) %>%
     left_join(counts, by = 'stratum') %>%
-    group_split(stratum) %>%
-    map(~ slice_sample(.x, n = .x$n_take[1])) %>%
-    bind_rows() %>%
+    group_by(stratum) %>%
+    filter(rank(draw, ties.method = 'first') <= n_take) %>%
+    ungroup() %>%
+    arrange(stratum, draw) %>%
     rename(stratum_pop = n_stratum) %>%
-    select(-n_take) %>%
+    select(-n_take, -draw) %>%
     return()
 }
 
@@ -556,6 +579,19 @@ cross_model_compare = function(ours, theirs, model, known_diffs = NULL,
       match_100_clean = mean(abs_diff[fed_aligned] <= tolerances[2]),
       .groups = 'drop'
     ) %>%
+    # Wilson interval on the clean match rate, and a flag for cells too small
+    # to read against the 95% bar: at 14 clean records one return is 7pp
+    mutate(
+      z     = qnorm(1 - (1 - CROSS_MODEL_CI_LEVEL) / 2),
+      mid   = (match_100_clean + z^2 / (2 * n_clean)) / (1 + z^2 / n_clean),
+      half  = z / (1 + z^2 / n_clean) *
+              sqrt(match_100_clean * (1 - match_100_clean) / n_clean +
+                   z^2 / (4 * n_clean^2)),
+      match_100_clean_lo = mid - half,
+      match_100_clean_hi = mid + half,
+      underpowered       = n_clean < CROSS_MODEL_MIN_CLEAN
+    ) %>%
+    select(-z, -mid, -half) %>%
     bind_rows(
       records %>%
         filter(excluded) %>%
@@ -601,7 +637,7 @@ cross_model_weighted_cells = function(records, frame, state_wts,
   # Parameters:
   #   - records (df)   : cross_model_compare()$records for one model-year
   #   - frame (df)     : the sample that model actually ran (id, stratum,
-  #                      stratum_pop) -- the PE leg runs a nested subset
+  #                      stratum_pop) -- each model draws its own sample
   #   - state_wts (df) : build_state_weights() output (id, state, weight)
   #   - tolerance (dbl): dollar tolerance for the match rate
   #
@@ -830,7 +866,7 @@ cross_model_report = function(out_dir, known_diffs_path = NULL) {
 }
 
 
-cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
+cross_model_run = function(states, years, models, n = 20000, n_pe = 10000,
                            out_dir, cache_dir, venv_python = NULL,
                            chunk_size = 10000, force_prepare = FALSE) {
 
@@ -843,7 +879,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
   #   - years (int[])    : tax years (2017-2025)
   #   - models (str[])   : subset of c('taxsim', 'policyengine')
   #   - n (int)          : TAXSIM sample size per year
-  #   - n_pe (int)       : PolicyEngine sample size per year (nested subset)
+  #   - n_pe (int)       : PolicyEngine sample size per year, split equally
+  #                        across strata
   #   - out_dir (str)    : results directory (summary.csv, raw/)
   #   - cache_dir (str)  : federal pre-pass cache directory
   #   - venv_python (str): path to policyengine venv python (PE leg only)
@@ -877,9 +914,17 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
       next
     }
 
-    # Federal pre-pass and sampling
+    # Federal pre-pass and sampling. The canonical split gives each year one
+    # model, so each draws its own sample from the full eligible population:
+    # TAXSIM proportional at n, PolicyEngine equal-per-stratum at n_pe. (PE
+    # used to be the first n_pe / strata records of the TAXSIM sample, which
+    # capped it at the small strata's floor of 25)
     prep = cross_model_prepare_year(yr, cache_dir, force = force_prepare)
-    sampled = cross_model_sample(prep$tax_units, n = n)
+    sampled = if (yr <= 2020) {
+      cross_model_sample(prep$tax_units, n = n, allocation = 'proportional')
+    } else {
+      cross_model_sample(prep$tax_units, n = n_pe, allocation = 'equal')
+    }
     message('Year ', yr, ': sampled ', nrow(sampled), ' records')
 
     # State law under production indexation
@@ -1026,12 +1071,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                                         chunk_size = chunk_size) %>%
           rename(ext_liab = siitax)
       } else {
-        pe_sampled = sampled %>%
-          group_by(stratum) %>%
-          slice_head(n = ceiling(n_pe / n_distinct(sampled$stratum))) %>%
-          ungroup()
-        frame = pe_sampled
-        theirs = cross_model_pe_leg(pe_sampled, states, yr,
+        frame = sampled
+        theirs = cross_model_pe_leg(sampled, states, yr,
                                     venv_python = venv_python,
                                     # the run's own directory, not the shared
                                     # federal cache: two runs at once (one
@@ -1109,4 +1150,48 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
   write_csv(cells, summary_path)
 
   return(cells)
+}
+
+
+#--------------------------------------------------------------------------
+# Standalone sampler tests. Run with:
+#   Rscript src/tests/state/test_state_cross_model.R
+#--------------------------------------------------------------------------
+
+if (sys.nframe() == 0L) {
+  suppressPackageStartupMessages(library(tidyverse))
+  source('./src/misc/rng.R')
+  cat('--- cross_model_sample tests ---\n')
+
+  set.seed(1)
+  pop = tibble(id = sample(1:900000, 60000), dep_status = 0, filer = 1,
+               become_filer_ctc = 0, become_filer_rebate = 0,
+               filing_status = sample(1:4, 60000, replace = T),
+               n_dep = rpois(60000, 0.6),
+               agi = rlnorm(60000, 10.8, 1.1) - 8000)
+
+  a = cross_model_sample(pop, n = 5000, allocation = 'equal')
+  b = cross_model_sample(pop %>% slice_sample(prop = 1), n = 5000,
+                         allocation = 'equal')
+  stopifnot(identical(sort(a$id), sort(b$id)))
+  cat('  [PASS] sample does not depend on row order or the global seed\n')
+
+  # Move 50 records' AGI across stratum lines (a federal fix): only records
+  # in the strata they leave or enter can change membership
+  moved = sample(pop$id, 50)
+  shifted = pop %>% mutate(agi = if_else(id %in% moved, agi * 1.4, agi))
+  c2 = cross_model_sample(shifted, n = 5000, allocation = 'equal')
+  shared = length(intersect(a$id, c2$id)) / nrow(a)
+  stopifnot(shared > 0.95)
+  cat(sprintf('  [PASS] 50 moved records keep %.1f%% of the sample\n',
+              100 * shared))
+
+  p = cross_model_sample(pop, n = 5000, allocation = 'proportional')
+  e = cross_model_sample(pop, n = 5000, allocation = 'equal')
+  sizes_e = count(e, stratum)$n
+  stopifnot(all(count(p, stratum)$n >= pmin(25, p$stratum_pop[!duplicated(p$stratum)])),
+            all(sizes_e == pmin(max(sizes_e), e$stratum_pop[!duplicated(e$stratum)])))
+  cat('  [PASS] allocations: proportional floor of 25, equal per stratum\n')
+
+  cat('\nAll tests passed.\n')
 }

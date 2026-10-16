@@ -62,7 +62,8 @@ RNG_STREAMS = c(
   behavior2       = 7L,
   behavior3       = 8L,
   eitc_precert    = 9L,
-  subsample       = 10L   # design C: which records a pct_sample < 1 run keeps
+  subsample       = 10L,  # design C: which records a pct_sample < 1 run keeps
+  cross_model     = 11L   # which records the state cross-model harness samples
 )
 stopifnot(!anyDuplicated(RNG_STREAMS), !anyDuplicated(names(RNG_STREAMS)))
 

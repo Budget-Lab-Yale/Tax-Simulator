@@ -59,6 +59,22 @@ PolicyEngine is the tie-breaker for 2021+ disagreements.
 Dependent filers (`dep_status == 1`) are excluded from samples in v1 (TAXSIM
 mstat-8 semantics differ enough to swamp state signal).
 
+**Sampling is keyed by record id.** Strata are filing status × AGI band
+(nonpositive, positive deciles, top 1%) × has-dependents. Within a stratum the
+records taken are those with the smallest `draw_by_id(id, 'cross_model')`
+(`src/misc/rng.R`), so a record's membership depends on its own id and stratum,
+not on the rest of the file. A federal calculator change therefore re-draws
+only records it moves across a stratum line. The seeded `slice_sample()` this
+replaced re-drew ~65% of the PolicyEngine sample when four federal fixes
+shifted a few records (2026-10-16), moving cells across the bar on different
+records rather than different law. Each window draws its own sample from the
+full eligible population: TAXSIM proportional to stratum size (floor 25),
+PolicyEngine equal per stratum (both capped at the stratum's size).
+
+Cells whose clean subset has fewer than 100 records are flagged
+`underpowered` in `summary.csv`, with a 90% Wilson interval on the clean
+match rate (`match_100_clean_lo`/`_hi`); at 14 records one return is 7pp.
+
 ## Running
 
 From the repo root:
@@ -81,7 +97,7 @@ Rscript research/state_tax/cross_model/run_cross_model.R \
 ```
 
 Flags: `--n` (TAXSIM sample/year, default 20000), `--n-pe` (PE sample/year,
-default 1500), `--chunk-size` (WASM rows/call, default 10000),
+default 10000), `--chunk-size` (WASM rows/call, default 10000),
 `--force-prepare` (recompute the federal pre-pass cache).
 
 The first run per year executes the full federal calculator on ~220k records
@@ -157,7 +173,9 @@ A state's tracker row (`research/state_tax/state_parameter_rollout.csv`) flips t
 1. **match@$100 ≥ 95%** in every canonical-window cell, on the clean
    (federally aligned) subset where defined, after known-difference
    exclusions — a fully excluded cell (e.g. IL 2021 vs PE, the one-time
-   rebate) drops out and the verdict rests on the remaining cells; and
+   rebate) drops out and the verdict rests on the remaining cells; an
+   `underpowered` cell (fewer than 100 clean records) is reported but not
+   read against the bar; and
 2. residual mismatch clusters are explained in `results/reports/<st>.md`
    (mapped to a known-differences row, or filed as a suspected
    encoding/research bug).
