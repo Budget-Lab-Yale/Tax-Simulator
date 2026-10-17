@@ -176,6 +176,21 @@ canonical-window cell clears the 0.95 bar on the clean subset: TAXSIM
 documented omissions (538-H, frozen-TY2020 EITC base, 511-F/G proration,
 military retirement) stay as known differences below.
 
+## Resampled-harness triage, 2026-10-16
+
+The id-keyed harness sample (decision S47) left OK PE 2025 at 0.947 (655 clean, 35 failing). Three causes:
+
+- **P44, PolicyEngine:** `ok_additions` has no formula, so PE applies no Schedule 511-A addition -- notably the
+  out-of-state municipal bond interest addback (68 O.S. 2358(A)(2)). Excluded (OK/policyengine 2021-2025);
+  14 failing records in 2025, 27-44 a year in 2021-2024.
+- **PE crosswalk deduction class** (as CA/AR/DE/IA): excluded on `xw_pe_unhanded_item`.
+- **538-S income test un-nets losses (our bug).** Gross household income prohibits negative amounts, so a loss
+  cannot pull a household under the ceiling. New generic switch `st_credits.percap_unnet_losses` (OK 1), reusing
+  the NM/ME `unnetted_losses` helper plus Form 4797 ordinary losses; test OK-S6. 12 loss records had been paid
+  $40/person.
+
+Left documented: the frozen TY2020 EITC base (4 records, about -$105 each).
+
 ## Known differences (direction and magnitude)
 
 - **Military retirement exclusion omitted -- the largest single item.** OK

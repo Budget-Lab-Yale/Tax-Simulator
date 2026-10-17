@@ -34,6 +34,11 @@ filing_status_mapper:
     '2': std_addl_married
     '3': std_addl_married
     '4': std_addl_unmarried
+  item_limit_thresh:
+    '1': item_limit_thresh_regular
+    '2': item_limit_thresh_regular
+    '3': item_limit_thresh_separate
+    '4': item_limit_thresh_regular
 
 std_single:
   value:
@@ -180,9 +185,12 @@ item_include_income_sales_tax:
 item_limit_style:
   value: 1
   reference: 'D.C. Code 47-1803.03(b-4); D-40 Schedule S Calculation F, all years 2017-2025'
-item_limit_thresh:
+item_limit_thresh_regular:
   value: 200000
-  reference: 'D.C. Code 47-1803.03(b-4): the reduction applies to income over $200,000. Not indexed'
+  reference: 'D.C. Code 47-1803.03(b-4); D-40 Schedule S Calculation F and line 17 instructions: the reduction applies to DC AGI over $200,000 ($100,000 if married filing separately -- see item_limit_thresh_separate). Not indexed'
+item_limit_thresh_separate:
+  value: 100000
+  reference: 'D-40 Calculation F / line 17 instructions: "$200,000 ($100,000 if married filing separately)"; PolicyEngine encodes the same, citing every booklet 2021-2025. Was $200,000 for all statuses until 2026-10-16 (cross-model triage, DC 2025: separate filers 8 of 9 failing itemizers). Not indexed'
 item_limit_rate:
   value: 0.05
   reference: 'D.C. Code 47-1803.03(b-4): five percent of the excess'

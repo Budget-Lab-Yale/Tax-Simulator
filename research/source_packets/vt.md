@@ -224,12 +224,17 @@ Schedule R, which the model does not compute).
    corroborated only by the 2017 IN-111's own structure. **Retrieve
    `IN-155-2017.pdf` and confirm before encoding**; if the term is the full
    SALT deduction (property tax included), `salt_addback` alone under-adds.
-2. **PE disagreement, TY2022 CDCC AGI cap.** PE sets an income limit in effect
-   for 2022 (citing Act 138 s.3 as retaining the 5828c cap); the 2022 booklet's
-   Schedule IN-112 Part II instructions impose **no** AGI cap and no
-   accreditation test. We follow the form. If PE is right, we overstate the
-   2022 CDCC for filers above $30,000/$40,000 AGI by up to 72% of the federal
-   credit. Worth 15 minutes against Act 138 text.
+2. **RESOLVED 2026-10-16 in PE's favour: TY2022 CDCC AGI cap.** Act 138 of
+   2022 (legislature.vermont.gov) sec. 3 raised 5828c to 72% and KEPT its
+   "less than $30,000 ($40,000 joint)" cap; sec. 2 struck child and dependent
+   care from the 24% credit in 5822(d) and sec. 8 repealed 5813(c). So in
+   TY2022 filers above the cap get no Vermont care credit at all. Act 72 of
+   2023 sec. 14 removed the cap from 1 Jan 2023. The 2022 booklet omits the
+   cap; the statute governs. Encoded as `cdctc_match` 0 / `cdctc_lowinc_rate`
+   0.72 for 2022 only. Found by the cross-model triage of the resampled
+   harness (S47): 77 of 135 failing VT PE 2022 records, cell 0.947 -> ~0.976.
+   The accreditation test remains the `cdctc_lowinc_qual_share` = 1
+   assumption.
 3. **PE disagreement, minimum-tax formula**: PE computes `3% x AGI - US-oblig
    interest`; the form reads `3% x (AGI - interest)`. Immaterial to us (we
    don't model it) but relevant when reading PE residuals.

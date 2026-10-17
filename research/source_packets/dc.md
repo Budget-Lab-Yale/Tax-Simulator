@@ -63,8 +63,9 @@ Last updated: `2026-10-08` (child care credit base); previous: `2026-08-15`
   therefore very valuable; **full** SS / tier-1 RR subtraction at every age
   with no income test; **NO pension exclusion of any kind**; itemization
   coupled to the federal election with income taxes stripped and real property
-  taxes UNCAPPED, plus a DC-specific 5%-of-AGI-over-$200,000 reduction of the
-  non-protected components; a 2017-only per-exemption allowance with a stepped
+  taxes UNCAPPED, plus a DC-specific 5%-of-AGI-over-$200,000 ($100,000 married filing
+  separately; corrected 2026-10-16, had been $200,000 for all statuses) reduction
+  of the non-protected components; a 2017-only per-exemption allowance with a stepped
   phase-out; and a 40/70/100% federal EITC match for filers WITH children
   alongside a completely separate DC-formula credit for CHILDLESS workers.
 
@@ -145,7 +146,7 @@ project and worth noting: DC's PE parameters are unusually clean. PE covers
 TY2021+ for most items (so 2017-2020 rests on the booklets alone, all four
 read and identical to 2021), and its one apparent divergence -- the itemized
 limitation starting in 2021 -- is a coverage artifact, not a vintage claim
-(the 5%-over-$200,000 rule has been in force since 2011 and is printed in
+(the 5%-over-$200,000 rule, $100,000 for separate filers, has been in force since 2011 and is printed in
 every 2017-2025 booklet). **The real risk in DC is entirely on our side.**
 
 ## Child care credit base, 2026-10-08

@@ -527,6 +527,15 @@ federal $10,000 cap on high-income federal non-itemizers with no property tax --
 state income taxes. Concentrated in TY2018 (289 clean records); TAXSIM's deduction used then exceeds the form's by
 $1,000 or more.
 
+### T60. Georgia retirement exclusion extended to an under-62 spouse
+
+When either spouse on a joint return is 65 or older, TAXSIM treats both spouses as eligible for Georgia's retirement
+income exclusion, including the earned-income portion (up to $4,000 each). O.C.G.A. 48-7-27(a)(5) and Form 500
+Schedule 1 test each taxpayer separately: only a taxpayer aged 62 or older may exclude his or her own earned income.
+Probe (2026-10-16, TY2019 joint, $30,000 of wages each): $8,000 excluded at ages 70/55, $0 at 55/58, the same in
+either spouse order. Effect: TAXSIM understates Georgia tax for couples with one spouse 65+ and a working spouse
+under 62.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1507,6 +1516,13 @@ childless separate filers (about 10 clean records a year, 2021-2024).
 sums it onto the head, so a filer claiming an elderly parent as a dependent receives an extra $2,500. 30 Del. C. 1108(b)
 limits the additional amount to the taxpayer and spouse. Effect: Delaware tax understated by $2,500 x the marginal rate
 per aged dependent (probe 2026-10-15: records 324233, 41551, 88133 at 5,750 against the 3,250 base).
+
+### P44. Oklahoma Schedule 511-A additions are always zero
+
+`ok_additions` has no formula in the pinned policyengine-us, so it returns 0 and none of the Schedule 511-A additions
+are applied -- in particular interest on other states' municipal bonds (68 O.S. 2358(A)(2)). Every gap in the class
+is the top rate times the addback (TY2025 record with $186,455 of exempt interest: $46,614 added back by us, gap
+$2,202 = 4.72%). Effect: PolicyEngine understates Oklahoma tax for holders of out-of-state municipal bonds.
 
 ## Corroboration worth passing along
 

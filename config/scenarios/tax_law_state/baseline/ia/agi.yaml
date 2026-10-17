@@ -34,6 +34,11 @@ pension_excl_65plus:
     '2017': 6000
     '2023': 999999999.0
   reference: 'Same caps. The eligibility test is disability, age 55 or older, or qualifying-survivor status -- not 65 -- so the under-65 and 65-plus caps are the same figure and the age gate below does the work'
+pension_excl_joint_shared:
+  value:
+    '2017': 1
+    '2023': 0
+  reference: 'Iowa Code 422.7(31) (through TY2022) caps the exclusion at $12,000 "for a husband and wife who file a joint state income tax return" (and status 3/4 separate-on-combined), not per spouse. IA 1040 Expanded Instructions 2022, line 21, Example 2: "Since only one spouse receiving the pension income was 55 years of age, an exclusion of $8,000 is allowed ... a married couple is allowed a combined exclusion of up to $12,000"; and "If only one spouse has pension income and meets the eligibility requirements, that spouse takes the entire exclusion of up to $12,000." So one eligible spouse may use the couple''s whole cap. Moot from TY2023 (cap struck by HF 2317). Encoded 2026-10-16 (cross-model triage, IA PE 2022: we had capped such couples at $6,000)'
 pension_excl_min_age:
   value: 55
   reference: 'Iowa Code 422.7(31) then (19): "is fifty-five years of age or older". Fifty-five, not the more common sixty-five'

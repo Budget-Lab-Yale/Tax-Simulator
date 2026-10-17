@@ -109,6 +109,9 @@ percap_add_nontax_ss:
 percap_add_exempt_int:
   value: 1
   reference: 'Form 538-S instructions: interest income whether taxable or not'
+percap_unnet_losses:
+  value: 1
+  reference: 'Form 538-S instructions: gross household income is "the total amount of gross income received by all persons living in the same household", with negative amounts prohibited (source packet, Uncertainties 3), so a business, rental or capital loss cannot reduce it. Each loss is added back to federal AGI (shared unnetted_losses helper, Form 4797 ordinary losses included). PolicyEngine''s ok_gross_income likewise sums positive sources only. Encoded 2026-10-16 (cross-model triage, OK PE 2025: 12 loss records paid $40/person)'
 percap_add_hh_resources:
   value: 1
   reference: 'Form 538-S instructions: public assistance, child support, workers compensation, VA disability -- the hh_resources_inc optional data column (S43)'

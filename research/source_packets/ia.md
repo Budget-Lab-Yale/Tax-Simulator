@@ -209,6 +209,18 @@ income compared with the base, as the federal worksheet does; PolicyEngine
 does not. It matters only for Social Security recipients near the elderly
 thresholds.
 
+## Resampled-harness triage, 2026-10-16
+
+The id-keyed harness sample (decision S47) left IA PE 2022 at 0.941 (2,095 clean, 124 failing). Two causes:
+
+- **Shared joint pension cap (our bug, TY2017-2022).** Iowa Code 422.7(31) caps the exclusion at $12,000 for a
+  husband and wife filing jointly, and the 2022 IA 1040 line 21 instructions (Example 2) let a single eligible
+  spouse use the whole $12,000. We capped such couples at $6,000. New generic switch
+  `st_agi.pension_excl_joint_shared` (IA 1 for 2017-2022); tests IA-8b/IA-8c. E.g. PE record 91532 (ages 80/33,
+  $44,717 pension): we excluded $6,000, PE $12,000.
+- **PE crosswalk deduction class** (as CA/AR/DE): Iowa's own Schedule A items that the PE input cannot carry
+  (`xw_pe_unhanded_item`); known-differences row IA/policyengine 2021-2022.
+
 ## Known differences
 
 - **The Iowa AMT is the largest unencoded feature.** It ran through TY2022 at

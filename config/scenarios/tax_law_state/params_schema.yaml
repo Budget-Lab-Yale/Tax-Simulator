@@ -56,6 +56,7 @@ scalars:
   #     141.019(1)(g)). Reads the two optional data columns (S43)
   st_agi.pension_excl_public_grandfather: 0
   st_agi.pension_excl_agi_limit: .inf   # AGI cliff for the exclusion (WI $5k at 65+)
+  st_agi.pension_excl_joint_shared: 0   # joint return: one eligible spouse may use the couple's combined cap (IA pre-2023)
   # Linear phase-out of the pension exclusion on federal AGI (ME 5122(2)(M-3)
   # TY2025+: reduced by (FAGI - threshold)/width to zero); .inf = none
   st_agi.pension_excl_po_thresh: .inf
@@ -922,6 +923,7 @@ scalars:
   #     per-person credit's income test (HI N-311 lines 4-6); reads
   #     spouse_agi_mfs (S43)
   st_credits.percap_add_spouse_mfs: 0
+  st_credits.percap_unnet_losses: 0   # add back each loss to the income test (OK 538-S: negative amounts prohibited)
   # Low income comprehensive tax rebate (NM PIT-RC Table 1, NMSA 7-2-14): a
   # refundable per-return amount from a dense table keyed by household
   # "exemptions" (taxpayers + dependents + lictr_aged_exemptions per 65+

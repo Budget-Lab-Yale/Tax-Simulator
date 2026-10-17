@@ -52,6 +52,15 @@ Test GA-4 pins the $7,400.)
 - The unborn-child exemption beginning in 2024 is not observable.
 - Post-2025 rate policy requires annual review before a new rate is encoded.
 
+### T60 (2026-10-16)
+
+TAXSIM extends the retirement exclusion's earned-income portion to an under-62 spouse whenever the other spouse is
+65+ (probe: $8,000 excluded at ages 70/55, $0 at 55/58). Georgia tests each taxpayer separately (O.C.G.A.
+48-7-27(a)(5)); our encoding stands. Excluded; it alone held the 2018-2020 TAXSIM cells at 0.948 on the resampled
+harness (S47). Two possible our-side issues surfaced in the residual and are NOT yet checked against Schedule 1:
+the unearned-retirement base reads raw `kg_lt + kg_st` (uncapped capital losses, `st_agi.R`
+`st_retir_unearned`), and `retirement_excl_incl_passthru` puts `other_inc` in the base.
+
 ## Cross-model and aggregate validation
 
 - Cross-model: `todo`; compare 2017, 2023, and 2025 cases, emphasizing retirement-income ordering and itemization.

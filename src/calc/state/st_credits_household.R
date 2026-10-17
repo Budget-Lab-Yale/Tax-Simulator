@@ -50,6 +50,7 @@ st_credits_household_req_vars = c(
   'st_credits.percap_add_hh_resources',
   'st_credits.percap_after_eitc',
   'st_credits.percap_add_spouse_mfs',
+  'st_credits.percap_unnet_losses',
   'st_credits.lictr',
   'st_credits.lictr_income_base',
   'st_credits.lictr_add_nontax_ss',
@@ -276,6 +277,23 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # hh_resources_inc optional data column to the enum base where a state
   # says so (OK's "gross household income"); dependents count only under
   # percap_dep_max_age, from the observed age slots
+  # Losses and above-the-line adjustments that a "total income" concept adds
+  # back to federal AGI (ME 5213-A/5219-KK total income; NM 7-2-2(L)
+  # "undiminished by losses"): each loss (the capital loss only to the $3,000
+  # federal AGI actually nets) and the above-the-line deductions. S-corp
+  # losses and above_ded are read optionally so synthetic test units without
+  # them still compute
+  opt_col = function(name) {
+    if (name %in% colnames(tax_unit)) coalesce(tax_unit[[name]], 0) else rep(0, n)
+  }
+  unnetted_losses = pmax(0, -tax_unit$sole_prop) + pmax(0, -tax_unit$farm) +
+    pmin(3000, pmax(0, -(tax_unit$kg_lt + tax_unit$kg_st))) +
+    pmax(0, tax_unit$rent_loss) + pmax(0, tax_unit$part_active_loss) +
+    pmax(0, tax_unit$part_passive_loss) +
+    pmax(0, opt_col('scorp_active_loss')) +
+    pmax(0, opt_col('scorp_passive_loss')) +
+    pmax(0, opt_col('above_ded'))
+
   percap_table_income = st_income_base(
     tax_unit, tax_unit$st_credits.percap_table_income_base
   )
@@ -285,7 +303,12 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     tax_unit$st_credits.percap_add_nontax_ss *
       pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
     tax_unit$st_credits.percap_add_exempt_int * tax_unit$exempt_int +
-    tax_unit$st_credits.percap_add_hh_resources * tax_unit$hh_resources_inc
+    tax_unit$st_credits.percap_add_hh_resources * tax_unit$hh_resources_inc +
+    # OK 538-S "gross household income" prohibits negative amounts, so a loss
+    # cannot pull a household under the ceiling: un-net them, Form 4797
+    # ordinary losses included as for the NM LICTR below
+    tax_unit$st_credits.percap_unnet_losses *
+      (unnetted_losses + pmax(0, -opt_col('other_gains')))
   percap_table_amt = lookup_state_credit_table(
     floor(percap_table_income + 0.5), rep(0L, n), credit_tables,
     'percap_credit', filing_status = tax_unit$filing_status
@@ -319,22 +342,6 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # NONTAXABLE Social Security and exempt interest, approximating ME's
   # broad "total income" (loss and above-the-line add-backs are
   # documented approximations)
-  # Losses and above-the-line adjustments that a "total income" concept adds
-  # back to federal AGI (ME 5213-A/5219-KK total income; NM 7-2-2(L)
-  # "undiminished by losses"): each loss (the capital loss only to the $3,000
-  # federal AGI actually nets) and the above-the-line deductions. S-corp
-  # losses and above_ded are read optionally so synthetic test units without
-  # them still compute
-  opt_col = function(name) {
-    if (name %in% colnames(tax_unit)) coalesce(tax_unit[[name]], 0) else rep(0, n)
-  }
-  unnetted_losses = pmax(0, -tax_unit$sole_prop) + pmax(0, -tax_unit$farm) +
-    pmin(3000, pmax(0, -(tax_unit$kg_lt + tax_unit$kg_st))) +
-    pmax(0, tax_unit$rent_loss) + pmax(0, tax_unit$part_active_loss) +
-    pmax(0, tax_unit$part_passive_loss) +
-    pmax(0, opt_col('scorp_active_loss')) +
-    pmax(0, opt_col('scorp_passive_loss')) +
-    pmax(0, opt_col('above_ded'))
   stfc_income = st_income_base(tax_unit, tax_unit$st_credits.stfc_income_base) +
     tax_unit$st_credits.stfc_add_nontax_ss *
       pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +

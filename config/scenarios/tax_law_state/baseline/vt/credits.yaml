@@ -74,8 +74,9 @@ ctc_refundable:
 cdctc_match:
   value:
     '2017': 0.24
-    '2022': 0.72
-  reference: '32 V.S.A. 5828(b); Schedule IN-112 Part II instructions 2017-2025. Act 138 of 2022 replaced the 24% nonrefundable credit with a 72% refundable one'
+    '2022': 0.0
+    '2023': 0.72
+  reference: '32 V.S.A. 5822(d) 24% credit (TY2017-2021). Act 138 of 2022 sec. 2 struck child and dependent care from 5822(d) and sec. 8 repealed its purpose statement (5813(c)), so for TY2022 the ONLY Vermont care credit is the 72% low-income credit of 5828c, still capped at $30,000/$40,000 AGI (see cdctc_lowinc_rate). Act 72 of 2023 sec. 14 dropped that cap from 1 Jan 2023, so from TY2023 every filer gets 72%. The TY2022 IN-112 booklet omits the cap; the statute governs. Corrected 2026-10-16 (cross-model triage: had paid 72% to every 2022 filer)'
 cdctc_refundable:
   value:
     '2017': 0
@@ -84,8 +85,9 @@ cdctc_refundable:
 cdctc_lowinc_rate:
   value:
     '2017': 0.5
-    '2022': 0.0
-  reference: '32 V.S.A. 5828c as it read through TY2021; IN-112 Part II line 1 (2017-2021): the Low Income Child and Dependent Care Credit is "50% of federal Form 2441, Line 11" (TY2017-2020, the claimed federal credit) or "Line 10" (TY2021, the full ARPA credit), refundable, "instead of the nonrefundable 24% credit ... You cannot take both credits" (2021 instructions advise comparing the two). Repealed by Act 138 of 2022 when the 72% refundable credit replaced both. Encoded 2026-10-08 (had been documented only)'
+    '2022': 0.72
+    '2023': 0.0
+  reference: 'TY2022: Act 138 of 2022 sec. 3 raised 32 V.S.A. 5828c from 50% to 72% (refundable) and kept the AGI cap; folded into the general 72% credit from TY2023 by Act 72 of 2023 sec. 14 (see cdctc_match). Earlier: 32 V.S.A. 5828c as it read through TY2021; IN-112 Part II line 1 (2017-2021): the Low Income Child and Dependent Care Credit is "50% of federal Form 2441, Line 11" (TY2017-2020, the claimed federal credit) or "Line 10" (TY2021, the full ARPA credit), refundable, "instead of the nonrefundable 24% credit ... You cannot take both credits" (2021 instructions advise comparing the two). Repealed by Act 138 of 2022 when the 72% refundable credit replaced both. Encoded 2026-10-08 (had been documented only)'
 cdctc_lowinc_agi_limit:
   value: 30000
   reference: 'IN-112 Part II: federal AGI of $30,000 or less for single, head of household, married filing separately and civil-union-separate filers (the form says "or less"; the 2021 instructions say "less than")'

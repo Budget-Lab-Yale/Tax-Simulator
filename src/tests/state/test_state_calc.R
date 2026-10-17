@@ -3556,6 +3556,21 @@ test_state_calc = function() {
                          liab_st_iit = -1281.25),
            label = 'VT-6b 2022 care credit at 72% refundable, plus the new CTC')
 
+  # VT-6e: TY2022 the 72% credit is ONLY the low-income 5828c credit (Act 138
+  # sec. 2-3 kept the $30,000/$40,000 cap and struck care from the 24%
+  # credit), so the VT-6c head of household at AGI 35,000 gets nothing; from
+  # TY2023 Act 72 of 2023 sec. 14 drops the cap: 72% x 700 = 504
+  run_case('VT', 2022,
+           list(agi = 35000, filing_status = 4, wages1 = 35000, ei1 = 35000,
+                n_dep = 1, dep_age1 = 4, care_exp = 3000, cdctc_nonref = 700),
+           expect = list(st_cdctc = 0),
+           label = 'VT-6e 2022 above the $30,000 cap: no Vermont care credit')
+  run_case('VT', 2023,
+           list(agi = 35000, filing_status = 4, wages1 = 35000, ei1 = 35000,
+                n_dep = 1, dep_age1 = 4, care_exp = 3000, cdctc_nonref = 700),
+           expect = list(st_cdctc = 504),
+           label = 'VT-6f 2023 cap removed: 72% above $30,000')
+
   #--------------------------------------------------------------------------
   # OKLAHOMA (Form 511, Schedules 511-A/B/D/F/G)
   #
@@ -3596,6 +3611,13 @@ test_state_calc = function() {
   run_case('OK', 2022, list(age1 = 40, agi = 15000, hh_resources_inc = 6000),
            expect = list(st_percap_credit = 0),
            label = 'OK-S5 2022 sales tax relief: household resources live via the overlay')
+  # OK-S6: losses cannot reduce gross household income (538-S: negative
+  # amounts prohibited). AGI 15,000 after a 10,000 business loss is 25,000 of
+  # gross household income, over the $20,000 ceiling for a 30-year-old
+  run_case('OK', 2022, list(age1 = 30, agi = 15000, wages1 = 25000,
+                            ei1 = 25000, sole_prop = -10000),
+           expect = list(st_percap_credit = 0),
+           label = 'OK-S6 2022 sales tax relief: a business loss is un-netted')
 
   run_case('OK', 2017, ok_single_100k,
            expect = list(st_txbl_inc = 100000, liab_st_iit = 4811.50),
@@ -3898,6 +3920,19 @@ test_state_calc = function() {
            expect = list(st_ded = 52000, st_txbl_inc = 248000,
                          liab_st_iit = 19480.00),
            label = 'DC-8 2019 itemized limitation, 5% of AGI over 200,000')
+
+  # DC-8b the same return filed married separately: Calculation F's
+  # threshold is $100,000, so the reduction is 5% x 200,000 = 10,000 and the
+  # deduction 57,000 - 10,000 = 47,000
+  run_case('DC', 2019,
+           list(agi = 300000, filing_status = 3, wages1 = 300000, ei1 = 300000,
+                itemizing = 1, item_ded = 57000, item_ded_ex_limits = 57000,
+                salt_item_ded = 10000, salt_prop = 12000,
+                salt_inc_sales = 15000, med_item_ded = 5000,
+                char_item_ded = 10000, mort_int_item_ded = 30000,
+                std_ded = 12200),
+           expect = list(st_ded = 47000),
+           label = 'DC-8b 2019 itemized limitation for MFS, 5% over 100,000')
 
   # DC-9 the care credit is 32% of the federal section 21 credit and
   # nonrefundable. Single with one young dependent at AGI 40,000: taxable
@@ -5065,6 +5100,22 @@ run_case('AR', 2024,
            expect = list(st_agi = 44000, st_txbl_inc = 41790,
                          liab_st_iit = 1957.99),
            label = 'IA-8 2022 retirement exclusion capped at 6,000')
+
+  # IA-8b: a joint couple where only one spouse is 55+ (IA 1040 line 21,
+  # Example 2: the couple's combined exclusion of up to 12,000 is available
+  # to the eligible spouse). Ages 70 / 40, 30,000 of pension: 12,000 excluded,
+  # so an Iowa base of 50,000 - 12,000 = 38,000. IA-8c: both spouses eligible
+  # pool to the same 12,000
+  run_case('IA', 2022,
+           list(agi = 50000, filing_status = 2, age1 = 70, age2 = 40,
+                wages1 = 20000, ei1 = 20000, txbl_pens_dist = 30000),
+           expect = list(st_agi = 38000),
+           label = 'IA-8b 2022 one eligible spouse takes the joint 12,000')
+  run_case('IA', 2022,
+           list(agi = 50000, filing_status = 2, age1 = 70, age2 = 60,
+                wages1 = 20000, ei1 = 20000, txbl_pens_dist = 30000),
+           expect = list(st_agi = 38000),
+           label = 'IA-8c 2022 two eligible spouses: still 12,000 in total')
 
   # In TY2023 the same filer excludes the whole 30,000, and does so from a
   # base that is already federal taxable income -- so an Iowa base of 6,150

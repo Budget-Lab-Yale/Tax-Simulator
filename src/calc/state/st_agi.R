@@ -167,6 +167,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_incl_ira', # (int) whether IRA distributions are eligible (MD 0)
     'st_agi.pension_excl_public_grandfather', # (int) pre-1998 government service excluded in full (KY)
     'st_agi.pension_excl_agi_limit', # (dbl) AGI cliff for the exclusion (WI)
+    'st_agi.pension_excl_joint_shared', # (int) one eligible spouse may use the couple's combined cap (IA)
     'st_agi.pension_excl_po_thresh', # (dbl) linear phase-out FAGI threshold (ME 2025+; Inf = none)
     'st_agi.pension_excl_po_width',  # (dbl) linear phase-out width (ME $100k/$50k MFS)
     'st_agi.pension_excl_po_rate',   # (dbl) DOLLARS of exclusion lost per dollar above it (MT 2)
@@ -294,6 +295,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # only when FAGI is under the limit)
   cap1_v = cap1_v * (tax_unit$agi < tax_unit$st_agi.pension_excl_agi_limit)
   cap2_v = cap2_v * (tax_unit$agi < tax_unit$st_agi.pension_excl_agi_limit)
+  # Shared joint cap (IA 422.7(31) through TY2022: "up to a maximum of twelve
+  # thousand dollars for a husband and wife who file a joint ... return"; the
+  # IA 1040 line 21 instructions let a single eligible spouse take the
+  # couple's whole $12,000). Where only one spouse is eligible, that spouse
+  # carries twice the per-person cap; with both eligible the pooled total is
+  # unchanged, since cap1 + cap2 is consumed as one unit cap below
+  shared = tax_unit$st_agi.pension_excl_joint_shared == 1 &
+           tax_unit$filing_status == 2
+  cap1_v = if_else(shared, 2 * pmax(cap1_v, cap2_v), cap1_v)
+  cap2_v = if_else(shared, 0, cap2_v)
   band_ages = st_family_matrix(tax_unit, 'st_agi.pension_excl_band_ages')
   if (!is.null(band_ages)) {
     band_amts = st_family_matrix(
