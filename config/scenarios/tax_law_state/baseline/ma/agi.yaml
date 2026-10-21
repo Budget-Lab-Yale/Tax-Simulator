@@ -42,6 +42,9 @@ ob_div_share:
 ob_bus_share:
   value: 1
   reference: 'Form 1 lines 6-8: Schedule C business or profession, Schedule F farm, and rents/royalties/partnership/S-corporation/trust income from Schedule E'
+ob_passthru_as_federal:
+  value: 1
+  reference: 'Partnership and S-corporation income or loss enters as allowed federally (after the IRC 469 passive-activity limits): DOR TIR 89-2 (federal passive activity loss limitations apply for Massachusetts income tax purposes); Schedule E-2 (2019-2024) line 1 "passive loss allowed" from federal Form 8582. Added 2026-10-21: the gross part/scorp fields carry losses that federal AGI suspends -- TY2023 record 384002 had a $1.17M suspended partnership loss that pushed Massachusetts income negative and let the Limited Income Credit wipe out the tax on $1.78M of gains'
 ob_rent_share:
   value: 1
   reference: 'Form 1 line 8, rents, royalties and REMIC income (Schedule E)'

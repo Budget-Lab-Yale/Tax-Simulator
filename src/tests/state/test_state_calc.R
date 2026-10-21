@@ -5784,6 +5784,35 @@ run_case('AR', 2024,
                             n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 1000),
            expect = list(st_care_credit = 0),
            label = 'MA-19 2023 care credits replaced by the CFTC')
+  # MA-20 (2026-10-21): the Child and Family Tax Credit also reaches a
+  # dependent aged 65 or over -- TY2024 single with a dependent aged 80: 440.
+  # Separate filers are barred: a separate filer with a child of 5 gets 0
+  run_case('MA', 2024,
+           list(agi = 45000, wages1 = 45000, ei1 = 45000, filing_status = 4,
+                n_dep = 1, dep_age1 = 80),
+           expect = list(st_ctc = 440),
+           label = 'MA-20a CFTC for a dependent aged 65 or over')
+  run_case('MA', 2024,
+           list(agi = 45000, wages1 = 45000, ei1 = 45000, filing_status = 3,
+                n_dep = 1, dep_age1 = 5),
+           expect = list(st_ctc = 0),
+           label = 'MA-20b CFTC barred to separate filers')
+  # MA-21 (2026-10-21): the Limited Income Credit band ends at 1.75 x the No
+  # Tax Status threshold even when short-term gains taxed at 8.5% outside the
+  # state AGI measure push tax above 10% of that measure. TY2023 single,
+  # $30,000 wages and $400,000 of short-term gain: no credit
+  run_case('MA', 2023,
+           list(agi = 430000, wages1 = 30000, ei1 = 30000, kg_st = 400000),
+           expect = list(st_lic = 0),
+           label = 'MA-21 no Limited Income Credit above the band')
+  # MA-22: the 4% surtax base includes Part A short-term gains. TY2024
+  # single, $500,000 wages and $700,000 of short-term gain: base about
+  # 500,000 - 4,400 + 700,000 = 1,195,600, over the $1,053,750 threshold by
+  # 141,850 -> 5,674 (tolerance covers the small Part B deduction)
+  run_case('MA', 2024,
+           list(agi = 1200000, wages1 = 500000, ei1 = 500000, kg_st = 700000),
+           expect = list(st_taxable_income_surtax = 5674), tol = 100,
+           label = 'MA-22 surtax base includes short-term gains')
 
   #--------------------------------------------------------------------------
   # Oregon (Form OR-40)

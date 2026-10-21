@@ -19,6 +19,9 @@ taxable_income_threshold:
     '2024': 1053750
     '2025': 1083150
   reference: '2023 booklet p.3 ("In 2023, this threshold is $1,000,000. The threshold is subject to an annual inflation adjustment"); 2024 booklet pp.3 and 13 ($1,053,750); 2025 booklet p.3 ($1,083,150). The threshold does NOT vary by filing status -- a single filer and a joint filer face the same figure, confirmed by the absence of any status-specific amount in the 2023, 2024 and 2025 booklets. It is one of the very few indexed Massachusetts parameters'
+base_add_st_gains:
+  value: 1
+  reference: 'Schedule 4% Surtax base includes Schedule B line 37 (interest, dividends, short-term and collectibles gains after excess exemptions). Short-term gains are taxed at their own rate outside st_txbl_inc in this model, so they are added back here (2026-10-21: TY2023 record 384002 had $857,374 of short-term gains left out of the surtax base)'
 
 documented_not_modeled:
   surtax_base_construction:

@@ -40,6 +40,9 @@ lic_mfs:
 lic_per_dep:
   value: 1000
   reference: '2017 booklet p.13 No Tax Status / Limited Income Credit chart: $1,000 per dependent added to the No Tax Status column (and $1,750 to the credit column, which is the same figure scaled by 1.75). "If the number of dependents is more than 6, add $1,000 per dependent" -- the chart is NOT capped at six, so the add-on continues linearly'
+lic_band_mult:
+  value: 1.75
+  reference: '2024 booklet p.12: the Limited Income Credit band runs from the No Tax Status threshold to 1.75 times it ($14,000 single; $28,700 plus $1,750 per dependent joint; $25,200 plus $1,750 per dependent head of household). Applied explicitly 2026-10-21: short-term gains are taxed at 8.5-12% outside the state AGI measure, so the phase-in alone did not end the credit (TY2023 record 384002, $1.08M of state income, drew $19,960)'
 lic_income_base:
   value: 2
   reference: 'The test is on Massachusetts AGI (the Form 1 line 27 worksheet), which is Part B gross income less a subset of Schedule Y deductions, plus Schedule B and Schedule D income -- so it sits BEFORE the payroll deduction, the rental deduction and the exemptions. The model''s state income base is the closest available measure'
@@ -149,12 +152,18 @@ ctc_max_child_age:
 ctc_refundable:
   value: 1
   reference: '2023 booklet p.4: "individuals ... may claim a refundable, non-transferable child and family tax credit". Form 1 line 46 sits in the refundable block'
+ctc_aged_dep_min_age:
+  value: 65
+  reference: '2023 booklet p.4: a qualifying individual also includes "a dependent who is age 65 or over" (encoded 2026-10-21 from the dependent age slots; was documented-not-modeled although observable -- PolicyEngine 2023-25 misses at exactly $310/$440 were single filers with a dependent aged 65+)'
+ctc_mfs_eligible:
+  value: 0
+  reference: '2024 booklet p.15: the Child and Family Tax Credit is not available to married filing separately (encoded 2026-10-21; was documented-not-modeled)'
 
 documented_not_modeled:
   cftc_disabled_and_elderly_dependents:
-    reference: 'The Child and Family Tax Credit reaches three kinds of qualifying individual, and only the first is modeled: a dependent under 13; a qualifying individual under IRC s.21, which includes a dependent OR THE SPOUSE who is physically or mentally incapable of self-care; and a dependent aged 65 or over or disabled (2023 booklet p.4). From TY2024 a noncustodial parent may also claim it for a child aged 13 or older who is incapable of self-care. Disability status is not a model input and dependent ages above the tracked slots are limited [understates the credit for households with a disabled member or an elderly dependent -- at $440 per individual with no cap, this is not a small omission]'
+    reference: 'The Child and Family Tax Credit reaches three kinds of qualifying individual; dependents under 13 and (from 2026-10-21) dependents aged 65 or over are modeled: a dependent under 13; a qualifying individual under IRC s.21, which includes a dependent OR THE SPOUSE who is physically or mentally incapable of self-care; and a dependent aged 65 or over or disabled (2023 booklet p.4). From TY2024 a noncustodial parent may also claim it for a child aged 13 or older who is incapable of self-care. Disability status is not a model input and dependent ages above the tracked slots are limited [understates the credit for households with a disabled member or an elderly dependent -- at $440 per individual with no cap, this is not a small omission]'
   cftc_and_eitc_mfs_exclusion:
-    reference: 'The CFTC is barred to married filing separately (2024 booklet p.15) and is not gated here [overstates the CFTC for separate filers with young children]. The earned income credit is NOT barred where the federal credit reaches a separate filer: "Massachusetts adopts the expansion of the federal EIC in calculating the Massachusetts EIC" (Form 1 instructions TY2021 and TY2024; the Form 1 line 43 note bars separate filers "unless you qualify for an exception"), so it follows the federal credit (IRC 32(d)(2) from 2021). Massachusetts adds a domestic-abuse exception for separate filers outside the federal rule, which is unobservable. Corrected 2026-10-07: this note had said the EITC was barred'
+    reference: 'The CFTC is barred to married filing separately (2024 booklet p.15) -- gated from 2026-10-21 (ctc_mfs_eligible). The earned income credit is NOT barred where the federal credit reaches a separate filer: "Massachusetts adopts the expansion of the federal EIC in calculating the Massachusetts EIC" (Form 1 instructions TY2021 and TY2024; the Form 1 line 43 note bars separate filers "unless you qualify for an exception"), so it follows the federal credit (IRC 32(d)(2) from 2021). Massachusetts adds a domestic-abuse exception for separate filers outside the federal rule, which is unobservable. Corrected 2026-10-07: this note had said the EITC was barred'
   senior_circuit_breaker:
     reference: 'Form 1 line 44 and Schedule CB give filers aged 65 or over a REFUNDABLE credit equal to the amount by which property tax paid -- or 25% of rent for a renter -- exceeds 10% of total income, capped at an indexed maximum that MORE THAN DOUBLED in TY2023 (about $1,200 to $2,590) by a statutory base doubling rather than indexation. Blocked on assessed value, property tax paid and rent, all Tier 1 imputation targets [understates Massachusetts refunds for elderly homeowners and renters -- the largest data-blocked item in the state]'
   limited_income_credit_ordering:

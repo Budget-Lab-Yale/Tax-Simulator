@@ -1,6 +1,6 @@
 # Cross-model validation: MA
 
-Class: broad | Generated: 2026-10-13 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-10-21 | Verdict: **NEEDS REVIEW**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,65 +10,63 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  9708|    4091|   0.4282|    0.6378|         0.6527|          0.8861|          0.0377|         32.5998|   -959.7858|
-| 2017|taxsim       | 10793|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       |  9645|    5482|   0.4406|    0.6385|         0.5972|          0.8179|          0.0416|         29.6415|  -1038.5848|
-| 2018|taxsim       | 10857|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       |  9660|    5541|   0.4424|    0.6345|         0.5994|          0.8304|          0.0394|         28.4194|   -271.3948|
-| 2019|taxsim       | 10842|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       |  9652|    5314|   0.4140|    0.6385|         0.5694|          0.8359|          0.0386|         31.2431|   -846.6510|
-| 2020|taxsim       | 10844|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |   132|      64|   0.6667|    0.7803|         0.9844|          0.9844|          0.3182|          0.0036|     55.6340|
-| 2021|policyengine |  1403|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     444|   0.4628|    0.5749|         0.7680|          0.8356|          0.0570|         34.8266|    -48.5192|
-| 2022|policyengine |   386|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1102|     448|   0.4501|    0.5563|         0.7701|          0.8125|          0.0535|         41.2785|   -703.9910|
-| 2023|policyengine |   428|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1128|     459|   0.4486|    0.5505|         0.7865|          0.8301|          0.0638|         44.9704|    150.7352|
-| 2024|policyengine |   399|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2025|policyengine |  1132|     117|   0.4028|    0.5203|         0.7778|          0.7949|          0.0495|         81.5060|   -143.1510|
-| 2025|policyengine |   394|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2017|taxsim       |  9675|    4114|   0.4449|    0.6500|         0.6529|          0.8833|          0.0400|         27.8930|    494.5613|
+| 2017|taxsim       | 10828|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       |  9617|    5523|   0.4493|    0.6511|         0.6035|          0.8287|          0.0398|         27.0504|    451.0570|
+| 2018|taxsim       | 10885|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       |  9563|    5514|   0.4513|    0.6449|         0.6059|          0.8303|          0.0395|         26.2238|    451.7070|
+| 2019|taxsim       | 10939|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       |  9578|    5321|   0.4197|    0.6501|         0.5696|          0.8406|          0.0396|         30.1489|    449.4924|
+| 2020|taxsim       | 10919|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |   700|     353|   0.7486|    0.8229|         0.9830|          0.9830|          0.3657|          0.0012|    111.4508|
+| 2021|policyengine |  8139|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  6113|    2401|   0.5006|    0.6221|         0.8305|          0.8867|          0.0623|         14.4094|    272.0693|
+| 2022|policyengine |  2692|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  6022|    2603|   0.4988|    0.6098|         0.8141|          0.8771|          0.0599|         15.8271|    430.8700|
+| 2023|policyengine |  2778|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  6010|    2617|   0.5012|    0.6063|         0.8135|          0.8728|          0.0594|         13.6919|    448.9360|
+| 2024|policyengine |  2784|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2025|policyengine |  6009|     638|   0.4971|    0.6023|         0.8088|          0.8401|          0.0571|         17.4901|    802.3524|
+| 2025|policyengine |  2791|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage            |     n|
 |----:|:-----------|:----------------|-----:|
-| 2017|TRUE        |1 state AGI      |  2132|
-| 2017|TRUE        |2 exemptions     |    30|
-| 2017|TRUE        |4 taxable income |   717|
-| 2017|TRUE        |7 rate/rounding  |    97|
-| 2017|FALSE       |1 state AGI      | 11332|
-| 2017|FALSE       |2 exemptions     |   175|
-| 2017|FALSE       |4 taxable income |   551|
-| 2017|FALSE       |5 state EITC     |     4|
-| 2017|FALSE       |7 rate/rounding  |     4|
-| 2018|TRUE        |1 state AGI      |  4286|
-| 2018|TRUE        |2 exemptions     |    26|
-| 2018|TRUE        |4 taxable income |   711|
-| 2018|TRUE        |7 rate/rounding  |   103|
-| 2018|FALSE       |1 state AGI      |  9103|
-| 2018|FALSE       |2 exemptions     |   185|
-| 2018|FALSE       |4 taxable income |   512|
-| 2018|FALSE       |5 state EITC     |     6|
-| 2018|FALSE       |7 rate/rounding  |     4|
-| 2019|TRUE        |1 state AGI      |  4256|
-| 2019|TRUE        |2 exemptions     |    38|
-| 2019|TRUE        |4 taxable income |   688|
-| 2019|TRUE        |7 rate/rounding  |   113|
-| 2019|FALSE       |1 state AGI      |  9076|
-| 2019|FALSE       |2 exemptions     |   191|
-| 2019|FALSE       |4 taxable income |   530|
-| 2019|FALSE       |5 state EITC     |     6|
-| 2019|FALSE       |7 rate/rounding  |     6|
-| 2020|TRUE        |1 state AGI      |  4229|
-| 2020|TRUE        |2 exemptions     |    34|
-| 2020|TRUE        |4 taxable income |   719|
-| 2020|TRUE        |7 rate/rounding  |   107|
-| 2020|FALSE       |1 state AGI      |  9444|
-| 2020|FALSE       |2 exemptions     |   188|
-| 2020|FALSE       |4 taxable income |   553|
-| 2020|FALSE       |5 state EITC     |     3|
-| 2020|FALSE       |7 rate/rounding  |     6|
+| 2017|TRUE        |1 state AGI      |  2049|
+| 2017|TRUE        |2 exemptions     |    39|
+| 2017|TRUE        |4 taxable income |   710|
+| 2017|TRUE        |7 rate/rounding  |   103|
+| 2017|FALSE       |1 state AGI      | 11227|
+| 2017|FALSE       |2 exemptions     |   195|
+| 2017|FALSE       |4 taxable income |   560|
+| 2017|FALSE       |5 state EITC     |     3|
+| 2017|FALSE       |7 rate/rounding  |     5|
+| 2018|TRUE        |1 state AGI      |  4182|
+| 2018|TRUE        |2 exemptions     |    32|
+| 2018|TRUE        |4 taxable income |   728|
+| 2018|TRUE        |7 rate/rounding  |   112|
+| 2018|FALSE       |1 state AGI      |  9088|
+| 2018|FALSE       |2 exemptions     |   201|
+| 2018|FALSE       |4 taxable income |   517|
+| 2018|FALSE       |5 state EITC     |     2|
+| 2018|FALSE       |7 rate/rounding  |     2|
+| 2019|TRUE        |1 state AGI      |  4177|
+| 2019|TRUE        |2 exemptions     |    35|
+| 2019|TRUE        |4 taxable income |   734|
+| 2019|TRUE        |7 rate/rounding  |   114|
+| 2019|FALSE       |1 state AGI      |  9088|
+| 2019|FALSE       |2 exemptions     |   202|
+| 2019|FALSE       |4 taxable income |   520|
+| 2019|FALSE       |7 rate/rounding  |     2|
+| 2020|TRUE        |1 state AGI      |  4273|
+| 2020|TRUE        |2 exemptions     |    35|
+| 2020|TRUE        |4 taxable income |   727|
+| 2020|TRUE        |7 rate/rounding  |   109|
+| 2020|FALSE       |1 state AGI      |  9314|
+| 2020|FALSE       |2 exemptions     |   206|
+| 2020|FALSE       |4 taxable income |   534|
+| 2020|FALSE       |7 rate/rounding  |     3|
 
 ## Known differences applied
 
@@ -93,4 +91,5 @@ defined (federally aligned records; see README).
 |ALL   |both         |     2017|     2025|structural         |exclude  |Child and dependent care credit take-up: the federal calculator draws 90% take-up for the care credit (cdctc.R, calibrated to 2019 claims) and every state care credit shares the draw (JI 2026-10-08); TAXSIM and PolicyEngine assume full take-up. A family with care expenses drawn as a non-taker gets no state care credit from us and the full credit from them; where federal tax is zero either way the record stays federally aligned. Keyed on care expenses with the draw at zero (in a state without a care credit the hits match and drop out harmlessly)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 |ALL   |policyengine |     2021|     2025|federal-side       |exclude  |Our federal child and dependent care credit (src/calc/functions/credits/cdctc.R) has no bar on married-filing-separately returns; IRC 21(e)(2) denies the credit to separate filers unless the spouses lived apart for the last six months (treated as unmarried), which the PUF does not identify. PolicyEngine pays such filers nothing federally (probe 2026-10-09, MD 2024 records 40953, 48820, 42620: cdcc 0), so every state credit built on the federal one (MD 502CR Part B here) diverges by the state credit. Federal-side: documented, not fixed in the state workstream                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 |ALL   |policyengine |     2021|     2025|input-coverage     |exclude  |PolicyEngine twin of the per-state TAXSIM crosswalk rows: the PolicyEngine input carries property tax, mortgage interest and charitable gifts but no investment interest or other itemized deductions (Schedule A lines 9 and 16, our inv_int_item_ded_potential + other_item_ded_potential = xw_unhanded_item), so a state itemized deduction built from federal Schedule A is short by them in PolicyEngine. Found on IA 2022 records 220684 and 163276: PolicyEngine's Iowa itemized deductions are lower than ours by exactly other_item_exp ($7,819 and $848)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+|MA    |policyengine |     2021|     2025|external-model-bug |exclude  |P34: policyengine-us 1.775.7 ma_child_and_family_credit (the $180/$360 Household Dependent Tax Credit 2021-22; the $310/$440 CFTC 2023+) has no filing-status test, but c. 62 s. 6(y) as inserted by St. 2021 c. 24 s. 29 allows a married taxpayer the credit only on a joint return or as head of household (2021/2022 Form 1 instructions line 46: 'You cannot claim this credit if married filing a separate return'), and the 2024 booklet bars the CFTC to married filing separately. All 22 +180 records in 2022 (15 clean) are filing_status 3 with one qualifying dependent; 2021 shows the same pattern under the 62F exclusion. Keyed on separate filers with a dependent                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 

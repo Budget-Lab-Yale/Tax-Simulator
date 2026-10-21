@@ -15,6 +15,7 @@ st_credits_child_req_vars = c(
   'st_credits.dep_credit_po_thresh',
   'st_credits.dep_credit_po_per_1k',
   'st_credits.ctc_style',
+  'st_credits.ctc_aged_dep_min_age', # (dbl) dependents at/over this age also qualify (MA CFTC 65; Inf = none)
   'st_credits.ctc_match_share',
   'st_credits.ctc_fed_base_per_child',
   'st_credits.ctc_min_per_child',
@@ -187,8 +188,14 @@ st_credits_child = function(tax_unit, st_eitc) {
   # ctc_po_rate per dollar of the enum income base over the threshold
   ny_gate  = (is.na(tax_unit$st_credits.ctc_tier1_bound)) &
              (tax_unit$st_credits.ctc_style >= 1)
+  # plus dependents at or over ctc_aged_dep_min_age where the credit also
+  # reaches elderly dependents (MA CFTC: a dependent aged 65 or over; Inf =
+  # none). Counted from the observed dependent age slots
   n_qual   = st_n_dep_in(tax_unit, tax_unit$st_credits.ctc_min_child_age,
-                         tax_unit$st_credits.ctc_max_child_age)
+                         tax_unit$st_credits.ctc_max_child_age) +
+             if_else(is.finite(tax_unit$st_credits.ctc_aged_dep_min_age),
+                     st_n_dep_in(tax_unit, tax_unit$st_credits.ctc_aged_dep_min_age, Inf),
+                     0)
   n_young  = st_n_dep_in(tax_unit, 0, tax_unit$st_credits.ctc_young_age_limit)
   n_old    = st_n_dep_in(tax_unit, tax_unit$st_credits.ctc_young_age_limit + 1,
                          tax_unit$st_credits.ctc_max_child_age)
@@ -237,6 +244,10 @@ st_credits_child = function(tax_unit, st_eitc) {
       pmax(0, tax_unit$st_credits.ctc_young_amount * n_qual - ctc_po_cont),
     TRUE ~ 0
   )
+  # Separate filers barred where the state says so (MA CFTC, 2024 booklet
+  # p.15; NJ's tiered credit is gated below)
+  ctc_ny = if_else(tax_unit$filing_status == 3 &
+                     tax_unit$st_credits.ctc_mfs_eligible == 0, 0, ctc_ny)
 
   # CO CTC (gated on tier bounds): style 1 = tier share of the federal
   # credit attributed to under-6 children; style 2 = flat tier amount

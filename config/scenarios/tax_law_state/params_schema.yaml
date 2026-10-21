@@ -551,6 +551,7 @@ scalars:
   st_surtax.taxable_income_threshold: .inf
   st_surtax.taxable_income_rate: 0
   st_surtax.taxable_income_round: 0
+  st_surtax.base_add_st_gains: 0   # 1 = separately taxed short-term gains join the surtax base (MA)
   st_surtax.per_return_amount: {default: 0, units: per_return}
   st_surtax.per_return_blind_exempt: 0
   # Net-investment-income add-on tax (MN 2024+: 1% over $1,000,000)
@@ -573,6 +574,7 @@ scalars:
   # alternate tax: $32,000/$24,000 against the ordinary $13,500/$9,000)
   st_credits.lic_thresh_aged: {default: 0, units: per_return}
   st_credits.lic_aged_min_age: .inf
+  st_credits.lic_band_mult: .inf   # no limited income credit above this multiple of the threshold (MA 1.75)
   # Nonrefundable credit as a share of net capital gain (MT 2% through TY2023)
   st_credits.kg_credit_rate: 0
   # Stepped flat credits on state taxable income (AR): see st_credits.R
@@ -700,7 +702,8 @@ scalars:
   # the excess DOWN, so 0 keeps that
   st_credits.ctc_po_round_up: 0
   st_credits.ctc_refundable: 1   # UT CTC is nonrefundable
-  st_credits.ctc_mfs_eligible: 1   # 0 = separate filers barred from the tiered CTC (NJ-1040 line 65)
+  st_credits.ctc_mfs_eligible: 1   # 0 = separate filers barred from the child credit (NJ-1040 line 65 tiered; MA CFTC flat)
+  st_credits.ctc_aged_dep_min_age: .inf   # dependents at/over this age also count for the flat child credit (MA CFTC: 65)
   st_credits.ctc_mfs_share: 1      # share of the child credit a married-separate filer takes (NM 0.5)
   st_credits.ctc_pct_of_eitc: 0
   st_credits.ctc_max_age: 16

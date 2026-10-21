@@ -179,6 +179,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.lic_income_base',
     'st_credits.lic_thresh_aged',      # (dbl) higher threshold where either filer meets the age test (IA)
     'st_credits.lic_aged_min_age',     # (dbl) that age test (IA 65)
+    'st_credits.lic_band_mult',        # (dbl) no credit above this multiple of the threshold (MA 1.75; Inf = none)
     'st_credits.kg_credit_rate',       # (dbl) nonrefundable credit as a share of net capital gain (MT 0.02)
     'st_credits.elderly_credit_style', # (int) 1 = banded refundable elderly credit from the elderly_credit table (IN)
     'st_credits.elderly_credit_min_age', # (dbl) age for that credit
@@ -468,8 +469,14 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   lic_thresh = if_else(lic_aged, tax_unit$st_credits.lic_thresh_aged,
                        tax_unit$st_credits.lic_thresh) +
                tax_unit$st_credits.lic_per_dep * coalesce(tax_unit$n_dep, 0L)
+  # The phase-in alone ends the credit only while tax is at most lic_rate of
+  # the income measure; where some income is taxed outside that measure at a
+  # higher rate (MA short-term gains at 8.5-12%), the published band ceiling
+  # (MA: 1.75 x the No Tax Status threshold, 2024 booklet p.12) has to be
+  # applied explicitly
   st_lic = if_else(
-    tax_unit$st_credits.lic_rate > 0,
+    tax_unit$st_credits.lic_rate > 0 &
+      lic_income <= tax_unit$st_credits.lic_band_mult * lic_thresh,
     pmax(0, pmax(0, tax_unit$st_tax_pre_credit) -
             tax_unit$st_credits.lic_rate * pmax(0, lic_income - lic_thresh)),
     0
