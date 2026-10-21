@@ -5,10 +5,9 @@
 # income CLIFF, not a taper), the earned income credit (refundable, at a
 # higher rate where a dependent is under 3), and the Oregon Kids Credit
 # (refundable, TY2023+), and the retirement income credit (ORS 316.157;
-# encoded 2026-10-13). The kicker and the working family household and
-# dependent care credit are documented below -- the kicker because it reads
-# a prior-year liability (deferred by S46), the WFHDC because its base is
-# not reconstructible from the microdata.
+# encoded 2026-10-13), and the working family household and dependent care
+# credit (encoded 2026-10-21, below). The kicker is documented below -- it
+# reads a prior-year liability (deferred by S46).
 
 filing_status_mapper:
   exempt_credit_po_thresh:
@@ -181,11 +180,57 @@ retire_inc_credit_add_hh_resources:
   value: 1
   reference: 'ORS 316.157(2)(c)(A)(ii),(xiii),(xv): child support, veterans benefits, welfare -- the hh_resources_inc optional data column (S43). Gifts, inheritances, insurance proceeds, the $1,000 loss limits and the $5,000 depreciation add-back are unobserved [overstates the credit for recipients]. The federal pension subtraction (worksheet line 2) is not modeled, so the pension base is the whole pool'
 
+#-----------------------------------------------------------------------
+# Working Family Household and Dependent Care credit (ORS 315.264; Schedule
+# OR-WFHDC; Publication OR-WFHDC-TB), refundable (encoded 2026-10-21 on the
+# generic poverty-banded care credit). Percentage x qualified expenses,
+# expenses capped at $12,000 for one qualifying individual and $24,000 for
+# two or more and at the lesser earner's earned income (Schedule OR-WFHDC
+# 2017 lines 21-24). The percentage comes from Part B of the tables
+# (credit_tables.csv, care_fpg_rate): rows A-Y are 10-point bands of income
+# as a share of the HHS poverty guideline for the household size (Part A;
+# poverty_guideline, the same-year HHS figures, verified against every
+# Part A band in 2019/2020/2021/2023/2025: e.g. 2023 size 2, row A tops out
+# at $1,972 = 10% of $19,720), columns by the youngest qualifying
+# individual's age on January 1 (under 3, 3-5, 6-12). Part B is identical
+# in the 2019, 2020, 2021, 2023 and 2025 publications; the 2017-18
+# percentages came from the department's online calculator (2017 schedule
+# line 25) and are ASSUMED equal (the 2017 300%-of-poverty AGI limits match
+# the table's zero row). Income is the greater of federal and Oregon AGI
+# from TY2019 (2019+ publications); TY2017 used federal AGI (OR-40 line 7);
+# TY2018 not retrieved, treated as 2017. Not modeled: disabled qualifying
+# individuals (columns 4-5; no disability data), household members who are
+# not dependents, the student/disabled-spouse earned-income deeming, and
+# prior-year expenses (line 27). care_exp is the Tax-Data CPS-ASEC SPM
+# child care expense imputation (capped at earnings, not at $3k/$6k).
+#-----------------------------------------------------------------------
+care_fpg_style:
+  value: 1
+  reference: 'ORS 315.264; Schedule OR-WFHDC (150-101-195) 2017 Section 4; Publication OR-WFHDC-TB (150-101-458) 2019-2025; Form OR-40 refundable credits'
+care_fpg_exp_cap1:
+  value: 12000
+  reference: 'Schedule OR-WFHDC 2017 line 21: "If you are claiming one qualifying individual, enter the lesser of Section 2, line 15, column (c) or $12,000"'
+care_fpg_exp_cap2:
+  value: 24000
+  reference: 'Schedule OR-WFHDC 2017 line 21: "If you are claiming two or more qualifying individuals ... or $24,000"'
+care_fpg_child_age_limit:
+  value: 12
+  reference: 'Qualifying individual: a dependent child under 13 (IRC 21(b)(1) by reference, ORS 315.264(1)); year-end age 12 or less'
+care_fpg_age_cut1:
+  value: 3
+  reference: 'Publication OR-WFHDC-TB Part B columns: youngest qualifying individual under age 3 as of January 1 of the tax year'
+care_fpg_age_cut2:
+  value: 6
+  reference: 'Publication OR-WFHDC-TB Part B columns: at least age 3 but under 6; at least 6 but under 13'
+care_fpg_income_max_state:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'Publication OR-WFHDC-TB 2019-2025: "AGI range ... the greater of the taxpayer''s federal or Oregon AGI"; 2017 Schedule OR-WFHDC instructions: "Your adjusted gross income (AGI) (Form OR-40, line 7)" (federal AGI). 2018 not retrieved'
+
 documented_not_modeled:
   kicker:
     reference: 'The Oregon surplus "kicker" credit is a percentage of the taxpayer''s PRIOR year total Oregon personal income tax liability before credits -- 9.863 percent of 2024 liability on the TY2025 return (OR-40 Instr. 2025 line 32). Prior-year liability is not observable per record in a cross-sectional microsimulation, and the percentage is certified biennially by the Department of Administrative Services. NOT MODELED [understates Oregon refunds materially in kicker years -- this is Oregon''s largest known difference, and it recurs every other year]. Encoding it would require either a lagged panel or a same-year approximation of prior-year liability, which was deliberately not attempted'
-  working_family_household_and_dependent_care:
-    reference: 'The WFHDC credit (Schedule OR-WFHDC) is refundable and pays a percentage of qualifying care expenses that is keyed jointly to household income as a percentage of the federal poverty guideline and to the age of the child, with its own expense caps. Household size, the poverty-guideline ratio and Oregon-specific expense definitions are not reconstructible from the model''s care_exp variable alone [understates Oregon refunds for low-income working families with care expenses]. The most valuable remaining Oregon item after the kicker'
   political_contribution_credit:
     reference: 'A small credit for Oregon political contributions, capped per return and denied above an AGI limit that was lowered to $150,000 joint / $75,000 other for TY2020. Contributions are unobserved'
   eic_for_itin_filers:

@@ -83,9 +83,10 @@ Last updated: `2026-08-21`
 - Encoded: the exemption credit with its hard AGI cliff; the earned income
   credit with the new young-child rate; the Oregon Kids Credit via the
   style-3 child credit machinery
-- Documented: the kicker, the working family household and dependent care
-  credit, the retirement income credit, the political contribution credit, the
-  ITIN-filer earned income credit
+- Encoded 2026-10-21: the working family household and dependent care credit
+  (generic `care_fpg_*`; tables in `credit_tables.csv`)
+- Documented: the kicker, the political contribution credit, the ITIN-filer
+  earned income credit
 
 ### `filing.yaml`
 
@@ -179,10 +180,22 @@ Last updated: `2026-08-21`
   needs either a lagged panel or a same-year approximation of prior-year
   liability, and the decision to do neither was deliberate rather than an
   oversight.
-- **The working family household and dependent care credit is not modeled** --
-  refundable, and a percentage of care expenses keyed jointly to household
-  income as a share of the federal poverty guideline and to child age. The most
-  valuable remaining Oregon item after the kicker.
+- **Working family household and dependent care credit (encoded 2026-10-21).**
+  Rate from Publication OR-WFHDC-TB Part B (identical in the 2019, 2020, 2021,
+  2023 and 2025 editions; 2017-18 percentages came from an online calculator and
+  are assumed equal, corroborated by TAXSIM's 2017 rates in the last column),
+  rows A-Y as 10-point bands of income over the same-year HHS poverty guideline
+  (verified against Part A in five editions), columns by the youngest child's
+  age on January 1. Not modeled: disabled qualifying individuals (columns 4-5),
+  household members who are not dependents, spouse earned-income deeming, and
+  prior-year expenses. Income is the greater of federal and Oregon AGI from
+  TY2019, federal AGI in TY2017 (TY2018 not retrieved).
+- **Schedule OR-A taxes are capped at the federal SALT limit** (line 9; $10,000 /
+  $5,000 through 2024, $40,000 / $20,000 in 2025). Encoded 2026-10-21 by reading
+  the federal effective cap, so the TY2025 high-income reduction carries through
+  per the 2025 instructions ("the same limit that applies to your federal
+  deduction"); the final form's line 9 prints only $40,000 / $20,000, so this is a
+  reading, flagged to JI (P46: PolicyEngine uses the flat amount).
 - **The retirement income credit (ORS 316.157) is not modeled.** Its 9% rate is
   known but the eligible base, the household-income measure and the Social
   Security offset limits were not transcribed from a primary source in this
@@ -320,3 +333,14 @@ its flag is off by default, which should be checked when Alabama is triaged.
   annual personal income tax statistics for a revenue-agency benchmark, and the
   Legislative Revenue Office publishes kicker forecasts that would help size
   that known difference.
+
+### Closure 2026-10-21
+
+All nine cells clear on the id-keyed sample: TAXSIM 2017-20 0.989 / 0.987 / 1.000 /
+0.990, PolicyEngine 2021-25 0.997 / 0.992 / 0.992 / 0.991 / 0.998 (from 0.904-0.953).
+Our side: the OR-A SALT cap and the WFHDC (above). External rows: T62 (TAXSIM never
+applies the young-child EITC rate), T63 (TAXSIM's WFHDC always uses the disabled-18+
+column), the TAXSIM head-of-household inference, education credits keyed at
+Oregon's 9% rate, the PolicyEngine crosswalk itemized class, and P46. Report:
+`research/state_tax/cross_model/results/reports/or.md`.
+

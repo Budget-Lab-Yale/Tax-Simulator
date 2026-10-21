@@ -44,11 +44,18 @@ st_credits_care_req_vars = c(
   'st_credits.care_credit_hh_aged_min',   # (int) or dependent age >= this
   'st_credits.care_credit_hh_limit',      # (int) member count cap
   'st_credits.care_credit_mfs_ineligible',# (int) married filing separately barred
-  'st_credits.care_credit_refundable'     # (int) refundable
+  'st_credits.care_credit_refundable',    # (int) refundable
+  'st_credits.care_fpg_style',            # (int) poverty-banded care credit on (OR WFHDC)
+  'st_credits.care_fpg_exp_cap1',         # (dbl) expense cap, one qualifying child
+  'st_credits.care_fpg_exp_cap2',         # (dbl) expense cap, two or more
+  'st_credits.care_fpg_child_age_limit',  # (int) qualifying child year-end age <= this
+  'st_credits.care_fpg_age_cut1',         # (int) Jan-1 age below this: table column 1
+  'st_credits.care_fpg_age_cut2',         # (int) Jan-1 age below this: column 2 (else 3)
+  'st_credits.care_fpg_income_max_state'  # (int) 1 = income is the greater of federal and state AGI
 )
 
 
-st_credits_care = function(tax_unit) {
+st_credits_care = function(tax_unit, credit_tables = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates the care-credit family on a parsed tax unit tibble.
@@ -262,6 +269,47 @@ st_credits_care = function(tax_unit) {
               care_credit_ei_limit),
          care_credit_hh_n * tax_unit$st_credits.care_credit_hh_member_amt) *
     (1 - tax_unit$st_credits.care_credit_mfs_ineligible * (tax_unit$filing_status == 3))
+
+  #------------------------------------------------------------------------
+  # Poverty-banded care credit (OR Working Family Household and Dependent
+  # Care credit, ORS 315.264; Schedule OR-WFHDC and Publication
+  # OR-WFHDC-TB). A percentage of qualified expenses -- capped at
+  # care_fpg_exp_cap1 for one qualifying child, cap2 for two or more, and at
+  # the lesser earner's earned income -- read from the state's care_fpg_rate
+  # table. The table's income key is the band ceiling(10 x income / poverty
+  # guideline) for the household size (poverty_guideline table; taxpayers
+  # plus dependents, 8 or more uses 8); its key concept is the column for
+  # the youngest qualifying child's age on January 1 of the tax year
+  # (year-end age less one). Disabled qualifying individuals (the table's
+  # columns 4-5) are not observed and not modeled. Shares the federal
+  # take-up draw like the other own-computation care credits
+  #------------------------------------------------------------------------
+  # (the per-unit age limit recycles down each column of the age matrix)
+  fpg_age_obs  = dep_age
+  fpg_age_obs[is.na(dep_age) |
+                dep_age > tax_unit$st_credits.care_fpg_child_age_limit] = Inf
+  fpg_n_qual   = rowSums(is.finite(fpg_age_obs))
+  fpg_jan1_age = pmax(0, pmin(fpg_age_obs[, 1], fpg_age_obs[, 2], fpg_age_obs[, 3]) - 1)
+  fpg_column   = case_when(
+    fpg_jan1_age < tax_unit$st_credits.care_fpg_age_cut1 ~ 1L,
+    fpg_jan1_age < tax_unit$st_credits.care_fpg_age_cut2 ~ 2L,
+    TRUE ~ 3L)
+  fpg_hh_size  = 1L + (tax_unit$filing_status == 2) + as.integer(tax_unit$n_dep)
+  fpg_guideline = lookup_state_credit_table(rep(0, nrow(tax_unit)), fpg_hh_size,
+                                            credit_tables, 'poverty_guideline')
+  fpg_income   = if_else(tax_unit$st_credits.care_fpg_income_max_state == 1,
+                         pmax(tax_unit$agi, tax_unit$st_agi), tax_unit$agi)
+  fpg_band     = if_else(fpg_guideline > 0,
+                         ceiling(10 * pmax(0, fpg_income) / fpg_guideline), Inf)
+  fpg_rate     = lookup_state_credit_table(fpg_band, fpg_column, credit_tables,
+                                           'care_fpg_rate')
+  fpg_exp_cap  = if_else(fpg_n_qual >= 2, tax_unit$st_credits.care_fpg_exp_cap2,
+                         tax_unit$st_credits.care_fpg_exp_cap1)
+  st_care_fpg  = (tax_unit$st_credits.care_fpg_style == 1) *
+    (tax_unit$dep_status != 1) * (fpg_n_qual > 0) * fpg_rate *
+    pmin(tax_unit$care_exp, fpg_exp_cap, care_credit_ei_limit) *
+    tax_unit$cdctc_takeup
+  st_care_credit = st_care_credit + st_care_fpg
 
   list(st_cdctc = st_cdctc, st_cdctc_lowinc = st_cdctc_lowinc,
        st_care_credit = st_care_credit)

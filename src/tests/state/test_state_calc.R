@@ -5852,6 +5852,43 @@ run_case('AR', 2024,
            expect = list(st_fed_tax_ded = 4600),
            label = 'OR-10 2021 stimulus offset continues')
 
+  # OR-W1 (2026-10-21): Working Family Household and Dependent Care credit,
+  # the 2023 Publication OR-WFHDC-TB Example 1 -- household of five, youngest
+  # qualifying child four on January 1 (five at year end), AGI $58,000:
+  # 58,000 / 35,140 (2023 guideline, five) = 1.65 -> row P, column "at least
+  # 3 but under 6" = 45%. $10,000 of expenses, both spouses earning more:
+  # 0.45 x 10,000 = 4,500
+  run_case('OR', 2023,
+           list(filing_status = 2, age1 = 35, age2 = 35, agi = 58000,
+                wages1 = 40000, wages2 = 18000, ei1 = 40000, ei2 = 18000,
+                n_dep = 3, dep_age1 = 5, dep_age2 = 8, dep_age3 = 10,
+                care_exp = 10000),
+           expect = list(st_care_credit = 4500),
+           label = 'OR-W1 WFHDC booklet example 1 (row P, 45%)')
+  # OR-W2: two qualifying children, $30,000 of expenses: capped at $24,000,
+  # then at the lesser earner's $15,000. Household of four, AGI 45,000 /
+  # 30,000 (2023 guideline, four) = 1.50 -> row N; youngest is 1 at year
+  # end (0 on January 1) -> under-3 column, 55%. 0.55 x 15,000 = 8,250
+  run_case('OR', 2023,
+           list(filing_status = 2, age1 = 30, age2 = 30, agi = 45000,
+                wages1 = 30000, wages2 = 15000, ei1 = 30000, ei2 = 15000,
+                n_dep = 2, dep_age1 = 1, dep_age2 = 4, care_exp = 30000),
+           expect = list(st_care_credit = 8250),
+           label = 'OR-W2 WFHDC expense caps and under-3 column')
+  # OR-W3: above 300% of the guideline (row Y) pays nothing; no qualifying
+  # child (youngest dependent 14) pays nothing
+  run_case('OR', 2023,
+           list(filing_status = 2, age1 = 30, age2 = 30, agi = 95000,
+                wages1 = 50000, wages2 = 45000, ei1 = 50000, ei2 = 45000,
+                n_dep = 2, dep_age1 = 1, dep_age2 = 4, care_exp = 10000),
+           expect = list(st_care_credit = 0),
+           label = 'OR-W3a WFHDC zero above 300% of poverty')
+  run_case('OR', 2023,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, filing_status = 4,
+                n_dep = 1, dep_age1 = 14, care_exp = 3000),
+           expect = list(st_care_credit = 0),
+           label = 'OR-W3b WFHDC needs a child under 13')
+
   #--------------------------------------------------------------------------
   # Alabama (Form 40)
   #

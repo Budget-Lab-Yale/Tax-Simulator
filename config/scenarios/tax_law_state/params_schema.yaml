@@ -280,6 +280,7 @@ scalars:
   st_ded.item_prop_tax_cap: .inf
   st_ded.item_mort_prop_cap: .inf   # cap on mortgage interest + capped property tax together (NC $20,000)
   st_ded.item_salt_cap: .inf   # cap on the deductible taxes in the default state itemized base (MS $10,000 / $5,000 MFS)
+  st_ded.item_salt_cap_fed: 0  # 1 = that cap is the federal effective SALT limit, phase-down and MFS included (OR-A line 9)
   st_ded.pease: 0
   st_ded.pease_thresh: .inf
   st_ded.pease_thresh2: .inf   # second tier start (MN 2023+)
@@ -367,6 +368,19 @@ scalars:
   st_credits.care_credit_hh_limit: 0
   st_credits.care_credit_mfs_ineligible: 0
   st_credits.care_credit_refundable: 1
+  # Poverty-banded care credit (OR WFHDC, ORS 315.264): rate from the state's
+  # care_fpg_rate table keyed by the band ceiling(10 x income / poverty
+  # guideline) and the youngest qualifying child's Jan-1 age column, applied
+  # to expenses capped per one / two-or-more children and at the lesser
+  # earner's earned income. Needs the poverty_guideline table (household
+  # size key). Shares st_care_credit and care_credit_refundable
+  st_credits.care_fpg_style: 0
+  st_credits.care_fpg_exp_cap1: 0
+  st_credits.care_fpg_exp_cap2: 0
+  st_credits.care_fpg_child_age_limit: -1
+  st_credits.care_fpg_age_cut1: 0
+  st_credits.care_fpg_age_cut2: 0
+  st_credits.care_fpg_income_max_state: 0
   # Employee payroll and self-employment taxes added to the state itemized
   # base (MO-A Part 2 lines 2-7)
   st_ded.item_add_payroll: 0

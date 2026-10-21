@@ -544,6 +544,24 @@ December 31, 2011 (10% TY2013, 20% TY2014, 25% from TY2015). TAXSIM's Arizona AG
 `ltcg`, where the form gives 80,000. Effect: TAXSIM overstates Arizona tax by 25% of long-term gain times the
 marginal rate (about $450 per $40,000 at 4.5%). PolicyEngine applies the subtraction.
 
+### T62. Oregon EITC young-child rate never applied
+
+ORS 315.266 and OR-17 set Oregon's earned income credit at 11% of the federal credit (12% from TY2020) where a
+qualifying dependent is under 3 at the end of the year, against 8% (9%) otherwise. TAXSIM applies the base rate to
+everyone. Probe (2026-10-21, TY2017 single, $12,000 of wages, one dependent): v39 = 272.00 with the dependent aged 1
+and aged 5, 8% of the federal credit both times. Effect: TAXSIM overstates Oregon tax by 3% of the federal EITC for
+families with a child under 3.
+
+### T63. Oregon WFHDC credit ignores the youngest child's age
+
+The Working Family Household and Dependent Care credit percentage (Publication OR-WFHDC-TB Part B) depends on income
+as a share of the poverty guideline and on the youngest qualifying individual's age (under 3, 3-5, 6-12, and two
+columns for disabled individuals). TAXSIM always uses the last column (disabled, 18 or older). Probe grid
+(2026-10-21, head of household, one dependent aged 1 to 10, $4,000 of care, TY2017 and TY2019): the implied rate is
+the same at every age and equals that column at every income band -- TY2019 wages $14,000 (row I) give 50% where a
+child under 3 earns 70%. The credit is also booked outside v38. Effect: TAXSIM understates the credit by 5 to 45
+percentage points of qualifying expenses.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1539,6 +1557,15 @@ with no formula, so `az_agi` adds nothing back -- in particular interest on othe
 43-1021; Form 140 line 14). Every gap in the class is the Arizona rate times the addback (TY2023 record with $187,650
 of exempt interest, 25% of it treated as non-Arizona: our base $46,652 higher, gap $1,166 = 2.5%). Effect:
 PolicyEngine understates Arizona tax for holders of out-of-state municipal bonds.
+
+### P46. Oregon TY2025 itemized-tax limit not reduced at high income (concept question)
+
+For TY2025 PolicyEngine caps the income and property taxes on Schedule OR-A at a flat $40,000 ($20,000 married
+filing separately). The 2025 OR-A instructions say "The same limit that applies to your federal deduction also
+applies to your Oregon deduction", which we read as including the OBBBA reduction of the federal limit toward
+$10,000 ($5,000) above $500,000 ($250,000) of modified AGI; the 2025 form's line 9 prints only $40,000 / $20,000.
+Raised as a reading to confirm rather than a bug: 23 TY2025 itemizers in our sample, each differing by exactly the
+cap difference times the Oregon rate.
 
 ## Corroboration worth passing along
 

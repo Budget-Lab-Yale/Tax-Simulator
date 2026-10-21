@@ -249,7 +249,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   earn   = st_credits_earned(tax_unit, hh$st_hh_credit, credit_tables,
                              st_exempt_credit = hh$st_exempt_credit)
   child  = st_credits_child(tax_unit, earn$st_eitc)
-  care   = st_credits_care(tax_unit)
+  care   = st_credits_care(tax_unit, credit_tables)
   senior = st_credits_senior(tax_unit)
 
   # Where the child credit and the care credit are alternatives rather than

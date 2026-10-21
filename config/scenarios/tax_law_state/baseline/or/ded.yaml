@@ -165,6 +165,17 @@ item_coupling:
 salt_addback:
   value: 1
   reference: 'Schedule OR-A removes state and local INCOME tax from the itemized total, because Oregon''s federal-tax-liability subtraction already accounts for income taxes paid; sales tax is likewise not deductible. Property taxes remain'
+# Schedule OR-A line 9 caps the remaining taxes (non-Oregon income taxes, real
+# estate and personal property) at the federal SALT limit: $10,000 ($5,000
+# MFS) in the 2019 and 2021 forms; the 2025 instructions: "can't be more than
+# $40,000 ($20,000 if married filing separately). The same limit that applies
+# to your federal deduction also applies to your Oregon deduction." Read off
+# the federal calculation, so the OBBBA phase-down follows automatically; no
+# cap before TCJA. Added 2026-10-21: before this, state-only and federal
+# itemizers deducted uncapped property tax (PE 2022-24 cells 0.90).
+item_salt_cap_fed:
+  value: 1
+  reference: 'Schedule OR-A (150-101-031/-007) line 9, 2019 and 2021: "Total income and property taxes. Add lines 5 through 8. Don''t enter more than $10,000 ($5,000 if married filing separately)"; 2025 OR-A instructions, Limitation on income and property tax ($40,000 / $20,000, same limit as federal); https://www.oregon.gov/DOR/forms/FormsPubs/schedule-or-a_101-007_2021.pdf; https://www.oregon.gov/obtp/Documents/2025%20OR-A%20Instructions.pdf'
 
 #-----------------------------------------------------------------------
 # Federal tax liability subtraction (Form OR-40 line 10; ORS 316.680,

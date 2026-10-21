@@ -186,6 +186,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_ded_mfs_ineligible', # (int) both care deductions barred to married filing separately (MA)
     'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
     'st_ded.item_salt_cap',          # (dbl) cap on the state itemized taxes (MS follows the federal $10,000 limit)
+    'st_ded.item_salt_cap_fed',      # (int) 1 = cap the state itemized taxes at the federal effective SALT limit (OR-A line 9)
     'st_ded.item_payroll_add_med',   # (int) ... including the Additional Medicare Tax (AL: withheld as Medicare tax)
     'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
     'st_ded.prop_tax_ded_cap',       # (dbl) capped property tax deduction (NJ $10,000 then $15,000)
@@ -433,9 +434,19 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # IRC 164(b)(6) limit for its own Schedule A (MS: "Per the Tax Cuts and
       # Jobs Act, there is a $10,000 limitation ($5,000 if married filing
       # separately)", applied after removing state income tax)
+      # With item_salt_cap_fed the cap is the federal effective limit itself,
+      # phase-down and MFS halving included (OR-A line 9: "The same limit that
+      # applies to your federal deduction also applies to your Oregon
+      # deduction"). The federal capped SALT equals that limit whenever it
+      # binds; when it does not, the state's narrower set of taxes cannot
+      # exceed it, so no cap is needed
+      st_salt_cap_fed = if_else(
+        st_ded.item_salt_cap_fed == 1 &
+          salt_item_ded_potential < salt_inc_sales + salt_prop + salt_pers,
+        salt_item_ded_potential, Inf),
       st_item_default =
         item_ded_ex_limits_potential - salt_item_ded_potential +
-        pmin(st_ded.item_salt_cap,
+        pmin(st_ded.item_salt_cap, st_salt_cap_fed,
              salt_prop + salt_pers +
                if_else(st_ded.salt_addback == 1 &
                          agi >= st_ded.salt_addback_agi_thresh, 0, salt_inc_sales)),
