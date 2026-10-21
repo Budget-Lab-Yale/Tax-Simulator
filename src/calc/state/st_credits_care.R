@@ -263,10 +263,14 @@ st_credits_care = function(tax_unit, credit_tables = NULL) {
             dep_age >= tax_unit$st_credits.care_credit_hh_aged_min, na.rm = TRUE) +
       tax_unit$dep_disabled_n,
     tax_unit$st_credits.care_credit_hh_limit)
+  # The expense-based credit shares the federal take-up draw like every state
+  # care credit (JI 2026-10-08; applied here 2026-10-21 -- this block had been
+  # missing it). The flat household-member credit is not an expense claim and
+  # does not take the draw
   st_care_credit = tax_unit$st_credits.care_credit * (tax_unit$dep_status != 1) *
     pmax(pmin(tax_unit$care_exp,
               care_credit_n_qual * tax_unit$st_credits.care_credit_per_dep_cap,
-              care_credit_ei_limit),
+              care_credit_ei_limit) * tax_unit$cdctc_takeup,
          care_credit_hh_n * tax_unit$st_credits.care_credit_hh_member_amt) *
     (1 - tax_unit$st_credits.care_credit_mfs_ineligible * (tax_unit$filing_status == 3))
 

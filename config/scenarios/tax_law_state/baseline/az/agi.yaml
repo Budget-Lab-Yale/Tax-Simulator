@@ -48,13 +48,23 @@ cap_gains_base_lt_only:
 # subtract the federal Schedule 1-A tips (line 13), overtime (line 21),
 # vehicle-loan interest (line 30) and enhanced senior (line 37) deductions on
 # page 6 item V. Vehicle-loan interest is already outside federal AGI in this
-# model (agi.R), so it reaches Arizona through the federal-AGI start. The
-# senior deduction is on; tips and overtime await JI's sign-off on first use
-# of the Tax-Data tips/overtime imputations in the state calculator
-# (2026-10-20). Carried to TY2026+ by the S45 convention (PolicyEngine cites
+# model (agi.R), so it reaches Arizona through the federal-AGI start. Tips and
+# overtime read the Tax-Data tips1/2 and ot1/2 imputations through the federal
+# calculator (JI approved first state use 2026-10-21). Carried to TY2026+ by the S45 convention (PolicyEngine cites
 # HB 4168 (2026) continuing the senior subtraction as 43-1022(35); unverified).
 sub_fed_senior_ded:
   value:
     '2017': 0
     '2025': 1
   reference: 'ADOR Middle Class Tax Cuts Package (MCTCP) Worksheet 2025, line 5 (IRS Schedule 1-A line 37, enhanced deduction for seniors) -> Form 140 page 6 item V; https://azdor.gov/sites/default/files/document/FORMS_INDIVIDUAL_2025_MCTCP.pdf'
+sub_fed_tip_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'ADOR MCTCP Worksheet 2025, line 2 (IRS Schedule 1-A line 13, qualified tips deduction) -> Form 140 page 6 item V'
+sub_fed_ot_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'ADOR MCTCP Worksheet 2025, line 3 (IRS Schedule 1-A line 21, qualified overtime compensation deduction) -> Form 140 page 6 item V'
+

@@ -372,6 +372,11 @@ test_state_calc = function() {
   run_case('AZ', 2024, list(agi = 50000, age1 = 70, senior_ded = 6000),
            expect = list(st_subtractions = 0),
            label = 'AZ-X6b no senior-deduction subtraction before TY2025')
+  # AZ-X6c: MCTCP lines 2-3 -- federal tips (4,000) and overtime (3,000)
+  # deductions subtracted in TY2025
+  run_case('AZ', 2025, list(agi = 60000, tip_ded = 4000, ot_ded = 3000),
+           expect = list(st_subtractions = 7000),
+           label = 'AZ-X6c TY2025 federal tips and overtime deductions subtracted')
   # AZ-X7 (2026-10-20): Increased Excise Tax Credit worksheet, TY2023.
   # Joint, three dependents, AGI 20,000: 25 x (2 + 3) = 125, capped at 100.
   # Single at AGI 12,000: 25; at 13,000: over the $12,500 limit, nothing
@@ -1457,6 +1462,49 @@ test_state_calc = function() {
                 ei1 = 60000, ei2 = 20000),
            expect = list(st_twoearner_credit = 140),
            label = 'SC-11 two wage earner credit below the cap')
+  # SC-12 (2026-10-21): line t -- a dependent under 6 on December 31 adds a
+  # second dependent amount. TY2023 joint, dependents aged 3 and 8:
+  # 2 x 4,610 + 4,610 = 13,830
+  run_case('SC', 2023,
+           list(filing_status = 2, age1 = 35, age2 = 35, agi = 80000,
+                txbl_inc = 52300, n_dep = 2, dep_age1 = 3, dep_age2 = 8),
+           expect = list(st_exempt = 13830),
+           label = 'SC-12 under-6 dependent deduction (line t)')
+  # SC-13: TY2025 OBBBA nonconformity (line e). Single federal non-itemizer
+  # with the $15,750 standard deduction and a $5,000 federal tips deduction:
+  # add back 750 + 5,000 = 5,750; none of it in TY2024
+  run_case('SC', 2025,
+           list(agi = 60000, txbl_inc = 39250, std_ded = 15750,
+                tip_ded = 5000),
+           expect = list(st_additions = 5750),
+           label = 'SC-13 TY2025 OBBBA deductions added back')
+  run_case('SC', 2024,
+           list(agi = 60000, txbl_inc = 40400, std_ded = 14600,
+                tip_ded = 5000),
+           expect = list(st_additions = 0),
+           label = 'SC-13b no OBBBA add-back before TY2025')
+  # SC-14 (2026-10-21): child and dependent care credit, 7% of capped
+  # federal expenses. Joint, two children under 13, $8,000 of care, both
+  # earning: 7% x 6,000 = 420. One child with $2,000: 140. Separate filers: 0
+  run_case('SC', 2023,
+           list(filing_status = 2, age1 = 35, age2 = 35, agi = 90000,
+                txbl_inc = 62300, wages1 = 50000, wages2 = 40000,
+                ei1 = 50000, ei2 = 40000, n_dep = 2, dep_age1 = 4,
+                dep_age2 = 9, care_exp = 8000),
+           expect = list(st_care_credit = 420),
+           label = 'SC-14a care credit $420 cap for two children')
+  run_case('SC', 2023,
+           list(agi = 50000, txbl_inc = 36150, filing_status = 4,
+                wages1 = 50000, ei1 = 50000, n_dep = 1, dep_age1 = 6,
+                care_exp = 2000),
+           expect = list(st_care_credit = 140),
+           label = 'SC-14b care credit 7% of expenses')
+  run_case('SC', 2023,
+           list(agi = 50000, txbl_inc = 36150, filing_status = 3,
+                wages1 = 50000, ei1 = 50000, n_dep = 1, dep_age1 = 6,
+                care_exp = 2000),
+           expect = list(st_care_credit = 0),
+           label = 'SC-14c no care credit for separate filers')
 
   #--------------------------------------------------------------------------
   # Connecticut (CT-1040) -- federal-AGI start, graduated rates with stepped
@@ -4869,6 +4917,46 @@ run_case('AR', 2024,
            expect = list(st_txbl_inc = 83000, liab_st_iit = 4946.50),
            label = 'MT-13 2023 a one-earner couple declines the election')
 
+  # MT-14 (2026-10-21): TY2024 revised Worksheet A. Joint federal itemizer,
+  # itemized total 40,000 with SALT capped at 10,000 (property 8,000, state
+  # income tax 6,000): line 5 = 10,000 - 8,000 = 2,000; line 8 = 40,000 -
+  # 29,200 = 10,800; line 9 = 2,000; Montana itemized = 38,000
+  run_case('MT', 2024,
+           list(filing_status = 2, age1 = 50, age2 = 50, agi = 200000,
+                wages1 = 200000, ei1 = 200000, itemizing = TRUE,
+                std_ded = 29200, item_ded = 40000, item_ded_potential = 40000,
+                item_ded_ex_limits_potential = 40000,
+                salt_item_ded = 10000, salt_item_ded_potential = 10000,
+                salt_prop = 8000, salt_inc_sales = 6000),
+           expect = list(st_item_ded = 38000, st_ded = 38000),
+           label = 'MT-14 TY2024 Worksheet A on the capped federal SALT')
+  # MT-14b: a federal standard-deduction filer cannot itemize for Montana
+  # from TY2024, however large the property tax: deduction = 29,200
+  run_case('MT', 2024,
+           list(filing_status = 2, age1 = 50, age2 = 50, agi = 200000,
+                wages1 = 200000, ei1 = 200000, itemizing = FALSE,
+                std_ded = 29200, item_ded_potential = 25000,
+                item_ded_ex_limits_potential = 25000,
+                salt_item_ded_potential = 10000, salt_prop = 60000,
+                mort_int_item_ded_potential = 15000),
+           expect = list(st_ded = 29200),
+           label = 'MT-14b TY2024 federal standard deduction filers stay standard')
+  # MT-14c: the production shape -- do_taxes() zeroes std_ded for itemizers
+  # and keeps the amount in std_ded_potential. Line 8 must still read 29,200:
+  # itemized 32,000 with capped SALT 10,000, all state income tax (line 5 =
+  # 10,000); line 8 = 32,000 - 29,200 = 2,800; line 9 = 2,800; Montana
+  # itemized = 29,200 (std_ded = 0 had removed the whole 10,000)
+  run_case('MT', 2025,
+           list(filing_status = 2, age1 = 50, age2 = 50, agi = 200000,
+                wages1 = 200000, ei1 = 200000, itemizing = TRUE,
+                std_ded = 0, std_ded_potential = 29200,
+                item_ded = 32000, item_ded_potential = 32000,
+                item_ded_ex_limits_potential = 32000,
+                salt_item_ded = 10000, salt_item_ded_potential = 10000,
+                salt_inc_sales = 10000),
+           expect = list(st_item_ded = 29200),
+           label = 'MT-14c Worksheet line 8 reads the pre-election standard deduction')
+
   #--------------------------------------------------------------------------
   # Louisiana (IT-540)
   #
@@ -6955,7 +7043,7 @@ st_test_unit = function(overrides = list()) {
     sch_e = 0, part_scorp = 0, trad_contr_ira = 0, keogh_contr = 0, early_penalty = 0,
     alimony_exp = 0, se_health = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
-    txbl_ira_dist = 0, ot_ded = 0, tip_ded = 0, senior_ded = 0, hsa_contr = 0,
+    txbl_ira_dist = 0, ot_ded = 0, tip_ded = 0, senior_ded = 0, auto_int_ded = 0, hsa_contr = 0,
     char_cash = 0, char_noncash = 0,
     item_ded = 0, item_ded_ex_limits = 0, salt_item_ded = 0,
     salt_inc_sales = 0, salt_prop = 0, salt_pers = 0,
@@ -6978,7 +7066,7 @@ st_test_unit = function(overrides = list()) {
   for (v in c('item_ded', 'item_ded_ex_limits', 'salt_item_ded',
               'med_item_ded', 'mort_int_item_ded', 'inv_int_item_ded',
               'casualty_item_ded', 'char_item_ded', 'misc_item_ded',
-              'other_item_ded')) {
+              'other_item_ded', 'std_ded')) {
     pot = paste0(v, '_potential')
     if (is.null(unit[[pot]])) {
       unit[[pot]] = unit[[v]]

@@ -5,6 +5,11 @@
 # Set return variables for function
 return_vars$calc_std_ded = c('std_ded')
 
+# Pre-election copy preserved by do_1040() before it zeroes std_ded for
+# itemizers, for state worksheets that limit an addback to the excess over the
+# federal standard deduction (see src/calc/state/st_ded.R)
+return_vars$std_ded_potential = 'std_ded_potential'
+
 
 calc_std_ded = function(tax_unit, fill_missings = F) {
 

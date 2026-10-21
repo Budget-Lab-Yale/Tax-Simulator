@@ -95,6 +95,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'blind1',             # (bool) whether primary filer is blind
     'blind2',             # (bool) whether secondary filer is blind
     'std_ded',            # (dbl)  federal standard deduction
+    'std_ded_potential',  # (dbl)  federal standard deduction before the election (nonzero for itemizers)
     'ei1',                # (dbl)  primary earned income
     'ei2',                # (dbl)  secondary earned income
     'dep_age1',           # (int)  age of youngest dependent (NA if none)
@@ -477,6 +478,16 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
           # and local taxes was limited to $10,000"
           st_ded.item_component_style == 3 ~
             pmax(0, item_ded_ex_limits_potential - salt_inc_sales),
+          # Style 4 (MT TY2024+ Worksheet A, revised 1/2025): the federal
+          # itemized total less the state income tax share of the CAPPED
+          # SALT deduction (line 1 less local income, real estate and
+          # personal property taxes, line 5), but only down to the federal
+          # standard deduction (lines 7-9). No local income tax is separable
+          # from salt_inc_sales; it is zero in the state that uses this style
+          st_ded.item_component_style == 4 ~
+            item_ded_potential -
+              pmin(pmax(0, salt_item_ded_potential - salt_prop - salt_pers),
+                   pmax(0, item_ded_potential - std_ded_potential)),
           TRUE ~ st_item_default
         ),
         0
@@ -588,7 +599,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # deductions to medical and dental only from TY2022 (widely reported as
       # a repeal, which it was not), which the component flags carry
       st_item_ded = if_else(st_ded.item_less_fed_std == 1,
-                            pmax(0, st_item_ded - std_ded), st_item_ded),
+                            pmax(0, st_item_ded - std_ded_potential), st_item_ded),
 
       # Election: independent choice takes the larger; coupled follows the
       # federal election
@@ -750,7 +761,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                                   (st_ded.item_allowed == 0 |
                                      st_ded.salt_addback_prorate == 1),
                                 pmin(salt_inc_component,
-                                     pmax(0, item_ded - std_ded)),
+                                     pmax(0, item_ded - std_ded_potential)),
                                 0),
 
       # High-income federal deduction addback (CO three regimes): federal

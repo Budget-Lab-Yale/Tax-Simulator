@@ -198,6 +198,33 @@ year. Note clarified; no gate.
   federal tax deduction inside the schedule; and TY2024+ cells with realised
   long-term gains turn on whether it implements the HB 221 stacking.
 
+### Closure 2026-10-21
+
+All eight scored cells clear on the id-keyed sample (TY2021 PolicyEngine fully excluded,
+P5): TAXSIM 2017-20 0.970 / 0.966 / 0.966 / 0.986; PolicyEngine 2022-25 0.975 / 0.971 /
+0.989 / 0.991 (from 0.79-0.95).
+
+- **Our side (TY2024+ itemized deductions).** The Department's revised Worksheet A
+  ("Revision to 2024 Form 2 Instructions for Taxpayers Claiming Itemized Deductions",
+  V1 1/2025, https://revenue.mt.gov/files/Forms/SALT-Cap-Instructions.pdf) starts from the
+  federal itemized total and removes only the state-income-tax share of the CAPPED SALT
+  deduction, not below the federal standard deduction; the worksheet is for federal
+  itemizers only. Encoded as generic `item_component_style` 4 with `item_coupling` 1 from
+  TY2024 (property tax had been carried uncapped and federal standard-deduction filers
+  allowed to itemize). The 2025 instructions keep the same arithmetic as Worksheet B, an
+  addition to federal taxable income. Tests MT-14, MT-14b, MT-14c.
+- **Model-wide fix found here.** The federal calculator zeroes `std_ded` for itemizers;
+  worksheet line 8 needs the itemizer's standard deduction. New `std_ded_potential`
+  (kept by `do_taxes()` before the election, like the itemized `*_potential` copies) now
+  feeds every state path that limits an add-back to the excess over the federal standard
+  deduction (MT style 4, LA `item_less_fed_std`, the SALT add-back limit for CO ID MN NM
+  SC VT). Re-scored 2026-10-21: no cell fell; LA PE 2021 +1.9pp, NM PE 2022-25 +0.6-0.9pp.
+- **External.** P47 (PolicyEngine capital gain credit goes negative on a loss), P48 and
+  T64 (both models omit the partial pension/IRA exemption), P49 (PolicyEngine old-age
+  subtraction for 65+ dependents), P50 (PolicyEngine TY2025 flat $40,000 SALT limit), the
+  HB 222 property tax rebate netted into TY2022-23 (P5 class), and PolicyEngine's Elderly
+  Homeowner/Renter Credit (data gap; harness exports `pe_mt_elderly_hrc`).
+
 ## Aggregate validation notes
 
 - HT2 targets once weights land; the Montana DOR publishes an annual

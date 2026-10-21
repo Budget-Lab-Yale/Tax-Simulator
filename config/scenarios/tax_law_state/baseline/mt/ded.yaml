@@ -103,8 +103,15 @@ item_allowed:
   value: 1
   reference: 'Montana ran its own Itemized Deductions Schedule through TY2023 (Form 2 p.7) and allows adjusted federal itemized deductions from TY2024 (Form 2 line 2)'
 item_component_style:
-  value: 1
-  reference: 'Components are selected rather than inherited, because in BOTH regimes the state income tax deduction is stripped out -- pre-2024 by the schedule''s own construction, and from TY2024 by Worksheet A, "Adjusted Federal Itemized Deductions": total federal itemized less the state income tax on federal Schedule A'
+  value:
+    '2017': 1
+    '2024': 4
+  reference: 'TY2017-2023: components are selected rather than inherited, because Montana''s own Itemized Deductions Schedule strips the state income tax deduction by construction. TY2024+: style 4, the revised Worksheet A (Montana DOR, "Revision to 2024 Form 2 Instructions for Taxpayers Claiming Itemized Deductions", V1 1/2025; https://revenue.mt.gov/files/Forms/SALT-Cap-Instructions.pdf): federal itemized total (Form 1040 line 12) less the smaller of the state income tax share of the CAPPED federal SALT deduction (Schedule A line 5e less lines 5a-local, 5b, 5c) and the excess over the federal standard deduction. The 2025 instructions keep the same lines 1-9 as Worksheet B, an addition to federal taxable income (Schedule I Part I line 4), with the $40,000 cap and its phase-down -- arithmetically identical. Corrected 2026-10-21: TY2024-25 had carried uncapped property tax'
+item_coupling:
+  value:
+    '2017': 0
+    '2024': 1
+  reference: 'TY2017-2023: Montana''s own schedule, elected independently of the federal return. TY2024+: Form 2 line 2 "Federal standard deduction or adjusted federal itemized deductions" -- "If you took the standard deduction on your Form 1040, enter the amount from your Form 1040, line 12"; Worksheet A: "Do not use this worksheet if you took the federal standard deduction." Coupled to the federal election (added 2026-10-21; federal non-itemizers had been allowed to itemize for Montana)'
 item_include_medical:
   value: 1
   reference: 'Montana itemized schedule medical lines pre-2024; part of the federal total from TY2024'
@@ -128,7 +135,7 @@ item_include_other:
   reference: 'Other itemized deductions, both regimes'
 item_include_prop_tax:
   value: 1
-  reference: 'Real estate taxes. Left UNCAPPED: pre-2024 Montana''s own schedule had no SALT cap, and from TY2024 Worksheet A removes the state INCOME tax from the federal total, so for the ordinary case where property plus income taxes fall under the federal cap the result is exactly the uncapped property tax'
+  reference: 'Real estate taxes, TY2017-2023 (style 1). Left UNCAPPED: pre-2024 Montana''s own schedule had no SALT cap. Not read from TY2024, when style 4 starts from the federal total with the federal cap (the earlier reading -- that removing the income tax leaves the uncapped property tax -- holds only below the cap; the revised Worksheet A settles it)'
 item_include_pers_tax:
   value: 1
   reference: 'Personal property taxes, on the same reasoning'

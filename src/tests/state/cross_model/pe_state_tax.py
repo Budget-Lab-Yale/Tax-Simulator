@@ -178,6 +178,10 @@ OUTPUT_VARS = {
     # ours is documented-not-modeled pending the rent / property-tax overlays
     # (crosswalk item 1). 2026-10-20
     "pe_az_property_tax_credit": ["az_property_tax_credit"],
+    # Montana Elderly Homeowner/Renter Credit (Form 2EC): PE pays it on
+    # real_estate_taxes = salt_prop; ours is documented-not-modeled pending the
+    # rent / property-tax overlays. 2026-10-21
+    "pe_mt_elderly_hrc": ["mt_elderly_homeowner_or_renter_credit"],
     "pe_or_kicker": ["or_kicker"],
     # Maine's 2025 affordability payment ($300 per person, H.P. 1491 Part T):
     # a direct payment from a special revenue fund, not a tax credit, which PE

@@ -1,6 +1,6 @@
 # Cross-model validation: ID
 
-Class: broad | Generated: 2026-10-13 | Verdict: **PASS**
+Class: broad | Generated: 2026-10-21 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,19 +10,32 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  7539|    5316|   0.9077|    0.9611|         0.9855|          1.0000|               0|          0.0655|     13.0989|
-| 2017|taxsim       | 12962|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 10248|    5828|   0.7135|    0.7784|         0.9564|          0.9772|               0|          0.0685|  -1113.0074|
-| 2018|taxsim       | 10254|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 10257|    5919|   0.7193|    0.7829|         0.9608|          0.9839|               0|          0.1358|  -1226.8889|
-| 2019|taxsim       | 10245|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 10252|    5629|   0.7139|    0.7803|         0.9565|          0.9801|               0|          0.5621|  -1321.5973|
-| 2020|taxsim       | 10244|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1535|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1527|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1530|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1527|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2025|policyengine |  1526|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2017|taxsim       |  7535|    5258|   0.9098|    0.9574|         0.9876|          1.0000|               0|          0.0653|   -232.0434|
+| 2017|taxsim       | 12968|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 10105|    5806|   0.7252|    0.7868|         0.9583|          0.9778|               0|          0.0668|  -1351.2534|
+| 2018|taxsim       | 10397|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 10030|    5806|   0.7291|    0.7907|         0.9569|          0.9773|               0|          0.1345|  -1363.7878|
+| 2019|taxsim       | 10472|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 10190|    5644|   0.7260|    0.7884|         0.9555|          0.9780|               0|          0.4576|  -1410.2238|
+| 2020|taxsim       | 10307|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  8839|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  8805|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  8800|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  8794|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2025|policyengine |  8800|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+
+## Mismatch stage diagnosis (TAXSIM |diff| > $15)
+
+| year|fed_aligned |stage       |     n|
+|----:|:-----------|:-----------|-----:|
+| 2017|TRUE        |1 state AGI |   302|
+| 2017|FALSE       |1 state AGI | 12134|
+| 2018|TRUE        |1 state AGI |   949|
+| 2018|FALSE       |1 state AGI |  9487|
+| 2019|TRUE        |1 state AGI |   965|
+| 2019|FALSE       |1 state AGI |  9526|
+| 2020|TRUE        |1 state AGI |   925|
+| 2020|FALSE       |1 state AGI |  9513|
 
 ## Known differences applied
 

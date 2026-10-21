@@ -141,6 +141,13 @@ scalars:
   st_agi.sub_fed_tip_ded: 0
   st_agi.sub_fed_ot_ded: 0
   st_agi.sub_fed_senior_ded: 0
+  # Federal deductions added back where the state has not adopted them (SC
+  # TY2025 OBBBA nonconformity, SC1040 line e); add_std_above: a federal
+  # non-itemizer's standard deduction above this amount is added back
+  st_agi.add_fed_tip_ded: 0
+  st_agi.add_fed_senior_ded: 0
+  st_agi.add_fed_auto_int_ded: 0
+  st_agi.add_std_above: .inf
   # Federal above-the-line HSA deduction reversed (state does not conform
   # to IRC 223; CA)
   st_agi.add_hsa: 0
@@ -266,7 +273,7 @@ scalars:
   # election (HI Worksheet A-2) can grant it; solved by re-running the
   # pipeline to a fixed point in do_state_taxes()
   st_ded.salt_own_tax_impute: 0
-  st_ded.item_component_style: 0   # 0 default rebuild, 1 components, 2 federal potential, 3 federal total less full income tax (NE)
+  st_ded.item_component_style: 0   # 0 default rebuild, 1 components, 2 federal potential, 3 federal total less full income tax (NE), 4 federal total less the income-tax share of capped SALT, not below the federal standard (MT 2024+)
   st_ded.item_include_medical: 0
   st_ded.item_include_mortgage: 0
   st_ded.item_include_investment: 0

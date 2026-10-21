@@ -1,6 +1,6 @@
 # Cross-model validation: MT
 
-Class: broad | Generated: 2026-10-13 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-10-21 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,23 +10,65 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  7417|    5512|   0.8088|    0.9219|         0.8378|          0.9291|          0.1769|          0.0033|      4.6863|
-| 2017|taxsim       | 13084|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       |  7530|    5470|   0.8029|    0.9126|         0.8400|          0.9276|          0.1753|          0.0034|     -3.6752|
-| 2018|taxsim       | 12972|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       |  7524|    5546|   0.7525|    0.8931|         0.8384|          0.9228|          0.1110|          0.0142|      2.4752|
-| 2019|taxsim       | 12978|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       |  7387|    5268|   0.7502|    0.8912|         0.8607|          0.9434|          0.1163|          0.0064|     45.2189|
-| 2020|taxsim       | 13109|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1535|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |   758|     376|   0.4987|    0.6306|         0.7287|          0.7926|          0.1135|         16.0046|  -1585.0819|
-| 2022|policyengine |   769|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |   744|     366|   0.4852|    0.5887|         0.7404|          0.7869|          0.1102|         20.3176|   -614.6194|
-| 2023|policyengine |   786|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1128|     460|   0.5009|    0.6179|         0.8978|          0.9370|          0.1144|         13.1700|   -165.9466|
-| 2024|policyengine |   399|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2025|policyengine |  1132|     117|   0.2032|    0.6069|         0.8803|          0.9145|          0.1051|         66.3716|  -3339.6529|
-| 2025|policyengine |   394|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2017|taxsim       |  6194|    4677|   0.8605|    0.9530|         0.8991|          0.9699|          0.1577|          0.0030|      8.7273|
+| 2017|taxsim       | 14309|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       |  6237|    4695|   0.8587|    0.9489|         0.9014|          0.9659|          0.1546|          0.0031|     -3.9711|
+| 2018|taxsim       | 14265|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       |  6226|    4687|   0.8320|    0.9489|         0.9031|          0.9661|          0.0866|          0.0049|     -4.4426|
+| 2019|taxsim       | 14276|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       |  5971|    4373|   0.8275|    0.9409|         0.9223|          0.9856|          0.0883|          0.0047|     77.0587|
+| 2020|taxsim       | 14526|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  8839|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  2813|    1652|   0.7408|    0.8870|         0.9249|          0.9746|          0.1351|          0.0049|    -19.7553|
+| 2022|policyengine |  5992|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  2781|    1740|   0.7418|    0.8828|         0.9190|          0.9713|          0.1305|          0.0043|    -20.5832|
+| 2023|policyengine |  6019|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  4676|    2521|   0.7143|    0.8708|         0.9683|          0.9889|          0.1367|          0.0353|    -17.0734|
+| 2024|policyengine |  4118|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2025|policyengine |  4342|     561|   0.2579|    0.8026|         0.9626|          0.9911|          0.1430|         44.2503|     26.8793|
+| 2025|policyengine |  4458|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+
+## Mismatch stage diagnosis (TAXSIM |diff| > $15)
+
+| year|fed_aligned |stage            |    n|
+|----:|:-----------|:----------------|----:|
+| 2017|TRUE        |1 state AGI      |  993|
+| 2017|TRUE        |2 exemptions     |    2|
+| 2017|TRUE        |3 deductions     |  126|
+| 2017|TRUE        |4 taxable income |    4|
+| 2017|TRUE        |7 rate/rounding  |    5|
+| 2017|FALSE       |1 state AGI      | 9571|
+| 2017|FALSE       |2 exemptions     |   36|
+| 2017|FALSE       |3 deductions     | 2640|
+| 2017|FALSE       |7 rate/rounding  |    3|
+| 2018|TRUE        |1 state AGI      | 1950|
+| 2018|TRUE        |2 exemptions     |    3|
+| 2018|TRUE        |3 deductions     |  743|
+| 2018|TRUE        |4 taxable income |    4|
+| 2018|TRUE        |7 rate/rounding  |    4|
+| 2018|FALSE       |1 state AGI      | 8761|
+| 2018|FALSE       |2 exemptions     |   34|
+| 2018|FALSE       |3 deductions     | 1857|
+| 2018|FALSE       |7 rate/rounding  |    1|
+| 2019|TRUE        |1 state AGI      | 1990|
+| 2019|TRUE        |2 exemptions     |    4|
+| 2019|TRUE        |3 deductions     |  700|
+| 2019|TRUE        |4 taxable income |    3|
+| 2019|TRUE        |7 rate/rounding  |    5|
+| 2019|FALSE       |1 state AGI      | 8902|
+| 2019|FALSE       |2 exemptions     |   34|
+| 2019|FALSE       |3 deductions     | 1957|
+| 2019|FALSE       |4 taxable income |    4|
+| 2019|FALSE       |5 state EITC     |  274|
+| 2020|TRUE        |1 state AGI      | 1795|
+| 2020|TRUE        |2 exemptions     |    3|
+| 2020|TRUE        |3 deductions     |  748|
+| 2020|TRUE        |7 rate/rounding  |    3|
+| 2020|FALSE       |1 state AGI      | 9103|
+| 2020|FALSE       |2 exemptions     |   35|
+| 2020|FALSE       |3 deductions     | 1821|
+| 2020|FALSE       |4 taxable income |    4|
+| 2020|FALSE       |5 state EITC     |  291|
 
 ## Known differences applied
 
@@ -49,4 +91,11 @@ defined (federally aligned records; see README).
 |ALL   |both         |     2017|     2025|structural         |exclude  |Child and dependent care credit take-up: the federal calculator draws 90% take-up for the care credit (cdctc.R, calibrated to 2019 claims) and every state care credit shares the draw (JI 2026-10-08); TAXSIM and PolicyEngine assume full take-up. A family with care expenses drawn as a non-taker gets no state care credit from us and the full credit from them; where federal tax is zero either way the record stays federally aligned. Keyed on care expenses with the draw at zero (in a state without a care credit the hits match and drop out harmlessly)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |ALL   |policyengine |     2021|     2025|federal-side       |exclude  |Our federal child and dependent care credit (src/calc/functions/credits/cdctc.R) has no bar on married-filing-separately returns; IRC 21(e)(2) denies the credit to separate filers unless the spouses lived apart for the last six months (treated as unmarried), which the PUF does not identify. PolicyEngine pays such filers nothing federally (probe 2026-10-09, MD 2024 records 40953, 48820, 42620: cdcc 0), so every state credit built on the federal one (MD 502CR Part B here) diverges by the state credit. Federal-side: documented, not fixed in the state workstream                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 |ALL   |policyengine |     2021|     2025|input-coverage     |exclude  |PolicyEngine twin of the per-state TAXSIM crosswalk rows: the PolicyEngine input carries property tax, mortgage interest and charitable gifts but no investment interest or other itemized deductions (Schedule A lines 9 and 16, our inv_int_item_ded_potential + other_item_ded_potential = xw_unhanded_item), so a state itemized deduction built from federal Schedule A is short by them in PolicyEngine. Found on IA 2022 records 220684 and 163276: PolicyEngine's Iowa itemized deductions are lower than ours by exactly other_item_exp ($7,819 and $848)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|MT    |policyengine |     2022|     2023|external-model-bug |exclude  |P5 class: PolicyEngine counts mt_property_tax_rebate (HB 222 of 2023: up to $675 of property tax on a principal residence for TY2022 and TY2023, claimed on a separate Department of Revenue rebate application, not on Form 2) as a nonrefundable Montana income tax credit (mt non_refundable credit list 2022-2023). Not a Form 2 credit, so our encoding needs no change. 2026-10-21: 12.5-13.4% of each cell; with P47 and P48 these records match at 0.21-0.23 and explain about 90% of the 2022-23 residual                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|MT    |policyengine |     2021|     2023|external-model-bug |exclude  |P47: policyengine-us mt_capital_gain_credit is 2% of capital_gains with no floor at zero (the code comment says the variable 'is capped at 0'; it is not), so a net capital LOSS yields a negative credit that RAISES Montana tax -- e.g. TY2022 record 64878 (AGI -$203,518): mt_non_refundable_credits = -6,650, mt_income_tax = 6,650 on zero taxable income. 15-30-2301 is a credit on net capital GAIN. Keyed where 2% of the net loss exceeds the $100 tolerance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|MT    |policyengine |     2021|     2023|external-model-bug |exclude  |P48: policyengine-us has no Montana partial pension, annuity and IRA income exemption (15-30-2110(2)(c); $4,640 per taxpayer in TY2022, reduced $2 per $1 of federal AGI over the threshold; repealed from TY2024) -- the mt subtractions list for 2021-2023 omits it. Our encoding follows the Form 2 partial pension schedules (agi.yaml). Keyed where the exemption at the 6.75% top rate exceeds $100                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|MT    |policyengine |     2024|     2025|external-model-bug |exclude  |P49: policyengine-us mt_old_age_subtraction ($5,500 per person 65 or older, TY2024+) is computed for every member of the tax unit, dependents included -- the formula has no head-or-spouse condition -- so a filer under 65 with a dependent parent aged 78 gets $5,500 off Montana taxable income (TY2024 records 6013, 154264, 25521: PolicyEngine Montana taxable income = federal less 5,500). The subtraction is the taxpayer's and spouse's. Keyed on any dependent aged 65 or over                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|MT    |policyengine |     2021|     2025|transfer-netting   |exclude  |PE nets mt_elderly_homeowner_or_renter_credit (Form 2EC, 15-30-2337: 62+, household income under $45,000, up to $1,150) into state_income_tax, computed on real_estate_taxes = salt_prop with no rent input; ours is documented-not-modeled pending the rent / property-tax overlays (tax_data_gaps.csv, Elderly Homeowner/Renter Credit). Mirrors the MO/RI/AZ rows                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|MT    |taxsim       |     2017|     2020|external-model-bug |exclude  |T64: TAXSIM does not apply Montana's partial pension, annuity and IRA income exemption (15-30-2110(2)(c); $4,110 per taxpayer in TY2017, reduced $2 per $1 of federal AGI over $34,260). Probe 2026-10-21 (single, $10,000 wages, TY2017/2019/2020): v32 = 20,000 with $10,000 of pensions, the whole pension, where the Form 2 schedule exempts $4,110. On pension-only records TAXSIM's state AGI exceeds ours by exactly our exemption. PolicyEngine omits it too (P48). Keyed where the exemption at the 6.9% top rate exceeds $100                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|MT    |policyengine |     2025|     2025|external-model-bug |exclude  |P50: for TY2025 PolicyEngine builds Montana's adjusted itemized deduction with the flat $40,000 ($20,000 MFS) SALT limit, not the federal limit after the OBBBA reduction toward $10,000 ($5,000) above $500,000 ($250,000) MAGI. The 2025 Form 2 instructions (Worksheet B) describe the reduction explicitly ('There is a phaseout for taxpayers with modified adjusted gross income of more than $500,000 ... until the cap is gradually reduced to $10,000') and start from Schedule A line 5e. TY2025 record 384796 (MFS, AGI $544,265): PolicyEngine mt_itemized_deductions_joint 62,421 = federal itemized 47,421 - 5,000 + 20,000. 2026-10-21: exposed records match at 0.17 against 0.99. Same mechanism as the Oregon P46 reading                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 

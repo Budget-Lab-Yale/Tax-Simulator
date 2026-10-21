@@ -1,6 +1,6 @@
 # Cross-model validation: LA
 
-Class: broad | Generated: 2026-10-13 | Verdict: **PASS**
+Class: broad | Generated: 2026-10-21 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,24 +10,65 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  7288|    5646|   0.7913|    0.9374|         0.8773|          0.9655|          0.1139|          7.7810|    -14.0627|
-| 2017|taxsim       | 13213|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 10041|    7577|   0.7574|    0.9338|         0.8431|          0.9596|          0.0878|          8.7116|    -21.2574|
-| 2018|taxsim       | 10461|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       |  9937|    7602|   0.7447|    0.9320|         0.8354|          0.9547|          0.0868|          9.2735|    -20.4130|
-| 2019|taxsim       | 10565|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       |  9615|    7042|   0.7434|    0.9124|         0.8537|          0.9541|          0.0881|          9.5400|    -14.3486|
-| 2020|taxsim       | 10881|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |   646|     256|   0.5356|    0.7492|         0.8633|          0.9609|          0.1269|          9.3748|   -147.6546|
-| 2021|policyengine |   889|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |   840|     415|   0.7155|    0.8583|         0.9783|          0.9952|          0.1012|          0.0042|     -5.4350|
-| 2022|policyengine |   687|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |   841|     420|   0.7051|    0.8526|         0.9833|          1.0000|          0.0987|          0.0043|     -0.5991|
-| 2023|policyengine |   689|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |   820|     436|   0.7329|    0.8780|         0.9771|          1.0000|          0.1146|          0.0039|      3.3556|
-| 2024|policyengine |   707|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2025|policyengine |   788|     105|   0.6777|    0.8668|         0.9810|          1.0000|          0.1497|          0.0055|     -8.4027|
-| 2025|policyengine |   738|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2017|taxsim       |  7285|    5568|   0.7937|    0.9477|         0.8797|          0.9722|          0.1113|          7.4789|     -9.5378|
+| 2017|taxsim       | 13218|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       |  9982|    7517|   0.7631|    0.9423|         0.8489|          0.9630|          0.0850|          8.7638|    -22.0318|
+| 2018|taxsim       | 10520|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       |  9983|    7513|   0.7475|    0.9371|         0.8436|          0.9591|          0.0837|          9.4524|    -22.5823|
+| 2019|taxsim       | 10519|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       |  9621|    7113|   0.7424|    0.9204|         0.8538|          0.9599|          0.0865|          9.7279|    -17.0150|
+| 2020|taxsim       | 10876|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  3761|    1503|   0.5504|    0.8495|         0.8663|          0.9714|          0.1348|          9.9327|      0.2796|
+| 2021|policyengine |  5078|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  5024|    2431|   0.7432|    0.8955|         0.9815|          0.9984|          0.1071|          0.0041|      3.0285|
+| 2022|policyengine |  3781|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  4975|    2617|   0.7429|    0.8931|         0.9794|          0.9989|          0.1035|          0.0038|      2.0060|
+| 2023|policyengine |  3825|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  4929|    2609|   0.7397|    0.8931|         0.9824|          0.9985|          0.1029|          0.0041|      3.6098|
+| 2024|policyengine |  3865|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2025|policyengine |  4666|     610|   0.7070|    0.8913|         0.9902|          0.9967|          0.1389|          0.0048|     -4.5129|
+| 2025|policyengine |  4134|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+
+## Mismatch stage diagnosis (TAXSIM |diff| > $15)
+
+| year|fed_aligned |stage            |    n|
+|----:|:-----------|:----------------|----:|
+| 2017|TRUE        |1 state AGI      |  322|
+| 2017|TRUE        |2 exemptions     |  478|
+| 2017|TRUE        |3 deductions     |    6|
+| 2017|TRUE        |4 taxable income |  179|
+| 2017|FALSE       |1 state AGI      | 3908|
+| 2017|FALSE       |2 exemptions     | 5878|
+| 2017|FALSE       |3 deductions     | 2646|
+| 2017|FALSE       |4 taxable income |  207|
+| 2017|FALSE       |5 state EITC     |   81|
+| 2018|TRUE        |1 state AGI      |  718|
+| 2018|TRUE        |2 exemptions     | 1124|
+| 2018|TRUE        |3 deductions     |   74|
+| 2018|TRUE        |4 taxable income |  305|
+| 2018|FALSE       |1 state AGI      | 3554|
+| 2018|FALSE       |2 exemptions     | 4121|
+| 2018|FALSE       |3 deductions     | 1457|
+| 2018|FALSE       |4 taxable income |  314|
+| 2018|FALSE       |5 state EITC     |   85|
+| 2019|TRUE        |1 state AGI      |  749|
+| 2019|TRUE        |2 exemptions     | 1124|
+| 2019|TRUE        |3 deductions     |   77|
+| 2019|TRUE        |4 taxable income |  318|
+| 2019|FALSE       |1 state AGI      | 3569|
+| 2019|FALSE       |2 exemptions     | 4162|
+| 2019|FALSE       |3 deductions     | 1463|
+| 2019|FALSE       |4 taxable income |  321|
+| 2019|FALSE       |5 state EITC     |  150|
+| 2020|TRUE        |1 state AGI      |  713|
+| 2020|TRUE        |2 exemptions     | 1074|
+| 2020|TRUE        |3 deductions     |   67|
+| 2020|TRUE        |4 taxable income |  329|
+| 2020|FALSE       |1 state AGI      | 3966|
+| 2020|FALSE       |2 exemptions     | 4084|
+| 2020|FALSE       |3 deductions     | 1447|
+| 2020|FALSE       |4 taxable income |  332|
+| 2020|FALSE       |5 state EITC     |  149|
 
 ## Known differences applied
 

@@ -195,7 +195,7 @@ Last updated: `2026-08-21`
   the federal effective cap, so the TY2025 high-income reduction carries through
   per the 2025 instructions ("the same limit that applies to your federal
   deduction"); the final form's line 9 prints only $40,000 / $20,000, so this is a
-  reading, flagged to JI (P46: PolicyEngine uses the flat amount).
+  reading, confirmed by JI 2026-10-21 (P46: PolicyEngine uses the flat amount).
 - **The retirement income credit (ORS 316.157) is not modeled.** Its 9% rate is
   known but the eligible base, the household-income measure and the Social
   Security offset limits were not transcribed from a primary source in this

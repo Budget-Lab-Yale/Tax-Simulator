@@ -93,6 +93,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
     'tip_ded',        # (dbl)  federal qualified tips deduction (post-federal calc)
     'senior_ded',     # (dbl)  federal enhanced senior deduction (post-federal calc)
+    'auto_int_ded',   # (dbl)  federal vehicle-loan interest deduction (in AGI in this model)
+    'std_ded',        # (dbl)  federal standard deduction (zero for itemizers)
     'char_cash',      # (dbl)  cash charitable contributions
     'char_noncash',   # (dbl)  non-cash charitable contributions
     'itemizing',      # (bool) whether unit itemizes on the federal return
@@ -189,6 +191,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_fed_tip_ded',       # (int) whether the federal tips deduction is subtracted (AZ 2025)
     'st_agi.sub_fed_ot_ded',        # (int) whether the federal OT deduction is subtracted (AZ 2025)
     'st_agi.sub_fed_senior_ded',    # (int) whether the federal senior deduction is subtracted (AZ 2025)
+    'st_agi.add_fed_tip_ded',       # (int) federal tips deduction added back (SC 2025 nonconformity)
+    'st_agi.add_fed_senior_ded',    # (int) federal senior deduction added back (SC 2025)
+    'st_agi.add_fed_auto_int_ded',  # (int) federal vehicle-loan interest deduction added back (SC 2025)
+    'st_agi.add_std_above',         # (dbl) non-itemizer federal standard deduction above this is added back (SC 2025 pre-OBBBA amount; Inf = none)
     'st_agi.add_hsa',               # (int) whether the federal HSA deduction is added back (CA)
     'st_agi.cap_loss_limit',        # (dbl) state per-year net capital loss limit (WI $500)
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
@@ -539,7 +545,20 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # unobserved and stay untaxed -- documented known-difference)
       st_add_hsa = st_agi.add_hsa * hsa_contr,
 
-      st_additions = st_add_muni + st_add_ot + st_add_cap_loss + st_add_hsa,
+      # Additions: federal deductions from IRC sections the state has not
+      # adopted, for a taxable-income start (SC TY2025 conforms to the IRC as
+      # of 12/31/2024, so SC1040 line e adds back the OBBBA Schedule 1-A
+      # deductions and the OBBBA increase in the standard deduction for
+      # federal non-itemizers). Vehicle-loan interest sits in federal AGI in
+      # this model, which a taxable-income start inherits all the same
+      st_add_fed_obbba = st_agi.add_fed_tip_ded * tip_ded +
+                         st_agi.add_fed_senior_ded * senior_ded +
+                         st_agi.add_fed_auto_int_ded * auto_int_ded +
+                         if_else(itemizing == 1, 0,
+                                 pmax(0, std_ded - st_agi.add_std_above)),
+
+      st_additions = st_add_muni + st_add_ot + st_add_cap_loss + st_add_hsa +
+                     st_add_fed_obbba,
 
       # Subtraction: state refunds included in the federal base
       st_sub_ref = st_agi.sub_state_ref * state_ref,

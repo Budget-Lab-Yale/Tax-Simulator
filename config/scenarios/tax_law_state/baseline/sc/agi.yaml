@@ -1,4 +1,11 @@
 ---
+filing_status_mapper:
+  add_std_above:
+    '1': std_pre_obbba_single
+    '2': std_pre_obbba_joint
+    '3': std_pre_obbba_single
+    '4': std_pre_obbba_head
+
 # South Carolina: base and additions/subtractions (SC1040; S.C. Code 12-6-1110
 # et seq.). SC tax = rate x (federal TAXABLE income + additions - subtractions),
 # so the federal standard/itemized deduction flows through. SC uses FIXED-DATE
@@ -36,6 +43,55 @@ documented_not_modeled:
 conformity_group:
   value: 3
   reference: 'Fixed-date annual conformity -> reference-law group 3 (conformity_groups.yaml)'
+
+# TY2025 OBBBA nonconformity. South Carolina conforms to the IRC as amended
+# through December 31, 2024 (2025 SC1040 instructions, Before You Begin), so
+# P.L. 119-21's deductions are not adopted and SC1040 line e adds back "any
+# federal deductions resulting from IRC sections that South Carolina does not
+# adopt": the Schedule 1-A tips, overtime, vehicle-loan interest and enhanced
+# senior deductions, and for federal non-itemizers the OBBBA increase in the
+# standard deduction over the pre-OBBBA TY2025 amounts (Rev. Proc. 2024-40:
+# $15,000 / $30,000 / $22,500). The conformity bridge (group 3, S44) points at
+# enacted federal law, so the departure is carried here. Added 2026-10-21;
+# tips/overtime/vehicle-loan use the Tax-Data tips1/2, ot1/2 and auto_int_exp
+# imputations through the federal calculator (JI approved first state use
+# 2026-10-21). Not modeled: the itemizer SALT-cap increase to $40,000.
+# Carried to TY2026+ by S45 pending SC's next conformity act.
+add_overtime_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: '2025 SC1040 instructions p.2 ("South Carolina conforms to the Internal Revenue Code as amended through December 31, 2024") and line e ("Add back any federal deductions resulting from IRC sections that South Carolina does not adopt"); IRS Schedule 1-A line 21; https://dor.sc.gov/sites/dor/files/forms/SC1040Instr_2025.pdf'
+add_fed_tip_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: '2025 SC1040 instructions line e (IRC sections not adopted); IRS Schedule 1-A line 13'
+add_fed_senior_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: '2025 SC1040 instructions line e (IRC sections not adopted); IRS Schedule 1-A line 37'
+add_fed_auto_int_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: '2025 SC1040 instructions line e (IRC sections not adopted); IRS Schedule 1-A line 30'
+std_pre_obbba_single:
+  value:
+    '2017': .inf
+    '2025': 15000
+  reference: 'Rev. Proc. 2024-40 (TY2025 inflation adjustments): TY2025 standard deduction before P.L. 119-21, single and married filing separately $15,000; the OBBBA increase above it is added back on SC1040 line e'
+std_pre_obbba_joint:
+  value:
+    '2017': .inf
+    '2025': 30000
+  reference: 'Rev. Proc. 2024-40 (TY2025 inflation adjustments): married filing jointly $30,000'
+std_pre_obbba_head:
+  value:
+    '2017': .inf
+    '2025': 22500
+  reference: 'Rev. Proc. 2024-40 (TY2025 inflation adjustments): head of household $22,500'
 
 # Out-of-state municipal bond interest added back (SC1040 line d); SC own-state
 # obligations stay exempt

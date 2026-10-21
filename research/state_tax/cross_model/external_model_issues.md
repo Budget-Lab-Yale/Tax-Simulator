@@ -562,6 +562,22 @@ the same at every age and equals that column at every income band -- TY2019 wage
 child under 3 earns 70%. The credit is also booked outside v38. Effect: TAXSIM understates the credit by 5 to 45
 percentage points of qualifying expenses.
 
+### T64. Montana partial pension, annuity and IRA exemption not applied
+
+15-30-2110(2)(c) MCA exempted up to $4,110 per taxpayer of pension, annuity and IRA income in TY2017 (indexed;
+reduced $2 per $1 of federal AGI over the threshold; repealed from TY2024). TAXSIM's Montana AGI carries the whole
+pension. Probe (2026-10-21, single, $10,000 of wages, TY2017/2019/2020): v32 = 20,000 with $10,000 of pensions, where
+the Form 2 schedule gives 15,890 in TY2017. Effect: TAXSIM overstates Montana tax for retirees by up to the exemption
+times the marginal rate.
+
+### T65. South Carolina TY2017 deduction for dependents under 6 not applied
+
+SC1040 line t (12-6-1160) deducts, for each dependent under 6 at year end, the federal personal exemption amount in
+TY2017 ($4,050; 2017 instruction packet) and the SC dependent exemption from TY2018. TAXSIM applies it from TY2018
+only. Probe (2026-10-21, joint, $60,000 of wages, one dependent aged 3 vs 8): v36 = 35,150 for both in TY2017; the
+age-3 return is lower by exactly $4,110 / $4,190 / $4,260 in TY2018-20. Effect: TAXSIM overstates TY2017 South
+Carolina tax by $4,050 times the rate for each young child.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1564,8 +1580,39 @@ For TY2025 PolicyEngine caps the income and property taxes on Schedule OR-A at a
 filing separately). The 2025 OR-A instructions say "The same limit that applies to your federal deduction also
 applies to your Oregon deduction", which we read as including the OBBBA reduction of the federal limit toward
 $10,000 ($5,000) above $500,000 ($250,000) of modified AGI; the 2025 form's line 9 prints only $40,000 / $20,000.
-Raised as a reading to confirm rather than a bug: 23 TY2025 itemizers in our sample, each differing by exactly the
+Our reading was confirmed internally (2026-10-21); raised upstream as a reading to confirm rather than a bug: 23 TY2025 itemizers in our sample, each differing by exactly the
 cap difference times the Oregon rate.
+
+### P47. Montana capital gain credit goes negative on a net capital loss
+
+`mt_capital_gain_credit` is `0.02 * capital_gains` with no floor at zero; the code comment says the variable "is
+capped at 0", but `capital_gains` is negative for a net loss. The negative credit then raises Montana tax: TY2022
+record with federal AGI of -$203,518 and no Montana taxable income gets `mt_non_refundable_credits` = -6,650 and
+`mt_income_tax` = 6,650. 15-30-2301 MCA credits 2% of net capital GAIN. Effect: PolicyEngine overstates Montana tax
+by 2% of the net loss for TY2021-23 filers with capital losses.
+
+### P48. Montana partial pension, annuity and IRA exemption not modeled
+
+The Montana subtractions list for 2021-2023 has no pension exemption (15-30-2110(2)(c) MCA: $4,640 per taxpayer in
+TY2022 against pension, annuity and IRA income, reduced $2 per $1 of federal AGI above the threshold; repealed from
+TY2024). Effect: PolicyEngine overstates Montana tax by up to about $310 per eligible taxpayer for TY2021-23.
+
+### P49. Montana old-age subtraction given to dependents
+
+`mt_old_age_subtraction` ($5,500 for a person 65 or older, TY2024+) is computed for every person in the tax unit
+with no head-or-spouse condition, so a dependent parent's age earns the filer the subtraction. TY2024 records with a
+filer under 50 and a dependent aged 78-80: PolicyEngine's Montana taxable income is the federal figure less
+exactly 5,500. Effect: PolicyEngine understates Montana tax by $5,500 times the marginal rate (about $260-$325) for
+filers claiming an elderly dependent.
+
+### P50. Montana TY2025 itemized SALT limit not reduced at high income
+
+Montana's TY2025 Worksheet B starts from federal Schedule A line 5e and its instructions describe the OBBBA
+reduction of the $40,000 limit toward $10,000 above $500,000 of modified AGI. PolicyEngine applies the flat
+$40,000 ($20,000 MFS): TY2025 married-filing-separately record with AGI $544,265 gets
+`mt_itemized_deductions_joint` = 62,421, which is the federal itemized total of 47,421 with its phased-down $5,000 of
+SALT replaced by $20,000. Effect: PolicyEngine understates Montana tax for high-income itemizers. The same choice
+appears for Oregon (P46).
 
 ## Corroboration worth passing along
 

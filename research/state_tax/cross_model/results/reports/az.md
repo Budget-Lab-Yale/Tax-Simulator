@@ -26,7 +26,7 @@ defined (federally aligned records; see README).
 | 2023|policyengine |  2702|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2024|policyengine |  6074|    2773|   0.6939|    0.8433|         0.9794|          0.9996|          0.0413|          0.0049|     26.0195|
 | 2024|policyengine |  2720|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2025|policyengine |  6049|     637|   0.6108|    0.7907|         0.9623|          1.0000|          0.0521|          0.9159|      5.1195|
+| 2025|policyengine |  6049|     637|   0.5689|    0.7476|         0.9608|          1.0000|          0.0521|          3.3954|    -10.2892|
 | 2025|policyengine |  2751|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)

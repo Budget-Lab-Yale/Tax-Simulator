@@ -5,9 +5,11 @@
 # chained-CPI indexed. In TY2017 the federal personal exemptions are still in
 # federal taxable income, so no separate SC dependent exemption applies.
 #
-# KNOWN-DIFFERENCE: a dependent under age 6 receives the amount TWICE (line t
-# doubles line w). The under-6 doubling is not modeled (needs dependent-age
-# detail keyed to the exemption); only the single per-dependent amount is taken.
+# Dependents under age 6 on December 31 get a further deduction (SC1040 line t;
+# S.C. Code 12-6-1160): from TY2018 the same amount as the line w dependent
+# exemption, in TY2017 the federal personal exemption amount ($4,050). Encoded
+# 2026-10-21 on the generic per-child add-on from the observed dependent ages
+# (dependents beyond the three age slots are not counted).
 
 personal_amount:
   value: 0
@@ -24,3 +26,19 @@ dep_amount:
     '2024': 4790
     '2025': 4930
   reference: 'S.C. Code 12-6-1140; SC1040 line w SC dependent exemption (chained-CPI indexed, $10 rounding). No line w in 2017 (federal personal exemptions still in the base)'
+dep_child_addl:
+  value:
+    '2017': 4050
+    '2018': 4110
+    '2019': 4190
+    '2020': 4260
+    '2021': 4300
+    '2022': 4430
+    '2023': 4610
+    '2024': 4790
+    '2025': 4930
+  reference: 'S.C. Code 12-6-1160; SC1040 line t "Dependents under the age of 6 years on December 31 of the tax year" (2017, 2022, 2024 forms). TY2018+: equal to the line w dependent exemption; TY2017: the federal personal exemption amount ($4,050) under 12-6-1160 as then in force'
+dep_child_max_age:
+  value: 5
+  reference: 'SC1040 line t: under the age of 6 years on December 31 (year-end age 5 or less)'
+
