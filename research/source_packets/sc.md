@@ -66,7 +66,7 @@ probe now agrees within $10 everywhere, incl. retirees at $0)
 - **Military-retirement deduction** (fully deductible 2022+) not separately
   identified; **44% cap-gain deduction** needs net LT gain over net ST loss
   (PUF has it at return level).
-- **Under-6 dependent doubling** (line t) not modeled (needs dependent-age detail).
+- **Under-6 dependent deduction** (line t) encoded 2026-10-21 from the observed dependent ages (TY2017: the federal personal exemption amount, $4,050, per the 2017 instruction packet).
 - **SALT addback** uses the shared mechanism; SC's exact $10k-cap interaction is
   a known-difference vs the CO form.
 - **US-obligation subtraction**: flag only, not modeled (PUF share unobserved;
@@ -86,3 +86,25 @@ probe now agrees within $10 everywhere, incl. retirees at $0)
   will project 2025 law and be structurally wrong for SC.
 - Reform-year 0% ceiling B0 carries $10-50 uncertainty; the exact constant C is
   preserved so tax above B0 is exact.
+
+## Closure 2026-10-21
+
+All nine cells clear: TAXSIM 2017-20 0.993 / 0.967 / 0.967 / 0.968; PolicyEngine 2021-25
+1.000 / 0.963 / 0.962 / 0.960 / 0.978 (from 0.874-0.902).
+
+- **Our side.** Line t for dependents under 6; the child and dependent care credit (7% of
+  IRC 21 expenses, $210 / $420, nonrefundable, separate filers barred; 2025 SC1040
+  instructions line 11); the TY2025 OBBBA nonconformity (SC conforms to the IRC as of
+  December 31, 2024, so SC1040 line e adds back the Schedule 1-A tips, overtime,
+  vehicle-loan and senior deductions and, for federal non-itemizers, the standard deduction
+  over the pre-OBBBA $15,000 / $30,000 / $22,500). The S44 conformity bridge points SC's
+  group at enacted federal law, so this departure is carried in agi.yaml. The 2025 line a
+  worksheet itself uses the $40,000 federal limit (not $10,000), which we read as the limit
+  actually applied after the high-income reduction (P52). The line a limit to the excess
+  over the standard deduction now reads `std_ded_potential` (model-wide fix).
+- **External.** T65 (TAXSIM has no line t in TY2017), T66 (TAXSIM's care credit ignores
+  the IRC 21 earned-income and age limits), P51 (PolicyEngine's out-of-state municipal
+  interest line is commented out), P52.
+- **Not modeled.** Tuition credit, military retirement deduction, niche credits (see
+  `tax_data_gaps.csv`).
+

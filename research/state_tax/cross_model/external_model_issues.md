@@ -578,6 +578,14 @@ only. Probe (2026-10-21, joint, $60,000 of wages, one dependent aged 3 vs 8): v3
 age-3 return is lower by exactly $4,110 / $4,190 / $4,260 in TY2018-20. Effect: TAXSIM overstates TY2017 South
 Carolina tax by $4,050 times the rate for each young child.
 
+### T66. South Carolina care credit ignores the IRC 21 limits
+
+12-6-3380 grants 7% of the expenses on which the federal credit is figured ($210 / $420 at most). TAXSIM's v38
+pays it without the federal limits: probe (2026-10-21, TY2019 joint, $60,000 of wages, $5,000 of child care, one
+dependent) gives v38 = 210 when the spouse earns nothing and when the dependent is 15, though TAXSIM's own federal
+credit is zero in both cases. Effect: TAXSIM understates South Carolina tax by up to $420 for one-earner couples
+and families with only older children.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1613,6 +1621,20 @@ $40,000 ($20,000 MFS): TY2025 married-filing-separately record with AGI $544,265
 `mt_itemized_deductions_joint` = 62,421, which is the federal itemized total of 47,421 with its phased-down $5,000 of
 SALT replaced by $20,000. Effect: PolicyEngine understates Montana tax for high-income itemizers. The same choice
 appears for Oregon (P46).
+
+### P51. South Carolina out-of-state municipal interest not added back
+
+`gov.states.sc.tax.income.additions.additions` lists the state tax add-back and the QBI add-back; the line for
+"Interest income on obligations of states and political subdivisions other than South Carolina" (SC1040 line d,
+12-6-1120) is present but commented out. Effect: PolicyEngine understates South Carolina tax for holders of
+out-of-state municipal bonds, as with P44 (Oklahoma) and P45 (Arizona).
+
+### P52. South Carolina TY2025 state tax add-back uses the flat $40,000 limit (concept question)
+
+The TY2025 SC1040 line a worksheet limits the add-back to "the $40,000 federal tax deduction limit less deductible
+Property Taxes". `sc_state_tax_addback` uses the flat $40,000 ($20,000 MFS). For a filer whose federal limit was
+reduced toward $10,000 (MAGI over $500,000), that adds back state income tax that was never deducted federally. We
+use the limit actually applied, as for Oregon (P46) and Montana (P50).
 
 ## Corroboration worth passing along
 
