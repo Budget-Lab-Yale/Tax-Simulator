@@ -37,6 +37,7 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     'tip_ded',       # (dbl) value of below-the-line tip deduction
     'ot_ded',        # (dbl) value of below-the-line overtime deduction
     'senior_ded',    # (dbl) value of below-the-line extra senior deduction
+    'auto_int_ded',  # (dbl) value of below-the-line auto loan interest deduction
     
     # Tax law attributes
     'item.limit_tax_value_thresh',     # (dbl) tax value limitation reduction threshold
@@ -68,7 +69,8 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
       senior_ded = itemizing * senior_ded,
       
       # Calculate taxable income
-      txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded - tip_ded - ot_ded - senior_ded)
+      txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded - tip_ded - ot_ded - senior_ded -
+                         auto_int_ded)
       
     ) %>% 
     
