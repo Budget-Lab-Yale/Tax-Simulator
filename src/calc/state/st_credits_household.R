@@ -323,7 +323,10 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
        (coalesce(tax_unit$disabled1, FALSE) | coalesce(tax_unit$disabled2, FALSE)))
   percap_limit = if_else(percap_elig, tax_unit$st_credits.percap_income_limit_elig,
                                       tax_unit$st_credits.percap_income_limit)
-  st_percap_credit = (tax_unit$dep_status != 1) * (percap_income <= percap_limit) * (
+  # Capped per return at percap_max (AZ increased excise tax credit: $100
+  # per household, Form 140 line 56 worksheet line 5); Inf = no cap
+  st_percap_credit = (tax_unit$dep_status != 1) * (percap_income <= percap_limit) * pmin(
+    tax_unit$st_credits.percap_max,
     (tax_unit$st_credits.percap_amount + percap_table_amt) *
       (n_taxpayers + percap_dep_count) +
     tax_unit$st_credits.percap_aged_addl * n_aged

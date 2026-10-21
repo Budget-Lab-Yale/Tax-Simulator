@@ -173,6 +173,11 @@ OUTPUT_VARS = {
     "pe_mi_homestead": ["mi_homestead_property_tax_credit"],
     "pe_mi_home_heating": ["mi_home_heating_credit"],
     "pe_mo_property_tax_credit": ["mo_property_tax_credit"],
+    # Arizona Form 140PTC property tax credit (A.R.S. 43-1072, 65+ or SSI,
+    # very low household income): PE pays it on real_estate_taxes = salt_prop;
+    # ours is documented-not-modeled pending the rent / property-tax overlays
+    # (crosswalk item 1). 2026-10-20
+    "pe_az_property_tax_credit": ["az_property_tax_credit"],
     "pe_or_kicker": ["or_kicker"],
     # Maine's 2025 affordability payment ($300 per person, H.P. 1491 Part T):
     # a direct payment from a special revenue fund, not a tax credit, which PE

@@ -23,3 +23,38 @@ sub_us_int:
 ss_sub_share:
   value: 1
   reference: 'Arizona Form 140, subtraction for federally taxable Social Security benefits, 2017-2025'
+
+# 25% net long-term capital gain subtraction for assets acquired after
+# December 31, 2011 (Form 140 lines 22-24 / 23-24; A.R.S. 43-1022(22); 10%
+# TY2013, 20% TY2014, 25% TY2015+). ASSUMPTION: the acquisition date is
+# unobserved, so every long-term gain is treated as qualifying (PolicyEngine's
+# convention) -- an upper bound, since pre-2012 assets and undated fund
+# distributions do not qualify (Worksheet for Net Long-Term Capital Gain
+# Subtraction). The worksheet excludes short-term items ("Do not include any
+# short-term capital gains or (losses)"), so the base is net long-term gain
+# alone on a return with a net capital gain (cap_gains_base_lt_only).
+# Added 2026-10-20 (cross-model triage: explained the PolicyEngine 2021-25
+# residual, ratio of our excess to the predicted subtraction value median
+# 1.000).
+cap_gains_excl_share:
+  value: 0.25
+  reference: 'A.R.S. 43-1022(22); Arizona Form 140 lines 22-24 (2019, 2023 booklets: "Multiply line 23 by 25% (.25)"); 2023 Form 140 instructions p.12 and Worksheet for Net Long-Term Capital Gain Subtraction for Assets Acquired After December 31, 2011 (p.31); https://azdor.gov/sites/default/files/2023-12/FORMS_INDIVIDUAL_2023_140Booklet.pdf'
+
+cap_gains_base_lt_only:
+  value: 1
+  reference: '2023 Arizona Form 140 booklet p.31, Worksheet for Net Long-Term Capital Gain Subtraction line 1 (net long-term gain or loss from post-2011 assets) and note "Do not include any short-term capital gains or (losses) in this worksheet"'
+
+# TY2025 Middle Class Tax Cuts Package (MCTCP) worksheet: Form 140 filers
+# subtract the federal Schedule 1-A tips (line 13), overtime (line 21),
+# vehicle-loan interest (line 30) and enhanced senior (line 37) deductions on
+# page 6 item V. Vehicle-loan interest is already outside federal AGI in this
+# model (agi.R), so it reaches Arizona through the federal-AGI start. The
+# senior deduction is on; tips and overtime await JI's sign-off on first use
+# of the Tax-Data tips/overtime imputations in the state calculator
+# (2026-10-20). Carried to TY2026+ by the S45 convention (PolicyEngine cites
+# HB 4168 (2026) continuing the senior subtraction as 43-1022(35); unverified).
+sub_fed_senior_ded:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'ADOR Middle Class Tax Cuts Package (MCTCP) Worksheet 2025, line 5 (IRS Schedule 1-A line 37, enhanced deduction for seniors) -> Form 140 page 6 item V; https://azdor.gov/sites/default/files/document/FORMS_INDIVIDUAL_2025_MCTCP.pdf'

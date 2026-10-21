@@ -536,6 +536,14 @@ Probe (2026-10-16, TY2019 joint, $30,000 of wages each): $8,000 excluded at ages
 either spouse order. Effect: TAXSIM understates Georgia tax for couples with one spouse 65+ and a working spouse
 under 62.
 
+### T61. Arizona net long-term capital gain subtraction not applied
+
+A.R.S. 43-1022(22) and Form 140 lines 22-24 subtract 25% of net long-term capital gain from assets acquired after
+December 31, 2011 (10% TY2013, 20% TY2014, 25% from TY2015). TAXSIM's Arizona AGI carries the whole gain. Probe
+(2026-10-20, single, $50,000 of wages, TY2017/2019/2020): v32 = 50,000 with no gain and 90,000 with $40,000 of
+`ltcg`, where the form gives 80,000. Effect: TAXSIM overstates Arizona tax by 25% of long-term gain times the
+marginal rate (about $450 per $40,000 at 4.5%). PolicyEngine applies the subtraction.
+
 ### T30. Arkansas AGI ignores nonprop entirely
 
 TAXSIM-35's Arkansas AGI (v32) takes no part of `nonprop`, positive or negative. Arkansas taxes other income
@@ -1523,6 +1531,14 @@ per aged dependent (probe 2026-10-15: records 324233, 41551, 88133 at 5,750 agai
 are applied -- in particular interest on other states' municipal bonds (68 O.S. 2358(A)(2)). Every gap in the class
 is the top rate times the addback (TY2025 record with $186,455 of exempt interest: $46,614 added back by us, gap
 $2,202 = 4.72%). Effect: PolicyEngine understates Oklahoma tax for holders of out-of-state municipal bonds.
+
+### P45. Arizona additions are always zero
+
+The same defect as P44: `az_additions` (`variables/gov/states/az/tax/income/az_additions.py`) declares the variable
+with no formula, so `az_agi` adds nothing back -- in particular interest on other states' municipal bonds (A.R.S.
+43-1021; Form 140 line 14). Every gap in the class is the Arizona rate times the addback (TY2023 record with $187,650
+of exempt interest, 25% of it treated as non-Arizona: our base $46,652 higher, gap $1,166 = 2.5%). Effect:
+PolicyEngine understates Arizona tax for holders of out-of-state municipal bonds.
 
 ## Corroboration worth passing along
 

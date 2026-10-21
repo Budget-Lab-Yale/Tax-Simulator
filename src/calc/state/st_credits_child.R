@@ -10,6 +10,7 @@ st_credits_child_req_vars = c(
   'st_credits.ctc_mfs_share',
   'st_credits.dep_credit_style',
   'st_credits.dep_credit_young_amount',
+  'st_credits.dep_credit_young_max_age',
   'st_credits.dep_credit_other_amount',
   'st_credits.dep_credit_po_thresh',
   'st_credits.dep_credit_po_per_1k',
@@ -347,11 +348,21 @@ st_credits_child = function(tax_unit, st_eitc) {
 
   # Dependent credit: separate qualifying-child and other-dependent
   # amounts, then a common percentage-point reduction for each $1,000 of
-  # AGI above the state threshold (Arizona Form 140 Table V).
+  # AGI above the state threshold (Arizona Form 140 Table V). The young
+  # amount is an age test (A.R.S. 43-1073.01: under 17), not federal CTC
+  # eligibility: n_dep_ctc is zero for some units whose observed dependents
+  # are all under 17, so the count is the larger of the two (n_dep_ctc
+  # still covers dependents beyond the three observed age slots)
+  dep_ages_obs = cbind(tax_unit$dep_age1, tax_unit$dep_age2, tax_unit$dep_age3)
+  n_dep_young = pmin(tax_unit$n_dep,
+                     pmax(tax_unit$n_dep_ctc,
+                          rowSums(dep_ages_obs <
+                                    tax_unit$st_credits.dep_credit_young_max_age,
+                                  na.rm = TRUE)))
   dep_credit_base = tax_unit$st_credits.dep_credit_young_amount *
-                      tax_unit$n_dep_ctc +
+                      n_dep_young +
                     tax_unit$st_credits.dep_credit_other_amount *
-                      pmax(0, tax_unit$n_dep - tax_unit$n_dep_ctc)
+                      pmax(0, tax_unit$n_dep - n_dep_young)
   dep_credit_factor = pmax(
     0,
     1 - st_step_reduction(agi, tax_unit$st_credits.dep_credit_po_thresh, 1000,

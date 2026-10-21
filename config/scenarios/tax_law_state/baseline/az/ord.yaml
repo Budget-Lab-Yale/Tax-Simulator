@@ -1,6 +1,10 @@
 ---
-# Arizona resident rate schedules.  The 2021 final bracket combines the 4.5%
-# regular rate and the 3.5% Prop. 208 surcharge for an equivalent total tax.
+# Arizona resident rate schedules.  The 2021 final bracket combines the 1.00%
+# regular rate (Tax Tables X/Y above $250,000 / $500,000; SB 1828) and the 3.5%
+# Prop. 208 surcharge (Form 140 line 46b) for a 4.5% total -- the same marginal
+# rate as the bracket below it.  Prop. 208 was struck in March 2022 and ADOR
+# reprocessed TY2021 returns with no change in total liability.  (Corrected
+# 2026-10-20 from 8%, which stacked the surcharge on the 4.5% rate.)
 
 filing_status_mapper:
   brackets:
@@ -13,10 +17,10 @@ rates:
   value:
     '2017': [0.0259, 0.0288, 0.0336, 0.0424, 0.0454, 0.0454, 0.0454, 0.0454, 0.0454, 0.0454]
     '2019': [0.0259, 0.0334, 0.0417, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045]
-    '2021': [0.0259, 0.0334, 0.0417, 0.045, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08]
+    '2021': [0.0259, 0.0334, 0.0417, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045]
     '2022': [0.0255, 0.0298, 0.0298, 0.0298, 0.0298, 0.0298, 0.0298, 0.0298, 0.0298, 0.0298]
     '2023': [0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025, 0.025]
-  reference: 'Arizona Form 140 Tax Tables X and Y, 2017-2025; https://azdor.gov/forms/individual/form-140-arizona-resident-personal-income-tax-booklet'
+  reference: 'Arizona Form 140 Tax Tables X and Y, 2017-2025; https://azdor.gov/forms/individual/form-140-arizona-resident-personal-income-tax-booklet. TY2021: 2021 Form 140 booklet p.59 (regular 1.00% over $250,000/$500,000 plus 3.5% surcharge on line 46b = 4.5%); https://azdor.gov/sites/default/files/2023-03/FORMS_INDIVIDUAL_2021_140BOOKLET.pdf; ADOR, Guidance to taxpayers following Prop 208 ruling (2022): no change in overall liability'
 brackets_single:
   value:
     '2017': [0, 10346, 25861, 51721, 155159, 155159, 155159, 155159, 155159, 155159]

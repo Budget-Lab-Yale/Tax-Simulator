@@ -91,6 +91,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'se_health',      # (dbl)  federal self-employed health insurance deduction
     'liab_seca_er',   # (dbl)  half of self-employment tax (the federal deduction)
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
+    'tip_ded',        # (dbl)  federal qualified tips deduction (post-federal calc)
+    'senior_ded',     # (dbl)  federal enhanced senior deduction (post-federal calc)
     'char_cash',      # (dbl)  cash charitable contributions
     'char_noncash',   # (dbl)  non-cash charitable contributions
     'itemizing',      # (bool) whether unit itemizes on the federal return
@@ -184,12 +186,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
     'st_agi.sub_char_nonitem_share', # (dbl) share of the excess subtracted (MN 0.5)
     'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
+    'st_agi.sub_fed_tip_ded',       # (int) whether the federal tips deduction is subtracted (AZ 2025)
+    'st_agi.sub_fed_ot_ded',        # (int) whether the federal OT deduction is subtracted (AZ 2025)
+    'st_agi.sub_fed_senior_ded',    # (int) whether the federal senior deduction is subtracted (AZ 2025)
     'st_agi.add_hsa',               # (int) whether the federal HSA deduction is added back (CA)
     'st_agi.cap_loss_limit',        # (dbl) state per-year net capital loss limit (WI $500)
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
     'st_agi.cap_gains_excl_flat',   # (dbl) flat-dollar alternative, greater-of (VT $5,000)
     'st_agi.cap_gains_excl_txbl_share', # (dbl) ceiling as a share of federal taxable income (VT 0.40; Inf = none)
     'st_agi.cap_gains_full_excl_above', # (dbl) gain above this excluded in full (AR $10,000,000; Inf = none)
+    'st_agi.cap_gains_base_lt_only', # (int) 1 = gain base ignores ST items when net gain > 0 (AZ)
     'st_agi.div_excl_share',        # (dbl) share of qualified dividends excluded
     'st_agi.age_ded_amount',        # (dbl) per-person aged deduction (VA-style)
     'st_agi.age_ded_min_age',       # (dbl) minimum age for the aged deduction
@@ -510,6 +516,14 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_add_muni = st_agi.add_exempt_int * exempt_int *
                     if_else(st_agi.own_state_exempt == 1, 1 - interest_own_state_share, 1),
       st_add_ot   = st_agi.add_overtime_ded * ot_ded,
+
+      # Subtraction: federal below-the-line (Schedule 1-A) deductions carried
+      # into a federal-AGI-start state (AZ TY2025 MCTCP worksheet lines 2, 3
+      # and 5, entered on Form 140 page 6 item V). Each switch is separate
+      # because states adopt them separately
+      st_sub_fed_below = st_agi.sub_fed_tip_ded * tip_ded +
+                         st_agi.sub_fed_ot_ded * ot_ded +
+                         st_agi.sub_fed_senior_ded * senior_ded,
 
       # Addition: federally-allowed net capital loss beyond the state's own
       # per-year limit (WI $500 through 2022). The federal $3,000 cap makes
@@ -867,8 +881,14 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # Subtraction: partial exclusion of net long-term capital gain (ND 40%,
       # SC 44%) and qualified dividends (ND 40%). The gain base is net LT gain
       # in excess of net ST loss (the smaller of net LT gain and net LT gain
-      # less net ST loss), matching the ND/SC worksheets.
-      st_cap_gain_base = pmax(0, kg_lt + pmin(0, kg_st)),
+      # less net ST loss), matching the ND/SC worksheets. With
+      # cap_gains_base_lt_only the base is net LT gain alone, short-term items
+      # ignored, on a return with a net capital gain (AZ Form 140 worksheet)
+      st_cap_gain_base = if_else(
+        st_agi.cap_gains_base_lt_only == 1,
+        if_else(kg_lt + kg_st > 0, pmax(0, kg_lt), 0),
+        pmax(0, kg_lt + pmin(0, kg_st))
+      ),
 
       # The gain exclusion is the GREATER of a share of the eligible base and
       # a flat dollar amount capped at that base (VT 32 V.S.A. 5811(21)(B)(ii)
@@ -936,7 +956,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_sub_retire_share + st_sub_age + st_sub_ui +
                         st_sub_senior_inv + st_sub_twoearner + st_bid +
                         st_sub_bus_excl + st_sub_pens_tier +
-                        st_sub_senior_int,
+                        st_sub_senior_int + st_sub_fed_below,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

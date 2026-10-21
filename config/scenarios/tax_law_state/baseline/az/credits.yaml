@@ -7,6 +7,11 @@ filing_status_mapper:
     '2': dep_credit_po_joint
     '3': dep_credit_po_single
     '4': dep_credit_po_single
+  percap_income_limit:
+    '1': excise_limit_single
+    '2': excise_limit_joint
+    '3': excise_limit_single
+    '4': excise_limit_joint
 
 dep_credit_style:
   value:
@@ -18,6 +23,9 @@ dep_credit_young_amount:
     '2017': 0
     '2019': 100
   reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025 ($100 per qualifying dependent under age 17)'
+dep_credit_young_max_age:
+  value: 17
+  reference: 'A.R.S. 43-1073.01(A)(1): $100 for each dependent under seventeen years of age at the end of the taxable year -- an age test, not federal child tax credit eligibility (counted from dependent ages; 2026-10-20)'
 dep_credit_other_amount:
   value:
     '2017': 0
@@ -32,3 +40,29 @@ dep_credit_po_joint:
 dep_credit_po_per_1k:
   value: 0.05
   reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025 (5 percentage points for each $1,000 or fraction of excess AGI)'
+
+# Increased Excise Tax Credit (A.R.S. 43-1072; Form 140 line 56): $25 for
+# each taxpayer and each dependent claimed, at most $100 per household,
+# refundable, for federal AGI (Form 140 line 12) of $12,500 or less (single,
+# married filing separately) or $25,000 or less (joint, head of household).
+# Dependent filers are ineligible (handled generically). Encoded 2026-10-20
+# on the generic per-person credit. Not observed: the SSN-valid-for-
+# employment test, incarceration, and the household-wide $100 cap across
+# separate returns; non-Arizona-resident dependents. Claimants of the Form
+# 140PTC property tax credit take the same amount there (the property tax
+# credit itself needs rent/property tax and is not encoded).
+percap_amount:
+  value: 25
+  reference: 'A.R.S. 43-1072; 2023 Form 140 instructions, Credit for Increased Excise Taxes Worksheet lines 1-4 ($25 per person); identical 2019 and 2025 booklets'
+percap_max:
+  value: 100
+  reference: '2023 Form 140 instructions, Credit for Increased Excise Taxes Worksheet line 5 (maximum credit $100; "cannot exceed $100 per household")'
+percap_refundable:
+  value: 1
+  reference: 'Form 140 line 56, among payments and refundable credits (lines 53-59)'
+excise_limit_single:
+  value: 12500
+  reference: '2023 Form 140 instructions line 56: single or married filing separately, Form 140 line 12 (federal AGI) $12,500 or less; same in the 2019 and 2025 booklets'
+excise_limit_joint:
+  value: 25000
+  reference: '2023 Form 140 instructions line 56: married filing jointly or head of household, Form 140 line 12 $25,000 or less'

@@ -136,6 +136,11 @@ scalars:
   # at or below $50,000/$100,000 of federal AGI); 1 = full subtraction
   st_agi.ss_allages_sub_share: 1
   st_agi.add_overtime_ded: 0
+  # Federal Schedule 1-A deductions subtracted from a federal-AGI start
+  # (AZ TY2025 MCTCP worksheet); one switch each
+  st_agi.sub_fed_tip_ded: 0
+  st_agi.sub_fed_ot_ded: 0
+  st_agi.sub_fed_senior_ded: 0
   # Federal above-the-line HSA deduction reversed (state does not conform
   # to IRC 223; CA)
   st_agi.add_hsa: 0
@@ -152,6 +157,11 @@ scalars:
   # Gain above this is excluded in full rather than by the share (AR1000D
   # lines 7a-8: $10,000,000); .inf = no second tier
   st_agi.cap_gains_full_excl_above: .inf
+  # Gain base: 0 = net LT gain less any net ST loss (ND/SC worksheets);
+  # 1 = net LT gain alone, short-term items ignored, when the return has a
+  # net capital gain (AZ Form 140 worksheet: "Do not include any short-term
+  # capital gains or (losses)")
+  st_agi.cap_gains_base_lt_only: 0
   st_agi.div_excl_share: 0
   st_agi.ss_taxable_gross_cap_share: .inf
   st_agi.pension_sub_share: 0
@@ -633,6 +643,9 @@ scalars:
   st_credits.eitc_child_bonus: {default: 0, units: per_return}
   st_credits.dep_credit_style: 0
   st_credits.dep_credit_young_amount: 0
+  # Young amount goes to dependents under this age, counted from the observed
+  # dependent ages, or to n_dep_ctc if larger (AZ: under 17, A.R.S. 43-1073.01)
+  st_credits.dep_credit_young_max_age: 17
   st_credits.dep_credit_other_amount: 0
   st_credits.dep_credit_po_thresh: .inf
   st_credits.dep_credit_po_per_1k: 0
@@ -868,6 +881,9 @@ scalars:
   st_credits.percap_amount: {default: 0, units: per_person}
   st_credits.percap_aged_addl: {default: 0, units: per_instance}
   st_credits.percap_refundable: 1
+  # Per-return cap on the per-person credit (AZ increased excise tax credit:
+  # $100 per household); .inf = no cap
+  st_credits.percap_max: .inf
   # Household base credit from a dense published table (ME sales tax
   # fairness credit, 5213-A): a per-return refundable amount keyed by
   # filing status and capped dependent count, with the stepped income

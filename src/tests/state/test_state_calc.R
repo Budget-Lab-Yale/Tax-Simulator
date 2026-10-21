@@ -331,6 +331,61 @@ test_state_calc = function() {
                 wages1 = 60000, ei1 = 60000, n_dep = 2, dep_age1 = 5, dep_age2 = 8),
            expect = list(st_exempt = 11200),
            label = 'AZ-X2 joint-with-dependents personal exemption + $2,300 dependents')
+  # AZ-X3 (2026-10-20): TY2021 single, taxable income 350,000 -- the 2021
+  # Form 140 booklet's own Table X example: regular tax 10,029 + 1% x 100,000
+  # = 11,029 (line 46a) plus the Prop. 208 surcharge 3.5% x 100,000 = 3,500
+  # (line 46b). The table's base 10,029 is the unrounded 10,029.25.
+  # AGI = 350,000 + the 12,550 standard deduction
+  run_case('AZ', 2021, list(agi = 362550),
+           expect = list(st_txbl_inc = 350000,
+                         liab_st_iit = 10029.25 + 1000 + 3500),
+           label = 'AZ-X3 TY2021 regular 1% + Prop. 208 surcharge = 4.5% top rate')
+  # AZ-X4 (2026-10-20): TY2023 single, AGI 200,000 including 40,000 net
+  # long-term gain (Form 140 lines 23-24: 25% x 40,000 = 10,000 subtracted,
+  # every gain treated as post-2011). Taxable = 200,000 - 10,000 - 13,850
+  # = 176,150 at 2.5%
+  run_case('AZ', 2023, list(agi = 200000, kg_lt = 40000),
+           expect = list(st_sub_capgain = 10000, st_txbl_inc = 176150,
+                         liab_st_iit = 176150 * 0.025),
+           label = 'AZ-X4 25% net long-term capital gain subtraction')
+  # AZ-X4b: the worksheet ignores short-term items. 40,000 LT gain with a
+  # 10,000 ST loss: the subtraction is still 25% x 40,000 = 10,000 (the ND/SC
+  # base would give 25% x 30,000). AGI 190,000; taxable 190,000 - 10,000 -
+  # 13,850 = 166,150
+  run_case('AZ', 2023, list(agi = 190000, kg_lt = 40000, kg_st = -10000),
+           expect = list(st_sub_capgain = 10000, st_txbl_inc = 166150),
+           label = 'AZ-X4b LT gain subtraction ignores a short-term loss')
+  # AZ-X5 (2026-10-20): the $100 amount is an age test. Two dependents aged 6
+  # and 10 with n_dep_ctc = 0 (as on some Tax-Data records): 2 x 100 = 200,
+  # not 2 x 25
+  run_case('AZ', 2023,
+           list(agi = 80000, n_dep = 2, n_dep_ctc = 0, dep_age1 = 6, dep_age2 = 10),
+           expect = list(st_dep_credit = 200),
+           label = 'AZ-X5 dependent credit young amount by age, not n_dep_ctc')
+  # AZ-X6 (2026-10-20): TY2025 MCTCP worksheet line 5 -- a single filer aged
+  # 70 subtracts the federal enhanced senior deduction (6,000) on item V.
+  # Taxable = 50,000 - 6,000 - 15,750 - the 2,100 age-65 exemption = 26,150;
+  # TY2024 has no such subtraction
+  run_case('AZ', 2025, list(agi = 50000, age1 = 70, senior_ded = 6000),
+           expect = list(st_subtractions = 6000, st_txbl_inc = 26150),
+           label = 'AZ-X6 TY2025 federal senior deduction subtracted')
+  run_case('AZ', 2024, list(agi = 50000, age1 = 70, senior_ded = 6000),
+           expect = list(st_subtractions = 0),
+           label = 'AZ-X6b no senior-deduction subtraction before TY2025')
+  # AZ-X7 (2026-10-20): Increased Excise Tax Credit worksheet, TY2023.
+  # Joint, three dependents, AGI 20,000: 25 x (2 + 3) = 125, capped at 100.
+  # Single at AGI 12,000: 25; at 13,000: over the $12,500 limit, nothing
+  run_case('AZ', 2023,
+           list(filing_status = 2, age1 = 40, age2 = 40, agi = 20000, n_dep = 3,
+                dep_age1 = 3, dep_age2 = 6, dep_age3 = 9),
+           expect = list(st_percap_credit = 100),
+           label = 'AZ-X7 excise credit capped at $100 per household')
+  run_case('AZ', 2023, list(agi = 12000),
+           expect = list(st_percap_credit = 25, liab_st_iit = -25),
+           label = 'AZ-X7b excise credit, single under $12,500')
+  run_case('AZ', 2023, list(agi = 13000),
+           expect = list(st_percap_credit = 0),
+           label = 'AZ-X7c excise credit, single over $12,500')
 
   # AZ-1: 2025 single, AGI 100,000. Standard deduction is 15,750, leaving
   # 84,250 at the 2.5% flat rate.
@@ -6863,7 +6918,7 @@ st_test_unit = function(overrides = list()) {
     sch_e = 0, part_scorp = 0, trad_contr_ira = 0, keogh_contr = 0, early_penalty = 0,
     alimony_exp = 0, se_health = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
-    txbl_ira_dist = 0, ot_ded = 0, hsa_contr = 0,
+    txbl_ira_dist = 0, ot_ded = 0, tip_ded = 0, senior_ded = 0, hsa_contr = 0,
     char_cash = 0, char_noncash = 0,
     item_ded = 0, item_ded_ex_limits = 0, salt_item_ded = 0,
     salt_inc_sales = 0, salt_prop = 0, salt_pers = 0,

@@ -207,6 +207,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.cdctc_ref_agi_limit',  # (dbl) federal AGI at or below which it is refundable (LA $25,000)
     'st_credits.cdctc_ref_excess_only', # (0/1) only the excess over pre-credit state tax is refundable (MD 21B)
     'st_credits.percap_refundable',
+    'st_credits.percap_max',        # (dbl) per-return cap on the per-person credit (AZ $100; Inf = none)
     'st_credits.lictr_refundable',
     'st_credits.stfc_refundable',
     'st_credits.mc_style',
