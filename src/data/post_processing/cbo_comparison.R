@@ -40,7 +40,7 @@ cbo_comparison_mapping = function() {
     'TXBL',   'Subtract standard deduction',                 'Subtract standard deduction',                          'std_ded',
     'TXBL',   'Subtract itemized deductions',                'Subtract total itemized deductions',                   'item_ded',
     'TXBL',   'Subtract QBI deduction',                      'Subtract qualified business income deduction',         'qbi_ded',
-    'TXBL',   'Subtract additional deductions',              'Subtract additional deductions',                       'tip_ded + ot_ded + senior_ded',
+    'TXBL',   'Subtract additional deductions',              'Subtract additional deductions',                       'tip_ded + ot_ded + senior_ded + auto_int_ded',
     'TXBL',   'Total exemptions and deductions',             'Total exemptions and deductions after limits',         'ded',
     'TXBL',   'Taxable income',                              'Taxable income',                                       'txbl_inc',
     'TAX',    'Total income tax before credits (incl AMT)',  'Total income tax (including AMT) before credits',      'liab_bc',
