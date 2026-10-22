@@ -235,8 +235,11 @@ scalars:
   st_agi.ob_adj_se_health: 0
   st_agi.ob_adj_hsa: 0
   st_agi.ob_adj_seca: 0
+  st_agi.ob_adj_sl_int: 0     # own base subtracts the federal student loan interest deduction (MA)
+  st_agi.ob_adj_educator: 0   # own base subtracts federal educator expenses (MA)
   st_agi.ob_passthru_as_federal: 0   # 1 = own-base partnership/S-corp income as allowed on the federal return (part_scorp; AR line 19)
   st_agi.ob_cap_loss_limit: .inf   # net capital loss the own base may carry, halved for MFS (AR/MS federal $3,000); .inf = whole loss (AL)
+  st_agi.ob_cg_class_net: 0   # 1 = short- and long-term classes net, leftover loss up to ob_cap_loss_limit against interest/dividends (MA)
 
   # ded.yaml
   # Adopt the federal standard deduction by reference (MO RSMo 143.131.2):
@@ -395,6 +398,7 @@ scalars:
   # Per-person deduction of the filer's own payroll and government-retirement
   # contributions (MA Form 1 lines 11a/11b, $2,000 each spouse)
   st_ded.payroll_ded_cap: {default: 0, units: per_person}
+  st_ded.char_fed_ded: 0   # 1 = the federal charitable deduction is allowed against the ordinary class, itemizing or not (MA Schedule Y 9c, TY2023+)
   # Capped deduction for property taxes paid on a principal residence
   # (NJ-1040 line 41). Zero means the state has no such deduction
   st_ded.prop_tax_ded_cap: {default: 0, units: per_return}

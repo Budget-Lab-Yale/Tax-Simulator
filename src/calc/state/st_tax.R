@@ -50,7 +50,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_txbl_inc',               # (dbl) state taxable income
     'st_bus_excess',             # (dbl) business income above the carve-out cap
     'kg_pref',                   # (dbl) net capital gain (alternative-rate base)
-    'kg_st',                     # (dbl) short-term capital gains (separate-rate base)
+    'st_st_gains',               # (dbl) short-term capital gains taxed at the separate rate (from calc_st_agi)
     'wages1',                    # (dbl) primary wages (spouse tax adjustment)
     'wages2',                    # (dbl) secondary wages (spouse tax adjustment)
     'filing_status',             # (int) 1 single, 2 MFJ, 3 MFS, 4 HoH
@@ -300,9 +300,9 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
         # Separate rate on SHORT-TERM capital gains (MA Part A: 12% through
         # TY2022, 8.5% from TY2023). Those gains are held out of the ordinary
         # base by st_agi.ob_st_gains_share, so this is the whole tax on them,
-        # not a supplement. Losses give no relief here -- Massachusetts nets
-        # them under its own regime, which is a documented known difference
-        st_ord.st_gains_rate * pmax(0, kg_st),
+        # not a supplement. st_st_gains is net of a long-term loss where the
+        # state nets the classes (st_agi.ob_cg_class_net)
+        st_ord.st_gains_rate * st_st_gains,
 
       # Married filing separately on a combined return (KY Form 740 filing
       # status 2): each spouse's column applies the schedule to own income

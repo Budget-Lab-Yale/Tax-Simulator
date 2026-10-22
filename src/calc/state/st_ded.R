@@ -41,6 +41,11 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'agi',                # (dbl)  federal AGI
     'st_agi',             # (dbl)  state income base (calc_st_agi)
+    'txbl_int',           # (dbl)  taxable interest (charitable-deduction class cap)
+    'div_ord',            # (dbl)  ordinary dividends
+    'div_pref',           # (dbl)  qualified dividends
+    'kg_lt',              # (dbl)  long-term capital gains
+    'other_gains',        # (dbl)  other gains
     'filing_status',      # (int)  1 single, 2 MFJ, 3 MFS, 4 HoH
     'itemizing',          # (bool) whether unit itemizes federally
     'dep_status',         # (bool) whether filer is a dependent
@@ -190,6 +195,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.item_salt_cap_fed',      # (int) 1 = cap the state itemized taxes at the federal effective SALT limit (OR-A line 9)
     'st_ded.item_payroll_add_med',   # (int) ... including the Additional Medicare Tax (AL: withheld as Medicare tax)
     'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
+    'st_ded.char_fed_ded',           # (int) federal charitable deduction allowed against the ordinary class, itemizing or not (MA 2023+)
     'st_ded.prop_tax_ded_cap',       # (dbl) capped property tax deduction (NJ $10,000 then $15,000)
     'st_ded.retire_exempt_ss',       # (int) taxable Social Security exempt as a DEDUCTION (MO)
     'st_ded.retire_exempt_ss_min_age', # (int) minimum age for the SS exemption (MO 62)
@@ -729,6 +735,17 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # 18% of rent as property taxes, which is rent-blocked and documented
       st_prop_tax_ded = pmin(st_ded.prop_tax_ded_cap, pmax(0, salt_prop)),
 
+      # Charitable deduction equal to the federal one, whether or not the
+      # filer itemizes federally (MA Schedule Y line 9c from TY2023: "the
+      # amount entered on U.S. Form 1040, Schedule A, line 14", or what would
+      # have been entered), usable only against the ordinary (Part B) class --
+      # so capped at the base net of gains, interest and dividends. The
+      # exclusion of household goods and used clothing is unobserved
+      st_char_fed_ded = st_ded.char_fed_ded *
+        pmin(pmax(0, char_item_ded_potential),
+             pmax(0, st_agi - pmax(0, kg_lt + other_gains) -
+                     pmax(0, txbl_int + div_ord + div_pref))),
+
       # Where the federal tax deduction sits INSIDE the itemized schedule
       # rather than alongside it (MT pre-2024), it reaches only itemizers --
       # and it is itself part of what makes itemizing worthwhile, so it must
@@ -737,7 +754,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # from the additive term so it is not counted twice
       st_ded = if_else(st_itemizing, st_item_ded, st_std_ded) +
                st_care_exp_ded + st_retire_exempt +
-               st_payroll_ded + st_prop_tax_ded +
+               st_payroll_ded + st_prop_tax_ded + st_char_fed_ded +
                if_else(st_ded.fed_tax_ded_in_itemized == 1, 0, st_fed_tax_ded),
 
       #--------------------------------------------------------

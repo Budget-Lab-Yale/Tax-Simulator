@@ -54,6 +54,39 @@ ob_gains_share:
 ob_st_gains_share:
   value: 0
   reference: 'Short-term capital gains are Part A and taxed at their OWN rate (Schedule B lines 10 and 16; 12% through TY2022, 8.5% from TY2023 per the 2023 booklet p.3), so they are held out of the ordinary base and taxed by st_ord.st_gains_rate'
+ob_cg_class_net:
+  value: 1
+  reference: 'Schedule B (2023) Part 2: line 20 short-term losses applied against interest and dividends ("Not more than $2,000"), line 22 short-term losses applied against long-term gains, line 25 long-term losses applied against short-term gain, line 32 long-term losses applied against interest and dividends ("Not more than $2,000"); Schedule D carries the netted long-term gain. Encoded 2026-10-21 (generic st_agi.ob_cg_class_net): records with a short-term loss and a long-term gain matched PolicyEngine at 0.24, our excess about 5% of the unused short-term loss'
+ob_cap_loss_limit:
+  value: 2000
+  reference: 'Schedule B (2023) lines 20 and 32: capital losses applied against interest and dividends, not more than $2,000 in total (M.G.L. c. 62 s. 3(B)(a)(19)); applies only through the class-netting path (ob_cg_class_net)'
+# Schedule Y deductions that carry a federal Schedule 1 adjustment straight
+# across (2023 Form 1 instructions, Schedule Y): line 2 penalty on early
+# savings withdrawal, line 3 deductible alimony paid, line 7 self-employed
+# health insurance (U.S. Schedule 1 line 17), line 8 health savings accounts
+# (Schedule 1 line 13), line 9a educator expenses (Schedule 1 line 11), line
+# 10 student loan interest ("the amount from U.S. Form 1040, Schedule 1, line
+# 21, not to exceed $2,500"). Massachusetts has no IRA, Keogh/SEP or
+# half-SECA deduction. Encoded 2026-10-21 (the YAML had called these
+# inseparable from the federal amounts; lines 2, 3, 7, 8, 9a and 10 are not)
+ob_adj_penalty:
+  value: 1
+  reference: '2023 Form 1 instructions, Schedule Y line 2 (Penalty on Early Savings Withdrawal)'
+ob_adj_alimony:
+  value: 1
+  reference: '2023 Form 1 instructions, Schedule Y line 3 (Deductible Alimony Paid)'
+ob_adj_se_health:
+  value: 1
+  reference: '2023 Form 1 instructions, Schedule Y line 7 (Self-Employed Health Insurance: "the amount from U.S. Form 1040, Schedule 1, line 17")'
+ob_adj_hsa:
+  value: 1
+  reference: '2023 Form 1 instructions, Schedule Y line 8 (Health Savings Accounts: "the amount from U.S. Form 1040, Schedule 1, line 13")'
+ob_adj_educator:
+  value: 1
+  reference: '2023 Form 1 instructions, Schedule Y line 9a (U.S. Form 1040, Schedule 1, line 11, educator expenses)'
+ob_adj_sl_int:
+  value: 1
+  reference: '2023 Form 1 instructions, Schedule Y line 10 (Student Loan Interest Deduction: "Enter the amount from U.S. Form 1040, Schedule 1, line 21, not to exceed $2,500"; the separate undergraduate deduction on line 12 is not modeled)'
 ob_retirement_share:
   value: 1
   reference: 'Form 1 line 4, taxable pensions and annuities, and line 4 also carries taxable IRA, Keogh and Roth distributions. Contributory pensions of the U.S. government and of Massachusetts and its political subdivisions are EXEMPT and are not separable in the microdata -- see documented_not_modeled'

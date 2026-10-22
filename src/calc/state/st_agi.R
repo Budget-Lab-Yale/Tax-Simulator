@@ -6,7 +6,8 @@
 return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_excl',
                             'st_agi', 'st_age_package_taken',
                             'st_age_package_forgone', 'st_bid', 'st_bus_excess',
-                            'st_sub_pens', 'st_sub_capgain', 'st_sub_ss')
+                            'st_sub_pens', 'st_sub_capgain', 'st_sub_ss',
+                            'st_st_gains')
 
 
 calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
@@ -73,6 +74,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'farm',           # (dbl)  farm income or loss
     'txbl_int',       # (dbl)  taxable interest income
     'hsa_contr',      # (dbl)  deductible HSA contributions (federal above-the-line)
+    'sl_int_ded',     # (dbl)  federal student loan interest deduction
+    'ed_exp',         # (dbl)  federal educator expenses deduction
     'div_ord',        # (dbl)  ordinary dividends
     'div_pref',       # (dbl)  qualified dividends
     'kg_lt',          # (dbl)  long-term capital gains
@@ -122,6 +125,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_other_share',        # (dbl) own-base share: other income
     'st_agi.ob_estate_share',        # (dbl) own-base share: estate and trust income (own floored class)
     'st_agi.ob_cap_loss_limit',      # (dbl) own-base net capital loss limit, halved for MFS (Inf = none)
+    'st_agi.ob_cg_class_net',        # (int) short- and long-term classes net against each other (MA Schedules B/D)
     'st_agi.ob_passthru_as_federal', # (int) 1 = partnership/S-corp income as allowed federally (part_scorp)
     'st_agi.ob_adj_ira',             # (int) own base subtracts the federal IRA deduction
     'st_agi.ob_adj_keogh',           # (int) ... the Keogh/SEP deduction
@@ -130,6 +134,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_adj_se_health',       # (int) ... the self-employed health insurance deduction
     'st_agi.ob_adj_hsa',             # (int) ... the HSA deduction
     'st_agi.ob_adj_seca',            # (int) ... half of self-employment tax (MS line 61)
+    'st_agi.ob_adj_sl_int',          # (int) ... the student loan interest deduction (MA Schedule Y line 10)
+    'st_agi.ob_adj_educator',        # (int) ... educator expenses (MA Schedule Y line 9a)
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -390,6 +396,29 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     limit = tax_unit$st_agi.ob_cap_loss_limit / (1 + (tax_unit$filing_status == 3))
     pmax(x, -limit)
   }
+  # Cross-class capital gain netting, in MA Schedule B order (2023 Schedule B
+  # lines 20-32): (1) a net short-term loss first reduces interest and
+  # dividends, at most ob_cap_loss_limit ($2,000; line 20); (2) the rest
+  # offsets long-term gain (line 22); (3) a net long-term loss offsets
+  # short-term gain (line 25); (4) a long-term loss left over reduces interest
+  # and dividends within what remains of the same $2,000 (line 32). The
+  # long-term class stays in the own base (ob_gains_share); the netted
+  # short-term gain is returned as st_st_gains for the separate rate
+  cg_lt     = tax_unit$st_agi.ob_gains_share * (tax_unit$kg_lt + tax_unit$other_gains)
+  cg_st     = tax_unit$kg_st
+  # (not halved for separate filers: Schedule B prints a flat $2,000)
+  cg_cap    = tax_unit$st_agi.ob_cap_loss_limit
+  cg_intdiv = pmax(0, tax_unit$txbl_int + tax_unit$div_ord + tax_unit$div_pref)
+  cg_st_loss = pmax(0, -cg_st)
+  cg_lt_loss = pmax(0, -cg_lt)
+  cg_a      = pmin(cg_cap, cg_st_loss, cg_intdiv)
+  cg_lt_net = pmax(0, pmax(0, cg_lt) - (cg_st_loss - cg_a))
+  cg_b      = pmin(cg_lt_loss, pmax(0, cg_st))
+  cg_c      = pmin(pmax(0, cg_cap - cg_a), cg_lt_loss - cg_b, cg_intdiv - cg_a)
+  ob_cg_lt_term = cg_lt_net - cg_a - cg_c
+  st_st_gains_v = if_else(tax_unit$st_agi.ob_cg_class_net == 1,
+                          pmax(0, cg_st) - cg_b,
+                          pmax(0, cg_st))
   st_own_base_v = with(tax_unit,
     ob_floor(st_agi.ob_comp_share       *
              (wages1 + wages2 +
@@ -407,8 +436,9 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
             ob_floor(st_agi.ob_bus_share * (sole_prop + farm +
                      if_else(st_agi.ob_passthru_as_federal == 1, part_scorp,
                              part + scorp)))) +
-    ob_floor(ob_cap_loss(st_agi.ob_gains_share    * (kg_lt + other_gains) +
-                         st_agi.ob_st_gains_share * kg_st)) +
+    if_else(st_agi.ob_cg_class_net == 1, ob_cg_lt_term,
+            ob_floor(ob_cap_loss(st_agi.ob_gains_share    * (kg_lt + other_gains) +
+                                 st_agi.ob_st_gains_share * kg_st))) +
     ob_floor(st_agi.ob_rent_share       * net_rent) +
     ob_floor(st_agi.ob_retirement_share * txbl_pens_dist) +
     ob_floor(st_agi.ob_ira_share        * txbl_ira_dist) +
@@ -424,7 +454,23 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     (st_agi.ob_adj_ira * trad_contr_ira + st_agi.ob_adj_keogh * keogh_contr +
      st_agi.ob_adj_penalty * early_penalty + st_agi.ob_adj_alimony * alimony_exp +
      st_agi.ob_adj_se_health * se_health + st_agi.ob_adj_hsa * hsa_contr +
-     st_agi.ob_adj_seca * liab_seca_er)
+     st_agi.ob_adj_seca * liab_seca_er + st_agi.ob_adj_sl_int * sl_int_ded +
+     st_agi.ob_adj_educator * ed_exp)
+  )
+  # Where the classes net under the Massachusetts regime, they are also kept
+  # apart: a loss in the ordinary class (Part B: wages, business, rents,
+  # pensions, ...) cannot reduce interest and dividends (Part A) or long-term
+  # gains (Part C), and the investment class only takes the capital losses
+  # Schedule B allows against it (lines 20 and 32). Rebuild the base as the
+  # floored ordinary class plus the floored investment class plus the netted
+  # long-term gain
+  ob_intdiv_v = with(tax_unit, st_agi.ob_int_share * txbl_int +
+                                 st_agi.ob_div_share * (div_ord + div_pref))
+  ob_ordinary_v = st_own_base_v - ob_intdiv_v - ob_cg_lt_term
+  st_own_base_v = if_else(
+    tax_unit$st_agi.ob_cg_class_net == 1,
+    pmax(0, ob_ordinary_v) + pmax(0, ob_intdiv_v - cg_a - cg_c) + cg_lt_net,
+    st_own_base_v
   )
 
   # Starting point, computed ahead of the mutate as well because the
@@ -508,6 +554,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
       # Income-banded pension exclusion (NJ), computed above
       st_sub_pens_tier = pens_tier_v,
+
+      # Short-term gain taxed at the separate rate, after cross-class netting
+      # where the state nets (MA), else the gross positive amount
+      st_st_gains = st_st_gains_v,
 
       # Starting point
       st_start = case_when(

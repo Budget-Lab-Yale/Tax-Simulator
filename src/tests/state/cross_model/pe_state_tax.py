@@ -182,6 +182,14 @@ OUTPUT_VARS = {
     # real_estate_taxes = salt_prop; ours is documented-not-modeled pending the
     # rent / property-tax overlays. 2026-10-21
     "pe_mt_elderly_hrc": ["mt_elderly_homeowner_or_renter_credit"],
+    # PolicyEngine's federal charitable deduction, which its Massachusetts
+    # Part B deductions take in every year although the MA deduction was
+    # suspended TY2002-2022 (P53). 2026-10-21
+    "pe_charitable_deduction": ["charitable_deduction"],
+    # Massachusetts senior circuit breaker (Schedule CB): PE pays it on
+    # real_estate_taxes = salt_prop with no rent input; ours is
+    # documented-not-modeled pending the rent / property-tax overlays. 2026-10-21
+    "pe_ma_senior_cb": ["ma_senior_circuit_breaker"],
     "pe_or_kicker": ["or_kicker"],
     # Maine's 2025 affordability payment ($300 per person, H.P. 1491 Part T):
     # a direct payment from a special revenue fund, not a tax credit, which PE

@@ -5813,6 +5813,52 @@ run_case('AR', 2024,
            list(agi = 1200000, wages1 = 500000, ei1 = 500000, kg_st = 700000),
            expect = list(st_taxable_income_surtax = 5674), tol = 100,
            label = 'MA-22 surtax base includes short-term gains')
+  # MA-23 (2026-10-21): Schedule B netting. TY2023 single, $60,000 wages,
+  # $1,000 interest, $10,000 short-term loss, $50,000 long-term gain:
+  # line 20 uses $1,000 against interest (the smaller of interest and the
+  # loss, max $2,000); the other $9,000 offsets long-term gain (line 22), so
+  # the base is 60,000 + 1,000 - 1,000 + 41,000 = 101,000, nothing at the
+  # short-term rate
+  run_case('MA', 2023,
+           list(agi = 98000, wages1 = 60000, ei1 = 60000, txbl_int = 1000,
+                kg_st = -10000, kg_lt = 50000),
+           expect = list(st_agi = 101000, st_st_gains = 0),
+           label = 'MA-23a short-term loss against interest, then long-term gain')
+  # MA-23b: a $30,000 long-term loss against $20,000 of short-term gain
+  # (line 25) leaves no short-term gain to tax; the $10,000 left reduces
+  # interest of $5,000 to 3,000 (line 32, $2,000 cap)
+  run_case('MA', 2023,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, txbl_int = 5000,
+                kg_st = 20000, kg_lt = -30000),
+           expect = list(st_agi = 63000, st_st_gains = 0),
+           label = 'MA-23b long-term loss against short-term gain, then interest')
+  # MA-24 (2026-10-21): Schedule Y 9c charitable deduction from TY2023, for
+  # federal non-itemizers too: $5,000 of federal charitable deduction comes
+  # off; none in TY2022
+  run_case('MA', 2023,
+           list(agi = 80000, wages1 = 80000, ei1 = 80000, itemizing = FALSE,
+                char_item_ded_potential = 5000),
+           expect = list(st_ded = 5000),
+           label = 'MA-24a charitable deduction from TY2023')
+  run_case('MA', 2022,
+           list(agi = 80000, wages1 = 80000, ei1 = 80000, itemizing = FALSE,
+                char_item_ded_potential = 5000),
+           expect = list(st_ded = 0),
+           label = 'MA-24b no charitable deduction in TY2022')
+  # MA-25 (2026-10-21): a Part B loss cannot reach Part C gains. TY2025
+  # single, $50,000 business loss and $60,000 long-term gain: the base is the
+  # whole $60,000 (the ordinary class floors at zero), not $10,000
+  run_case('MA', 2025,
+           list(agi = 10000, sole_prop = -50000, kg_lt = 60000),
+           expect = list(st_agi = 60000),
+           label = 'MA-25 ordinary-class loss does not offset long-term gain')
+  # MA-26 (2026-10-21): Schedule Y line 10 takes the federal student loan
+  # interest deduction. TY2019 single, $40,000 wages and $2,000 of it: base
+  # 38,000
+  run_case('MA', 2019,
+           list(agi = 38000, wages1 = 40000, ei1 = 40000, sl_int_ded = 2000),
+           expect = list(st_agi = 38000),
+           label = 'MA-26 Schedule Y student loan interest')
 
   #--------------------------------------------------------------------------
   # Oregon (Form OR-40)
@@ -7073,6 +7119,7 @@ st_test_unit = function(overrides = list()) {
     alimony_exp = 0, se_health = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
     txbl_ira_dist = 0, ot_ded = 0, tip_ded = 0, senior_ded = 0, auto_int_ded = 0, hsa_contr = 0,
+    sl_int_ded = 0, ed_exp = 0,
     char_cash = 0, char_noncash = 0,
     item_ded = 0, item_ded_ex_limits = 0, salt_item_ded = 0,
     salt_inc_sales = 0, salt_prop = 0, salt_pers = 0,

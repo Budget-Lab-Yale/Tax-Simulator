@@ -1636,6 +1636,29 @@ Property Taxes". `sc_state_tax_addback` uses the flat $40,000 ($20,000 MFS). For
 reduced toward $10,000 (MAGI over $500,000), that adds back state income tax that was never deducted federally. We
 use the limit actually applied, as for Oregon (P46) and Montana (P50).
 
+### P53. Massachusetts charitable deduction applied before its 2023 reinstatement
+
+`ma_part_b_taxable_income_deductions` adds the federal `charitable_deduction` in every year. Massachusetts suspended
+its charitable deduction from TY2002 and reinstated it for tax years beginning on or after January 1, 2023 (2023 Form
+1 instructions; Schedule Y line 9c, which also excludes household goods and used clothing and limits the deduction
+to Part B income). Effect: PolicyEngine understates TY2021-22 Massachusetts tax by 5% of the charitable deduction.
+
+### P54. Massachusetts short-term loss used twice
+
+`ma_part_a_agi` applies a net short-term capital loss against interest and dividends (at most $2,000; Schedule B
+line 20), and `ma_part_c_gross_income` separately offsets the whole short-term loss against long-term gains
+(`max(0, ltcg + min(0, stcg))`). Schedule B carries into line 22 only the loss left after line 20 (line 21 = line 19c
+combined with line 20). Effect: PolicyEngine understates Massachusetts tax by up to $100 (5% of $2,000) for filers
+with a short-term loss, a long-term gain and interest or dividends.
+
+### P55. Massachusetts Form 4797 gains and losses treated as ordinary income (concept question)
+
+Massachusetts classes Form 4797 Part II gains and losses as capital (Schedule D line 7, "Massachusetts Long-Term
+Capital Gains and Losses from U.S. Form 4797, Part II ... treated as capital gains or losses for Massachusetts
+purposes"), so they net only within the capital classes. PolicyEngine nets them against ordinary Part B income: a
+$521,473 Form 4797 loss shelters $37,000 of wages and pensions entirely (TY2025), and a $262,806 gain is absorbed by
+a $600,466 ordinary loss. Raised as a classification to confirm.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

@@ -1052,7 +1052,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 10000,
                                 txbl_kg, sch_e, part_scorp))) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
-                         ui, txbl_int, ei1, ei2,
+                         ui, txbl_int, div_ord, div_pref, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          itemizing, n_dep_ge18, n_dep_ge65, n_dep_ge24,
                          elective_deferral, blind_n, n_dep_ctc, care_exp, kg_st, kg_lt,

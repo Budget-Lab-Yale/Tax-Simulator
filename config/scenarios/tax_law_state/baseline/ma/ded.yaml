@@ -60,6 +60,11 @@ care_ded_mfs_ineligible:
     '2021': 0
   reference: '2018 booklet p.13: line 12 "You cannot claim this deduction if married filing a separate U.S. Form 1040"; line 13 "Only if single, head of household or married filing jointly. You cannot claim this deduction if married filing a separate return." The bar applies to both branches'
 
+char_fed_ded:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: '2023 Form 1 instructions p.3 ("For tax years beginning on or after January 1, 2023, a deduction for charitable contributions is available ... This deduction had been suspended since the 2002 tax year") and Schedule Y line 9c: "Massachusetts allows a charitable deduction in an amount equal to the federal charitable deduction, except that the state deduction does not include any amounts for contributions of household goods or used clothing. Taxpayers do not have to itemize ... The Massachusetts deduction may only be used to reduce Part B adjusted gross income". Encoded 2026-10-21 (household goods / used clothing unobserved)'
 documented_not_modeled:
   public_retirement_contributions:
     reference: 'The line 11 base includes contributions to U.S. and Massachusetts public retirement systems as well as payroll taxes. Those contributions are not a model input, so only the payroll-tax component is reached [understates the deduction for state, municipal and federal employees, who often reach the $2,000 cap on retirement contributions alone. It also compounds the Massachusetts public-employee wage addback documented in agi.yaml]'
@@ -76,6 +81,6 @@ documented_not_modeled:
   dependent_care_credits_2021_2022:
     reference: 'THIS REGIME CHANGED TWICE and secondary sources describe only the last step. The TY2017-TY2020 DEDUCTIONS above are now encoded. For TY2021-TY2022 they became small refundable CREDITS ($240 for one qualifying individual / $480 for two or more, and $180 / $360 respectively); from TY2023 both were replaced by the Child and Family Tax Credit in credits.yaml. Only the two-year TY2021-TY2022 credit step is still unmodeled [worth at most $480 a return, an order of magnitude smaller than the deductions it replaced]'
   other_schedule_y_deductions:
-    reference: 'Schedule Y also carries the college tuition deduction (amounts above 25% of Massachusetts AGI), the undergraduate student loan interest deduction, employee business expenses, the self-employed health insurance deduction, moving expenses, alimony paid, and a deduction for contributory pension income from a reciprocal state. None is separable from federal amounts in the microdata, and several have Massachusetts-specific bases'
+    reference: 'Schedule Y also carries the college tuition deduction (amounts above 25% of Massachusetts AGI), the undergraduate student loan interest deduction, employee business expenses, the self-employed health insurance deduction, moving expenses, alimony paid, and a deduction for contributory pension income from a reciprocal state. Lines 2, 3, 7, 8, 9a and 10 mirror federal Schedule 1 adjustments and are encoded as own-base adjustments in agi.yaml (2026-10-21); the tuition, undergraduate student loan, business, moving and reciprocal-pension items have Massachusetts-specific bases and are not modeled'
   no_itemized_deduction:
-    reference: 'Massachusetts allows no itemized deduction at all -- there is nothing corresponding to federal Schedule A except the medical/dental amount, which arrives as an exemption (see exempt.yaml). Filers with large mortgage interest or charitable giving get no Massachusetts relief for it'
+    reference: 'Massachusetts allows no itemized deduction at all (the TY2023+ charitable deduction is a Schedule Y deduction, char_fed_ded) -- there is nothing corresponding to federal Schedule A except the medical/dental amount, which arrives as an exemption (see exempt.yaml). Filers with large mortgage interest or charitable giving get no Massachusetts relief for it'

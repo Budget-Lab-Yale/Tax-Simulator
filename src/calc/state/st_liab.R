@@ -63,7 +63,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'st_surtax.taxable_income_rate', # (dbl) taxable-income surtax rate
     'st_surtax.taxable_income_round', # (int) whether to round the base to dollars
     'st_surtax.base_add_st_gains',   # (int) separately taxed short-term gains join the surtax base (MA)
-    'kg_st',                         # (dbl) short-term capital gains
+    'st_st_gains',                   # (dbl) short-term gains taxed at the separate rate (from calc_st_agi)
     'st_surtax.per_return_amount',   # (dbl) flat per-return excise on required filers
     'st_surtax.per_return_blind_exempt', # (int) blind filers exempt from the excise
     'st_surtax.inv_income_rate',     # (dbl) net-investment-income add-on rate (MN 1%)
@@ -103,7 +103,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
 
       # MA's 4% surtax is on total taxable income -- Part A short-term gains,
       # taxed at their own rate outside st_txbl_inc, included
-      st_surtax_base = st_txbl_inc + st_surtax.base_add_st_gains * pmax(0, kg_st),
+      st_surtax_base = st_txbl_inc + st_surtax.base_add_st_gains * st_st_gains,
       st_surtax_taxable_income = if_else(st_surtax.taxable_income_round == 1,
                                           round(st_surtax_base), st_surtax_base),
       st_taxable_income_surtax = pmax(
