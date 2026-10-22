@@ -701,6 +701,16 @@ private cap, public pensions without limit) and Schedule 1 subtracts senior inte
 gives them the flat $20,000 against any income: probe (2026-10-22, TY2019 single aged 76, $40,000 of wages or of
 interest): v36 15,600 in both cases. A 74-year-old with a $60,000 pension is capped at $20,000 (2026-08-11 probe).
 
+### T81. Pennsylvania losses offset across income classes
+
+Pennsylvania taxes eight income classes separately; a loss in one class cannot offset income in another, and each
+class is floored at zero (PA-40 lines 4-8). TAXSIM nets Schedule E and Form 4797 losses against other income.
+Probe (2026-10-22, TY2019 single, $50,000 of wages): v32 is 45,000 with a $5,000 rental loss (otherprop) or a
+$5,000 S-corporation loss; a $3,000 short-term capital loss and a $5,000 Schedule C loss are correctly floored
+(v32 50,000). Related, and a proxy rather than a bug: TAXSIM taxes all pension and IRA income unless the older
+spouse is 65 or over, although Pennsylvania exempts IRA distributions from 59 1/2 and employer pensions on
+retirement at any age.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under

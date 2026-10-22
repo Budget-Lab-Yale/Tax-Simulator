@@ -1065,7 +1065,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 10000,
                          elective_deferral, blind_n, n_dep_ctc, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
-                         xw_fed_only_atl, xw_atl_disallowed_ma, other_gains, eitc_inv_inc, se1, se2,
+                         xw_fed_only_atl, xw_atl_disallowed_ma, other_gains, sch_e, eitc_inv_inc, se1, se2,
                          cdctc_shortfall, rebate, cdctc_takeup, ed_nonref,
                          liab_iit, liab_iit_net, salt_prop),
                 by = 'id')

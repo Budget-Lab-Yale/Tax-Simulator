@@ -2,7 +2,7 @@
 
 State: `PA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-08` (child care credit base); previous: `2026-07-23`
+Last updated: `2026-10-22` (cross-model close-out); previous: `2026-10-08`
 
 > **Status note (as of 2026-07-23), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -92,6 +92,25 @@ Federal base sweep (does the state credit read the federal credit before or afte
   the form exempts distributions after qualifying for retirement at any plan
   age. Noted for a synthetic probe before a row is added.
 - Spec: `research/state_tax/notes/datagap_spec_hi_ky_pa.md` §4.
+
+## Cross-model close-out, 2026-10-22
+
+No encoding change: every remaining difference is attributed to an external model or to an unobserved input.
+
+- T81 TAXSIM nets Schedule E and Form 4797 losses against other classes (PA-40 lines 4-8 floor each class at zero).
+  Probe: $5,000 rental or S-corporation loss against $50,000 of wages gives v32 45,000; capital and Schedule C
+  losses are floored correctly. The 2026-08-11 annotate row, promoted; new harness raw column `sch_e`.
+- Retirement distributions before retirement age (proxy, both models). PA exempts IRA distributions from 59 1/2
+  and employer pensions on retirement at any age, and taxes earlier distributions only above basis (contributions
+  PA already taxed). Retirement status and basis are unobserved, so we exempt every distribution. TAXSIM taxes all
+  of it unless the older spouse is 65+; PolicyEngine exempts IRAs from 59 1/2 and pensions from 65 (`is_retired`
+  default), per person.
+- TAXSIM leaves Schedule 1 other income out of PA income; we include the PUF field as the PA-40 line 8 proxy, which
+  also holds non-taxable items (proxy).
+- Schedule SP dependent children (both models proxy the relationship): PA counts a dependent child of any age; we
+  count every dependent, which overstates where an adult dependent is a parent; PolicyEngine counts qualifying
+  children only. Binds in TY2025.
+- Out-of-state municipal interest: our 25% assumption; PolicyEngine taxes none.
 
 ## Known differences
 
