@@ -818,6 +818,13 @@ test_state_calc = function() {
            expect = list(st_exempt = 9200,
                          liab_st_iit = (50000 - 9200) * 0.0425 - 300),
            label = 'MI-12 blind special exemption')
+  # MI-13 (2026-10-22): Schedule 1 line 2 adds back the federal deduction
+  # for half of self-employment tax. 2025 single, AGI 46,468 after a 3,532
+  # deduction: Michigan income 50,000, less the 5,800 exemption
+  run_case('MI', 2025, list(agi = 46468, liab_seca_er = 3532),
+           expect = list(st_additions = 3532,
+                         liab_st_iit = (50000 - 5800) * 0.0425),
+           label = 'MI-13 half of SE tax added back')
 
   # MI-2: 2019 Tier 1 (born before 1946 = age 74+): single 75, pension
   # 60,000 capped at the Form 4884 maximum 52,808; senior investment cap

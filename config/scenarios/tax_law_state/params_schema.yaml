@@ -147,6 +147,7 @@ scalars:
   st_agi.add_fed_tip_ded: 0
   st_agi.add_fed_senior_ded: 0
   st_agi.add_fed_auto_int_ded: 0
+  st_agi.add_seca_ded: 0   # 1 = add back the federal half-SE-tax deduction (MI Schedule 1 line 2, taxes measured by income)
   st_agi.add_std_above: .inf
   # Federal above-the-line HSA deduction reversed (state does not conform
   # to IRC 223; CA)

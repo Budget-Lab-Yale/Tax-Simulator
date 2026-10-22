@@ -12,6 +12,11 @@ documented_not_modeled:
 add_exempt_int:
   value: 1
   reference: 'Michigan MI-1040 Schedule 1, out-of-state municipal-interest addition, 2017-2025'
+# Taxes measured by income deducted federally are added back -- in this
+# model, the deduction for half of self-employment tax
+add_seca_ded:
+  value: 1
+  reference: 'MI Schedule 1 line 2 (2025 form): "Deduction for taxes on or measured by income, including self-employment tax, taken on your federal return"; same line on the 2018 form; Michigan Treasury, Additions and Subtractions page: the self-employment tax deduction taken federally is added back (MCL 206.30(1)). Encoded 2026-10-22: TAXSIM and PolicyEngine (mi_additions = self_employment_tax_ald) both add it; we did not'
 own_state_exempt:
   value: 1
   reference: 'Michigan MI-1040 Schedule 1, Michigan municipal-obligation exception, 2017-2025'

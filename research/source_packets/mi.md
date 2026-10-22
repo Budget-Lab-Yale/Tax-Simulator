@@ -2,7 +2,7 @@
 
 State: `MI`  
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-13`
+Last updated: `2026-10-22` (self-employment tax addition; cross-model close-out); previous: `2026-10-13`
 
 > **Status note (as of 2026-07-13), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -49,6 +49,30 @@ Last updated: `2026-07-13`
   excluded.
 - Spec: `research/state_tax/notes/datagap_spec_mi_mo_or.md` §1-2.
 
+## Self-employment tax addition and cross-model close-out, 2026-10-22
+
+- **Schedule 1 line 2** adds back the federal "deduction for taxes on, or measured by, income including
+  self-employment tax taken on your federal return" (2018 form; 2025 form adds electing flow-through entity tax;
+  Treasury "Additions and Subtractions" page). The model had not, so self-employed filers were under-taxed by 4.25%
+  of the half-SE-tax deduction. New generic switch `st_agi.add_seca_ded`; test MI-13. Both TAXSIM and PolicyEngine
+  (`mi_additions` = `self_employment_tax_ald`) add it. The electing flow-through entity share is unobserved.
+- Harness: PolicyEngine's Tier 1 subtraction reads `taxable_private_pension_income` / `taxable_public_pension_income`,
+  which the driver never filled, so Tier 1 retirees got no subtraction; Michigan pensions are now copied into the
+  private component (`PE_PRIVATE_PENSION_STATES`, as for Missouri).
+
+Attributed to the external models (issues doc T77-T79, P61):
+
+- T77 TAXSIM gives the age-67 standard deduction per spouse ($20,000 each) rather than $40,000 on the older
+  spouse's birth year.
+- T78 TAXSIM applies it from 65, not 67, and keeps the Tier 3 personal exemption.
+- T79 TAXSIM gives Tier 1 filers (born before 1946) the flat $20,000 instead of the Form 4884 and senior investment
+  subtractions (the 2026-08-11 annotate row, promoted to exclude).
+- TAXSIM nets the home heating credit at actual household income, not only at the $1.01 artifact (S46: outside the
+  income tax concept).
+- P61 (concept) TY2022 earned income credit: 30% by statute (PA 4 of 2023, retroactive) against PolicyEngine's 6%
+  form rate, the extra 24 points having been paid as 2023 checks. We keep the statutory rate.
+- Out-of-state municipal interest: our 25% add-back assumption; PolicyEngine adds none.
+
 ## Known differences
 
 - The retirement subtraction is ENCODED as of 2026-07-23 (elderly survey follow-up; full research in [research/raw/mi_retirement_research.md](research/raw/mi_retirement_research.md)): per-return age bands on the older spouse (new `pension_excl_band_*` family) expressing the birth-year tiers (Tier 1 born <1946: indexed Form 4884 cap, $50,509/$101,019 in 2017 to $65,897/$131,794 in 2025; Tier 2 born 1946-52: $20,000/$40,000) and the PA 4 of 2023 phase-in (25/50/75/100% of the cap for the expanding born-1946-to-1958/-62/-66 windows, printed amounts $15,380/$32,020/$49,423 single; everyone from 2026, floored at age 59 for the IRA-59.5/plan-retirement rules). The senior investment income subtraction (MCL 206.30(1)(p), born <1946, $11,259 to $14,688 single) is also encoded, reduced by the retirement subtraction taken. The Tier-2/3 67+ Michigan Standard Deduction is ALSO properly encoded (same date) as an all-income deduction via the new `senior_std_*` params: $20,000/$40,000 for 67+ older-spouse returns born after 1945, full for Tier-2 ages, netted by taxable SS (suspended 2026-2028 per PA 4) and exemption amounts for Tier-3 ages per the Worksheet 2 netting, mutually exclusive with the Form 4884 subtraction (calculator takes the better). Motivated by cross-model point masses at +$850/+$1,700 (= 20k/40k x 4.25%) on 67+ no-pension records. Tests MI-2..MI-10. Remaining known-differences: public pensions (unlimited for Tier 1) treated as private/capped — source unobservable; 457/TSP/unmatched-401(k) amounts would not qualify but sit in the PUF pension concept; military-pay/military-retirement reductions to the caps and standard deduction unobserved; SSA-exempt add-ons, fire/police (2023+), and surviving-spouse elections unobservable; 2026+ caps carry 2025 published values (CPI-indexed in law).
@@ -58,5 +82,5 @@ Last updated: `2026-07-13`
 
 ## Cross-model and aggregate validation
 
-- Cross-model: `todo`; compare 2017, 2022, 2023, and 2025 cases, emphasizing the EITC expansion and exemption indexation.
+- Cross-model: closed 2026-10-22 (see the close-out section above and the rollout tracker for scores).
 - Aggregate: blocked until weights land; reconcile MI HT2 and Department of Treasury annual income-tax revenue, with retirement/homestead differences called out separately.

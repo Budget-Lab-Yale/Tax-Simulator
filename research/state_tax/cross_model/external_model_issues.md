@@ -678,6 +678,29 @@ TAXSIM gives nothing under 65. Probe (2026-10-22, TY2019 single, $5,000 of wages
 maximum Social Security benefit) to every pension -- one input, read as public; whether a pension is public is
 unobserved in the data, so that half is a proxy difference rather than a bug.
 
+### T77. Michigan age-67 standard deduction given per spouse on joint returns
+
+MCL 206.30(9) sets the Michigan standard deduction (and the Tier 2 pension limit) at $20,000 for a single return and
+$40,000 for a joint return, with the older spouse's birth year controlling ("Married couples filing a joint return
+should complete Form 4884 based on the year of birth of the older spouse", Form 4884 instructions). TAXSIM gives
+$20,000 per qualifying spouse. Probe (2026-10-22, TY2019 joint, $50,000 of wages): v36 is 21,200 at ages 70/60 and
+60/70, 1,200 at 70/70.
+
+### T78. Michigan standard deduction from age 65 instead of 67
+
+MCL 206.30(9)(b) and (e) grant the $20,000 / $40,000 deduction "after that person reaches the age of 67". TAXSIM
+applies it from 65, so Tier 2 filers aged 65-66 (who should have only the pension limit) and Tier 3 filers born after
+1952 (who should have nothing before 67) receive it; at 67 TAXSIM also keeps the Tier 3 personal exemption that the
+deduction replaces. Probe (2026-10-22, TY2019 single, $40,000 of wages): v36 15,600 at ages 65 and 66, 35,600 at 64;
+TY2020, born 1953, age 67: 15,250 (the deduction and the $4,750 exemption).
+
+### T79. Michigan Tier 1 filers given the flat standard deduction
+
+For filers born before 1946 Michigan has no standard deduction; Form 4884 subtracts pensions (up to the indexed
+private cap, public pensions without limit) and Schedule 1 subtracts senior interest, dividends and gains. TAXSIM
+gives them the flat $20,000 against any income: probe (2026-10-22, TY2019 single aged 76, $40,000 of wages or of
+interest): v36 15,600 in both cases. A 74-year-old with a $60,000 pension is capped at $20,000 (2026-08-11 probe).
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
@@ -1782,6 +1805,14 @@ the qualifying retirement allowance to include "401(k) plans, deferred compensat
 plans, also known as Keogh plans, annuities from a defined pension plan and individual retirement arrangements, also
 known as IRAs ... but not including Roth IRAs". Effect: PolicyEngine overstates Missouri tax by up to $6,000 per
 spouse of IRA distributions times the rate within the exemption's income range.
+
+### P61. Michigan TY2022 earned income credit rate (concept question)
+
+Public Act 4 of 2023 raised the Michigan earned income credit from 6% to 30% of the federal credit for tax years
+beginning after December 31, 2021 (MCL 206.272). TY2022 returns had already been filed at 6%, so Treasury paid the
+additional 24 points as separate payments in 2023. PolicyEngine keeps 6% for 2022 by design (parameter note: "In
+2022, Michigan enacted a supplemental 24% match after tax filing season"); we encode the statutory 30%. Raised to
+agree on whether the TY2022 credit is the statutory rate or the rate on the form.
 
 ## Corroboration worth passing along
 

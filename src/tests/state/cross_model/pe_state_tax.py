@@ -91,8 +91,11 @@ EVEN_SPLIT_COLS = {"pension_income", "ira_dist"}
 # calculator uses while the pension_public optional input is unpublished. MO:
 # MO-A Part 3 Section B saw no private pension at all, so PolicyEngine never
 # paid the $6,000 exemption (2026-10-22, MO 2024 record 155551). Scoped by
-# state because NE (closed) also reads the private component
-PE_PRIVATE_PENSION_STATES = {"MO"}
+# state because NE (closed) also reads the private component. MI: the Tier-1
+# retirement subtraction (born before 1946) reads the private and public
+# components, so PolicyEngine paid Tier-1 retirees no subtraction at all
+# (2026-10-22, MI 2024 record 313622)
+PE_PRIVATE_PENSION_STATES = {"MO", "MI"}
 # PE's generic state_income_tax INCLUDES local piggyback taxes for some
 # states. For MD, with no county input, PE defaults the county to
 # first-in-state (Allegany, ~3%), silently adding a county tax to every

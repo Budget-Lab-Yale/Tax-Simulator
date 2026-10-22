@@ -200,6 +200,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.add_fed_tip_ded',       # (int) federal tips deduction added back (SC 2025 nonconformity)
     'st_agi.add_fed_senior_ded',    # (int) federal senior deduction added back (SC 2025)
     'st_agi.add_fed_auto_int_ded',  # (int) federal vehicle-loan interest deduction added back (SC 2025)
+    'st_agi.add_seca_ded',          # (int) federal deduction for half of SE tax added back (MI Schedule 1 line 2)
     'st_agi.add_std_above',         # (dbl) non-itemizer federal standard deduction above this is added back (SC 2025 pre-OBBBA amount; Inf = none)
     'st_agi.add_hsa',               # (int) whether the federal HSA deduction is added back (CA)
     'st_agi.cap_loss_limit',        # (dbl) state per-year net capital loss limit (WI $500)
@@ -607,8 +608,12 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                          if_else(itemizing == 1, 0,
                                  pmax(0, std_ded - st_agi.add_std_above)),
 
+      # Addition: the federal deduction for half of self-employment tax, a
+      # tax "measured by income" (MI Schedule 1 line 2; MCL 206.30(1))
+      st_add_seca = st_agi.add_seca_ded * liab_seca_er,
+
       st_additions = st_add_muni + st_add_ot + st_add_cap_loss + st_add_hsa +
-                     st_add_fed_obbba,
+                     st_add_fed_obbba + st_add_seca,
 
       # Subtraction: state refunds included in the federal base
       st_sub_ref = st_agi.sub_state_ref * state_ref,
