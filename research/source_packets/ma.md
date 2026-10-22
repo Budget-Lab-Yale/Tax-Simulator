@@ -340,6 +340,32 @@ in that table decompose exactly as 2,000 (payroll, definitional) plus 3,600 or
 7,200 (dependent care, the real gap). Trust `siitax`, per the harness README
 caveat.
 
+### Closure 2026-10-21
+
+All nine cells clear on the id-keyed sample: TAXSIM 2017-20 0.982 / 0.956 / 0.957 / 0.960;
+PolicyEngine 2021-25 0.997 / 0.983 / 0.979 / 0.976 / 0.971 (from 0.82-0.88).
+
+**Our side** (generic switches, default off elsewhere):
+- Child and Family Tax Credit also for dependents 65+ and barred to separate filers.
+- Partnership and S-corporation income as allowed federally (TIR 89-2; Schedule E-2
+  line 1): suspended passive losses had wiped out tax on large gains.
+- Limited Income Credit capped at the 1.75x band; the 4% surtax base includes
+  short-term gains.
+- Schedule B netting in form order (lines 20, 22, 25, 32; $2,000 against interest and
+  dividends) and class separation: a Part B loss no longer reaches Part A or C income.
+- TY2023+ charitable deduction (Schedule Y 9c, federal amount, itemizing or not, Part B
+  only).
+- Schedule Y lines 2, 3, 7, 8, 9a and 10 taken from the federal adjustments (penalty,
+  alimony, self-employed health insurance, HSA, educator expenses, student loan interest).
+
+**External.** PolicyEngine: P53 (charity deduction before its TY2023 reinstatement), P54
+(a short-term loss used twice), P55 (Form 4797 gains treated as ordinary), senior circuit
+breaker (data gap). TAXSIM: T67 (no line 11 deduction when only the spouse earns), T68
+(a dependent aged 0 not counted for the under-12 deduction), T69 (a 12-year-old counted),
+T70 (ordinary losses absorb gains), the head-of-household inference, and three
+crosswalk input-coverage rows (federal adjustments Massachusetts disallows, Form 4797
+gains, the medical/dental exemption). Report: `results/reports/ma.md`.
+
 ## Aggregate validation notes
 
 - HT2 targets once weights land; the Massachusetts DOR publishes annual

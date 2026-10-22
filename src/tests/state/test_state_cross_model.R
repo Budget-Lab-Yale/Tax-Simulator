@@ -1042,6 +1042,12 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 10000,
                            abs(misc_item_ded_potential) +
                            abs(other_item_ded_potential) + salt_pers,
                          xw_fed_only_atl = ed_exp + sl_int_ded + tuition_ded,
+                         # federal above-the-line deductions a Massachusetts-style
+                         # own base disallows (IRA, Keogh/SEP, tuition, above-the-
+                         # line charity, other), which reach TAXSIM inside nonprop
+                         xw_atl_disallowed_ma = trad_contr_ira + keogh_contr +
+                                                pmin(tuition_ded, agi.tuition_ded_limit) +
+                                                char_above_ded + other_above_ded,
                          xw_pe_passthru_misc = part_scorp - part_se +
                                                estate - estate_loss +
                                                other_inc + other_gains,
@@ -1053,12 +1059,13 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 10000,
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, div_ord, div_pref, ei1, ei2,
+                         dep_age1, dep_age2, dep_age3, med_item_ded_potential,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          itemizing, n_dep_ge18, n_dep_ge65, n_dep_ge24,
                          elective_deferral, blind_n, n_dep_ctc, care_exp, kg_st, kg_lt,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item, xw_pe_passthru_misc, liab_niit, ftc,
-                         xw_fed_only_atl, other_gains, eitc_inv_inc, se1, se2,
+                         xw_fed_only_atl, xw_atl_disallowed_ma, other_gains, eitc_inv_inc, se1, se2,
                          cdctc_shortfall, rebate, cdctc_takeup, ed_nonref,
                          liab_iit, liab_iit_net, salt_prop),
                 by = 'id')

@@ -578,6 +578,34 @@ only. Probe (2026-10-21, joint, $60,000 of wages, one dependent aged 3 vs 8): v3
 age-3 return is lower by exactly $4,110 / $4,190 / $4,260 in TY2018-20. Effect: TAXSIM overstates TY2017 South
 Carolina tax by $4,050 times the rate for each young child.
 
+### T67. Massachusetts line 11 payroll deduction missing when only the spouse earns
+
+Form 1 line 11 allows each spouse up to $2,000 of Social Security, Medicare and public-retirement contributions.
+TAXSIM computes none when the wages belong to the spouse alone. Probe (2026-10-21, TY2019 joint, $43,314 of
+wages): implied base 32,514 with the wages on the primary and 34,514 with the same wages on the spouse. Together
+with T16 (one $2,000 cap per return), TAXSIM overstates Massachusetts tax by up to $100 a return.
+
+### T68. Massachusetts under-12 dependent deduction ignores a dependent aged 0
+
+TY2017-20 Form 1 line 13 deducts $3,600 for one dependent member of household under 12 ($7,200 for two or more).
+TAXSIM leaves out a dependent whose age is 0 while still granting the $1,000 dependent exemption. Probe (2026-10-21,
+TY2018 joint, $60,000 of wages, one dependent): implied base 48,200 at age 0 and 44,600 at age 1. Effect: TAXSIM
+overstates Massachusetts tax by $184 for families with a child born during the year.
+
+### T69. Massachusetts under-12 dependent deduction counts a 12-year-old
+
+The TY2017-20 line 13 deduction is for a dependent member of household under age 12 at year end. TAXSIM counts a
+dependent aged 12. Probe (2026-10-21, TY2018, $40,000 of wages, one dependent): the same implied base at ages 11 and
+12, $3,600 higher at 13. Effect: TAXSIM understates Massachusetts tax by $184 for families whose youngest child is
+12.
+
+### T70. Massachusetts class separation (concept question)
+
+TAXSIM lets a loss in the ordinary class (business, rents, other income) absorb long-term capital gains for
+Massachusetts. Massachusetts taxes its classes separately: a Part B loss does not reduce Part C gains. TY2017 record
+with federal AGI of -$1,157,306 and $168,429 of long-term gain: TAXSIM $0, our $8,366 (5.1% of the gain less
+exemptions).
+
 ### T66. South Carolina care credit ignores the IRC 21 limits
 
 12-6-3380 grants 7% of the expenses on which the federal credit is figured ($210 / $420 at most). TAXSIM's v38
