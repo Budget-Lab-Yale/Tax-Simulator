@@ -662,6 +662,22 @@ Tax Law 612(c)(3-a) excludes up to $20,000 of private pension and annuity income
 the age of fifty-nine and one-half" (IT-201 line 29). TAXSIM applies it from 65. Probe (2026-10-22, TY2017 and
 TY2019 single, $30,000 of wages and $20,000 of pensions): v32 is 50,000 at ages 58, 60, 62 and 64 and 30,000 at 66.
 
+### T75. Missouri business income deduction missing
+
+RSMo 143.022 and MO-A Part 1 line 17 subtract a share of Schedule C and Schedule E Part II profit from federal AGI
+(5% in TY2018, 10% in TY2019-2021; "The State of Missouri allows a subtraction from federal adjusted gross income in
+the amount of 10 percent", 2019 booklet). TAXSIM applies none. Probe (2026-10-22, single, $40,000 of Schedule C
+income, TY2018-2020): v32 equals federal AGI ($37,174) in every year; S-corporation income likewise.
+
+### T76. Missouri private pension exemption only from age 65
+
+MO-A Part 3 Section B (RSMo 143.124) exempts up to $6,000 per spouse of private pension, annuity and IRA income at
+any age, reduced dollar for dollar by Missouri AGI less taxable Social Security over $25,000 / $32,000 / $16,000.
+TAXSIM gives nothing under 65. Probe (2026-10-22, TY2019 single, $5,000 of wages and $20,000 of pension): v36 is
+12,464.51 at ages 45, 60 and 64 and 0 at 66. From 65 TAXSIM instead applies the public-pension exemption (up to the
+maximum Social Security benefit) to every pension -- one input, read as public; whether a pension is public is
+unobserved in the data, so that half is a proxy difference rather than a bug.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
@@ -1748,6 +1764,24 @@ one to five or more qualifying persons. `ny_cdcc_max` takes `min(cdcc_relevant_e
 never bind. Record 58008 (TY2025, head of household, children aged 3, 8 and 9, $10,362 of expenses): `ny_cdcc`
 2,178 against IT-216's 2,722.50 (7,500 x .33 x 1.10). Effect: PolicyEngine overstates New York tax by up to $3,000
 of expenses times the New York credit rate for families with three or more qualifying persons.
+
+### P59. Missouri business income deduction computed but never applied
+
+`mo_business_income_deduction` (15% for TY2022, 20% from TY2023, of qualified business income) is not read by any
+other variable: it is absent from `gov.states.mo.tax.income.subtractions.agi_subtractions` and from the deductions
+in `mo_taxable_income`. MO-A Part 1 line 17 subtracts it from federal AGI ("a subtraction from federal adjusted gross
+income in the amount of 20 percent for Missouri-source business income", 2023 booklet). The parameter also has no
+TY2021 value (the booklet gives 10%), and the form's base is Schedule C, Schedule E Part II and (from TY2023) farm
+profit rather than qualified business income. Record 341101 (TY2024): `mo_adjusted_gross_income` 315,902 against
+the form's 273,989.
+
+### P60. Missouri private retirement exemption excludes IRA distributions
+
+`mo_pension_and_ss_or_ssd_deduction_section_b` reads `taxable_private_pension_income` only. RSMo 143.124.1 defines
+the qualifying retirement allowance to include "401(k) plans, deferred compensation plans, self-employed retirement
+plans, also known as Keogh plans, annuities from a defined pension plan and individual retirement arrangements, also
+known as IRAs ... but not including Roth IRAs". Effect: PolicyEngine overstates Missouri tax by up to $6,000 per
+spouse of IRA distributions times the rate within the exemption's income range.
 
 ## Corroboration worth passing along
 

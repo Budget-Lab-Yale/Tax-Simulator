@@ -85,6 +85,14 @@ PRIMARY_VARS = {
 }
 # Tax-unit-level person inputs split evenly between spouses on a joint record
 EVEN_SPLIT_COLS = {"pension_income", "ira_dist"}
+# States whose PolicyEngine pension rules read taxable_private_pension_income
+# (an input PolicyEngine does not derive from taxable_pension_income, which we
+# set directly). The pension is copied into it -- the all-private reading our
+# calculator uses while the pension_public optional input is unpublished. MO:
+# MO-A Part 3 Section B saw no private pension at all, so PolicyEngine never
+# paid the $6,000 exemption (2026-10-22, MO 2024 record 155551). Scoped by
+# state because NE (closed) also reads the private component
+PE_PRIVATE_PENSION_STATES = {"MO"}
 # PE's generic state_income_tax INCLUDES local piggyback taxes for some
 # states. For MD, with no county input, PE defaults the county to
 # first-in-state (Allegany, ~3%), silently adding a county tax to every
@@ -349,6 +357,12 @@ def build_situation(rows, year):
                 situation["people"][primary].setdefault(var, {})[yr] = val
             else:
                 group_values.setdefault(entity, {})[var] = {yr: val}
+
+        if row["state"] in PE_PRIVATE_PENSION_STATES:
+            for person in [primary] + ([spouse] if joint else []):
+                pens = situation["people"][person].get("taxable_pension_income")
+                if pens is not None:
+                    situation["people"][person]["taxable_private_pension_income"] = dict(pens)
 
         # Group entities: one instance of each per record.
         #

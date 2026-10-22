@@ -48,22 +48,34 @@ std_equals_federal:
 #-----------------------------------------------------------------------
 # Itemized deductions (MO-A Part 2). Missouri starts from the FEDERAL
 # itemized total, ADDS the taxpayer's own payroll and self-employment
-# taxes, and SUBTRACTS state and local income taxes. The election is
-# coupled in both directions.
+# taxes, and SUBTRACTS state and local income taxes. Only federal
+# itemizers may itemize, and they take the larger of the two.
 #-----------------------------------------------------------------------
 
 item_allowed:
   value: 1
   reference: 'Form MO-A Part 2 "Missouri Itemized Deductions"'
 item_coupling:
+  value: 0
+  reference: 'Superseded by item_fed_gate (2026-10-22). MO-A Part 2 preamble: "You cannot itemize your Missouri deductions if you took the standard deduction on your federal return... You must itemize your Missouri deductions if you were required to itemize on your federal return" (2024 booklet p.16) -- "required" is the married-filing-separately case, not every federal itemizer'
+item_fed_gate:
   value: 1
-  reference: 'MO-A Part 2 preamble: "You cannot itemize your Missouri deductions if you took the standard deduction on your federal return... You must itemize your Missouri deductions if you were required to itemize on your federal return" (2024 booklet p.16, same wording every year). Not a best-of election'
+  reference: 'MO-1040 line 14 instructions (2019 and 2024 booklets): "If you itemized on your federal return, you may want to itemize on your Missouri return or take the standard deduction, whichever results in a higher deduction. If you were required to itemize on your federal return, you must itemize on your Missouri return." Federal standard-deduction takers cannot itemize. The required-to-itemize case (a separate filer whose spouse itemizes) is unobserved and takes the better of the two here [rare]'
+item_component_style:
+  value: 5
+  reference: 'MO-A Part 2 line 1 "total federal itemized deductions from Federal Form 1040 ... Line 12" (SALT cap included) and line 9 "income taxes from ... Schedule A, Line 5", prorated by the MO-A Part 2 worksheet when line 5d exceeds the $10,000 / $5,000 limit (2019, 2023, 2024 booklets). Encoded 2026-10-22: had rebuilt the base with UNCAPPED property taxes (the model-wide v1 convention), over-deducting for high-property-tax itemizers'
 salt_addback:
   value: 1
   reference: 'MO-A Part 2 line 11 subtracts state and local income taxes from the federal itemized total (RSMo 143.141). Kansas City and St. Louis earnings taxes stay deductible and are netted out of that subtraction on the form -- not modeled separately, since local earnings taxes are not a model input [slightly understates Missouri itemized deductions for the two cities'' residents]'
 item_add_payroll:
   value: 1
   reference: 'MO-A Part 2 lines 2-7 add, per spouse, Social Security tax withheld (capped at the year''s OASDI maximum -- $10,453 for TY2024, 2024 booklet p.16), Medicare tax, railroad retirement Tier I and Tier II, and self-employment tax. RSMo 143.141(2). This is a substantial add-back that many secondary implementations omit'
+item_payroll_add_med:
+  value: 1
+  reference: 'MO-A Part 2 line 6 (wages: W-2 box 6 plus Form 8959 line 7 less line 22) and line 7 (plus Form 8959 line 13): the Additional Medicare Tax is included (2023, 2024 booklets)'
+item_payroll_seca_er:
+  value: 0
+  reference: 'MO-A Part 2 line 7: "Federal Schedule 2, Part 2, Line 4 ... Minus Federal Schedule 1, Part 2, Line 15" (2024 booklet; 2019: "less, Federal Schedule 1, Part 2, Line 14") -- self-employment tax less the half deducted above the line'
 
 # Pre-TCJA Pease limitation, TY2017 only: MO-A Part 2 carried its own
 # worksheet keyed to the federal limitation that TCJA then suspended.
@@ -198,8 +210,6 @@ retire_exempt_pub_less_ss:
 documented_not_modeled:
   per_spouse_retirement_worksheet:
     reference: 'MO-A Part 3 runs per spouse: each spouse''s own pension income against an own $6,000 cap, and taxable Social Security allocated between spouses by each one''s share of benefits received (Worksheet for Lines 4 and 5). The PUF has neither split, so the private cap is applied as two caps against the couple''s pooled pension income and the taxable Social Security that qualifies is prorated by how many spouses meet the age test [right in total for couples who both qualify; approximate where only one spouse has pension income or reaches 62]'
-  itemized_salt_convention:
-    reference: 'The model''s state itemized base replaces the capped federal SALT deduction with UNCAPPED property and personal-property taxes, while MO-A Part 2 starts from the federal Schedule A total (SALT already capped) and removes the income-tax component -- prorated by the worksheet the booklet supplies when Schedule A line 5d exceeds the federal cap. A model-wide v1 convention, not a Missouri choice [overstates Missouri itemized deductions post-2018 for high-property-tax filers]'
   cultural_contributions:
     reference: 'MO-A Part 2 line 1 lets the federal itemized total be increased by approved literary, musical, scholastic or artistic contributions to a non-profit institution (cash contributions do not qualify). Unobserved in the PUF'
   farmland_beginning_farmer:

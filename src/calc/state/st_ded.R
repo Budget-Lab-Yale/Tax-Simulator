@@ -194,6 +194,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.item_salt_cap',          # (dbl) cap on the state itemized taxes (MS follows the federal $10,000 limit)
     'st_ded.item_salt_cap_fed',      # (int) 1 = cap the state itemized taxes at the federal effective SALT limit (OR-A line 9)
     'st_ded.item_payroll_add_med',   # (int) ... including the Additional Medicare Tax (AL: withheld as Medicare tax)
+    'st_ded.item_payroll_seca_er',   # (int) ... including the deductible half of SE tax (AL 1; MO 0: Sch. 2 line 4 less Sch. 1 deductible half)
     'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
     'st_ded.char_fed_ded',           # (int) federal charitable deduction allowed against the ordinary class, itemizing or not (MA 2023+)
     'st_ded.prop_tax_ded_cap',       # (dbl) capped property tax deduction (NJ $10,000 then $15,000)
@@ -382,7 +383,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # dependent-filer limitation automatically, and cannot drift from
       # federal law the way a transcribed copy would. Applied last, so it
       # replaces rather than stacks with the amounts above
-      st_std_ded = if_else(st_ded.std_equals_federal == 1, std_ded, st_std_ded),
+      # std_ded_potential, not std_ded: the federal calculator zeroes std_ded
+      # for itemizers, and Missouri's best-of election for federal itemizers
+      # (item_fed_gate) compares against the standard amount they forwent
+      st_std_ded = if_else(st_ded.std_equals_federal == 1, std_ded_potential, st_std_ded),
 
       # Federal income tax deduction (MO-1040 lines 9-13; OR-40 federal tax
       # liability subtraction; AL Form 40 full deductibility). The deductible
@@ -494,6 +498,16 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
             item_ded_potential -
               pmin(pmax(0, salt_item_ded_potential - salt_prop - salt_pers),
                    pmax(0, item_ded_potential - std_ded_potential)),
+          # Style 5 (MO-A Part 2 lines 1 and 9-11): the federal itemized total
+          # before any state limitation, less the income/sales-tax SHARE of
+          # the capped SALT deduction -- Schedule A line 5a over line 5d,
+          # times line 5e, the worksheet the booklet supplies when the cap
+          # binds. Uncapped years (ratio 1) subtract the whole of it
+          st_ded.item_component_style == 5 ~
+            item_ded_ex_limits_potential -
+              if_else(salt_inc_sales + salt_prop + salt_pers > 0,
+                      salt_item_ded_potential * salt_inc_sales /
+                        (salt_inc_sales + salt_prop + salt_pers), 0),
           TRUE ~ st_item_default
         ),
         0
@@ -508,9 +522,12 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # liab_pr_ee already holds the EMPLOYEE half of self-employment tax, so
       # the whole of it is liab_pr_ee + liab_seca_er; adding liab_seca (both
       # halves) counted the employee half twice (fixed 2026-10-02, AL triage)
+      # Missouri adds only the half that is NOT deducted above the line
+      # (MO-A Part 2 line 7: Schedule 2 line 4 less Schedule 1 line 15, 2019
+      # and 2024 booklets), so it sets item_payroll_seca_er = 0
       st_item_base = st_item_base +
                      st_ded.item_add_payroll *
-                       (liab_pr_ee + liab_seca_er +
+                       (liab_pr_ee + st_ded.item_payroll_seca_er * liab_seca_er +
                         st_ded.item_payroll_add_med * liab_add_med) *
                      (st_ded.item_allowed == 1) +
                      st_ded.fed_tax_ded_in_itemized * st_fed_tax_ded *

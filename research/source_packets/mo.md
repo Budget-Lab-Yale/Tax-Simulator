@@ -2,7 +2,7 @@
 
 State: `MO`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-10-07` (State EITC cross-check); previous: `2026-08-18`
+Last updated: `2026-10-22` (itemized deduction per MO-A Part 2; cross-model close-out); previous: `2026-10-07`
 
 ## Scope
 
@@ -162,6 +162,45 @@ a qualifying child from TY2021. Now encoded (`st_credits.eitc_mfs_barred` = 1); 
   (S46(a)); PolicyEngine's credit on `salt_prop` and any TAXSIM v37 are
   excluded meanwhile.
 - Spec: `research/state_tax/notes/datagap_spec_mi_mo_or.md` §1, §3.
+
+## Itemized deduction and cross-model close-out, 2026-10-22
+
+Read from the MO-1040 booklets (2019, 2023, 2024: line 14 and MO-A Part 2 instructions):
+
+- **Base (line 1, line 9).** The federal Schedule A total, SALT cap included, less only the income-tax share of
+  the capped SALT deduction -- Schedule A line 5a over line 5d, times line 5e, the worksheet the booklet supplies
+  when the cap binds. New generic `item_component_style` 5. The model had rebuilt the base with uncapped property
+  taxes (the v1 convention the old `itemized_salt_convention` entry documented), over-deducting for
+  high-property-tax itemizers.
+- **Payroll add-on (lines 2-7).** Line 7 is "Schedule 2, line 4 ... minus Schedule 1, line 15" -- self-employment
+  tax less the half already deducted above the line; new `item_payroll_seca_er` = 0 (the shared code had added both
+  halves, which Alabama keeps). Lines 6-7 include the Additional Medicare Tax (Form 8959): `item_payroll_add_med` = 1.
+- **Election (line 14).** "If you itemized on your federal return, you may want to itemize on your Missouri return
+  or take the standard deduction, whichever results in a higher deduction"; only a filer *required* to itemize
+  federally must itemize. `item_fed_gate` replaces the hard coupling. The federal standard deduction is read as
+  `std_ded_potential`, since the federal calculator zeroes `std_ded` for itemizers.
+- Worksheet tests MO-16 (prorated SALT share), MO-17 (federal itemizer takes the standard deduction), MO-18 (SE
+  half plus Additional Medicare Tax).
+
+The business income deduction stays a subtraction in Missouri AGI (MO-A Part 1 line 17: "a subtraction from federal
+adjusted gross income", 2019 and 2023 booklets), as encoded. RSMo 143.124.1 counts traditional IRAs (not Roth) as
+private retirement income for Section B, as encoded.
+
+Attributed to the external models (issues doc T75, T76, P59, P60):
+
+- T75 TAXSIM has no business income deduction (TY2018-2020).
+- T76 TAXSIM gives no private pension exemption under 65; from 65 it applies the public-pension exemption to every
+  pension. The second half is a proxy difference: public versus private is unobserved and we read every pension as
+  private until `pension_public` is published (S43).
+- TAXSIM exempts Social Security at every age; Section C exempts benefits from 62 and disability benefits at any
+  age, and disability is unobserved (proxy difference).
+- P59 PolicyEngine computes the business income deduction but nothing applies it.
+- P60 PolicyEngine's Section B leaves out IRA distributions.
+- Joint returns with one spouse under 62: who receives the benefits is unobserved (we prorate by spouses 62+, the
+  PolicyEngine driver gives them all to the head).
+- Harness: PolicyEngine's Section B reads `taxable_private_pension_income`, an input the driver never filled, so it
+  paid no private exemption at all; for Missouri the driver now copies pensions into it
+  (`PE_PRIVATE_PENSION_STATES`).
 
 ## Known differences
 

@@ -6520,6 +6520,50 @@ run_case('AR', 2024,
            expect = list(st_agi = 40000, liab_st_iit = 893.27),
            label = 'MO-14 2025 full capital gains subtraction')
 
+  # MO-16: MO-A Part 2 starts from the CAPPED federal Schedule A total and
+  # removes only the income-tax share of the capped SALT (line 9 worksheet).
+  # 2024 single: SALT paid 20,000 (6,000 income tax, 14,000 property),
+  # capped at 10,000; mortgage 20,000; federal itemized 30,000. Subtraction
+  # = 10,000 x 6,000 / 20,000 = 3,000; plus FICA 7,650 -> 34,650 (the
+  # uncapped rebuild gave 30,000 - 10,000 + 14,000 + 7,650 = 41,650)
+  run_case('MO', 2024,
+           list(agi = 100000, wages1 = 100000, ei1 = 100000, itemizing = 1,
+                item_ded = 30000, item_ded_ex_limits = 30000,
+                salt_item_ded = 10000, salt_inc_sales = 6000,
+                salt_prop = 14000, mort_int_item_ded = 20000,
+                std_ded = 0, std_ded_potential = 14600, liab_bc = 15000,
+                liab_pr_ee = 7650),
+           expect = list(st_item_ded = 34650, st_itemizing = TRUE),
+           label = 'MO-16 2024 itemized: prorated income-tax share of capped SALT')
+
+  # MO-17: a federal itemizer takes the larger of Missouri itemized and the
+  # standard deduction (MO-1040 line 14). 2024 single, federal itemized
+  # 15,000 (8,000 income tax, 7,000 mortgage), FICA 4,590: Missouri
+  # itemized = 15,000 - 8,000 + 4,590 = 11,590 < 14,600 -> standard
+  run_case('MO', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, itemizing = 1,
+                item_ded = 15000, item_ded_ex_limits = 15000,
+                salt_item_ded = 8000, salt_inc_sales = 8000,
+                mort_int_item_ded = 7000, std_ded = 0,
+                std_ded_potential = 14600, liab_bc = 6000, liab_pr_ee = 4590),
+           expect = list(st_itemizing = FALSE, st_std_ded = 14600),
+           label = 'MO-17 2024 federal itemizer takes the larger standard deduction')
+
+  # MO-18: MO-A Part 2 lines 6-7 add the Additional Medicare Tax and only
+  # the half of self-employment tax not deducted above the line (Schedule 2
+  # line 4 less Schedule 1 line 15). 2024 single, federal itemized 20,000
+  # (mortgage only), employee payroll incl. the employee SE half 10,000, the
+  # deductible SE half 5,000, Additional Medicare Tax 900: 20,000 + 10,000 +
+  # 900 = 30,900
+  run_case('MO', 2024,
+           list(agi = 200000, wages1 = 200000, ei1 = 200000, itemizing = 1,
+                item_ded = 20000, item_ded_ex_limits = 20000,
+                mort_int_item_ded = 20000, std_ded = 0,
+                std_ded_potential = 14600, liab_bc = 40000,
+                liab_pr_ee = 10000, liab_seca_er = 5000, liab_add_med = 900),
+           expect = list(st_item_ded = 30900),
+           label = 'MO-18 2024 itemized: SE tax less its deductible half, plus Additional Medicare')
+
   #--------------------------------------------------------------------------
   # Maine (1040ME)
   #--------------------------------------------------------------------------
