@@ -3,13 +3,102 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-10-13
+updated: 2026-10-22
 sot: self
 supersedes: []
 superseded_by: null
 ---
 
 # State income tax workstream — status
+
+## 2026-10-22: every jurisdiction clears the cross-model bar
+
+**All 51 jurisdictions now pass.** Every jurisdiction's `cross_model` status in
+`research/state_tax/state_parameter_rollout.csv` is `done`: on records whose
+federal results agree, at least 95% are within $100 of TAXSIM-35 in every year
+2017-2020 and of PolicyEngine US in every year 2021-2025 (cells under 100 clean
+records are flagged underpowered and not judged). Twenty-one states closed
+between 2026-10-13 and today, the last seven (AZ OR MT SC MA, then NY MO MI PA)
+on 2026-10-21/22. Per-state scores are in `cross_model/results/summary.csv`; the
+reasoning is in each source packet and in the tracker's notes column.
+
+**How the misses were closed.** Every remaining difference is attributed to one
+of three causes, each recorded as a row of
+`src/tests/state/cross_model/known_differences.csv` (324 rows: 285 exclude, 39
+annotate):
+
+- *Our encoding was wrong, and was fixed.* The large ones of the last two weeks:
+  New York's Empire State child credit now follows the IT-213 worksheets (it had
+  paid $330 a child to families with no earnings); Missouri's itemized
+  deduction starts from the capped federal Schedule A and removes a prorated
+  income-tax share, as MO-A Part 2 does; Michigan adds back the federal
+  deduction for half of self-employment tax (Schedule 1 line 2), which both
+  external models do and we did not; Massachusetts nets capital gains and losses
+  in Schedule B order and keeps its income classes separate. Each fix is a
+  generic, default-off switch declared in `params_schema.yaml`, with worksheet
+  tests in `src/tests/state/test_state_calc.R`.
+- *The external model is wrong.* Confirmed by a direct probe of TAXSIM or by
+  reading PolicyEngine's source, and written up for their maintainers in
+  `cross_model/external_model_issues.md`: TAXSIM T1-T81 and PolicyEngine
+  P1-P61. Not yet sent (see below).
+- *Neither side can be right for that record*, because the input that decides it
+  is unobserved: whether a pension is public or private, whether a retiree has
+  retired under the plan's terms, who in a couple receives the Social Security,
+  which state's bonds the tax-exempt interest comes from (we assume 25%
+  out-of-state). These are `data-proxy` or `structural` rows; most clear when a
+  producer publishes the matching optional input (decision S43).
+
+**Federal changes that came with it.** These move federal results for every run,
+federal-only included:
+
+- Qualified passenger-vehicle loan interest (P.L. 119-21) is a below-the-line
+  deduction, not an AGI adjustment (PR #132 to `main`, cherry-picked here as
+  37b87d28e). AGI rises for claimants from TY2025. The 2025 PolicyEngine cells
+  were re-scored for all states on the rebuilt federal pre-pass: all still clear,
+  each gaining about 100 clean records (the claimants now agree on federal AGI).
+- `std_ded_potential`: the federal standard deduction is zero for itemizers, so
+  state rules that read the forgone federal amount (Montana's Worksheet A,
+  Missouri's best-of election, the itemized-less-standard rules among others)
+  now read this column.
+- Three 2026-07-01 audit fixes reach `main` with this branch: dependent standard
+  deduction keeps its age/blind add-ons; the care credit's earned-income cap is
+  one pool across age groups; tax-exempt interest counts in the Social Security
+  taxability test. (The fourth, the 1250/collectibles headroom, is already on
+  `main`.)
+
+**Harness changes since 2026-10-13.** The sample is drawn by record id within
+strata, so a federal fix no longer re-draws the sample (S47; PolicyEngine 10,000
+records a year, equal per stratum). The PolicyEngine driver now fills
+`taxable_private_pension_income` for Missouri and Michigan, whose PolicyEngine
+retirement rules read it and had paid no exemption at all; it exports the New
+York one-time payments and several state credits for keying exclusions; the raw
+output carries `sch_e`, dependent ages and `med_item_ded_potential`.
+
+**Calls JI may want to revisit.** Michigan's TY2022 earned income credit is
+encoded at the statutory 30% (PA 4 of 2023, retroactive) although the extra 24
+points were paid as separate checks; PolicyEngine uses the 6% printed on the
+return (P61). One-time state payments booked to a tax year by an external model
+(New York's 2022 supplemental credits, Maine's 2025 affordability payment) are
+excluded rather than modeled, per S46.
+
+**What is still open.**
+
+1. *Production state weights.* The pinned State-Weights vintage is still the
+   Phase 4 dry run (`dryrun_B_2022_2023`, covering TY2022-2025): every state-mode
+   total is PROVISIONAL, and aggregate validation against HT2 and state revenue
+   figures stays blocked. This is the next workstream; it lives in Tax-Data
+   (`research/state_weights/MOVED.md` here points to it).
+2. *Upstream reports.* TAXSIM and PolicyEngine issues found since the last send
+   (T61-T81, P45-P61, and earlier unsent items) are written up but not sent.
+3. *PR to `main`.* A trial merge is clean; `main`'s one extra commit is the
+   1250/collectibles fix this branch already carries.
+4. *Per-state reports.* `cross_model/results/reports/{st}.md` were regenerated
+   for each state as it closed; the 2025 re-score after the vehicle-loan fix
+   updated the summary boards only.
+5. Unchanged from 2026-10-13: the circuit-breaker review (S46), TY2026 law for
+   the states the tracker marks UNENCODED, the data-gap imputations
+   (`notes/state_data_imputation_plan.md`), and the deferred items in the plan's
+   section 7.
 
 ## 2026-10-13: all 51 enabled, data gaps registered, overlay interface built
 

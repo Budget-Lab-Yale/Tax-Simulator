@@ -3,7 +3,7 @@ title: "State Individual Income Tax Module — Implementation Plan"
 role: plan
 workstream: state_tax
 status: current
-updated: 2026-10-13
+updated: 2026-10-22
 sot: self
 supersedes: []
 superseded_by: null
@@ -505,14 +505,13 @@ years pre-2017; state population-projection aging of weights.
 
 ---
 
-**Current Phase 6 packet status (2026-07-13).** Indiana, Kentucky, and Michigan
-now have primary-source packets, baseline YAML, worksheet tests, and generic
-support for refundable EITC matches and Kentucky's family-size percentage-of-tax
-credit. California now has the same artifacts plus reusable exemption-credit and
-independent earned-income-credit support. All four remain pending cross-model and
-weights-dependent aggregate validation. California's exact $50 CalEITC lookup,
-full 2018-24 rate-bracket transcription, and California-specific index series are
-explicit follow-up items rather than complete claims.
+**Phase status (2026-10-22).** Phase 5 is built and Phase 6's cross-model
+validation is complete: all 51 jurisdictions are encoded, enabled and clear the
+cross-model bar (TAXSIM-35 2017-2020, PolicyEngine US 2021-2025, 95% of
+federally aligned records within $100 in every cell). Phase 6's aggregate
+validation waits on production state weights (built in Tax-Data). Current
+detail is in `research/STATUS.md`; per-state status in
+`state_parameter_rollout.csv`.
 
 Illinois, Colorado, and New York source packets have now been normalized and
 their next-state research cohorts are documented in
