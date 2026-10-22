@@ -4,7 +4,7 @@
 
 # Set return variables for function
 return_vars$calc_agi = c('txbl_ss', 'excess_bus_loss', 'char_above_ded', 
-                         'auto_int_ded', 'gross_inc', 'above_ded', 'agi')
+                         'gross_inc', 'above_ded', 'agi')
 
 
 calc_agi = function(tax_unit, fill_missings = F) {
@@ -62,9 +62,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'char_cash',       # (dbl) charitable contributions made in cash
     'char_noncash',    # (dbl) noncash charitable contributions 
     'other_above_ded', # (dbl) other deductions per Schedule 1 line 24
-    'auto_int_exp',    # (dbl) auto loan interest expense
     'r.bus_loss',      # (dbl) random number for determining excess business loss limitation eligibility
-    'r.new_car',       # (dbl) random number for determining whether auto loan interest is attributable to a new car
     
     # Tax law attributes
     'agi.alimony_repeal_year',    # (int) year during and after which a divorce does not generate taxable/deductible alimony
@@ -74,11 +72,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.sl_po_range',            # (int) MAGI phaseout range for student loan interest deduction
     'agi.tuition_ded_limit',      # (int) limit on tuition and feeds deduction 
     'agi.dpad_limit',             # (int) limit on domestic production activities deduction
-    'char.above_limit',           # (int) maximum deductible above-the-line charitable contributions
-    'agi.auto_int_ded_limit',     # (int) maximum amount of auto loan interest deductible from gross income
-    'agi.auto_int_ded_po_thresh', # (int) threshold above which auto loan interest deduction begins to phase out
-    'agi.auto_int_ded_po_rate',   # (int) phaseout rate for auto loan interest deduction
-    'agi.auto_int_ded_new'        # (int) whether auto interest is only deductible for new cars
+    'char.above_limit'            # (int) maximum deductible above-the-line charitable contributions
   )
   
   tax_unit %>% 
@@ -125,15 +119,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         pmin(tuition_ded, agi.tuition_ded_limit) +
                         pmin(dpad, agi.dpad_limit),
 
-      # Calculate auto loan interest deduction
-      # (source for new car share of financing: Experian's State of the Automotive Finance Market, 2024)
-      magi         = inc_ex_ss + gross_ss - above_ded_ex_sl,
-      auto_int_ded = pmin(agi.auto_int_ded_limit, auto_int_exp),
-      auto_int_ded = pmax(0, auto_int_ded - pmax(0, magi - agi.auto_int_ded_po_thresh) * agi.auto_int_ded_po_rate),
-      auto_int_ded = auto_int_ded * as.integer((agi.auto_int_ded_new == 0) | (r.new_car < 0.58)),
-      
-      above_ded_ex_sl = above_ded_ex_sl + auto_int_ded,
-                      
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
       
