@@ -141,6 +141,7 @@ scalars:
   st_agi.sub_fed_tip_ded: 0
   st_agi.sub_fed_ot_ded: 0
   st_agi.sub_fed_senior_ded: 0
+  st_agi.sub_fed_auto_int_ded: 0
   # Federal deductions added back where the state has not adopted them (SC
   # TY2025 OBBBA nonconformity, SC1040 line e); add_std_above: a federal
   # non-itemizer's standard deduction above this amount is added back

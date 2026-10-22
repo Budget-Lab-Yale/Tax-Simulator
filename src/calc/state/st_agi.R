@@ -96,7 +96,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
     'tip_ded',        # (dbl)  federal qualified tips deduction (post-federal calc)
     'senior_ded',     # (dbl)  federal enhanced senior deduction (post-federal calc)
-    'auto_int_ded',   # (dbl)  federal vehicle-loan interest deduction (in AGI in this model)
+    'auto_int_ded',   # (dbl)  federal vehicle-loan interest deduction (Schedule 1-A, below the line)
     'std_ded',        # (dbl)  federal standard deduction (zero for itemizers)
     'char_cash',      # (dbl)  cash charitable contributions
     'char_noncash',   # (dbl)  non-cash charitable contributions
@@ -197,6 +197,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_fed_tip_ded',       # (int) whether the federal tips deduction is subtracted (AZ 2025)
     'st_agi.sub_fed_ot_ded',        # (int) whether the federal OT deduction is subtracted (AZ 2025)
     'st_agi.sub_fed_senior_ded',    # (int) whether the federal senior deduction is subtracted (AZ 2025)
+    'st_agi.sub_fed_auto_int_ded',  # (int) whether the federal vehicle-loan interest deduction is subtracted (AZ 2025)
     'st_agi.add_fed_tip_ded',       # (int) federal tips deduction added back (SC 2025 nonconformity)
     'st_agi.add_fed_senior_ded',    # (int) federal senior deduction added back (SC 2025)
     'st_agi.add_fed_auto_int_ded',  # (int) federal vehicle-loan interest deduction added back (SC 2025)
@@ -575,11 +576,12 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_add_ot   = st_agi.add_overtime_ded * ot_ded,
 
       # Subtraction: federal below-the-line (Schedule 1-A) deductions carried
-      # into a federal-AGI-start state (AZ TY2025 MCTCP worksheet lines 2, 3
-      # and 5, entered on Form 140 page 6 item V). Each switch is separate
-      # because states adopt them separately
+      # into a federal-AGI-start state (AZ TY2025 MCTCP worksheet lines 2-5,
+      # entered on Form 140 page 6 item V). Each switch is separate because
+      # states adopt them separately
       st_sub_fed_below = st_agi.sub_fed_tip_ded * tip_ded +
                          st_agi.sub_fed_ot_ded * ot_ded +
+                         st_agi.sub_fed_auto_int_ded * auto_int_ded +
                          st_agi.sub_fed_senior_ded * senior_ded,
 
       # Addition: federally-allowed net capital loss beyond the state's own
@@ -600,8 +602,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # adopted, for a taxable-income start (SC TY2025 conforms to the IRC as
       # of 12/31/2024, so SC1040 line e adds back the OBBBA Schedule 1-A
       # deductions and the OBBBA increase in the standard deduction for
-      # federal non-itemizers). Vehicle-loan interest sits in federal AGI in
-      # this model, which a taxable-income start inherits all the same
+      # federal non-itemizers). Vehicle-loan interest is below the line
+      # federally (in taxable income, not AGI), so it is added back here
       st_add_fed_obbba = st_agi.add_fed_tip_ded * tip_ded +
                          st_agi.add_fed_senior_ded * senior_ded +
                          st_agi.add_fed_auto_int_ded * auto_int_ded +

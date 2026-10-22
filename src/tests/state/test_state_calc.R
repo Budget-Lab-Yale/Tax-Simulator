@@ -420,6 +420,11 @@ test_state_calc = function() {
   run_case('AZ', 2025, list(agi = 60000, tip_ded = 4000, ot_ded = 3000),
            expect = list(st_subtractions = 7000),
            label = 'AZ-X6c TY2025 federal tips and overtime deductions subtracted')
+  # AZ-X6d (2026-10-22): MCTCP line 4 -- the federal vehicle-loan interest
+  # deduction (2,500), below the federal line since the PR #132 fix
+  run_case('AZ', 2025, list(agi = 60000, auto_int_ded = 2500),
+           expect = list(st_subtractions = 2500),
+           label = 'AZ-X6d TY2025 federal vehicle-loan interest deduction subtracted')
   # AZ-X7 (2026-10-20): Increased Excise Tax Credit worksheet, TY2023.
   # Joint, three dependents, AGI 20,000: 25 x (2 + 3) = 125, capped at 100.
   # Single at AGI 12,000: 25; at 13,000: over the $12,500 limit, nothing

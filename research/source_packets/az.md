@@ -48,7 +48,8 @@ Last updated: `2026-10-20`
 - Low-income family, property (Form 140PTC), donation, and business credits need additional eligibility inputs and are not encoded. The property tax credit needs rent and property tax paid (`tax_data_gaps.csv`); PolicyEngine pays it in the harness (exclusion row).
 - LT gain subtraction: the acquisition date is unobserved, so every long-term gain is treated as post-2011 (an upper bound; `tax_data_gaps.csv`).
 - Excise credit: the SSN-valid-for-employment test, incarceration, and the $100 cap shared across separate returns in one household are unobserved.
-- TY2025 tips and overtime subtractions (MCTCP lines 2-3) are encodable on `sub_fed_tip_ded` / `sub_fed_ot_ded` but held off pending JI's decision on first state use of the Tax-Data tips and overtime imputations (2026-10-20).
+- TY2025 tips and overtime subtractions (MCTCP lines 2-3) are encoded on `sub_fed_tip_ded` / `sub_fed_ot_ded` (JI approved first state use of the Tax-Data tips and overtime imputations, 2026-10-21).
+- TY2025 vehicle-loan interest subtraction (MCTCP line 4, IRS Schedule 1-A line 30) encoded 2026-10-22 on the new `sub_fed_auto_int_ded`, once the federal calculator moved the deduction below the line (PR #132, cherry-picked as 37b87d28e); before that fix it reached Arizona inside federal AGI. Test AZ-X6d.
 - Exact filing thresholds depend on gross income, age, dependency, and status; the current flag is not an official return-count measure.
 - Post-2025 parameters carry the last published values pending annual Form 140 review.
 
