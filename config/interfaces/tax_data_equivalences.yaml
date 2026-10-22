@@ -15,8 +15,9 @@
 # that is in fact exact.
 #
 # An entry here says: for the listed YEARS, the listed vintages hold the same
-# records with the same amounts, so a producer built on one may be joined to
-# a run reading the other. The declaration is reviewable, dated, and limited
+# records, weights and tax-line amounts, so a producer built on one may be
+# joined to a run reading the other. Columns that differ but do not enter
+# liability in those years are named in the entry's reason. The declaration is reviewable, dated, and limited
 # to the years it vouches for; tax_data_vintages_match() (src/data/
 # supplemental_inputs.R) applies it and requires every run year to be covered.
 # Remove an entry when the pins converge on one vintage.
@@ -25,11 +26,22 @@ equivalences:
   - vintages: ['2026092720_filer_refit_v2', '2026100117_review_fixes']
     years: [2019, 2023]
     reason: >
-      2026100117_review_fixes re-published filer_refit_v2 with documentation
-      fixes; the TY2019 and TY2023 record sets and tax-line amounts are
-      identical (Affordability-Index D82 re-pin check: every TY2019/TY2023 line
-      matches; TY2023 live-row count 377,226 equals the State-Weights 2023
-      manifest n_records). State-Weights dryrun_B_2022_2023 was fit on
-      filer_refit_v2; Affordability-Index is pinned to review_fixes.
+      2026100117_review_fixes is filer_refit_v2 rebuilt with the filer refit
+      code-review fixes (Tax-Data 6f954f1), which moved the TY2017 refit ahead
+      of the benchmarked imputations and changed TY2021 filer weights. In
+      TY2019 and TY2023 the ids, weights and tax-line amounts are identical
+      (Affordability-Index D82 re-pin check; TY2023 live-row count 377,226
+      equals the State-Weights 2023 manifest n_records), but 19 imputed
+      columns are NOT: tips tips1 tips2 tips_lh1 tips_lh2 ot ot1 ot2
+      auto_int_exp parent_rank prim_mort_share and the eight c_* consumption
+      columns (tips, overtime and auto-loan interest differ on 2-17% of
+      records, consumption on ~99%; weighted totals within 0.7%; checked
+      2026-10-22). None enters TY2019 or TY2023 liability -- the tips,
+      overtime and auto-loan interest deductions start in TY2025 -- so the
+      join is exact for tax purposes in these years only. Do not extend the
+      years to 2025+, and do not rely on it for a producer that reads those
+      columns. State-Weights dryrun_B_2022_2023 was fit on filer_refit_v2;
+      Affordability-Index is pinned to review_fixes.
     declared: '2026-10-13'
     declared_by: JI
+    revised: '2026-10-22'
