@@ -679,6 +679,7 @@ scalars:
   st_credits.ctc_style: 0
   st_credits.ctc_match_share: 0
   st_credits.ctc_fed_base_per_child: 1000
+  st_credits.ctc_fed_limit: 0   # 1 = style-1 federal base as IT-213 Wks A/C allow it (tax and earned-income limits, proration to 4-16)
   st_credits.ctc_min_per_child: 0
   st_credits.ctc_min_child_age: 0
   st_credits.ctc_max_child_age: 16

@@ -18,6 +18,7 @@ st_credits_child_req_vars = c(
   'st_credits.ctc_aged_dep_min_age', # (dbl) dependents at/over this age also qualify (MA CFTC 65; Inf = none)
   'st_credits.ctc_match_share',
   'st_credits.ctc_fed_base_per_child',
+  'st_credits.ctc_fed_limit',  # (0/1) style 1: limit the pre-TCJA federal base per IT-213 Wks A/C
   'st_credits.ctc_min_per_child',
   'st_credits.ctc_min_child_age',
   'st_credits.ctc_max_child_age',
@@ -217,11 +218,35 @@ st_credits_child = function(tax_unit, st_eitc) {
   # partial step whole. Independent of ctc_po_per_child -- VT needs both
   ctc_po_step = if_else(tax_unit$st_credits.ctc_po_round_up == 1,
                         ctc_po_up, ctc_po_down)
+  # Style 1 federal base. Without ctc_fed_limit: the per-child amount for the
+  # qualifying children, phased out. With it (NY IT-213, TY2017-2024): the
+  # pre-TCJA federal credit as the worksheets ALLOW it -- $1,000 for every
+  # child under 17 (line 4, not just the 4-16 qualifying children), phased
+  # out; the nonrefundable part limited to federal tax after the foreign,
+  # care, education and saver's credits (Worksheet A lines 7-10); the
+  # remainder refundable up to 15% of earned income over $3,000, or for
+  # three or more children the larger of that and employee payroll tax less
+  # the EITC (Worksheet C, Schedule 8812 line 13); then prorated to the
+  # qualifying children (lines 9-12). The elderly credit (line 8g) is not
+  # subtracted: the federal calculator does not compute it
+  n_u17       = st_n_dep_in(tax_unit, 0, 16)
+  fed_base    = pmax(0, tax_unit$st_credits.ctc_fed_base_per_child *
+                       if_else(tax_unit$st_credits.ctc_fed_limit == 1, n_u17, n_qual) -
+                       ctc_po_up)
+  fed_liab    = pmax(0, tax_unit$liab_bc - tax_unit$ftc - tax_unit$cdctc_nonref -
+                       tax_unit$ed_nonref - tax_unit$savers_nonref)
+  fed_nonref  = pmin(fed_base, fed_liab)
+  actc_earned = 0.15 * pmax(0, tax_unit$ei - 3000)
+  actc_cap    = if_else(n_u17 >= 3,
+                        pmax(actc_earned, tax_unit$liab_pr_ee + tax_unit$liab_add_med -
+                                            tax_unit$eitc),
+                        actc_earned)
+  fed_allowed = (fed_nonref + pmin(fed_base - fed_nonref, actc_cap)) *
+                if_else(n_u17 > 0, n_qual / pmax(1, n_u17), 0)
+  fed_base    = if_else(tax_unit$st_credits.ctc_fed_limit == 1, fed_allowed, fed_base)
   ctc_ny = case_when(
     ny_gate & tax_unit$st_credits.ctc_style == 1 ~
-      pmax(tax_unit$st_credits.ctc_match_share *
-             pmax(0, tax_unit$st_credits.ctc_fed_base_per_child * n_qual -
-                     ctc_po_up),
+      pmax(tax_unit$st_credits.ctc_match_share * fed_base,
            tax_unit$st_credits.ctc_min_per_child * n_qual *
              (ctc_po_income <= tax_unit$st_credits.ctc_po_thresh)),
     ny_gate & tax_unit$st_credits.ctc_style == 2 &

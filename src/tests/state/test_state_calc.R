@@ -178,10 +178,14 @@ test_state_calc = function() {
   # Household credit (Table 2, 7k-20k row, 4 exemptions): 60 + 15x3 = 105.
   # NYS EITC = 30%x5,000 - min(105, 78) = 1,422 (IT-215 line 15 caps the
   # household-credit reduction at remaining tax). ESCC (style 1, 2023+ ages
-  # 0-16): 33% x (1,000x2) = 660 (no phase-out; > $100x2 floor).
+  # 0-16): 33% x (1,000x2) = 660 (no phase-out; > $100x2 floor). The
+  # pre-TCJA federal credit is allowed in full: no federal tax, so all of it
+  # is additional child tax credit, capped at 15% x (20,000 - 3,000) = 2,550
+  # (IT-213 Worksheet C) -- hence the 20,000 of wages.
   # Liab = max(0, 78-105) - (1,422+660) = -2,082
   run_case('NY', 2024,
            list(agi = 20000, filing_status = 2, n_dep = 2,
+                wages1 = 20000, ei1 = 20000,
                 dep_age1 = 5, dep_age2 = 8, eitc = 5000),
            expect = list(st_txbl_inc = 1950, st_hh_credit = 105,
                          st_eitc = 1422, st_ctc = 660,
@@ -221,6 +225,45 @@ test_state_calc = function() {
                 wages1 = 45000, ei1 = 45000, care_exp = 2500),
            expect = list(st_cdctc = 500),
            label = 'NY-5 dependent-care share table')
+
+  # NY-6..9: ESCC style 1 with the IT-213 worksheet limits (ctc_fed_limit).
+  # NY-6: 2019 HoH, no income, one child aged 8: the pre-TCJA federal credit
+  # allowed is 0 (no tax, no earned income), so the $100 floor pays (line 15)
+  run_case('NY', 2019,
+           list(filing_status = 4, n_dep = 1, n_dep_ctc = 1, dep_age1 = 8),
+           expect = list(st_ctc = 100),
+           label = 'NY-6 ESCC floor at zero earnings')
+
+  # NY-7: 2017 HoH, wages 5,000, child aged 8, no federal tax: Worksheet C
+  # 15% x (5,000 - 3,000) = 300; 33% x 300 = 99 < $100 floor -> 100 (TAXSIM
+  # probe 2026-10-22: siitax -610 = EITC 510 + 100)
+  run_case('NY', 2017,
+           list(filing_status = 4, agi = 5000, wages1 = 5000, ei1 = 5000,
+                n_dep = 1, n_dep_ctc = 1, dep_age1 = 8),
+           expect = list(st_ctc = 100),
+           label = 'NY-7 ESCC earned-income limit')
+
+  # NY-8: 2019 MFJ, wages 10,000, children 2 and 8, no federal tax. Line 4
+  # counts both (federal CTC children under 17): 2,000, all refundable-side,
+  # capped at 15% x 7,000 = 1,050; prorated to the one child aged 4-16
+  # (lines 9-12): 525; x 33% = 173.25 (> $100 floor)
+  run_case('NY', 2019,
+           list(filing_status = 2, age2 = 40, agi = 10000, wages1 = 10000,
+                ei1 = 10000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 2,
+                dep_age2 = 8),
+           expect = list(st_ctc = 0.33 * 1050 / 2),
+           label = 'NY-8 ESCC proration to children aged 4-16')
+
+  # NY-9: 2018 MFJ, earned income 20,000, three children 5/8/10, no federal
+  # tax: 15% x 17,000 = 2,550 < Schedule 8812 line 13 alternative (employee
+  # payroll tax 4,000 - EITC 500 = 3,500), so the full 3,000 is allowed:
+  # 33% x 3,000 = 990
+  run_case('NY', 2018,
+           list(filing_status = 2, age2 = 40, agi = 20000, wages1 = 20000,
+                ei1 = 20000, n_dep = 3, n_dep_ctc = 3, dep_age1 = 5,
+                dep_age2 = 8, dep_age3 = 10, liab_pr_ee = 4000, eitc = 500),
+           expect = list(st_ctc = 990),
+           label = 'NY-9 ESCC three-child payroll alternative')
 
   #--------------------------------------------------------------------------
   # Colorado (DR 0104)
@@ -7128,13 +7171,17 @@ st_test_unit = function(overrides = list()) {
     other_item_ded = 0, std_ded = 0,
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
     cdctc_ref = 0, cdctc_potential = 0, cdctc_takeup = 1L, care_exp = 0, ui = 0,
-    ftc = 0,
+    ftc = 0, ed_nonref = 0, savers_nonref = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
     liab_pr_ee = 0, liab_seca = 0, liab_seca_er = 0, liab_add_med = 0, liab_niit = 0, excess_ptc = 0,
     rebate = 0
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]
+  }
+  # Federal earned income follows the per-spouse amounts unless set
+  if (is.null(unit$ei)) {
+    unit$ei = unit$ei1 + unit$ei2
   }
   # As-if-itemizing amounts mirror the plain component overrides unless a
   # case sets the _potential name itself (production: do_taxes.R preserves

@@ -190,6 +190,13 @@ OUTPUT_VARS = {
     # real_estate_taxes = salt_prop with no rent input; ours is
     # documented-not-modeled pending the rent / property-tax overlays. 2026-10-21
     "pe_ma_senior_cb": ["ma_senior_circuit_breaker"],
+    # New York's one-time supplemental payments issued in 2022-2023 (Tax Law
+    # 606(d)(8): 25% of the TY2021 Empire State EITC; 606(c-1)(4)-(5): a
+    # percentage of the TY2021 / TY2022 Empire State child credit), which PE
+    # nets into ny refundable credits for the base tax year (P5 class). PE's
+    # supplemental EITC takes 25% of the FEDERAL credit (P56). 2026-10-22
+    "pe_ny_supplemental_eitc": ["ny_supplemental_eitc"],
+    "pe_ny_additional_ctc": ["ny_additional_ctc"],
     "pe_or_kicker": ["or_kicker"],
     # Maine's 2025 affordability payment ($300 per person, H.P. 1491 Part T):
     # a direct payment from a special revenue fund, not a tax credit, which PE

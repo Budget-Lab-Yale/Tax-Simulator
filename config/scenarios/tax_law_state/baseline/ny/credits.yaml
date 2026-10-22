@@ -72,6 +72,9 @@ ctc_match_share:
 ctc_fed_base_per_child:
   value: 1000
   reference: 'IT-213 Worksheet A (pre-TCJA federal CTC: $1,000 per qualifying child)'
+ctc_fed_limit:
+  value: 1
+  reference: 'IT-213 (2019) lines 4-13 and IT-213-I Worksheets A and C: $1,000 per child who qualifies for the federal CTC/ACTC/ODC (line 4, under 17), phased out; Worksheet A lines 7-10 limit it to federal tax less Schedule 3 lines 1-4 (foreign, care, education, saver''s credits); Worksheet C adds the additional child tax credit (15% of earned income over $3,000; three or more children: the larger of that and Schedule 8812 line 13); line 10-12 prorate to the children aged 4-16 (line 5). Read by style 1 only. Encoded 2026-10-22: had taken 33% of an unlimited $1,000 per qualifying child'
 ctc_min_per_child:
   value: 100
   reference: 'Tax Law 606(c-1); IT-213 line 9 (requires FAGI <= threshold)'

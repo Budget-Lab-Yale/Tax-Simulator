@@ -112,6 +112,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'cdctc_takeup',      # (int)  federal CDCTC take-up draw (own-computation credits share it)
     'liab_bc',           # (dbl)  federal tax before credits (KY 2441-K liability limit)
     'ftc',               # (dbl)  federal foreign tax credit (same limit)
+    'ed_nonref',         # (dbl)  federal education credits, nonrefundable (NY IT-213 Wks A line 8)
+    'savers_nonref',     # (dbl)  federal saver's credit, nonrefundable (same)
+    'ei',                # (dbl)  federal earned income (NY IT-213 Wks C line 4a)
+    'liab_pr_ee',        # (dbl)  employee payroll + SE tax (Sch. 8812 3+-child alternative)
+    'liab_add_med',      # (dbl)  Additional Medicare Tax (same)
     'care_exp',          # (dbl)  eligible dependent care expenses
     'kg_lt',             # (dbl)  net long-term capital gain (MT capital gains credit)
     'kg_st',             # (dbl)  net short-term capital gain (MT capital gains credit)

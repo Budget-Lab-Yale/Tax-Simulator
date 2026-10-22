@@ -632,6 +632,36 @@ $500,000 of long-term gain the deduction implied by v32 - v34 - v33 - v36 is 92,
 difference of 11,400 = 3.8% x $300,000; with $2,000,000 it is 509,166 against 440,766 (68,400). Effect: TAXSIM
 understates Alabama tax by about 5% of the NIIT.
 
+### T71. New York Empire State child credit paid for children under 4
+
+Through TY2022 the Empire State child credit (Tax Law 606(c-1); IT-213 line 5) reaches only children "at least four
+but less than 17 years old on December 31" (IT-213-I 2019, qualifying child condition 2). Lines 9-12 prorate the
+pre-TCJA federal credit to those children. TAXSIM pays it for every child under 17. Probe (2026-10-22, TY2017 and
+TY2019 joint, $17,000 of wages, one child): siitax is -1,350 (2017) and -1,388 (2019) at child ages 1, 3, 4 and 10
+alike, the $330 credit included each time. Effect: TAXSIM understates New York tax by $330 per child under 4 in
+the middle of the income range (about 650 clean records a year in the harness, the largest New York cluster).
+
+### T72. New York Empire State child credit cut off above the income threshold
+
+IT-213 line 3 asks whether federal AGI is at most $75,000 (single, head of household), $110,000 (joint) or $55,000
+(separate). A No answer skips only lines 14-15, the $100-per-child minimum; line 13 -- 33% of the pre-TCJA federal
+credit after its 5%-per-$1,000 phase-out (Worksheet A lines 2-6) -- still applies. TAXSIM pays nothing above the
+threshold. Probe (2026-10-22, TY2017 head of household, one child aged 8, wages only): v40 is 0 at federal AGI
+$76,000, $80,000 and $85,269, against the form's $313.50, $247.50 and $165.
+
+### T73. New York Empire State child credit prorated over dependents aged 17 or over
+
+IT-213 lines 9-12 divide the pre-TCJA federal credit by the line 4 count -- children under 17 who qualify for the
+federal child tax credit or the credit for other dependents -- and multiply by the children aged 4-16. TAXSIM counts
+older dependents in the divisor. Probe (2026-10-22, TY2018 joint, $49,800 of wages): dependents aged 15 and 19 give
+v40 = 165; the 15-year-old alone gives 330, which is right for both cases.
+
+### T74. New York pension and annuity exclusion only from age 65
+
+Tax Law 612(c)(3-a) excludes up to $20,000 of private pension and annuity income for a recipient "who has attained
+the age of fifty-nine and one-half" (IT-201 line 29). TAXSIM applies it from 65. Probe (2026-10-22, TY2017 and
+TY2019 single, $30,000 of wages and $20,000 of pensions): v32 is 50,000 at ages 58, 60, 62 and 64 and 30,000 at 66.
+
 ## PolicyEngine US
 
 > The 2026-09-30 status notes below cite reproductions and drafts under
@@ -1686,6 +1716,38 @@ Capital Gains and Losses from U.S. Form 4797, Part II ... treated as capital gai
 purposes"), so they net only within the capital classes. PolicyEngine nets them against ordinary Part B income: a
 $521,473 Form 4797 loss shelters $37,000 of wages and pensions entirely (TY2025), and a $262,806 gain is absorbed by
 a $600,466 ordinary loss. Raised as a classification to confirm.
+
+### P56. New York supplemental EITC is 25% of the federal credit, and is a 2022 payment
+
+`ny_supplemental_eitc` returns 25% of the federal `eitc` for TY2021 (parameter `eitc.supplemental_match`). Tax Law
+606(d)(8) directs a payment of "twenty-five percent of the earned income tax credit calculated and allowed pursuant
+to this subsection" -- the New York credit, itself 30% of the federal one -- so the right amount is 7.5% of the
+federal credit. Record 4706 (TY2021, joint, three children): federal EITC $6,728, `ny_supplemental_eitc` $1,682
+against a statutory $505. Separately, both this payment and the supplemental Empire State child credit
+(`ny_additional_ctc`, 606(c-1)(4)) were one-time checks the department issued in 2022, not credits on the TY2021
+return, and PolicyEngine nets them into TY2021 New York refundable credits (the P5 class). Effect: against the
+TY2021 return PolicyEngine understates New York tax by 25% of the federal EITC (of which 7.5 points would be the
+payment correctly sized) plus 25-100% of the Empire State child credit, by federal AGI tier.
+
+### P57. New York itemized deduction adjustment computed before the overall limitation
+
+IT-196 line 40 applies the pre-TCJA overall limitation; line 46, New York's own adjustment for higher incomes (Tax
+Law 615(f)-(g)), is taken on line 45, which follows it ("enter 50% (.50) of line 45 on line 46", IT-196-I 2024 for
+NY AGI of $525,000-$1,000,000; Worksheets 3-4 and the charitable-only rule above $1,000,000 work from the same line).
+`ny_itemized_deductions_reduction` and its components read `ny_itemized_deductions_max`, the deductions before the
+limitation, and `ny_itemized_deductions` then subtracts both the reduction and `ny_itemized_deductions_phase_out`.
+Record 206606 (TY2025, single, NY AGI $625,258): deductions $38,089, limitation $8,537, reduction $19,045, allowed
+$10,508; the form gives 50% x $29,552 = $14,776. Effect: PolicyEngine overstates New York tax for itemizers above the
+federal threshold by the limitation times the line 46 share times the rate.
+
+### P58. New York child care credit never reaches New York's higher expense caps
+
+IT-216-I Worksheet 1 line 12 (TY2018 on) caps qualifying expenses at $3,000 / $6,000 / $7,500 / $8,500 / $9,000 for
+one to five or more qualifying persons. `ny_cdcc_max` takes `min(cdcc_relevant_expenses, NY cap)`, but
+`cdcc_relevant_expenses` is already capped at the federal limit ($6,000 for two or more), so the three-plus caps
+never bind. Record 58008 (TY2025, head of household, children aged 3, 8 and 9, $10,362 of expenses): `ny_cdcc`
+2,178 against IT-216's 2,722.50 (7,500 x .33 x 1.10). Effect: PolicyEngine overstates New York tax by up to $3,000
+of expenses times the New York credit rate for families with three or more qualifying persons.
 
 ## Corroboration worth passing along
 
