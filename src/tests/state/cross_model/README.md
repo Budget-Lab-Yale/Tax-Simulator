@@ -77,7 +77,7 @@ Rscript research/state_tax/cross_model/run_cross_model.R \
 # PolicyEngine window (needs the venv below; consider sbatch)
 Rscript research/state_tax/cross_model/run_cross_model.R \
   --states ALL --years 2021:2024 --models policyengine \
-  --pe-python /nfs/roberts/project/pi_nrs36/ji252/venvs/policyengine/bin/python
+  --pe-python /path/to/venvs/policyengine/bin/python
 ```
 
 Flags: `--n` (TAXSIM sample/year, default 20000), `--n-pe` (PE sample/year,
@@ -91,8 +91,8 @@ The first run per year executes the full federal calculator on ~220k records
 
 ```bash
 module load Python/3.12.3-GCCcore-13.3.0
-python -m venv /nfs/roberts/project/pi_nrs36/ji252/venvs/policyengine
-/nfs/roberts/project/pi_nrs36/ji252/venvs/policyengine/bin/pip install \
+python -m venv /path/to/venvs/policyengine
+/path/to/venvs/policyengine/bin/pip install \
   -r src/tests/state/cross_model/pe_requirements.txt
 ```
 
