@@ -265,6 +265,10 @@ GROUP_PLURALS = {
 }
 
 
+# Input columns already reported missing, so each is warned about once
+_MISSING_INPUT_COLS = set()
+
+
 def resolve(candidates, required=True):
     """Return (variable_name, entity_key) for the first extant candidate."""
     for name in candidates:
@@ -344,7 +348,13 @@ def build_situation(rows, year):
         group_values = {}
         for col, candidates in PRIMARY_VARS.items():
             var, entity = resolve(candidates)
-            # .get: input files written before a column was added still load
+            # .get: input files written before a column was added still load,
+            # but say so once -- a renamed or dropped column would otherwise
+            # zero that income on the PolicyEngine side for every record
+            if col not in row and col not in _MISSING_INPUT_COLS:
+                _MISSING_INPUT_COLS.add(col)
+                print(f"WARNING: input column '{col}' absent from the harness "
+                      f"input; treating it as 0", file=sys.stderr, flush=True)
             val = float(row.get(col) or 0)
             if entity == "person":
                 # Pension and IRA income is held at tax-unit level, so who

@@ -72,14 +72,14 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
       
-      # Determine qualifying earned income based on age
-      qual1 = (n_dep_eitc > 0) | (age1 >= eitc.min_age & age1 <= eitc.max_age),
-      qual2 = if_else(
-        !is.na(age2),
-        (n_dep_eitc > 0) | (age2 >= eitc.min_age & age2 <= eitc.max_age),
-        F
-      ),
-      ei = (ei1 * qual1) + if_else(filing_status == 2, ei2 * qual2, 0),
+      # Determine eligibility based on age: without a qualifying child, the
+      # taxpayer OR the spouse must be in the age range (IRC 32(c)(1)(A)(ii)),
+      # and a joint return's earned income is combined either way
+      qual1 = age1 >= eitc.min_age & age1 <= eitc.max_age,
+      qual2 = filing_status == 2 & !is.na(age2) &
+              age2 >= eitc.min_age & age2 <= eitc.max_age,
+      ei = (ei1 + if_else(filing_status == 2, ei2, 0)) *
+           ((n_dep_eitc > 0) | qual1 | qual2),
 
       # Potentially deny eligibility based on dependent and filing status. A
       # separate filer qualifies only where the law allows it AND they have a

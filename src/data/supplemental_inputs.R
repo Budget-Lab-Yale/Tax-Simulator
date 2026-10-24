@@ -84,7 +84,8 @@ supplemental_schema = local({
       type                = field('type',   NA_character_),
       split               = field('split',  'whole'),
       shadow              = field('shadow', 'forbid'),
-      tax_data_equivalent = field('tax_data_equivalent', NA_character_)
+      tax_data_equivalent = field('tax_data_equivalent', NA_character_),
+      values              = unname(map(raw, ~ unlist(.x$values)))
     )
     bad = vars %>%
       filter(!(key %in% c('unit', 'state', 'person')) | !(type %in% c('dbl', 'int', 'lgl')) |
@@ -114,6 +115,35 @@ sup_cast = function(x, type) {
          int = as.integer(x),
          lgl = as.logical(x),
          stop('sup_cast(): unknown type ', type)))
+}
+
+
+
+sup_out_of_domain = function(raw, type, values = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Flags producer values that sup_cast() would silently reinterpret rather
+  # than turn into NA: a fraction cast to int (1.6 -> 1), a number other than
+  # 0/1 cast to lgl (2 -> TRUE), or a code outside the schema's `values`.
+  #
+  # Parameters:
+  #   - raw (vec)    : the column as read, before sup_cast()
+  #   - type (str)   : schema type (dbl | int | lgl)
+  #   - values (vec) : allowed values from the schema, or NULL for any
+  #
+  # Returns: logical vector, TRUE where a non-NA value is out of domain.
+  #----------------------------------------------------------------------------
+
+  num = suppressWarnings(as.numeric(raw))
+  bad = switch(type,
+               dbl = rep(FALSE, length(raw)),
+               int = !is.na(num) & num != round(num),
+               lgl = if (is.logical(raw)) rep(FALSE, length(raw)) else
+                       !is.na(raw) & !(toupper(as.character(raw)) %in% c('0', '1', 'TRUE', 'FALSE')))
+  if (!is.null(values)) {
+    bad = bad | (!is.na(raw) & !(sup_cast(raw, type) %in% sup_cast(values, type)))
+  }
+  bad
 }
 
 
@@ -278,6 +308,78 @@ validate_runscript_supplemental = function(runscript,
       if (!same) {
         stop("Scenario '", cf$ID[i], "' pins ", p, ' ', cf[[v_col]][i], '/', cf[[id_col]][i],
              ' but the baseline row pins ', bl[[v_col]][1], '/', bl[[id_col]][1],
+             '; supplemental inputs are frozen across scenarios')
+      }
+    }
+  }
+  invisible(TRUE)
+}
+
+
+
+validate_supplemental_stored_baseline = function(runscript, baseline_root,
+                                                 producers = supplemental_input_interfaces()) {
+
+  #----------------------------------------------------------------------------
+  # The baseline_vintage counterpart of validate_runscript_supplemental()'s
+  # freeze rule: a runscript with no baseline row reuses a stored baseline, so
+  # each state-mode counterfactual must request the variables that baseline
+  # ran with (its static/supplemental/supplemental_inputs_coverage.csv; none
+  # when the file is absent) and pin the same producer vintage/ID (its
+  # vintage-level dependencies.csv).
+  #
+  # Parameters:
+  #   - runscript (df)      : full runscript tibble (all rows)
+  #   - baseline_root (str) : the stored baseline vintage directory
+  #   - producers (str[])   : producer interface names
+  #
+  # Returns: TRUE invisibly; stops on violation.
+  #----------------------------------------------------------------------------
+
+  if (any(runscript$ID == 'baseline') || !('states' %in% colnames(runscript))) {
+    return(invisible(TRUE))
+  }
+  cf = runscript[!is.na(runscript$states), ]
+  if (nrow(cf) == 0) {
+    return(invisible(TRUE))
+  }
+
+  coverage_path = file.path(baseline_root, 'baseline', 'static', 'supplemental',
+                            'supplemental_inputs_coverage.csv')
+  stored_vars = if (file.exists(coverage_path)) {
+    sort(unique(read_csv(coverage_path, show_col_types = FALSE)$variable))
+  } else {
+    character()
+  }
+  deps_path = file.path(baseline_root, 'dependencies.csv')
+  stored_deps = if (file.exists(deps_path)) {
+    read_csv(deps_path, col_types = cols(.default = 'c')) %>%
+      filter(ID == 'baseline', interface %in% producers)
+  } else {
+    tibble(ID = character(), interface = character(), vintage = character(), scenario = character())
+  }
+
+  for (i in seq_len(nrow(cf))) {
+    cf_vars = if ('supplemental_inputs' %in% colnames(cf)) {
+      sort(parse_supplemental_value(cf$supplemental_inputs[i]))
+    } else {
+      character()
+    }
+    if (!identical(cf_vars, stored_vars)) {
+      stop("Scenario '", cf$ID[i], "' requests supplemental inputs (",
+           paste(cf_vars, collapse = ' '), ") but the stored baseline at ", baseline_root,
+           " ran with (", paste(stored_vars, collapse = ' '),
+           "); supplemental inputs are frozen across scenarios")
+    }
+    if (length(cf_vars) == 0) next
+    for (p in producers) {
+      v_col = paste0('dep.', p, '.vintage'); id_col = paste0('dep.', p, '.ID')
+      cf_pin = if (v_col %in% colnames(cf)) c(cf[[v_col]][i], cf[[id_col]][i]) else c(NA, NA)
+      stored = stored_deps %>% filter(interface == p)
+      stored_pin = if (nrow(stored) == 1) c(stored$vintage, stored$scenario) else c(NA, NA)
+      if (!identical(as.character(cf_pin), as.character(stored_pin))) {
+        stop("Scenario '", cf$ID[i], "' pins ", p, ' ', cf_pin[1], '/', cf_pin[2],
+             ' but the stored baseline pins ', stored_pin[1], '/', stored_pin[2],
              '; supplemental inputs are frozen across scenarios')
       }
     }
@@ -533,6 +635,12 @@ build_supplemental_inputs = function(tax_units, year, variables, roots,
       for (v in p_vars) {
         type = need$type[need$variable == v]
         was_na = is.na(d[[v]])
+        out_of_domain = sup_out_of_domain(d[[v]], type, need$values[[which(need$variable == v)]])
+        if (any(out_of_domain)) {
+          stop('build_supplemental_inputs(): ', sum(out_of_domain), ' value(s) of ', v, ' in ',
+               basename(f), ' are outside its domain (type ', type, ', e.g. ',
+               d[[v]][which(out_of_domain)[1]], ')')
+        }
         d[[v]] = sup_cast(d[[v]], type)
         if (any(is.na(d[[v]]) & !was_na)) {
           stop('build_supplemental_inputs(): ', v, ' in ', basename(f), ' cannot be read as ', type)

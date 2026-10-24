@@ -307,11 +307,12 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Personal exemptions
     bind_cols(calc_pe_ded(.)) %>% 
     
+    # Other below-the-line deductions (before QBI, whose taxable income
+    # measure nets them out)
+    bind_cols(calc_below_ded(.)) %>%
+
     # QBI deduction
-    bind_cols(calc_qbi_ded(.)) %>% 
-    
-    # Other below-the-line deductions 
-    bind_cols(calc_below_ded(.)) %>% 
+    bind_cols(calc_qbi_ded(.)) %>%
     
     # Taxable income and itemizer status
     bind_cols(calc_txbl_inc(.)) %>%

@@ -291,7 +291,7 @@ scalars:
   st_ded.item_include_income_sales_tax: 0
   st_ded.item_prop_tax_cap: .inf
   st_ded.item_mort_prop_cap: .inf   # cap on mortgage interest + capped property tax together (NC $20,000)
-  st_ded.item_salt_cap: .inf   # cap on the deductible taxes in the default state itemized base (MS $10,000 / $5,000 MFS)
+  st_ded.item_salt_cap: .inf   # fixed cap on the deductible taxes in the default state itemized base (unused: MS and OR take item_salt_cap_fed)
   st_ded.item_salt_cap_fed: 0  # 1 = that cap is the federal effective SALT limit, phase-down and MFS included (OR-A line 9)
   st_ded.pease: 0
   st_ded.pease_thresh: .inf

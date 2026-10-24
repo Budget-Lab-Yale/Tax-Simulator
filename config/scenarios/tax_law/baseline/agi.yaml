@@ -130,7 +130,13 @@ auto_int_ded_po_rate:
     '2014': 0
     '2025': 0.2
     '2029': 0
-    
+
+# Rounding step for the auto loan interest phaseout: IRC 163(h)(4)(C)(ii)
+# reduces the deduction by $200 for each $1,000 "(or fraction thereof)" of
+# MAGI over the threshold
+auto_int_ded_po_step:
+  value: 1000
+
 # Whether auto interest is only deductible for new cars
 auto_int_ded_new:
   value:

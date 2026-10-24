@@ -70,8 +70,10 @@ eitc_refundable:
 # 2017-2020 deduction block in ded.yaml). The 65+ dependent prong of the
 # HDTC is observed through the dependent age slots; the disabled prong of
 # both credits reads the dep_disabled_n optional data column (S43; zero
-# until published). Federal CDCTC take-up is NOT applied, as for the
-# deductions. Sources: 2021/2022 Form 1 and instructions (NBER mirror),
+# until published), counted only among dependents not already qualifying by
+# age. The expense-based Dependent Care Tax Credit takes the federal CDCTC
+# take-up draw (since 2026-10-21); the flat Household Dependent Tax Credit
+# does not. Sources: 2021/2022 Form 1 and instructions (NBER mirror),
 # 2021 inst p.3, p.16-17; 2022 inst p.17.
 #-----------------------------------------------------------------------
 

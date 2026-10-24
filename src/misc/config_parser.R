@@ -184,6 +184,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   # (the rule needs visibility into all rows; plan §2.4)
   validate_runscript_states(runscript)
   validate_runscript_supplemental(runscript)
+  if (!is.null(baseline_vintage)) {
+    validate_supplemental_stored_baseline(runscript, baseline_root)
+  }
 
   # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {

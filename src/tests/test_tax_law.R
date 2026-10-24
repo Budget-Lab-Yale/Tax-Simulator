@@ -27,6 +27,9 @@ test_tax_law = function() {
   test_unrounded_mapper()
   test_eitc_childless_threshold_indexed()
   test_eitc_mfs_separated_spouse_rule()
+  test_eitc_childless_spouse_age()
+  test_auto_int_ded_stepped_phaseout()
+  test_schedule_1a_in_qbi_and_amt()
   message('test_tax_law: ALL TESTS PASSED')
   invisible(TRUE)
 }
@@ -201,5 +204,132 @@ test_eitc_mfs_separated_spouse_rule = function() {
   }
 
   message('test_eitc_mfs_separated_spouse_rule: PASSED')
+  invisible(TRUE)
+}
+
+
+
+federal_test_law = function(years) {
+
+  #----------------------------------------------------------------------------
+  # Baseline federal law for the given years on a flat 2% index path, joined
+  # by year and filing status in the tests below.
+  #
+  # Returns: tax-law tibble (df).
+  #----------------------------------------------------------------------------
+
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'),
+                             year   = 1970:2040) %>%
+    mutate(growth = 0.02)
+  build_tax_law_from_id('baseline', years = years, indexes = test_indexes)
+}
+
+
+
+test_eitc_childless_spouse_age = function() {
+
+  #----------------------------------------------------------------------------
+  # Without a qualifying child, IRC 32(c)(1)(A)(ii) requires that the taxpayer
+  # OR the spouse be in the age range, and a joint return's earned income is
+  # combined. The credit used to count only the in-range spouse's earnings, so
+  # a 22-year-old earner married to a 30-year-old got nothing.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  law = federal_test_law(2023)
+  cases = tribble(
+    ~age1, ~age2, ~ei1, ~ei2, ~should_get,
+    22,    30,    6000, 0,    'positive',   # earner too young, spouse in range
+    30,    22,    0,    6000, 'positive',   # the mirror image
+    22,    22,    6000, 0,    'zero'        # neither in range
+  )
+  result = cases %>%
+    mutate(year = 2023, filing_status = 2, dep_status = 0, n_dep_eitc = 0,
+           agi = ei1 + ei2) %>%
+    left_join(law, by = c('year', 'filing_status')) %>%
+    mutate(eitc = calc_eitc(., fill_missings = T)$eitc)
+  ok = if_else(result$should_get == 'zero', result$eitc == 0, result$eitc > 0)
+  if (!all(ok) || abs(result$eitc[1] - result$eitc[2]) > 0.01) {
+    stop('Childless joint EITC age test fails: ',
+         paste(sprintf('%d/%d -> %.2f', result$age1, result$age2, result$eitc), collapse = '; '))
+  }
+
+  message('test_eitc_childless_spouse_age: PASSED')
+  invisible(TRUE)
+}
+
+
+
+test_auto_int_ded_stepped_phaseout = function() {
+
+  #----------------------------------------------------------------------------
+  # IRC 163(h)(4)(C)(ii) reduces the vehicle loan interest deduction by $200
+  # for each $1,000 "(or fraction thereof)" of MAGI over the threshold. One
+  # dollar over costs $200; $1,000 over costs $200; $1,001 over costs $400.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  law = federal_test_law(2026)
+  result = tibble(agi = c(100000, 100001, 101000, 101001), expect = c(10000, 9800, 9800, 9600)) %>%
+    mutate(year = 2026, filing_status = 1, auto_int_exp = 10000, r.new_car = 0) %>%
+    left_join(law, by = c('year', 'filing_status')) %>%
+    mutate(auto_int_ded = calc_below_ded(., fill_missings = T)$auto_int_ded)
+  if (any(abs(result$auto_int_ded - result$expect) > 0.01)) {
+    stop('Auto loan interest phaseout is not stepped: ',
+         paste(sprintf('%.0f -> %.2f', result$agi, result$auto_int_ded), collapse = '; '))
+  }
+
+  message('test_auto_int_ded_stepped_phaseout: PASSED')
+  invisible(TRUE)
+}
+
+
+
+test_schedule_1a_in_qbi_and_amt = function() {
+
+  #----------------------------------------------------------------------------
+  # The Schedule 1-A deductions (tips, overtime, senior, vehicle loan interest)
+  # reduce taxable income, so they reduce the QBI deduction's taxable income
+  # limit (IRC 199A(e)(1)) and the AMT starting point (Form 6251 line 1).
+  # Vehicle interest left both bases when it moved below the line.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  law = federal_test_law(2026)
+
+  # QBI: $50,000 of Schedule C profit, AGI 60,000, a 15,000 standard
+  # deduction. The 20%-of-taxable-income limit binds, so $10,000 of vehicle
+  # interest cuts the deduction by 2,000; so does $10,000 of tips
+  qbi = tibble(id = 1:3, auto_int_ded = c(0, 10000, 0), tip_ded = c(0, 0, 10000)) %>%
+    mutate(year = 2026, filing_status = 1, sole_prop = 50000, agi = 60000,
+           std_ded = 15000, item_ded = 0, pe_ded = 0, ot_ded = 0, senior_ded = 0,
+           part = 0, scorp = 0, farm = 0, div_pref = 0, kg_pref = 0,
+           wagebill_sole_prop = 0, wagebill_part = 0, wagebill_scorp = 0, wagebill_farm = 0,
+           sstb_sole_prop = 0, sstb_part = 0, sstb_scorp = 0, sstb_farm = 0) %>%
+    left_join(law, by = c('year', 'filing_status')) %>%
+    mutate(qbi_ded = calc_qbi_ded(., fill_missings = T)$qbi_ded)
+  if (abs((qbi$qbi_ded[1] - qbi$qbi_ded[2]) - 2000) > 0.01 ||
+      abs(qbi$qbi_ded[2] - qbi$qbi_ded[3]) > 0.01) {
+    stop('QBI taxable income omits Schedule 1-A deductions: ',
+         paste(sprintf('%.2f', qbi$qbi_ded), collapse = ' / '))
+  }
+
+  # AMT: a non-itemizer's AMT income is AGI less the Schedule 1-A deductions
+  amt = tibble(id = 1:2, auto_int_ded = c(0, 10000)) %>%
+    mutate(year = 2026, filing_status = 1, agi = 300000, std_ded = 15000,
+           ded = 15000, itemizing = FALSE,
+           # calc_amt() re-runs calc_tax() and drops these first
+           liab_ord = 0, liab_pref = 0, liab_1250 = 0, liab_collect = 0, liab = 0) %>%
+    left_join(law, by = c('year', 'filing_status')) %>%
+    mutate(amt_gross_inc = calc_amt(., fill_missings = T)$amt_gross_inc)
+  if (any(abs(amt$amt_gross_inc - (300000 - amt$auto_int_ded)) > 0.01)) {
+    stop('AMT income omits vehicle loan interest: ',
+         paste(sprintf('%.2f', amt$amt_gross_inc), collapse = ' / '))
+  }
+
+  message('test_schedule_1a_in_qbi_and_amt: PASSED')
   invisible(TRUE)
 }

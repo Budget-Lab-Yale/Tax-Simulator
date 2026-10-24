@@ -248,20 +248,26 @@ st_credits_care = function(tax_unit, credit_tables = NULL) {
   # exclusive per return ("you may claim an amount in line 46 only if there
   # is no entry in line 45"), so the unit takes the larger. Disabled
   # qualifying individuals come from the dep_disabled_n optional data
-  # column (zero until published, S43); 65+ dependents from the age slots
+  # column (zero until published, S43); 65+ dependents from the age slots.
+  # dep_disabled_n counts disabled dependents of ANY age and says nothing
+  # about which ones, so a disabled dependent is added only among those not
+  # already counted by age (at most n_dep in all): a disabled 8-year-old is
+  # counted once, not twice. Where the disabled one is in fact the young
+  # one and another dependent qualifies by neither test, this overcounts
   #------------------------------------------------------------------------
   dep_age = cbind(tax_unit$dep_age1, tax_unit$dep_age2, tax_unit$dep_age3)
+  add_disabled = function(n_by_age) {
+    n_by_age + pmin(tax_unit$dep_disabled_n, pmax(0, tax_unit$n_dep - n_by_age))
+  }
   care_credit_n_qual = pmin(
-    rowSums(dep_age <= tax_unit$st_credits.care_credit_age_limit, na.rm = TRUE) +
-      tax_unit$dep_disabled_n,
+    add_disabled(rowSums(dep_age <= tax_unit$st_credits.care_credit_age_limit, na.rm = TRUE)),
     tax_unit$st_credits.care_credit_dep_limit)
   care_credit_ei_limit = pmax(0, if_else(tax_unit$filing_status == 2,
                                          pmin(tax_unit$ei1, tax_unit$ei2),
                                          tax_unit$ei1))
   care_credit_hh_n = pmin(
-    rowSums(dep_age <= tax_unit$st_credits.care_credit_hh_member_age_limit |
-            dep_age >= tax_unit$st_credits.care_credit_hh_aged_min, na.rm = TRUE) +
-      tax_unit$dep_disabled_n,
+    add_disabled(rowSums(dep_age <= tax_unit$st_credits.care_credit_hh_member_age_limit |
+                         dep_age >= tax_unit$st_credits.care_credit_hh_aged_min, na.rm = TRUE)),
     tax_unit$st_credits.care_credit_hh_limit)
   # The expense-based credit shares the federal take-up draw like every state
   # care credit (JI 2026-10-08; applied here 2026-10-21 -- this block had been

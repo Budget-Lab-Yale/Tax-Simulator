@@ -33,8 +33,12 @@
 #            already on tax_units. Allow only for a Tax-Data placeholder column
 #            known to be unpopulated (trad_contr_er1/2 is the live case)
 #   tax_data_equivalent  (optional) the native Tax-Data column that would make
-#            the overlay unnecessary once populated; ensure_st_data() prefers a
-#            native column over the overlay
+#            the overlay unnecessary once populated. ensure_st_data() takes the
+#            overlay where it has a value and falls back to the native column
+#            (or this equivalent), then the default, for a record it leaves NA
+#   values   (optional) the allowed values of a coded variable; the reader
+#            stops on any other. int values must be whole and lgl values 0/1
+#            or TRUE/FALSE whether or not this is set
 #   units / description  documentation only
 #
 # Names are the overlay_variable column of research/state_tax/tax_data_gaps.csv.
@@ -68,6 +72,7 @@ tenure:
   split: whole
   shadow: forbid
   units: code
+  values: [0, 1, 2]
   description: 0 unknown, 1 owner-occupier, 2 renter
 rent_paid:
   key: state

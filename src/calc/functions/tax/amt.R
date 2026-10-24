@@ -37,7 +37,8 @@ calc_amt = function(tax_unit, fill_missings = F) {
     'tip_ded',            # (dbl) value of below-the-line tip deduction
     'ot_ded',             # (dbl) value of below-the-line overtime deduction
     'senior_ded',         # (dbl) value of below-the-line extra senior deduction
-    'itemizing',          # (bool) whether filer itemizes deductions
+    'auto_int_ded',       # (dbl) value of below-the-line auto loan interest deduction
+    'itemizing',         # (bool) whether filer itemizes deductions
     'salt_item_ded',      # (dbl)  itemized deduction for state and local taxes
     'misc_item_ded',      # (dbl)  miscellaneous itemized deductions
     'item_ded_ex_limits', # (dbl) itemized deductions before overall limitations
@@ -85,7 +86,8 @@ calc_amt = function(tax_unit, fill_missings = F) {
                       qbi_ded - 
                       tip_ded - 
                       ot_ded - 
-                      senior_ded + 
+                      senior_ded -
+                      auto_int_ded +
                       if_else(itemizing, 
                               salt_item_ded + 
                               misc_item_ded - 

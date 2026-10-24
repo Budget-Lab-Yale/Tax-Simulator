@@ -183,9 +183,11 @@ ensure_st_data = function(tax_units, schema = supplemental_schema()) {
   # column in config/interfaces/supplemental_inputs_schema.yaml exists on the
   # units, resolved in this order per variable v (decision S43):
   #   1. an overlay column sup.v is present (attach_supplemental_inputs()):
-  #      v = coalesce(sup.v, default), has_v = !is.na(sup.v); if v already
-  #      existed it is overwritten here, inside the state context only
-  #      (schema `shadow: allow`, the Tax-Data placeholder case);
+  #      the overlay wins where it has a value; a record it leaves NA falls
+  #      back to the native column (or the tax_data_equivalent), then the
+  #      default, so an uncovered record never loses a real Tax-Data value
+  #      (schema `shadow: allow`, the Tax-Data placeholder case). has_v is
+  #      TRUE where either source supplied the value;
   #   2. else v is present natively (Tax-Data absorbed it): untouched, has_v = TRUE;
   #   3. else the schema's tax_data_equivalent column is present (Tax-Data
   #      carries the concept under its own name, e.g. trad_contr_er1 for
@@ -209,16 +211,31 @@ ensure_st_data = function(tax_units, schema = supplemental_schema()) {
     sv = paste0(SUP_PREFIX, v)
     hv = paste0('has_', v)
     default = schema$defaults[[v]]
+    equivalent = vars$tax_data_equivalent[i]
+    has_equivalent = !is.na(equivalent) && equivalent %in% colnames(tax_units)
+
+    # The native value, from the column itself or its Tax-Data equivalent
+    native = NULL
+    if (v %in% colnames(tax_units)) {
+      native = sup_cast(tax_units[[v]], vars$type[i])
+    } else if (has_equivalent) {
+      native = sup_cast(tax_units[[equivalent]], vars$type[i])
+    }
+
     if (sv %in% colnames(tax_units)) {
-      tax_units[[hv]] = !is.na(tax_units[[sv]])
-      tax_units[[v]]  = coalesce(sup_cast(tax_units[[sv]], vars$type[i]), default)
+      overlay = sup_cast(tax_units[[sv]], vars$type[i])
+      if (is.null(native)) {
+        tax_units[[hv]] = !is.na(overlay)
+        tax_units[[v]]  = coalesce(overlay, default)
+      } else {
+        tax_units[[hv]] = !is.na(overlay) | !is.na(native)
+        tax_units[[v]]  = coalesce(overlay, native, default)
+      }
       tax_units[[sv]] = NULL
     } else if (v %in% colnames(tax_units)) {
       tax_units[[hv]] = TRUE
-    } else if (!is.na(vars$tax_data_equivalent[i]) &&
-               vars$tax_data_equivalent[i] %in% colnames(tax_units)) {
-      tax_units[[v]]  = coalesce(sup_cast(tax_units[[vars$tax_data_equivalent[i]]],
-                                          vars$type[i]), default)
+    } else if (has_equivalent) {
+      tax_units[[v]]  = coalesce(native, default)
       tax_units[[hv]] = TRUE
     } else {
       tax_units[[v]]  = default

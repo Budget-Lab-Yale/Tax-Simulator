@@ -155,6 +155,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'ei2',               # (dbl)  secondary earned income for independent EITCs
     'wages1',            # (dbl)  primary wages for zero-income child credits
     'wages2',            # (dbl)  secondary wages for zero-income child credits
+    'sole_prop1',        # (dbl)  primary Schedule C income/loss (earned income net of losses)
+    'sole_prop2',        # (dbl)  secondary Schedule C income/loss
+    'farm1',             # (dbl)  primary Schedule F income/loss
+    'farm2',             # (dbl)  secondary Schedule F income/loss
+    'part_se1',          # (dbl)  primary partnership SE income/loss
+    'part_se2',          # (dbl)  secondary partnership SE income/loss
     'sole_prop',         # (dbl)  Schedule C income/loss
     'other_inc',         # (dbl)  other income; negative = NOL carried in (NM LICTR add-back)
     'rent_loss',         # (dbl)  rental loss component (NM LICTR modified gross income)
@@ -592,8 +598,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                           tax_unit$st_credits.percap_after_eitc == 1,
                           pmin(hh$st_percap_credit *
                                  (1 - tax_unit$st_credits.percap_refundable),
+                               # the nonrefundable EITC share is already in
+                               # st_credits_nonref_other; add only the rest
                                pmax(0, tax_unit$st_tax_pre_credit -
-                                       st_credits_nonref_other - st_eitc)),
+                                       st_credits_nonref_other -
+                                       st_eitc * earn$st_eitc_ref_share)),
                           hh$st_percap_credit *
                             (1 - tax_unit$st_credits.percap_refundable)),
     st_credits_nonref = st_credits_nonref_other + st_percap_nonref,
