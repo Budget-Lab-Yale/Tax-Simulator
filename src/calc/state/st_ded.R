@@ -191,7 +191,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_hh_member_age_limit', # (int) maximum dependent age for the flat alternative (MA 11)
     'st_ded.care_ded_mfs_ineligible', # (int) both care deductions barred to married filing separately (MA)
     'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
-    'st_ded.item_salt_cap',          # (dbl) cap on the state itemized taxes (MS follows the federal $10,000 limit)
+    'st_ded.item_salt_cap',          # (dbl) fixed cap on the state itemized taxes (no state uses it; MS and OR follow the federal limit via item_salt_cap_fed)
     'st_ded.item_salt_cap_fed',      # (int) 1 = cap the state itemized taxes at the federal effective SALT limit (OR-A line 9)
     'st_ded.item_payroll_add_med',   # (int) ... including the Additional Medicare Tax (AL: withheld as Medicare tax)
     'st_ded.item_payroll_seca_er',   # (int) ... including the deductible half of SE tax (AL 1; MO 0: Sch. 2 line 4 less Sch. 1 deductible half)

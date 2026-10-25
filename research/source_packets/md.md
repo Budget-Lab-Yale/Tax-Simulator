@@ -170,6 +170,15 @@ the federal return; nonrefundable; dependent filers ineligible. New generic
 `cli_poverty_guideline` table. The credit is a statutory cliff, so the
 continuity allowance rose to $500. Tests MD-12a/b.
 
+**Fixed 2026-10-24 (code review): Worksheet 18B line 2 excluded losses only
+per person, not per business.** Earned income was `pmax(0, ei1)`, and `ei1`
+is wages plus net SE income, so a Schedule C or farm loss netted against
+wages. That both shrank the credit (wages 15,000, Schedule C loss 5,000:
+paid 500, form 750) and could create eligibility (wages 20,000, loss
+15,000: tested 5,000 against the guideline instead of 20,000). Line 2 is
+now wages plus each of Schedule C, Schedule F and partnership SE income
+floored at zero. Tests MD-12d/e.
+
 **Closed 2026-10-09 (run md_run_1009g).** Every cell clears 0.95: TAXSIM
 0.984 / 0.976 / 0.958 / 0.962, PolicyEngine 0.971 / 0.977 / 0.974 / 0.984 /
 0.965. The last steps, in order:

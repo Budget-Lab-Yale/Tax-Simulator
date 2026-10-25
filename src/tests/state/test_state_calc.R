@@ -2709,6 +2709,23 @@ test_state_calc = function() {
            expect = list(st_pov_credit = 0.05 * 11552,
                          liab_st_iit = (90 + 0.0475 * 3619) - 530),
            label = 'MD-12c childless credit refundable only above the tax')
+  # (d) Worksheet 18B line 2 excludes a business loss: 2024 single, wages
+  #     15,000 and a Schedule C loss of 5,000 (AGI 10,000). Earned income
+  #     is 15,000, under the $15,060 guideline -> 5% x 15,000 = 750, not
+  #     5% of the netted 10,000
+  run_case('MD', 2024,
+           list(agi = 10000, age1 = 40, wages1 = 15000, sole_prop = -5000, sole_prop1 = -5000,
+                ei1 = 10000),
+           expect = list(st_pov_credit = 750),
+           label = 'MD-12d poverty level credit ignores a Schedule C loss')
+  # (e) the loss cannot buy eligibility: wages 20,000 and a 15,000 loss
+  #     (AGI 5,000). Line 4 takes the larger of 20,000 and the income base,
+  #     above the guideline -> none
+  run_case('MD', 2024,
+           list(agi = 5000, age1 = 40, wages1 = 20000, sole_prop = -15000, sole_prop1 = -15000,
+                ei1 = 5000),
+           expect = list(st_pov_credit = 0),
+           label = 'MD-12e poverty level credit, loss does not create eligibility')
 
   # MD-13: dependent aged 65+ earns a second dependent exemption (Form
   # 502B). PolicyEngine record 45802 (2024 single, FAGI 51,571, one
@@ -2924,6 +2941,17 @@ test_state_calc = function() {
            expect = list(st_agi = 20000, st_txbl_inc = 5000, st_eitc = 850,
                          st_percap_credit = 375, liab_st_iit = -695.00),
            label = 'KS-4 2021 HoH: SS subtraction under the cliff + 17% EITC; food credit ordered after')
+  # KS-4c (2026-10-24): ordering after a NONREFUNDABLE EITC subtracts it
+  # once. Same unit with a federal EITC of 500 (state 85) and the EITC made
+  # nonrefundable: the food credit takes the 155 - 85 = 70 left, so the
+  # liability is zero (subtracting the EITC twice left it 70)
+  run_case('KS', 2021,
+           list(filing_status = 4, agi = 25000, txbl_ss = 5000,
+                gross_ss = 6000, n_dep = 2, dep_age1 = 8, dep_age2 = 10,
+                ei1 = 20000, wages1 = 20000, eitc = 500),
+           expect = list(st_eitc = 85, liab_st_iit = 0),
+           law_overrides = list(st_credits.eitc_refundable = 0),
+           label = 'KS-4c food credit after a nonrefundable EITC')
   run_case('KS', 2021,
            list(filing_status = 4, agi = 76000, txbl_ss = 5000,
                 gross_ss = 6000, n_dep = 2, dep_age1 = 8, dep_age2 = 10),
@@ -4467,12 +4495,20 @@ test_state_calc = function() {
   run_case('MS', 2023, list(agi = 50001, wages1 = 50001, ei1 = 50001, filing_status = 4, n_dep = 1, n_dep_ctc = 1, dep_age1 = 5,
                             care_exp = 3000, cdctc_nonref = 600),
            expect = list(st_cdctc = 0), label = 'MS-CC2 care credit cliff one dollar over')
-  # MS-SALT1: Schedule A taxes keep the federal $10,000 limit. 2024 single,
-  # $200,000 of wages, $15,000 of property tax and $8,000 of mortgage
-  # interest: Mississippi itemized = 8,000 + 10,000 = 18,000
+  # MS-SALT1: Schedule A taxes keep the federal $10,000 limit, read off the
+  # federal calculation (item_salt_cap_fed). 2024 single, $200,000 of wages,
+  # $15,000 of property tax and $8,000 of mortgage interest; the federal
+  # capped SALT is 10,000: Mississippi itemized = 8,000 + 10,000 = 18,000
   run_case('MS', 2024, list(agi = 200000, wages1 = 200000, ei1 = 200000, salt_prop = 15000,
-                            mort_int_item_ded_potential = 8000, item_ded_ex_limits_potential = 23000, salt_item_ded_potential = 15000),
+                            mort_int_item_ded_potential = 8000, item_ded_ex_limits_potential = 18000, salt_item_ded_potential = 10000),
            expect = list(st_item_ded = 18000), label = 'MS-SALT1 itemized taxes capped at $10,000')
+  # MS-SALT2: the federal limit returns to $10,000 in 2030, and Mississippi
+  # follows it. $30,000 of property tax: federal capped SALT 10,000, so
+  # Mississippi itemized = 8,000 + 10,000 = 18,000 (a transcribed $40,000
+  # cap would give 38,000)
+  run_case('MS', 2030, list(agi = 200000, wages1 = 200000, ei1 = 200000, salt_prop = 30000,
+                            mort_int_item_ded_potential = 8000, item_ded_ex_limits_potential = 18000, salt_item_ded_potential = 10000),
+           expect = list(st_item_ded = 18000), label = 'MS-SALT2 2030 limit follows the federal reversion')
   # MS-CP1/CP2: combined return, two columns on the single schedule with the
   # $12,000 exemption and $4,600 standard deduction divided freely. 2024,
   # $60,000 of wages. Two earners at 30,000 each: 30,000 - 6,000 - 2,300 =
@@ -5839,6 +5875,20 @@ run_case('AR', 2024,
                             n_dep = 1, n_dep_ctc = 1, dep_age1 = 5, care_exp = 1000),
            expect = list(st_care_credit = 0),
            label = 'MA-19 2023 care credits replaced by the CFTC')
+  # MA-20 (2026-10-24): a disabled dependent who also qualifies by age is
+  # counted once. One disabled child aged 8, $5,000 expenses -> DCTC 240,
+  # not 2 x 240. MA-20b: the disabled dependent is a second, adult
+  # dependent who qualifies by no age test -> 2 x 240 = 480
+  run_case('MA', 2021, list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 1, n_dep_ctc = 1, dep_age1 = 8, dep_disabled_n = 1L,
+                            care_exp = 5000),
+           expect = list(st_care_credit = 240),
+           label = 'MA-20 disabled child counted once')
+  run_case('MA', 2021, list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                            n_dep = 2, n_dep_ctc = 1, dep_age1 = 8, dep_age2 = 30,
+                            dep_disabled_n = 1L, care_exp = 5000),
+           expect = list(st_care_credit = 480),
+           label = 'MA-20b disabled adult dependent adds a qualifying individual')
   # MA-20 (2026-10-21): the Child and Family Tax Credit also reaches a
   # dependent aged 65 or over -- TY2024 single with a dependent aged 80: 440.
   # Separate filers are barred: a separate filer with a child of 5 gets 0
@@ -7203,6 +7253,7 @@ st_test_unit = function(overrides = list()) {
     exempt_int = 0, state_ref = 0, gross_ss = 0, txbl_ss = 0,
     txbl_int = 0, div_ord = 0, div_pref = 0, kg_lt = 0, kg_st = 0,
     txbl_kg = 0, kg_pref = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
+    sole_prop1 = 0, sole_prop2 = 0, farm1 = 0, farm2 = 0, part_se1 = 0, part_se2 = 0,
     part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
     part = 0, part_active_loss = 0, part_passive_loss = 0, net_rent = 0, rent_loss = 0,
     net_estate = 0,

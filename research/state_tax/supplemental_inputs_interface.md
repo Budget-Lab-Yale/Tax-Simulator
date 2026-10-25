@@ -140,9 +140,15 @@ TY2023. Collapse to one vintage at Tax-Data P6 and remove the entry.
   `get_state_totals()`, immediately before `do_state_taxes()`, for both
   key types. Reference-law contexts therefore need nothing extra.
 - `ensure_st_data()` (`do_state_taxes.R`, after `ensure_st_params()`)
-  resolves each schema variable: overlay present → value with the default
-  for NA and a `has_<v>` flag; native Tax-Data column present → untouched,
-  flag TRUE; neither → default, flag FALSE. Stages read bare names and gate
+  resolves each schema variable: overlay present → the overlay value, and
+  for a record the overlay leaves NA the native column (or its
+  `tax_data_equivalent`) and then the default, with `has_<v>` TRUE where
+  either source supplied the value (changed 2026-10-24: an NA overlay
+  record used to take the default even over a native value); native
+  Tax-Data column present → untouched, flag TRUE; neither → default, flag
+  FALSE. The reader also stops on values a cast would silently reinterpret:
+  a fractional `int`, an `lgl` other than 0/1/TRUE/FALSE, or a code outside
+  the schema's optional `values` list. Stages read bare names and gate
   on `has_<v>` only where the default is not self-evidently inert.
 - `st_split_spouse_unit()` halves `split: halve` variables and moves
   `split: person` pairs between slots, from the schema.

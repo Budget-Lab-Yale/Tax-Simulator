@@ -138,7 +138,11 @@ child care credit arriving in TY2023.
   amount; MS-CC1/CC2); and the federal $10,000 SALT limit on Mississippi's
   Schedule A taxes ("Per the Tax Cuts and Jobs Act, there is a $10,000
   limitation"), which the state itemized base never applied (new generic
-  `st_ded.item_salt_cap`; MS-SALT1).
+  `st_ded.item_salt_cap`; MS-SALT1). **Changed 2026-10-24:** the cap is now
+  read off the federal calculation (`st_ded.item_salt_cap_fed`, as OR does)
+  instead of transcribed amounts, which held $40,000 past the federal
+  reversion to $10,000 in 2030 and skipped the OBBBA income-based reduction
+  (MS-SALT2).
 - External: **P18** (PolicyEngine's Mississippi AGI omits miscellaneous income,
   the Alabama P17 pattern) and **P19** (its generic `state_income_tax` does not
   net the Mississippi child care credit that `ms_income_tax` does; the harness

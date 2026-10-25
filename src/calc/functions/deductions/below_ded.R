@@ -61,6 +61,7 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
     'agi.auto_int_ded_limit',     # (int) maximum deductible auto loan interest
     'agi.auto_int_ded_po_thresh', # (int) MAGI threshold above which the auto loan interest deduction phases out
     'agi.auto_int_ded_po_rate',   # (int) phaseout rate for auto loan interest deduction
+    'agi.auto_int_ded_po_step',   # (int) MAGI step the phaseout rounds up to
     'agi.auto_int_ded_new'        # (int) whether auto interest is only deductible for new cars
   )
   
@@ -137,8 +138,10 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       # parameters keep their historical agi.* names, which reforms and the
       # auto/hanson behavioral module reference
       # (source for new car share of financing: Experian's State of the Automotive Finance Market, 2024)
-      auto_int_ded = pmin(agi.auto_int_ded_limit, auto_int_exp),
-      auto_int_ded = pmax(0, auto_int_ded - pmax(0, agi - agi.auto_int_ded_po_thresh) * agi.auto_int_ded_po_rate),
+      auto_int_ded    = pmin(agi.auto_int_ded_limit, auto_int_exp),
+      auto_int_excess = pmax(0, agi - agi.auto_int_ded_po_thresh),
+      auto_int_excess = ceiling(auto_int_excess / agi.auto_int_ded_po_step) * agi.auto_int_ded_po_step,
+      auto_int_ded    = pmax(0, auto_int_ded - auto_int_excess * agi.auto_int_ded_po_rate),
       auto_int_ded = auto_int_ded * as.integer((agi.auto_int_ded_new == 0) | (r.new_car < 0.58))
       
     ) %>% 

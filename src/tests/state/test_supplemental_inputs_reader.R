@@ -125,6 +125,19 @@ test_supplemental_inputs_reader = function() {
               'cannot be read as dbl', 'a bad type stops')
   expect_stop(build_supplemental_inputs(units, 2023, 'rent_paid', list(`Affordability-Index` = root, Other = dup_root)),
               'more than one pinned producer', 'two producers publishing one variable stops')
+  # Values a cast would silently reinterpret stop instead
+  data.table::fwrite(tibble(id = 1, state = 'CT', rent_paid = 1, tenure = 1.6),
+                     file.path(dup_root, 'supplemental_state_2023.csv.gz'), compress = 'gzip')
+  expect_stop(build_supplemental_inputs(units, 2023, 'tenure', list(`Affordability-Index` = dup_root)),
+              'outside its domain', 'a fractional int stops')
+  data.table::fwrite(tibble(id = 1, state = 'CT', rent_paid = 1, tenure = 7L),
+                     file.path(dup_root, 'supplemental_state_2023.csv.gz'), compress = 'gzip')
+  expect_stop(build_supplemental_inputs(units, 2023, 'tenure', list(`Affordability-Index` = dup_root)),
+              'outside its domain', 'a code outside the schema values stops')
+  stopifnot(identical(sup_out_of_domain(c(0, 1, NA, 2), 'lgl'), c(FALSE, FALSE, FALSE, TRUE)),
+            identical(sup_out_of_domain(c(TRUE, NA), 'lgl'), c(FALSE, FALSE)),
+            identical(sup_out_of_domain(c(-2.5, NA), 'dbl'), c(FALSE, FALSE)),
+            identical(sup_out_of_domain(c(2, 2.5), 'int'), c(FALSE, TRUE)))
 
   # --- runscript rules
   producers = 'Affordability-Index'
@@ -144,6 +157,24 @@ test_supplemental_inputs_reader = function() {
               'frozen across scenarios', 'a counterfactual with a different producer pin stops')
   expect_stop(blank_supplemental_pins(rs %>% select(-starts_with('dep.')), producers),
               'pin no producer vintage', 'opting in without a pin stops')
+  # A runscript with no baseline row is checked against the stored baseline
+  stored = file.path(tempdir(), 'sup_stored')
+  dir.create(file.path(stored, 'baseline', 'static', 'supplemental'), recursive = TRUE, showWarnings = FALSE)
+  write_csv(tibble(year = 2023, variable = c('rent_paid', 'tenure'), interface = producers, vintage = 'sup_fixture'),
+            file.path(stored, 'baseline', 'static', 'supplemental', 'supplemental_inputs_coverage.csv'))
+  write_csv(tibble(ID = 'baseline', interface = producers, version = 1, vintage = 'sup_fixture', scenario = 'baseline'),
+            file.path(stored, 'dependencies.csv'))
+  cf_only = rs %>% filter(ID != 'baseline')
+  stopifnot(isTRUE(validate_supplemental_stored_baseline(cf_only, stored, producers)))
+  expect_stop(validate_supplemental_stored_baseline(cf_only %>% mutate(supplemental_inputs = 'tenure'), stored, producers),
+              'stored baseline .* ran with', 'a counterfactual unlike the stored baseline variable set stops')
+  expect_stop(validate_supplemental_stored_baseline(cf_only %>% mutate(`dep.Affordability-Index.vintage` = 'other'), stored, producers),
+              'stored baseline pins', 'a counterfactual unlike the stored baseline pin stops')
+  unlink(file.path(stored, 'baseline'), recursive = TRUE)                    # stored baseline ran without an overlay
+  expect_stop(validate_supplemental_stored_baseline(cf_only, stored, producers),
+              'ran with \\(\\)', 'opting in against a stored baseline without supplemental inputs stops')
+  stopifnot(isTRUE(validate_supplemental_stored_baseline(cf_only %>% mutate(supplemental_inputs = NA), stored, producers)))
+  unlink(stored, recursive = TRUE)
   no_opt = rs %>% mutate(supplemental_inputs = NA)
   b = blank_supplemental_pins(no_opt, producers)
   stopifnot(all(is.na(b$`dep.Affordability-Index.vintage`)))
@@ -179,9 +210,18 @@ test_supplemental_inputs_reader = function() {
   stopifnot(identical(r$elective_deferral1, c(5000, 0)), all(r$has_elective_deferral1),
             identical(r$elective_deferral2, c(0, 0)), !any(r$has_elective_deferral2),
             identical(r$rent_paid, c(0, 0)), !any(r$has_rent_paid))
+  # The overlay wins where it has a value; a record it leaves NA keeps the
+  # equivalent's real value rather than taking the default
   r2 = ensure_st_data(u %>% mutate(sup.elective_deferral1 = c(NA, 7000)))
-  stopifnot(identical(r2$elective_deferral1, c(0, 7000)),        # overlay wins over the equivalent
-            identical(r2$has_elective_deferral1, c(FALSE, TRUE)))
+  stopifnot(identical(r2$elective_deferral1, c(5000, 7000)),
+            identical(r2$has_elective_deferral1, c(TRUE, TRUE)))
+  # ... and the default only when neither source has a value
+  r3 = ensure_st_data(tibble(id = 1:2, trad_contr_er1 = c(NA, 0), sup.elective_deferral1 = c(NA, NA)))
+  stopifnot(identical(r3$elective_deferral1, c(0, 0)),
+            identical(r3$has_elective_deferral1, c(FALSE, TRUE)))
+  # A native column (not the equivalent) is the fallback the same way
+  r4 = ensure_st_data(tibble(id = 1:2, elective_deferral1 = c(3000, 0), sup.elective_deferral1 = c(NA, 7000)))
+  stopifnot(identical(r4$elective_deferral1, c(3000, 7000)))
 
   # --- split classes come from the schema
   sc = supplemental_split_classes()

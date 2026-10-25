@@ -517,7 +517,12 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL,
   # return (the cli_poverty_guideline table; strict "Line 3 is greater than
   # Line 4"). Nonrefundable, stacking after the EIC on line 22; dependent
   # filers ineligible
-  pov_earned = pmax(0, tax_unit$ei1) + pmax(0, coalesce(tax_unit$ei2, 0))
+  # Each business is floored at zero on its own, so a Schedule C or farm loss
+  # never nets against wages
+  pov_earned = tax_unit$wages1 + coalesce(tax_unit$wages2, 0) +
+    pmax(0, tax_unit$sole_prop1) + pmax(0, coalesce(tax_unit$sole_prop2, 0)) +
+    pmax(0, tax_unit$farm1)      + pmax(0, coalesce(tax_unit$farm2, 0)) +
+    pmax(0, tax_unit$part_se1)   + pmax(0, coalesce(tax_unit$part_se2, 0))
   pov_income = pmax(pov_earned,
                     st_income_base(tax_unit, tax_unit$st_credits.pov_credit_income_base))
   st_pov_credit = if_else(
