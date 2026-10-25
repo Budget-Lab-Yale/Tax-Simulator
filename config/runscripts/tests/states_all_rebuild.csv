@@ -1,0 +1,2 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,states,state_detail,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.State-Weights.vintage,dep.State-Weights.ID
+baseline,baseline,,2017:2025,,,,all,0,2026102315_rebuild,baseline,2026102315_rebuild,baseline
