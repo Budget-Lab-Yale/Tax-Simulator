@@ -366,10 +366,12 @@ credit. Each state's known modeling gaps are documented in
 
 Since 2026-09-29 the dispatcher `build_state_weights(method = "interface")`
 reads `state_weights_{year}.csv.gz` from the pinned **State-Weights**
-interface, written by Tax-Data; the default vintage is the Phase 4 dry run
-(`dryrun_B_2022_2023`, fitted 2022-23, carried 2024-25) and stays PROVISIONAL
-until Tax-Data P6 publishes the production fit, so the tracker's `aggregate`
-column is `blocked_weights` for every state. A 2026-10-13 full-sample
+interface, written by Tax-Data. Since 2026-10-24 the default vintage is the
+Phase 4 P6 production fit (`2026102315_rebuild`, arm `C_10_warmB_pct`, fitted
+2017-23, carried 2024-97, on Tax-Data `2026102315_rebuild`), replacing the
+dry run (`dryrun_B_2022_2023`, fitted 2022-23, carried 2024-25). No state-mode
+run has yet been validated on it, so state totals stay PROVISIONAL and the
+tracker's `aggregate` column is `blocked_weights` for every state. A 2026-10-13 full-sample
 `states = all` run (TY2022-25, 27 GB peak per year task) gives state totals
 of the right order -- e.g. TY2023 CA $129bn, NY $63bn, IL $25bn, $523bn over
 all states -- with federal totals byte-identical to a federal-only run. The

@@ -83,11 +83,13 @@ excluded rather than modeled, per S46.
 
 **What is still open.**
 
-1. *Production state weights.* The pinned State-Weights vintage is still the
-   Phase 4 dry run (`dryrun_B_2022_2023`, covering TY2022-2025): every state-mode
-   total is PROVISIONAL, and aggregate validation against HT2 and state revenue
-   figures stays blocked. This is the next workstream; it lives in Tax-Data
-   (`research/state_weights/MOVED.md` here points to it).
+1. *Production state weights.* The default State-Weights vintage is the Phase
+   4 P6 production fit as of 2026-10-24 (`2026102315_rebuild`, TY2017-2023
+   fitted, 2024-2097 carried, on Tax-Data `2026102315_rebuild`), replacing the
+   dry run (`dryrun_B_2022_2023`). No state-mode run has been made on it yet,
+   so every state-mode total is still PROVISIONAL and aggregate validation
+   against HT2 and state revenue figures is the next step. The producer lives
+   in Tax-Data (`research/state_weights/MOVED.md` here points to it).
 2. *Upstream reports.* TAXSIM and PolicyEngine issues found since the last send
    (T61-T81, P45-P61, and earlier unsent items) are written up but not sent.
 3. *PR to `main`.* A trial merge is clean; `main`'s one extra commit is the
