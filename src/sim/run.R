@@ -505,12 +505,20 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
   # Get static totals (state totals NULL unless state mode is on); when
   # state_detail is on, the compact per-year state liability matrix is
-  # written in the same pass
+  # written in the same pass; state_detail = 2 adds the long (id, state)
+  # component file
   static_state_detail_path = NULL
-  if (!is.null(scenario_info$states) && scenario_info$state_detail == 1) {
+  static_state_components_path = NULL
+  if (!is.null(scenario_info$states) && scenario_info$state_detail >= 1) {
     static_state_detail_path = file.path(scenario_info$output_path, 'static',
                                          'detail', 'state',
                                          paste0(year, '.csv'))
+  }
+  if (!is.null(scenario_info$states) && scenario_info$state_detail == 2) {
+    static_state_components_path = file.path(scenario_info$output_path,
+                                             'static', 'detail', 'state',
+                                             'components',
+                                             paste0(year, '.csv.gz'))
   }
   static_totals = list(pr            = get_pr_totals(tax_units_static, year),
                         `1040`        = get_1040_totals(tax_units_static, year),
@@ -521,7 +529,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                                                          static_state_detail_path,
                                                          static_state_contexts,
                                                          state_conformity_groups,
-                                                         supplemental = supplemental),
+                                                         supplemental = supplemental,
+                                                         components_path = static_state_components_path),
                         supplemental_coverage = if (is.null(supplemental)) NULL else
                                                 supplemental$coverage)
 
@@ -582,10 +591,17 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
     # Get conventional totals (state totals NULL unless state mode is on)
     conv_state_detail_path = NULL
-    if (!is.null(scenario_info$states) && scenario_info$state_detail == 1) {
+    conv_state_components_path = NULL
+    if (!is.null(scenario_info$states) && scenario_info$state_detail >= 1) {
       conv_state_detail_path = file.path(scenario_info$output_path,
                                          'conventional', 'detail', 'state',
                                          paste0(year, '.csv'))
+    }
+    if (!is.null(scenario_info$states) && scenario_info$state_detail == 2) {
+      conv_state_components_path = file.path(scenario_info$output_path,
+                                             'conventional', 'detail', 'state',
+                                             'components',
+                                             paste0(year, '.csv.gz'))
     }
     conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
                                 `1040`        = get_1040_totals(tax_units_conv, year),
@@ -596,7 +612,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                                                                  conv_state_detail_path,
                                                                  conv_state_contexts,
                                                                  state_conformity_groups,
-                                                                 supplemental = supplemental))
+                                                                 supplemental = supplemental,
+                                                                 components_path = conv_state_components_path))
 
   } else if (scenario_info$ID != 'baseline') {
 

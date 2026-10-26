@@ -254,7 +254,8 @@ Per scenario, under `{output_root}/{ID}/`:
 ├── static/                          # always
 │   ├── detail/
 │   │   ├── {year}.csv               # per-unit microdata incl. mtr_* columns
-│   │   └── state/{year}.csv         # state mode + state_detail=1: id × per-state liability
+│   │   └── state/{year}.csv         # state mode + state_detail>=1: id × per-state liability
+│   │       └── components/{year}.csv.gz  # state_detail=2: long (id, state) components
 │   ├── totals/                      # payroll.csv, 1040.csv, 1040_by_agi.csv,
 │   │   ...                          # receipts.csv, state.csv (state mode)
 │   └── supplemental/
@@ -326,7 +327,7 @@ the federally-calculated units. Three structural commitments:
 State mode is switched on by three runscript columns: `states` (2-letter
 codes or `all`; the baseline row must cover a superset of every
 counterfactual's states — validated at parse time), `state_tax_law` (a reform
-overlay directory), and `state_detail` (0/1).
+overlay directory), and `state_detail` (0/1/2).
 
 Within each year, `run_one_year()` then does the following, after the federal
 pass:

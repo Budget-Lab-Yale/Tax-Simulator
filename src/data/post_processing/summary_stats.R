@@ -316,7 +316,7 @@ get_pr_totals = function(tax_units, yr) {
 get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
                             detail_path = NULL, state_tax_contexts = list(),
                             conformity_groups = load_state_conformity_groups(),
-                            supplemental = NULL) {
+                            supplemental = NULL, components_path = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates state-level aggregates: runs the state calculator per
@@ -335,6 +335,10 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
   #   - supplemental (list) : optional data columns from
   #                           build_supplemental_inputs(), joined per state
   #                           just before the calculator; NULL = none
+  #   - components_path (str) : when non-NULL, path for the per-year long
+  #                           (id, state) file of state weight and liability
+  #                           components, positive-weight rows only
+  #                           (state_detail = 2)
   #
   # Returns: tibble long in (year, state, variable) with weighted totals, or
   #          NULL when no state law exists for the year (df | NULL).
@@ -352,6 +356,7 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
   state_groups = state_conformity_groups_for_law(law_yr, conformity_groups)
 
   detail = list()
+  components = list()
 
   totals = unique(law_yr$state) %>%
     map(.f = function(st) {
@@ -393,6 +398,18 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
             select(id, !!st := liab_st_individual_net)
       }
 
+      # Accumulate long component rows for gap diagnostics; a zero-weight
+      # record carries no mass in this state's totals
+      if (!is.null(components_path)) {
+          components[[st]] <<- st_results %>%
+            filter(st_weight > 0) %>%
+            transmute(id, state = st, st_weight, st_tax_filer, st_agi,
+                      st_txbl_inc, st_tax_pre_credit, st_credits_nonref,
+                      st_credits_ref, st_eitc, st_ctc, st_cdctc, liab_st_iit,
+                      liab_st_individual_net) %>%
+            as.data.table()
+      }
+
       st_results %>%
 
         # Weighted aggregates
@@ -426,6 +443,12 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
     detail %>%
       reduce(.f = ~ left_join(.x, .y, by = 'id')) %>%
       write_csv(detail_path)
+  }
+
+  # Write the long component file (about 20M rows a year at full sample)
+  if (!is.null(components_path) && length(components) > 0) {
+    dir.create(dirname(components_path), recursive = T, showWarnings = F)
+    fwrite(rbindlist(components), components_path, compress = 'gzip')
   }
 
   return(totals)

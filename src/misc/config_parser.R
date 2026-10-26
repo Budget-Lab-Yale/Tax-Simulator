@@ -450,8 +450,9 @@ get_scenario_info = function(id) {
     if (length(supplemental_inputs) == 0) supplemental_inputs = NULL
   }
 
-  # State detail output: off by default; when on, one compact per-year
-  # liability matrix at detail/state/{year}.csv (plan §5.3)
+  # State detail output: off by default; 1 writes one compact per-year
+  # liability matrix at detail/state/{year}.csv (plan §5.3); 2 adds the long
+  # (id, state) component file at detail/state/components/{year}.csv.gz
   state_detail = 0
   if (!is.null(runscript_items$state_detail) &&
       !is.na(runscript_items$state_detail)) {
