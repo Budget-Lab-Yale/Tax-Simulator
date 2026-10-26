@@ -71,6 +71,8 @@ research/state_tax/cross_model/results/raw/
 research/state_tax/cross_model/cache_sw/
 # Upstream PolicyEngine reports and drafts: local until sent (JI, 2026-09-30)
 research/state_tax/cross_model/bug_reports/policyengine/
+# State gap diagnostics: per-run slice files (tens of MB, regenerable)
+research/state_tax/aggregate/results/gap_slices_*.csv.gz
 
 # taxsim_bug_reports.do writes its Stata working files to the working
 # directory, and the protocol says to run it from the repo root. The
