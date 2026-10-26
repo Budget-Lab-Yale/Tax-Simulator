@@ -1,0 +1,39 @@
+family,statistic,value
+frame,"filed non-dependent returns (weighted, millions)",156.129286
+frame,filed non-dependent returns (unweighted),1555762
+tenure,share of returns: owner household,0.6580560356882693
+tenure,share of returns: renter household,0.34194396431173074
+tenure,share of returns: tenure N/A or no householder record,0
+tenure,share of returns in the householder's own tax unit,0.7687203283565903
+rent,renter returns: share with cash rent (RENT > 0),0.9609690791286277
+rent,renter returns: share no cash rent (OWNERSHPD 21),0.039030920871372304
+rent,renter returns: share in the householder unit (rent attributable),0.7366744520769266
+rent,renter returns: share with RENT allocated (QRENT),0.08491631565887926
+rent,renter returns: share with heat included in contract rent,0.09861471794494389
+rent,"renter householder returns: mean annual contract rent ($, no-cash at 0)",16799.623677308526
+rent,"renter householder returns: mean annual gross rent ($, no-cash at 0)",19170.269642367093
+rent,"all renter households: aggregate annual contract rent ($bn, HHWT)",719.616738384
+property_tax,"all owner households: aggregate property tax ($bn, HHWT, midpoints)",358.08388515
+property_tax,owner returns: share with property tax > 0,0.9550522460576643
+property_tax,owner returns: share with property tax none (code 1),0.044947753942335786
+property_tax,owner returns: share with PROPTX99 N/A (code 0) or NA,0
+property_tax,owner returns: share in the householder unit,0.785372244577449
+property_tax,owner returns: share with PROPTX99 allocated (QPROTX99),0.16693608471152335
+property_tax,"owner returns: share at the $100,000+ top code",0
+property_tax,"owner householder returns: mean property tax ($, midpoints)",4339.396927445291
+dependents,"tax units with >3 dependents (weighted, thousands)",2442.411
+dependents,"filed returns with n_dep > 3 (weighted, thousands)",2339.852
+dependents,share of tax units with >3 dependents,0.01594613213989111
+dependents,"dependents beyond the third slot (weighted, thousands)",3352.954
+dependents,"dependents aged 19-23 (weighted, thousands)",6206.317
+dependents,"of which enrolled (SCHOOL = 2) (weighted, thousands)",4593.138
+dependents,"of which in college (GRADEATT 6-7) (weighted, thousands)",4272.679
+dependents,tax units with >=1 enrolled dependent aged 19-23 (share),0.02746371349076725
+dependents,"dependents aged 24+ (weighted, thousands)",6257.583
+dependents,"private-school K-12 dependents (weighted, thousands)",6379.134
+dependents,"dependents aged 0 (weighted, thousands)",3026.646
+checks,tax units: return n_dep != claimed-dependent edges (count),0
+checks,households without a householder row (count),0
+checks,filed returns with no householder record (count),0
+checks,dependents with SCHOOL NA or unknown (count),0
+checks,dependents with AGE NA (count),0
