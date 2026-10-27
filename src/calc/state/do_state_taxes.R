@@ -72,7 +72,33 @@ do_state_taxes = function(tax_units, credit_tables = NULL, law_mfs = NULL) {
     joint = st_split_election(tax_units, joint, credit_tables, law_mfs)
   }
 
-  return(joint)
+  return(st_gate_federal_nonfilers(joint, tax_units$filer))
+}
+
+
+st_gate_federal_nonfilers = function(st_results, filer) {
+
+  #----------------------------------------------------------------------------
+  # A federal non-filer files no state return (decision 2026-10-26, JI): every
+  # state amount is zeroed and every state flag set FALSE, in every state.
+  # The non-filer pool represents people who do not file, so taxing them at
+  # statutory liability booked $14.5B (2.8%) of TY2022 state income tax and
+  # 0.86M NY returns that agency tables, which count filed returns, never
+  # see. `filer` is the post-federal flag, so units induced to file
+  # federally (refundable CTC, rebates) still file a state return.
+  #
+  # Parameters:
+  #   - st_results (df) : state-calculated variables, one row per unit
+  #   - filer (int)     : post-federal filing flag, same row order
+  #
+  # Returns: st_results with non-filer rows zeroed (df).
+  #----------------------------------------------------------------------------
+
+  nonfiler = filer == 0
+  if (!any(nonfiler)) return(st_results)
+  st_results %>%
+    mutate(across(where(is.numeric), ~ if_else(nonfiler, 0, as.numeric(.x))),
+           across(where(is.logical), ~ .x & !nonfiler))
 }
 
 

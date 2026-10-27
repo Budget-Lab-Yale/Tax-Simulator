@@ -1886,6 +1886,13 @@ test_state_calc = function() {
                          liab_st_iit = 360.69 + 0.0275 * 31800),
            label = 'OH-1 base-amount schedule')
 
+  # OH-1b: the same unit as a federal non-filer files no state return
+  # (decision 2026-10-26): liability, state AGI and the filer flags all zero
+  run_case('OH', 2024, list(agi = 60000, filer = 0),
+           expect = list(st_agi = 0, liab_st_iit = 0, st_filer = 0,
+                         st_tax_filer = 0, liab_st_individual_net = 0),
+           label = 'OH-1b federal non-filer gated out')
+
   # OH-2: zero-bracket cliff, 2024 single. OAGI 28,000: TI = 25,600 <=
   # 26,050 -> tax 0. OAGI 30,000: TI = 27,600 -> tax = 360.69 + 2.75% x
   # 1,550 = 403.315; $20 credit allowed (27,600 < 30,000) -> liab 383.315
