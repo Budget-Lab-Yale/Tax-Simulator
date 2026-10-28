@@ -449,6 +449,9 @@ for both external models are drafted in
   Reciprocity agreements and other-state credits are in the same bucket.
 - [ ] **PTET (pass-through entity tax) credits** are unmodeled — material for
   NY/IL/CA liability levels post-2021 and the main wedge in the NY pilot.
+  Per-state PTET rates, effective years and credit/exclusion method, and the
+  JCT 2024 federal targets, are in
+  `docs/papers/summaries/comey_gallagher_gorman_2025_salt_workarounds.md`.
 - [ ] **SALT circularity / federal↔state iteration** (Phase 7) — currently
   one-way; matters most for itemizers near the standard/itemized margin.
 - [ ] **Local income taxes** (NYC, Yonkers, MD counties, OH school districts):

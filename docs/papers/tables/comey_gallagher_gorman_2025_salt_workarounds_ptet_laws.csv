@@ -1,0 +1,52 @@
+state,ptet,ptet_rate_2025,top_mtr_2025,enacted_year,enacted_date,effective_year,method,flag,note
+AK,0,,0.0000,,,,,,
+AL,1,0.0500,0.0500,2021,2021-02-12,2021,credit,,
+AR,1,0.0390,0.0390,2021,2021-03-15,2022,exclusion,,
+AZ,1,0.0250,0.0450,2021,2021-07-09,2022,credit,,
+CA,1,0.0930,0.1330,2021,2021-07-16,2021,credit,,
+CO,1,0.0440,0.0440,2021,2021-06-23,2018,credit,,Retroactive effective year
+CT,1,0.0699,0.0699,2018,2018-05-31,2018,credit,,
+DC,0,,0.1075,,,,,,
+DE,0,,0.0660,,,,,,
+FL,0,,0.0000,,,,,,
+GA,1,0.0519,0.0519,2021,2021-05-04,2022,exclusion,,
+HI,1,0.0900,0.1100,2023,2023-06-01,2023,credit,,
+IA,1,0.0380,0.0380,2023,2023-05-11,2022,credit,,Retroactive effective year
+ID,1,0.0530,0.0530,2021,2021-04-15,2021,credit,,
+IL,1,0.0495,0.0495,2021,2021-08-27,2021,credit,,
+IN,1,0.0300,0.0300,2023,2023-02-22,2022,credit,,Retroactive effective year
+KS,1,0.0558,0.0558,2022,2022-04-14,2022,credit,,
+KY,1,0.0400,0.0400,2023,2023-03-31,2022,credit,,Retroactive effective year
+LA,1,0.0300,0.0300,2019,2019-06-22,2019,exclusion,,
+MA,1,0.0500,0.0900,2021,2021-09-30,2021,credit,,Credit is 90% of the owner's PTET share (fn 13)
+MD,1,0.0875,0.0650,2020,2020-05-08,2020,credit,,Only PTET rate set with local income tax in mind
+ME,0,,0.0715,,,,,,
+MI,1,0.0425,0.0425,2021,2021-12-21,2021,credit,,
+MN,1,0.0985,0.0985,2021,2021-07-01,2021,credit,,
+MO,1,0.0480,0.0470,2022,2022-06-30,2022,credit,,
+MS,1,0.0500,0.0440,2022,2022-04-14,2022,credit,+,Graduated PTET schedule; top rate shown
+MT,1,0.0590,0.0590,2023,2023-05-19,2023,credit,,
+NC,1,0.0425,0.0425,2021,2021-11-18,2022,exclusion,,
+ND,0,,0.0250,,,,,,
+NE,1,0.0520,0.0520,2023,2023-05-31,2018,credit,,Retroactive effective year
+NH,0,,0.0000,,,,,*,Taxes only interest and dividends
+NJ,1,0.1090,0.1075,2020,2020-01-13,2020,credit,+,Graduated PTET schedule; top rate shown
+NM,1,0.0590,0.0590,2022,2022-03-08,2022,credit,,
+NV,0,,0.0000,,,,,,
+NY,1,0.1090,0.1090,2021,2021-04-19,2021,credit,+,Graduated PTET schedule; top rate shown; NYC has its own PTET (p.6)
+OH,1,0.0300,0.0313,2022,2022-06-14,2022,credit,,
+OK,1,0.0475,0.0475,2019,2019-04-29,2019,exclusion,,
+OR,1,0.0990,0.0990,2021,2021-07-19,2022,credit,+,Graduated PTET schedule; top rate shown
+PA,0,,0.0307,,,,,,
+RI,1,0.0599,0.0599,2019,2019-07-05,2019,credit,,
+SC,1,0.0300,0.0620,2021,2021-05-17,2021,exclusion,,
+SD,0,,0.0000,,,,,,
+TN,0,,0.0000,,,,,,
+TX,0,,0.0000,,,,,,
+UT,1,0.0450,0.0450,2022,2022-03-23,2022,credit,,
+VA,1,0.0575,0.0575,2022,2022-04-11,2021,credit,,Retroactive effective year
+VT,0,,0.0875,,,,,,
+WA,0,,0.0000,,,,,**,Taxes only capital gains
+WI,1,0.0790,0.0765,2018,2018-12-14,2018,exclusion,,PTET rate above top MTR lets the state capture revenue (fn 15)
+WV,1,0.0482,0.0482,2023,2023-06-08,2022,credit,,Retroactive effective year
+WY,0,,0.0000,,,,,,

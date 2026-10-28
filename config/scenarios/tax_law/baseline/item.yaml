@@ -79,6 +79,8 @@ salt_floor_thresh:
     '2030': Inf
     
 # Amount of PTE SALT workaround allowed, non-SSTBs
+# lit: comey_gallagher_gorman_2025_salt_workarounds.ptet_ded_indiv_2024
+# lit: comey_gallagher_gorman_2025_salt_workarounds.fiscal_cost_2024
 salt_workaround_allowed_non_sstb:
   value: 0.75
   

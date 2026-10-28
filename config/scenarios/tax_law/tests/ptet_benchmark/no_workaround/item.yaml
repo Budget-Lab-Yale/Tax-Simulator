@@ -1,0 +1,13 @@
+# PTET benchmark counterfactual: no SALT cap workaround in any year, for
+# partnerships and S corporations alike (both read these two take-up
+# probabilities in do_salt_workaround_baseline()). Paired with baseline in
+# config/runscripts/tests/ptet_benchmark.csv.
+# lit: comey_gallagher_gorman_2025_salt_workarounds.fiscal_cost_2024
+
+# Amount of PTE SALT workaround allowed, non-SSTBs
+salt_workaround_allowed_non_sstb:
+  value: 0
+
+# Amount of PTE SALT workaround allowed, SSTBs
+salt_workaround_allowed_sstb:
+  value: 0

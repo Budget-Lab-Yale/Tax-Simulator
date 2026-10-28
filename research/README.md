@@ -15,7 +15,8 @@ Design records, plans, evidence and reviews for the state-tax work: per-state la
 encoding, and split state weights plus the non-filer rework. **If a document is not
 reachable from this file, it does not exist.**
 
-Shipped model documentation lives in `docs/`, not here. The cross-model harness *code*
+Shipped model documentation lives in `docs/`, not here. Papers and the parameters
+extracted from them live in `docs/papers/` (start at its `README.md`). The cross-model harness *code*
 lives in `src/tests/state/cross_model/`; only its *records* are here.
 
 ## Where to start
