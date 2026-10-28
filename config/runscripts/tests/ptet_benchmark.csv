@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID
+baseline,baseline,,2023:2024,2024,part_active,nextdollar,2026092720_filer_refit_v2,baseline
+no_workaround,tests/ptet_benchmark/no_workaround,,2023:2024,2024,,,2026092720_filer_refit_v2,baseline

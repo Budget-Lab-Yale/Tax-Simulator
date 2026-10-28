@@ -39,7 +39,8 @@ Tax-Simulator/
 │   └── misc/
 │       └── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
 ├── docs/                            # Shipped model documentation
-│   └── model_documentation.md       # The deep reference: data → calculator → outputs
+│   ├── model_documentation.md       # The deep reference: data → calculator → outputs
+│   └── papers/                      # Literature store: PDFs, manifest, extracted parameters (README.md first)
 ├── research/                        # State-tax research corpus
 │   ├── README.md                    # START HERE for the state workstreams
 │   ├── STATUS.md                    # What is true today
@@ -55,6 +56,11 @@ walk `src/` and `source()` every `.R` file except `main.R` itself and `slurm/`.
 Two consequences: a script that *executes* rather than defining functions must not
 live under `src/`, and non-R assets are skipped by the `.R` filter but should still
 be rare there.
+
+**Numbers from the literature live in `docs/papers/`.** Before hard-coding an
+elasticity, take-up rate or calibration target from a paper, check
+`docs/papers/parameters.csv`; if the paper is not there, ingest it with the
+`ingest-paper` skill, then cite the row with a `# lit: <param_id>` comment.
 
 ## Core Concepts
 
