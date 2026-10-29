@@ -18,7 +18,12 @@ derive_vars = function(tax_unit) {
   tax_unit %>% 
     mutate(
       
-      # Schedule E related variables
+      # Schedule E related variables. The loss pieces are the losses allowed
+      # on the return, so Schedule E income is the net partnership and S
+      # corporation amount, gain or loss, plus net rent and net estate and
+      # trust income. part_scorp and part_scorp_loss split the net
+      # pass-through amount into its positive and negative halves for
+      # reporting.
       part            = part_active + part_passive - part_active_loss - 
                         part_passive_loss - part_179,
       scorp           = scorp_active + scorp_passive - scorp_active_loss - 
@@ -28,7 +33,7 @@ derive_vars = function(tax_unit) {
       pt              = part + scorp + sole_prop,
       net_rent        = rent - rent_loss,
       net_estate      = estate - estate_loss,
-      sch_e           = part_scorp + net_rent + net_estate
+      sch_e           = part + scorp + net_rent + net_estate
       
     ) %>% 
     return()
