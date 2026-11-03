@@ -43,6 +43,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'std_ded',            # (dbl) value of standard deduction (even if eventually itemizing)
     'item_ded',           # (dbl) value of itemized deductions
     'pe_ded',             # (dbl) value of deduction for personal exemptions 
+    'tip_ded',            # (dbl) value of below-the-line tip deduction
+    'ot_ded',             # (dbl) value of below-the-line overtime deduction
+    'senior_ded',         # (dbl) value of below-the-line extra senior deduction
+    'auto_int_ded',       # (dbl) value of below-the-line auto loan interest deduction
     
     # Tax law attributes
     'qbi.rate',                    # (dbl) deduction rate
@@ -64,8 +68,14 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument 
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     
-    # Derive taxable income without regard to QBI deduction 
-    mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded))
+    # Derive taxable income without regard to QBI deduction (IRC 199A(e)(1)),
+    # which sets both the taxable income limit and the phase-in of the wage
+    # limit. It is net of the tip, overtime, senior and car loan interest
+    # deductions, which every filer takes (2025 Form 8995 line 11: Form 1040
+    # line 11a less lines 12e and 13b). The itemizing choice is made later, so
+    # the larger of the standard and itemized deductions is used.
+    mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded - tip_ded -
+                              ot_ded - senior_ded - auto_int_ded))
   
   # Calculate QBI deduction for each business 
   qbi_ded = tax_unit %>% 
