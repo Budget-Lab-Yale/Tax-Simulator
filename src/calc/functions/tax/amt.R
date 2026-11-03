@@ -79,14 +79,19 @@ calc_amt = function(tax_unit, fill_missings = F) {
     
     mutate(
       
-      # Calculate AMT gross income (what the form calls "taxable income") 
+      # Calculate AMT gross income (what the form calls "taxable income").
+      # The senior deduction is a section 151 deduction (IRC 151(d)(5)(C)), so
+      # it is treated like the personal exemption: added back when exemptions
+      # are a preference item (IRC 56(b)(1)(D); 2025 Form 6251 line 1a). For a
+      # non-itemizer calc_txbl_inc() folds it into `ded`, so it is taken out of
+      # `ded` here. The tip, overtime and car loan interest deductions stay
+      # deducted.
       amt_gross_inc = agi -
-                      ded -
-                      (pe_ded * (amt.pe_pref == 0)) - 
+                      (ded - if_else(itemizing, 0, senior_ded)) -
+                      ((pe_ded + senior_ded) * (amt.pe_pref == 0)) - 
                       qbi_ded - 
                       tip_ded - 
                       ot_ded - 
-                      senior_ded - 
                       auto_int_ded + 
                       if_else(itemizing, 
                               salt_item_ded + 
