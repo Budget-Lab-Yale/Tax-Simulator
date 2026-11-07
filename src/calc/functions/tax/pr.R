@@ -65,7 +65,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     'pr.tips_exempt',         # (int)   whether tips are exempt from payroll tax
     'pr.ot_exempt',           # (int)   whether FLSA-eligible overtime pay is exempt from payroll tax
     'pr.seca_taxable_rate',   # (dbl)   Share of self-employment earnings subject to SECA tax
-    'pr.se_thresh',           # (int)   Threshold above which total self-employment income must be reported
+    'pr.se_thresh',           # (int)   Net earnings from self-employment, per earner, below which no SECA tax is due
     'pr.oasdi_ee_rates[]',    # (dbl[]) OASDI rates, employee side 
     'pr.oasdi_ee_brackets[]', # (int[]) OASDI brackets, employee side
     'pr.oasdi_er_rates[]',    # (dbl[]) OASDI rates, employer side 
@@ -136,10 +136,12 @@ calc_pr = function(tax_unit, fill_missings = F) {
       # https://www.sfmagazine.com/articles/2017/august/how-the-self-employment-tax-is-miscalculated/
       # For this reason, we parameterize the taxable share as its own parameter, 
       # useful for unrelated reforms and reforms meant to fix this mistake. 
-      # In addition, set taxable SE earnings to 0 if if tax's unit total is below
-      # the reporting threshold
-      txbl_se1 = pmax(0, se1) * pr.seca_taxable_rate * (se > pr.se_thresh),
-      txbl_se2 = pmax(0, se2) * pr.seca_taxable_rate * (se > pr.se_thresh),
+      # In addition, set taxable SE earnings to 0 if an earner's amount is below
+      # the threshold (IRC 1402(b)(2); Schedule SE line 4c)
+      txbl_se1 = pmax(0, se1) * pr.seca_taxable_rate,
+      txbl_se2 = pmax(0, se2) * pr.seca_taxable_rate,
+      txbl_se1 = txbl_se1 * (txbl_se1 >= pr.se_thresh),
+      txbl_se2 = txbl_se2 * (txbl_se2 >= pr.se_thresh),
       
       # Calculate taxable earnings for Additional Medicare Tax
       txbl_inc_add_med = gross_wages + txbl_se1 + txbl_se2

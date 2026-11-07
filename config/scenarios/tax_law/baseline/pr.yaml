@@ -26,7 +26,7 @@ ot_exempt:
 seca_taxable_rate:
   value: 0.9235
   
-# Threshold above which total self-employment income must be reported
+# Net earnings from self-employment, per earner, below which no SECA tax is due
 se_thresh:
   value: 400
 
