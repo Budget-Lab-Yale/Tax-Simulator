@@ -32,6 +32,11 @@ filing_status_mapper:
     '2': limit_tax_value_thresh_married
     '3': limit_tax_value_thresh_single
     '4': limit_tax_value_thresh_single
+  salt_po_rate:
+    '1': salt_po_rate
+    '2': salt_po_rate
+    '3': salt_po_rate / 2
+    '4': salt_po_rate
 
 # Maximum deductible state and local taxes, joint returns
 salt_limit_married:
