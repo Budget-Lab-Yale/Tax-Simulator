@@ -49,6 +49,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'caregiver_cred_nonref', # (dbl) value of nonrefundable caregiver credit
     'ei',                    # (dbl) earned income
     'ei_prior_yr',           # (dbl) earned income last year       
+    'liab_pr_ee',            # (dbl) employee-side payroll tax, including half of SECA tax
+    'liab_add_med',          # (dbl) Additional Medicare Tax liability
+    'eitc',                  # (dbl) value of EITC
     'filer',                 # (int) whether tax unit files a tax return
     
     # Tax law attributes
@@ -87,6 +90,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.pi_type',             # (int) whether phase-in type is a rate (0 means range)
     'ctc.pi_rate',             # (dbl) phase-in rate
     'ctc.pi_range',            # (dbl) phase-in range for total CTC (excluding nonqualifying dependent credit) 
+    'ctc.ss_alt_min_children', # (int) number of qualifying children at which the refund may instead be social security taxes less the EITC
     'ctc.baby_bonus_in_credit', # (int) whether baby bonus is folded into slot 2 (1) or separate (0)
     'ctc.baby_bonus',          # (dbl) refundable credit for newborn child
     'ctc.baby_bonus_pi_rate',  # (dbl) phase-in rate for baby bonus (used when baby_bonus_in_credit = 0)
@@ -228,7 +232,15 @@ calc_ctc = function(tax_unit, fill_missings = F) {
                         (max_value1 + max_value2) / ctc.pi_range), 
       
       # Phase in with earned income above minimum refund value
-      ctc_ref = pmin(min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate), 
+      pi_value = min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate),
+      
+      # Larger families may instead use social security taxes less the EITC
+      # (IRC 24(d)(1)(B)(ii) and 24(d)(2))
+      ss_alt  = if_else(n_young + n_old >= ctc.ss_alt_min_children,
+                        pmax(0, liab_pr_ee + liab_add_med - eitc),
+                        0),
+      
+      ctc_ref = pmin(pmax(pi_value, ss_alt), 
                      pmin(remaining_ctc, max_refund_young + max_refund_old)),
       
       # Calculate refundable baby bonus and add to refundable CTC

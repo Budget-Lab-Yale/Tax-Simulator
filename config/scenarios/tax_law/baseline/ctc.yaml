@@ -158,6 +158,11 @@ value_other:
     '2014': 0
     '2018': 500
 
+# Number of qualifying children at which the refundable credit may instead be
+# social security taxes less the EITC (IRC 24(d)(1)(B)(ii))
+ss_alt_min_children:
+  value: 3
+
 # Whether to express minimum refundable CTC in dollar terms (in which case the 
 # calculator uses min_refund) or share of maximum value (in which case it 
 # uses min_refund_share)

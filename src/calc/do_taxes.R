@@ -390,11 +390,11 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
       caregiver_cred_ref    = 0, 
     ) %>%
     
-    # CTC
-    bind_cols(calc_ctc(.)) %>% 
-    
     # EITC
     bind_cols(calc_eitc(.)) %>% 
+    
+    # CTC
+    bind_cols(calc_ctc(.)) %>% 
     
     # Rebates / UBI
     bind_cols(calc_rebate(.)) %>%
