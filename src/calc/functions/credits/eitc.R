@@ -72,14 +72,17 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
       
-      # Determine qualifying earned income based on age
+      # Determine qualifying earned income based on age. Without a qualifying
+      # child, a joint return qualifies if either spouse meets the age test, and
+      # the credit is then based on the couple's combined earned income (IRC
+      # 32(c)(1)(A)(ii) and 32(c)(2))
       qual1 = (n_dep_eitc > 0) | (age1 >= eitc.min_age & age1 <= eitc.max_age),
       qual2 = if_else(
         !is.na(age2),
         (n_dep_eitc > 0) | (age2 >= eitc.min_age & age2 <= eitc.max_age),
         F
       ),
-      ei = (ei1 * qual1) + if_else(filing_status == 2, ei2 * qual2, 0),
+      ei = (ei1 + if_else(filing_status == 2, ei2, 0)) * (qual1 | (filing_status == 2 & qual2)),
 
       # Potentially deny eligibility based on dependent and filing status
       ei = ei * (!dep_status & (eitc.mfs_eligible == 1 | filing_status != 3)),
