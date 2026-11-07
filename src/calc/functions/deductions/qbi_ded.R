@@ -29,6 +29,14 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'part',               # (dbl) net partnership income
     'scorp',              # (dbl) net S corporation income
     'farm',               # (dbl) net farm income (Sch. F)
+    'sole_prop1',         # (dbl) Schedule C net income, primary earner
+    'sole_prop2',         # (dbl) Schedule C net income, secondary earner
+    'farm1',              # (dbl) Schedule F net income, primary earner
+    'farm2',              # (dbl) Schedule F net income, secondary earner
+    'part_se1',           # (dbl) partnership income subject to employment tax, primary earner
+    'part_se2',           # (dbl) partnership income subject to employment tax, secondary earner
+    'seca_ded1',          # (dbl) deduction for half of SECA tax, primary earner
+    'seca_ded2',          # (dbl) deduction for half of SECA tax, secondary earner
     'wagebill_sole_prop', # (dbl) W2 wages paid in sole proprietorship
     'wagebill_part',      # (dbl) owner's share of W2 wages paid in partnership
     'wagebill_scorp',     # (dbl) owner's share of W2 wages paid in S corporation
@@ -75,7 +83,20 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     # line 11a less lines 12e and 13b). The itemizing choice is made later, so
     # the larger of the standard and itemized deductions is used.
     mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded - tip_ded -
-                              ot_ded - senior_ded - auto_int_ded))
+                              ot_ded - senior_ded - auto_int_ded)) %>% 
+    
+    # Reduce business income by the deduction for half of SECA tax (Treas. Reg.
+    # 1.199A-3(b)(1)(vi)). Each earner's deduction is split across that earner's
+    # businesses in proportion to positive self-employment earnings.
+    mutate(
+      se_pos1 = pmax(0, sole_prop1) + pmax(0, farm1) + pmax(0, part_se1),
+      se_pos2 = pmax(0, sole_prop2) + pmax(0, farm2) + pmax(0, part_se2),
+      per_dollar1 = if_else(se_pos1 > 0, seca_ded1 / se_pos1, 0),
+      per_dollar2 = if_else(se_pos2 > 0, seca_ded2 / se_pos2, 0),
+      sole_prop = sole_prop - pmax(0, sole_prop1) * per_dollar1 - pmax(0, sole_prop2) * per_dollar2,
+      farm      = farm      - pmax(0, farm1)      * per_dollar1 - pmax(0, farm2)      * per_dollar2,
+      part      = part      - pmax(0, part_se1)   * per_dollar1 - pmax(0, part_se2)   * per_dollar2
+    )
   
   # Calculate QBI deduction for each business 
   qbi_ded = tax_unit %>% 
