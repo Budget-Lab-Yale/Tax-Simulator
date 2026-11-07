@@ -68,6 +68,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.po_type',             # (int) whether phaseout type is a rate (0 means range)
     'ctc.po_rate1',            # (dbl) phaseout rate for value 1
     'ctc.po_rate2',            # (dbl) phaseout rate for value 2 
+    'ctc.po_rate_other',       # (dbl) phaseout rate for nonqualifying dependent credit
     'ctc.po_range1',           # (dbl) phaseout range for value 2
     'ctc.po_range2',           # (dbl) phaseout range for value 1
     'ctc.po_range_other',      # (dbl) non-child dependent credit phaseout range for married returns
@@ -156,13 +157,27 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # When po_sequential == 1: combine value1+value2 into one pot, apply
       # thresh1 phaseout first, then thresh2 to the remainder. value_other
       # phases out with excess2 (its own independent threshold).
-      # When po_sequential == 0: existing additive logic unchanged.
+      # When po_sequential == 0: value1 and value2 phase out separately. Under a
+      # rate phaseout, value_other shares value1's reduction, because IRC 24(b)(1)
+      # reduces the total credit once. The reduction is taken from value_other
+      # first, which keeps as much of the total as possible refundable, as
+      # Schedule 8812 does.
+      value_other = if_else(
+        ctc.po_sequential == 1,
+        pmax(0, max_value_other - excess2 * po_rate_other),
+        pmax(0, max_value_other - excess1 * po_rate_other)
+      ),
       max_value_combined = max_value1 + max_value2,
       po1_reduction      = excess1 * po_rate1,
+      po1_on_value1      = if_else(
+        ctc.po_type == 1,
+        pmax(0, po1_reduction - (max_value_other - value_other)),
+        po1_reduction
+      ),
       value1      = if_else(
         ctc.po_sequential == 1,
         pmax(0, max_value_combined - po1_reduction),
-        pmax(0, max_value1 - po1_reduction)
+        pmax(0, max_value1 - po1_on_value1)
       ),
       value2      = if_else(
         ctc.po_sequential == 1,
@@ -170,11 +185,6 @@ calc_ctc = function(tax_unit, fill_missings = F) {
         pmax(0, max_value2 - excess2 * po_rate2)
       ),
       value1      = if_else(ctc.po_sequential == 1, value1 - value2, value1),
-      value_other = if_else(
-        ctc.po_sequential == 1,
-        pmax(0, max_value_other - excess2 * po_rate_other),
-        pmax(0, max_value_other - excess1 * po_rate_other)
-      ),
       
       # Apply filing status limitations
       across(.cols = c(value1, value2, value_other), 
