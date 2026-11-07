@@ -26,6 +26,7 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
+    'filing_status', # (int) filing status (1 = single, 2 = joint, 3 = married filing separately, 4 = head of household)
     'tips1',     # (dbl) tipped income included in wages, secondary earner
     'tips2',     # (dbl) tipped income included in wages, primary earner
     'wages1',    # (dbl) wages of primary earner
@@ -114,8 +115,9 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       # Senior deduction
       #------------------
       
-      # Count number of seniors
-      n_seniors = as.integer(age1 >= 65) + as.integer(!is.na(age2) & (age2 >= 65)),
+      # Count number of seniors. A married person must file jointly to claim
+      # the deduction (IRC 151(d)(5)(C))
+      n_seniors = (as.integer(age1 >= 65) + as.integer(!is.na(age2) & (age2 >= 65))) * (filing_status != 3),
       
       # Limit to maximum value
       senior_ded = below.senior_ded_value * n_seniors,
