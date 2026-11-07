@@ -125,15 +125,17 @@ calc_eitc = function(tax_unit, fill_missings = F) {
         T               ~ eitc.po_thresh_3
       ),
       
-      # Calculate credit value with current-year EI
-      max_eitc = pmin(ei, pi_end) * pi_rate,
-      eitc     = pmax(0, max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate),
+      # Calculate credit value with current-year EI: the smaller of the phase-in
+      # amount and the maximum credit less the phase-out amount (IRC 32(a)(2))
+      max_eitc = pi_end * pi_rate,
+      eitc     = pmax(0, pmin(pmin(ei, pi_end) * pi_rate,
+                              max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate)),
 
       # Prior-year EI election: if enabled, compute EITC using prior-year EI
       # and take the larger of the two
       ei_prior = ei_prior_yr * (ei > 0),
-      max_eitc_prior = pmin(ei_prior, pi_end) * pi_rate,
-      eitc_prior     = pmax(0, max_eitc_prior - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate),
+      eitc_prior     = pmax(0, pmin(pmin(ei_prior, pi_end) * pi_rate,
+                                    max_eitc - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate)),
       eitc           = if_else(eitc.ei_prior_yr == 1, pmax(eitc, eitc_prior), eitc),
       
       # Adjust for pre-certification changes
