@@ -90,6 +90,9 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       po_rate = if_else(below.tip_ded_po_type == 1, below.tip_ded_po_rate, tip_ded / below.tip_ded_po_range),
       tip_ded = pmax(0, tip_ded - pmax(0, agi - below.tip_ded_po_thresh) * po_rate),
       
+      # A married person must file jointly to claim the deduction
+      tip_ded = tip_ded * (filing_status != 3),
+      
       
       #--------------------
       # Overtime deduction
@@ -109,6 +112,9 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       # Limit based on AGI phaseout
       po_rate = if_else(below.ot_ded_po_type == 1, below.ot_ded_po_rate, ot_ded / below.ot_ded_po_range),
       ot_ded  = pmax(0, ot_ded - pmax(0, agi - below.ot_ded_po_thresh) * po_rate),
+      
+      # A married person must file jointly to claim the deduction
+      ot_ded  = ot_ded * (filing_status != 3),
 
       
       #------------------
