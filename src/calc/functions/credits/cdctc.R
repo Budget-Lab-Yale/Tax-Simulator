@@ -126,8 +126,9 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       # Limit credit-eligible expenses to per-qualifying-dependent maximum
       old_qual_exp = pmin(care_exp - young_qual_exp, n_old * cdctc.exp_limit),
       
-      # Limit credit-eligible expenses to earned income
-      old_qual_exp = pmin(old_qual_exp, ei_limit),
+      # Limit credit-eligible expenses to earned income left after young dependents.
+      # The earned income limit applies to total expenses (IRC 21(d)(1))
+      old_qual_exp = pmin(old_qual_exp, ei_limit - young_qual_exp),
       
       # Calculate AGI in excess of phaseout rates and adjust for discrete rounding steps 
       old_excess1 = pmax(0, agi - cdctc.old_po_thresh1),
