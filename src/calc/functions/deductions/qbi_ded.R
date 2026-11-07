@@ -37,6 +37,8 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'part_se2',           # (dbl) partnership income subject to employment tax, secondary earner
     'seca_ded1',          # (dbl) deduction for half of SECA tax, primary earner
     'seca_ded2',          # (dbl) deduction for half of SECA tax, secondary earner
+    'se_health',          # (dbl) self-employed health insurance premiums paid
+    'keogh_contr',        # (dbl) contributions to SEP plans and KEOGH accounts
     'wagebill_sole_prop', # (dbl) W2 wages paid in sole proprietorship
     'wagebill_part',      # (dbl) owner's share of W2 wages paid in partnership
     'wagebill_scorp',     # (dbl) owner's share of W2 wages paid in S corporation
@@ -85,14 +87,17 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded - tip_ded -
                               ot_ded - senior_ded - auto_int_ded)) %>% 
     
-    # Reduce business income by the deduction for half of SECA tax (Treas. Reg.
-    # 1.199A-3(b)(1)(vi)). Each earner's deduction is split across that earner's
-    # businesses in proportion to positive self-employment earnings.
+    # Reduce business income by the deductions attributable to it: half of SECA
+    # tax, self-employed health insurance and retirement contributions (Treas.
+    # Reg. 1.199A-3(b)(1)(vi)). Each earner's SECA deduction is split across that
+    # earner's businesses in proportion to positive self-employment earnings. The
+    # other two are tax unit amounts and are split across all of them.
     mutate(
       se_pos1 = pmax(0, sole_prop1) + pmax(0, farm1) + pmax(0, part_se1),
       se_pos2 = pmax(0, sole_prop2) + pmax(0, farm2) + pmax(0, part_se2),
-      per_dollar1 = if_else(se_pos1 > 0, seca_ded1 / se_pos1, 0),
-      per_dollar2 = if_else(se_pos2 > 0, seca_ded2 / se_pos2, 0),
+      unit_per_dollar = if_else(se_pos1 + se_pos2 > 0, (se_health + keogh_contr) / (se_pos1 + se_pos2), 0),
+      per_dollar1 = if_else(se_pos1 > 0, seca_ded1 / se_pos1, 0) + unit_per_dollar,
+      per_dollar2 = if_else(se_pos2 > 0, seca_ded2 / se_pos2, 0) + unit_per_dollar,
       sole_prop = sole_prop - pmax(0, sole_prop1) * per_dollar1 - pmax(0, sole_prop2) * per_dollar2,
       farm      = farm      - pmax(0, farm1)      * per_dollar1 - pmax(0, farm2)      * per_dollar2,
       part      = part      - pmax(0, part_se1)   * per_dollar1 - pmax(0, part_se2)   * per_dollar2
