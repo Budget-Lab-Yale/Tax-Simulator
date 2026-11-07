@@ -116,3 +116,15 @@ senior_ded_po_rate:
     '2014': 0
     '2025': 0.06
     '2029': 0
+
+# Whether married filing separately returns may claim the tip deduction
+tip_ded_mfs_eligible:
+  value: 0
+
+# Whether married filing separately returns may claim the OT deduction
+ot_ded_mfs_eligible:
+  value: 0
+
+# Whether married filing separately returns may claim the senior bonus deduction
+senior_ded_mfs_eligible:
+  value: 0

@@ -59,6 +59,9 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
     'below.senior_ded_value',     # (int) value of senior bonus deduction
     'below.senior_ded_po_thresh', # (int) AGI threshold for phaseout of senior bonus deduction
     'below.senior_ded_po_rate',   # (int) phaseout rate for senior bonus deduction
+    'below.tip_ded_mfs_eligible',     # (int) whether married filing separately returns may claim the tip deduction
+    'below.ot_ded_mfs_eligible',      # (int) whether married filing separately returns may claim the OT deduction
+    'below.senior_ded_mfs_eligible',  # (int) whether married filing separately returns may claim the senior deduction
     'agi.auto_int_ded_limit',     # (int) maximum deductible auto loan interest
     'agi.auto_int_ded_po_thresh', # (int) MAGI threshold above which the auto loan interest deduction phases out
     'agi.auto_int_ded_po_rate',   # (int) phaseout rate for auto loan interest deduction
@@ -90,8 +93,8 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       po_rate = if_else(below.tip_ded_po_type == 1, below.tip_ded_po_rate, tip_ded / below.tip_ded_po_range),
       tip_ded = pmax(0, tip_ded - pmax(0, agi - below.tip_ded_po_thresh) * po_rate),
       
-      # A married person must file jointly to claim the deduction
-      tip_ded = tip_ded * (filing_status != 3),
+      # A married person must file jointly to claim the deduction (IRC 224)
+      tip_ded = tip_ded * (filing_status != 3 | below.tip_ded_mfs_eligible == 1),
       
       
       #--------------------
@@ -113,8 +116,8 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       po_rate = if_else(below.ot_ded_po_type == 1, below.ot_ded_po_rate, ot_ded / below.ot_ded_po_range),
       ot_ded  = pmax(0, ot_ded - pmax(0, agi - below.ot_ded_po_thresh) * po_rate),
       
-      # A married person must file jointly to claim the deduction
-      ot_ded  = ot_ded * (filing_status != 3),
+      # A married person must file jointly to claim the deduction (IRC 225)
+      ot_ded  = ot_ded * (filing_status != 3 | below.ot_ded_mfs_eligible == 1),
 
       
       #------------------
@@ -123,7 +126,8 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       
       # Count number of seniors. A married person must file jointly to claim
       # the deduction (IRC 151(d)(5)(C))
-      n_seniors = (as.integer(age1 >= 65) + as.integer(!is.na(age2) & (age2 >= 65))) * (filing_status != 3),
+      n_seniors = (as.integer(age1 >= 65) + as.integer(!is.na(age2) & (age2 >= 65))) *
+                  (filing_status != 3 | below.senior_ded_mfs_eligible == 1),
       
       # Limit to maximum value
       senior_ded = below.senior_ded_value * n_seniors,
