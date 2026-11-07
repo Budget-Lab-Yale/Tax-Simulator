@@ -165,7 +165,8 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # rate phaseout, value_other shares value1's reduction, because IRC 24(b)(1)
       # reduces the total credit once. The reduction is taken from value_other
       # first, which keeps as much of the total as possible refundable, as
-      # Schedule 8812 does.
+      # Schedule 8812 does. A reform that gives the two credits different rates
+      # phases each out separately.
       value_other = if_else(
         ctc.po_sequential == 1,
         pmax(0, max_value_other - excess2 * po_rate_other),
@@ -174,7 +175,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       max_value_combined = max_value1 + max_value2,
       po1_reduction      = excess1 * po_rate1,
       po1_on_value1      = if_else(
-        ctc.po_type == 1,
+        ctc.po_type == 1 & ctc.po_rate_other == ctc.po_rate1,
         pmax(0, po1_reduction - (max_value_other - value_other)),
         po1_reduction
       ),
