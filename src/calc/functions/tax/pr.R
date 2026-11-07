@@ -4,7 +4,8 @@
 
 # Set return variables for function
 return_vars$calc_pr = c('gross_wages1', 'gross_wages2', 'gross_wages', 'se1', 
-                        'se2', 'se', 'ei1', 'ei2', 'ei', 'liab_fica_er1', 
+                        'se2', 'se', 'seca_ded1', 'seca_ded2', 'ei1', 'ei2', 'ei', 
+                        'liab_fica_er1', 
                         'liab_fica_er2', 'liab_fica', 'liab_seca', 'liab_seca_er', 
                         'liab_oasdi', 'liab_hi', 'liab_add_med', 'liab_pr_ee', 
                         'liab_pr_er', 'liab_pr')
@@ -25,6 +26,8 @@ calc_pr = function(tax_unit, fill_missings = F) {
   #   - se1          (dbl) : self-employment income for primary earner
   #   - se2          (dbl) : self-employment income for secondary earner
   #   - se           (dbl) : self-employment income for tax unit
+  #   - seca_ded1    (dbl) : deduction for half of SECA tax, primary earner
+  #   - seca_ded2    (dbl) : deduction for half of SECA tax, secondary earner
   #   - ei1          (dbl) : earned income for primary earner     
   #   - ei2          (dbl) : earned income for secondary earner 
   #   - ei           (dbl) : earned income     
@@ -139,12 +142,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
       txbl_se2 = pmax(0, se2) * pr.seca_taxable_rate * (se > pr.se_thresh),
       
       # Calculate taxable earnings for Additional Medicare Tax
-      txbl_inc_add_med = gross_wages + txbl_se1 + txbl_se2, 
-      
-      # Calculate total earned income, used elsewhere in tax code
-      ei1 = wages1 + se1, 
-      ei2 = wages2 + se2,
-      ei  = ei1 + ei2
+      txbl_inc_add_med = gross_wages + txbl_se1 + txbl_se2
       
     ) %>% 
   
@@ -189,6 +187,16 @@ calc_pr = function(tax_unit, fill_missings = F) {
     ) %>%
     
     mutate(
+      
+      # Calculate deduction for half of SECA tax, by earner
+      seca_ded1 = liab_seca_oasdi_er1 + liab_seca_hi_er1,
+      seca_ded2 = liab_seca_oasdi_er2 + liab_seca_hi_er2,
+      
+      # Calculate total earned income, used elsewhere in tax code. Net earnings
+      # from self-employment are net of that deduction (IRC 32(c)(2)(A)(ii))
+      ei1 = wages1 + se1 - seca_ded1, 
+      ei2 = wages2 + se2 - seca_ded2,
+      ei  = ei1 + ei2,
       
       # Aggregate payroll tax variables
       liab_fica_er1 = liab_fica_oasdi_er1 + liab_fica_hi_er1,
