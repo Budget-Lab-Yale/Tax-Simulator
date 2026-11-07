@@ -232,9 +232,8 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
   #   - y (str)               : column name for conditioning income variable y 
   #   - x (str)               : column name for income variable x on which tax 
   #                             is being assessed 
-  #   - inclusive (bool)      : whether x is included in y. If so, tax is
-  #                             limited to smaller of y and (x - y) in order to
-  #                             properly account for case when x > y i.e. y < 0
+  #   - inclusive (bool)      : whether x is included in y. If so, x is taxed
+  #                             as the top slice of y
   #   - output_name (str)     : name for function output variables 
   #   - by_bracket (bool)     : whether to include bracket-specific output
   #                             columns
@@ -298,10 +297,10 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
       # Calculate excess of x over adjusted bracket
       excess_x = pmax(0, pmin(adj_next_bracket, x) - adj_bracket)
       
-      # Limit excess x to excess y if y includes x
+      # If y includes x, x occupies the top of y, from y - x to y
       if (inclusive) {
-        excess_y = pmax(0, pmin(next_bracket, y) - bracket)
-        excess_x = pmin(excess_x, excess_y)
+        lower    = pmax(0, y - x)
+        excess_x = pmax(0, pmin(next_bracket, y) - pmax(bracket, lower))
       }
       
       # Apply rate and return
