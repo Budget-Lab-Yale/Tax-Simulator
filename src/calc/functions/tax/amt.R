@@ -29,6 +29,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
+    'filing_status',      # (int)  filing status (1 = single, 2 = joint, 3 = married filing separately, 4 = head of household)
     'agi',                # (dbl)  Adjusted Gross Income
     'pe_ded',             # (dbl)  deduction for personal exemptions
     'ded',                # (dbl)  itemized deductions if itemizing, else standard deduction
@@ -100,6 +101,16 @@ calc_amt = function(tax_unit, fill_missings = F) {
                               std_ded) - 
                       state_ref + 
                       amt_nols,
+      
+      # Married filing separately: increase income once the exemption is gone,
+      # by the phaseout rate times the excess over the income at which it reaches
+      # zero, up to the exemption amount (IRC 55(d)(2); Form 6251 line 4). Under
+      # IRC 55(d)(4)(A)(ii)(IV) the rate is 50 percent from 2026.
+      no_exempt_inc = if_else(amt.exempt_po_rate > 0, 
+                              amt.exempt_po_thresh + amt.exempt / amt.exempt_po_rate, 
+                              Inf),
+      amt_gross_inc = amt_gross_inc + (filing_status == 3) * 
+                      pmin(amt.exempt, amt.exempt_po_rate * pmax(0, amt_gross_inc - no_exempt_inc)),
       
       # Calculate AMT exemption after phaseout
       excess = pmax(0, amt_gross_inc - amt.exempt_po_thresh),
