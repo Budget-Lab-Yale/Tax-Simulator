@@ -90,17 +90,22 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     # Reduce business income by the deductions attributable to it: half of SECA
     # tax, self-employed health insurance and retirement contributions (Treas.
     # Reg. 1.199A-3(b)(1)(vi)). Each earner's SECA deduction is split across that
-    # earner's businesses in proportion to positive self-employment earnings. The
-    # other two are tax unit amounts and are split across all of them.
+    # earner's businesses in proportion to positive self-employment earnings.
+    # Health insurance is split across those and positive S corporation income,
+    # which a shareholder owning more than 2% deducts it against (IRC 162(l)(5)).
+    # Retirement contributions are split across self-employment earnings only.
     mutate(
       se_pos1 = pmax(0, sole_prop1) + pmax(0, farm1) + pmax(0, part_se1),
       se_pos2 = pmax(0, sole_prop2) + pmax(0, farm2) + pmax(0, part_se2),
-      unit_per_dollar = if_else(se_pos1 + se_pos2 > 0, (se_health + keogh_contr) / (se_pos1 + se_pos2), 0),
-      per_dollar1 = if_else(se_pos1 > 0, seca_ded1 / se_pos1, 0) + unit_per_dollar,
-      per_dollar2 = if_else(se_pos2 > 0, seca_ded2 / se_pos2, 0) + unit_per_dollar,
+      health_per_dollar = if_else(se_pos1 + se_pos2 + pmax(0, scorp) > 0,
+                                  se_health / (se_pos1 + se_pos2 + pmax(0, scorp)), 0),
+      keogh_per_dollar  = if_else(se_pos1 + se_pos2 > 0, keogh_contr / (se_pos1 + se_pos2), 0),
+      per_dollar1 = if_else(se_pos1 > 0, seca_ded1 / se_pos1, 0) + health_per_dollar + keogh_per_dollar,
+      per_dollar2 = if_else(se_pos2 > 0, seca_ded2 / se_pos2, 0) + health_per_dollar + keogh_per_dollar,
       sole_prop = sole_prop - pmax(0, sole_prop1) * per_dollar1 - pmax(0, sole_prop2) * per_dollar2,
       farm      = farm      - pmax(0, farm1)      * per_dollar1 - pmax(0, farm2)      * per_dollar2,
-      part      = part      - pmax(0, part_se1)   * per_dollar1 - pmax(0, part_se2)   * per_dollar2
+      part      = part      - pmax(0, part_se1)   * per_dollar1 - pmax(0, part_se2)   * per_dollar2,
+      scorp     = scorp     - pmax(0, scorp) * health_per_dollar
     )
   
   # Calculate QBI deduction for each business 
