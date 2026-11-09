@@ -367,6 +367,13 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     interface_paths = interface_paths
   )
 
+  # A reused baseline must have computed state taxes under the State-Weights
+  # vintage this run pins, or state deltas would count a change in weights as
+  # policy
+  if (!is.null(baseline_vintage)) {
+    validate_reused_baseline_state_weights(baseline_root, scenario_configs)
+  }
+
   # Write the run manifest
   write_run_manifest(
     output_root       = output_root,
@@ -782,6 +789,45 @@ get_enabled_state_jurisdictions = function() {
   registry = read_yaml(registry_path)
   enabled = names(registry)[map_lgl(registry, ~ isTRUE(.x$enabled))]
   return(toupper(enabled))
+}
+
+
+
+validate_reused_baseline_state_weights = function(baseline_root,
+                                                   scenario_configs) {
+
+  #----------------------------------------------------------------------------
+  # Checks that a baseline read from an existing vintage was run with the
+  # State-Weights vintage the current baseline row pins, where any scenario
+  # computes state taxes.
+  #
+  # Parameters:
+  #   - baseline_root (str)     : vintage folder holding the reused baseline
+  #   - scenario_configs (list) : resolved configurations by scenario ID
+  #
+  # Returns: TRUE invisibly; stops on a mismatch.
+  #----------------------------------------------------------------------------
+
+  if (!any(map_lgl(scenario_configs, ~ length(config_states(.x$economy)) > 0))) {
+    return(invisible(TRUE))
+  }
+  pin = scenario_configs[['baseline']]$economy$values$interfaces
+  dep_file = file.path(baseline_root, 'dependencies.csv')
+  used = if (file.exists(dep_file)) {
+    read_csv(dep_file, show_col_types = FALSE, col_types = cols(.default = 'c')) %>%
+      filter(ID == 'baseline', interface == 'State-Weights')
+  } else {
+    tibble()
+  }
+  if (nrow(used) != 1 ||
+      used$vintage != as.character(pin$state_weights_vintage) ||
+      used$scenario != as.character(pin$state_weights_id)) {
+    stop('The reused baseline at ', baseline_root, ' was not run with State-Weights ',
+         pin$state_weights_vintage, '/', pin$state_weights_id,
+         '; state deltas against it would count a change in weights as policy. ',
+         'Re-run the baseline with the same states settings.')
+  }
+  invisible(TRUE)
 }
 
 

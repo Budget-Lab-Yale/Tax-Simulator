@@ -487,7 +487,7 @@ strip_calc_vars = function(df, drop_mtrs = FALSE, strict = TRUE) {
   # Returns: the frame less the calculated variables (df).
   #----------------------------------------------------------------------------
 
-  calc_vars = return_vars %>% unlist() %>% set_names(NULL)
+  calc_vars = fed_calc_vars()
 
   df = if (strict) {
     df %>% select(-all_of(calc_vars))
