@@ -514,6 +514,7 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'tip_ded'               ~ 'Below-the-line tip deduction',
       Variable == 'ot_ded'                ~ 'Below-the-line overtime deduction',
       Variable == 'senior_ded'            ~ 'Below-the-line senior deduction for itemizers',
+      Variable == 'char_nonitem_ded'      ~ 'Charitable deduction for non-itemizers',
       Variable == 'txbl_inc'              ~ 'Taxable income',
       Variable == 'liab_ord'              ~ 'Ordinary-rate tax liability',
       Variable == 'liab_pref'             ~ 'Preferred-rate tax liability',

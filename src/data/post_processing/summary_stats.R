@@ -97,6 +97,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'tip_ded', 
     'ot_ded', 
     'senior_ded',
+    'char_nonitem_ded',
     'txbl_inc',
     'liab_ord', 
     'liab_pref', 
