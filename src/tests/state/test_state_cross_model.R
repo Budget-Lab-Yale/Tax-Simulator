@@ -352,13 +352,13 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         unemployment    = ui,
         rental          = rent - rent_loss,
         # Pass-through business income mirroring our AGI's Schedule E
-        # concept (sch_e = part_scorp + net_rent + net_estate; net_rent is
+        # concept (sch_e = part + scorp + net_rent + net_estate; net_rent is
         # passed separately as rental), less the SE portion already in
         # psemp/ssemp. other_gains (Form 4797) rides with other_inc --
         # ordinary income, no dedicated PE input. PE floors negative
         # miscellaneous_income (verified empirically), so net ordinary
         # losses route through pass_through, which accepts negatives
-        pass_through = part_scorp - part_se +
+        pass_through = part + scorp - part_se +
           pmin(0, other_inc + other_gains),
         estate       = estate - estate_loss,
         misc_income  = pmax(0, other_inc + other_gains),

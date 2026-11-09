@@ -119,11 +119,12 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # MFS filers are barred unless the state opts them in (earned_credit_mfs_
   # eligible == 1), mirroring the federal EITC's MFS treatment.
   # Disqualifying investment income, mirroring the federal EITC composition
+  # (net rent and net estate and trust income, but not pass-through income)
   # (eitc.R) -- states with their own ceiling (FTB 3514) set the limit;
   # default .inf imposes no state-side test
   earned_credit_inv_inc = tax_unit$txbl_int + tax_unit$exempt_int +
     tax_unit$div_ord + tax_unit$div_pref + pmax(0, tax_unit$txbl_kg) +
-    pmax(0, tax_unit$sch_e - tax_unit$part_scorp)
+    pmax(0, tax_unit$net_rent + tax_unit$net_estate)
   earned_credit_eligible = tax_unit$dep_status != 1 &
     (tax_unit$filing_status != 3 |
        tax_unit$st_credits.earned_credit_mfs_eligible == 1) &

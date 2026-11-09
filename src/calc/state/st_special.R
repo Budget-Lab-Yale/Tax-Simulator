@@ -26,7 +26,7 @@ calc_st_special = function(tax_unit, fill_missings = F) {
     'filer', 'dep_status', 'filing_status', 'age1', 'age2', 'blind1',
     'blind2', 'agi', 'gross_ss', 'txbl_ss', 'txbl_int', 'div_ord',
     'div_pref', 'kg_lt', 'char_cash', 'char_noncash', 'n_dep_eitc',
-    'ei1', 'ei2', 'exempt_int', 'txbl_kg', 'sch_e', 'part_scorp',
+    'ei1', 'ei2', 'exempt_int', 'txbl_kg', 'net_rent', 'net_estate',
     'liab_st_iit', 'st_filer',
     'st_programs.narrow_iit', 'st_programs.ltcg_excise', 'st_programs.wftc',
     'st_investment_income.interest_share',
@@ -151,7 +151,7 @@ calc_st_special = function(tax_unit, fill_missings = F) {
       st_wftc_earned_income = pmax(0, ei1) +
         if_else(filing_status == 2, pmax(0, ei2), 0),
       st_wftc_investment_income = txbl_int + exempt_int + div_ord + div_pref +
-        pmax(0, txbl_kg) + pmax(0, sch_e - part_scorp),
+        pmax(0, txbl_kg) + pmax(0, net_rent + net_estate),
       st_wftc_age_ok = n_dep_eitc > 0 |
         (age1 >= st_transfers.wftc_min_age & age1 <= st_transfers.wftc_max_age) |
         (filing_status == 2 & !is.na(age2) &
