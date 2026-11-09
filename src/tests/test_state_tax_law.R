@@ -54,7 +54,7 @@ test_state_credit_tables = function() {
 
   law = build_state_tax_law(
     states = 'CA', years = 2017:2026,
-    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
               mutate(growth = 0.025)
   )
   table = attr(law, 'credit_tables')
@@ -90,7 +90,7 @@ test_state_federal_conformity_guard = function() {
   # eligible for those calculations.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
   ca_law = build_state_tax_law('CA', 2025, indexes)
   il_law = build_state_tax_law('IL', 2025, indexes)
@@ -126,7 +126,7 @@ test_state_conformity_groups = function() {
   # selective-adoption overlays are researched and validated.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
   groups = load_state_conformity_groups()
   ca_law = build_state_tax_law('CA', 2017:2025, indexes)
@@ -174,7 +174,7 @@ test_state_reference_law_builder = function() {
   # of state identity. This is not a California legal bridge.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
   groups = tibble(
     conformity_group = c(0L, 7L),
@@ -250,7 +250,7 @@ test_state_conformity_context_routing = function() {
   # that changed the federal definition. Reusing group 7 is the cache contract.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
   groups = tibble(
     conformity_group = c(0L, 7L),
@@ -410,7 +410,7 @@ test_pilot_state_values = function() {
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
 
   law = build_state_tax_law(states  = c('IL', 'CO', 'NY'),
@@ -504,7 +504,7 @@ test_first_wave_state_values = function() {
   # configuration shapes before later states reuse them.
   #----------------------------------------------------------------------------
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
   law = build_state_tax_law(states = c('AZ', 'GA', 'NC'),
                             years = 2017:2035,
@@ -581,7 +581,7 @@ test_first_wave_state_values = function() {
 
 test_special_state_values = function() {
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
   law = build_state_tax_law(states = c('NH', 'TN', 'WA'),
                             years = 2017:2035,
@@ -670,7 +670,7 @@ unindexed_subparam:
     str_remove_all('\n  reference: .*')
 
   # Constant-growth synthetic index series
-  test_indexes = expand_grid(series = c('cpi'), year = 2015:2035) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2035) %>%
     mutate(growth = 0.02)
 
   parse_test_yaml = function(yaml_text) {
@@ -819,7 +819,7 @@ test_state_param_validation = function() {
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
     mutate(growth = 0.025)
 
   # Schema integrity (params_schema.yaml -> st_param_schema()): defaults

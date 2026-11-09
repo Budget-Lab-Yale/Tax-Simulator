@@ -216,7 +216,7 @@ build_tax_law_from_id = function(tax_law_id, years, indexes) {
     NULL
   }
 
-  tax_law %<>%
+  tax_law %>%
     imap(.f = ~ if (!is.null(parsed_baseline) &&
                     identical(.x, baseline_raw[[.y]])) {
                   parsed_baseline[[.y]]
@@ -226,13 +226,6 @@ build_tax_law_from_id = function(tax_law_id, years, indexes) {
                               years     = years_to_parse,
                               indexes   = indexes)
                 }) %>%
-    bind_rows() %>%
-
-  tax_law %>%
-    map2(.f      = parse_param,
-         .y      = names(.),
-         years   = 2014:max(years),
-         indexes = indexes) %>%
     bind_rows() %>%
 
     # Split subparameters into scalars and vectors

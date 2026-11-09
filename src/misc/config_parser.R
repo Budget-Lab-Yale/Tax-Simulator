@@ -834,4 +834,3 @@ validate_scenario_states = function(scenario_configs) {
   }
   invisible(TRUE)
 }
-}

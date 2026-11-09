@@ -26,7 +26,7 @@ test_state_calc = function() {
                 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
                 'AR', 'MS', 'MT', 'LA', 'IA'),
     years   = 2017:2035,
-    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
               mutate(growth = 0.025)
   )
   credit_tables = attr(law, 'credit_tables')
@@ -5270,7 +5270,7 @@ test_state_calc = function() {
     law_sub = build_state_tax_law(
       states  = subset_states,
       years   = 2024,
-      indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+      indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
                 mutate(growth = 0.025)
     )
     for (st in subset_states) {
@@ -5295,7 +5295,7 @@ test_state_calc = function() {
   law_zero = build_state_tax_law(
     states  = no_broad_zero_states,
     years   = 2017:2035,
-    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
               mutate(growth = 0.025)
   )
   for (st in no_broad_zero_states) {
