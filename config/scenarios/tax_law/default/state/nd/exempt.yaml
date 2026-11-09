@@ -1,0 +1,11 @@
+---
+# North Dakota: exemptions. None -- ND has no state personal or dependent
+# exemption. The federal deduction structure (and, for TY2017, federal personal
+# exemptions) is already embedded in the federal-taxable-income starting point.
+
+personal_amount:
+  value: 0
+  reference: 'ND-1 structure; no ND personal exemption'
+dep_amount:
+  value: 0
+  reference: 'ND-1 structure; no ND dependent exemption'

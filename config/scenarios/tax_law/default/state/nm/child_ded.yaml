@@ -1,0 +1,50 @@
+---
+# New Mexico: the $4,000-per-dependent deduction (NMSA 7-2-39; PIT-1 line 13,
+# "Deduction for certain dependents", TY2019+).
+#
+# The provision is $4,000 for each dependent AFTER THE FIRST, and it is
+# available only to married-filing-jointly, surviving-spouse and
+# head-of-household returns. Both restrictions are encodable:
+#   - "after the first" is st_child_ded.count_offset = 1 (added 2026-08-12);
+#     before it existed this provision was encoded as zero and documented,
+#     because the alternatives were all wrong by a full $4,000 of base per
+#     eligible return in the same direction
+#   - the status restriction is the filing_status_mapper below, which hands
+#     single and married-filing-separately returns an all-zero amount table
+#
+# There is no AGI table -- the deduction is flat -- so agi_bounds is Inf in
+# every slot and only the first amount is nonzero. The family is fixed at
+# seven elements by the calculator (the NC table's width).
+
+filing_status_mapper:
+  amounts:
+    '1': amounts_ineligible
+    '2': amounts_eligible
+    '3': amounts_ineligible
+    '4': amounts_eligible
+
+style:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'NMSA 7-2-39 (Laws 2019 ch.270 s.14), effective for tax years beginning on or after 1 Jan 2019; PIT-1 line 13 instructions 2019-2025'
+count_offset:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'NMSA 7-2-39(A): "$4,000 for each dependent ... in excess of one". The PIT-1 worksheet says to subtract 1 from total dependents'
+agi_bounds:
+  value: [.inf, .inf, .inf, .inf, .inf, .inf, .inf]
+  reference: 'NMSA 7-2-39 has no income limitation -- the deduction is a flat amount per eligible dependent at any income'
+amounts_eligible:
+  value:
+    '2017': [0, 0, 0, 0, 0, 0, 0]
+    '2019': [4000, 0, 0, 0, 0, 0, 0]
+  reference: 'NMSA 7-2-39(A) ($4,000 per dependent in excess of one); PIT-1 line 13 instructions 2019-2025. Unindexed. Only the first slot is used because there is no AGI table'
+amounts_ineligible:
+  value: [0, 0, 0, 0, 0, 0, 0]
+  reference: 'NMSA 7-2-39(A) limits the deduction to taxpayers filing as married filing jointly, surviving spouse, or head of household -- single and married-filing-separately returns get nothing'
+
+documented_not_modeled:
+  dependents_beyond_ctc_qualifying_children:
+    reference: 'NMSA 7-2-39 counts DEPENDENTS; the calculator counts n_dep_ctc, i.e. federal CTC-qualifying children. A unit whose dependents include a non-CTC dependent (a 19-23-year-old student, a qualifying relative) is credited too few [understates the deduction, overstating NM tax, by $4,000 of base per such dependent above the first]'

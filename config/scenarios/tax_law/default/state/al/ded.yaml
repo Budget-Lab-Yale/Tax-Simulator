@@ -1,0 +1,240 @@
+---
+# Alabama: deductions (Form 40 lines 11-12; Schedule A).
+#
+# TWO THINGS ARE UNUSUAL.
+#
+# (1) The standard deduction SLIDES DOWN with Alabama AGI in fixed dollar
+# steps: a flat maximum up to a threshold, then nineteen steps of a fixed
+# decrement, then a flat floor. The published chart is 21 rows per filing
+# status; the five parameters below reproduce all of it. (Independently
+# machine-checked against every printed row of every chart, both endpoints of
+# every band, four statuses x nine years: 1,508 of 1,512 points exact, the
+# four misses being the four occurrences of a single ADOR typo -- the MFJ
+# Vintage C row printed as "$25,500 - $26,999" which must read "$26,500 -
+# $26,999", since the row above ends at $26,499 and the other three columns
+# show $26,500 at the same row. The chart is wrong; the parameters are right.)
+#
+# (2) The federal income tax deduction is FULL and UNCAPPED -- Alabama is the
+# only state where it is entrenched constitutionally rather than by ordinary
+# statute. Its base differs from Missouri's in both directions: Alabama adds
+# the net investment income tax back and subtracts the additional child tax
+# credit, while Missouri does neither; Missouri subtracts the net premium tax
+# credit and Alabama does not.
+#
+# The itemize/standard election is INDEPENDENT of the federal election.
+# Because Alabama's standard deduction is small and its Schedule A allows
+# employee FICA, many Alabama filers itemize while taking the federal standard
+# deduction.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_married
+    '3': std_mfs
+    '4': std_head
+  std_po_thresh:
+    '1': std_start_single
+    '2': std_start_married
+    '3': std_start_mfs
+    '4': std_start_head
+  std_po_step:
+    '1': std_step_single
+    '2': std_step_married
+    '3': std_step_mfs
+    '4': std_step_head
+  std_po_amount_per_step:
+    '1': std_dec_single
+    '2': std_dec_married
+    '3': std_dec_mfs
+    '4': std_dec_head
+  std_po_floor:
+    '1': std_floor_single
+    '2': std_floor_married
+    '3': std_floor_mfs
+    '4': std_floor_head
+
+#-----------------------------------------------------------------------
+# Standard deduction. Three statutory vintages: TY2017-2018, TY2019-2021
+# (thresholds only), TY2022-2025 (Act 2022-292, amounts and thresholds).
+# Nothing is indexed.
+#-----------------------------------------------------------------------
+
+std_single:
+  value:
+    '2017': 2500
+    '2022': 3000
+  reference: 'Form 40 booklet standard deduction chart, p.9 of each year: $2,500 through TY2021, $3,000 from TY2022 (Act 2022-292)'
+std_married:
+  value:
+    '2017': 7500
+    '2022': 8500
+  reference: 'Booklet chart p.9: married filing joint maximum, $7,500 through TY2021 and $8,500 from TY2022'
+std_mfs:
+  value:
+    '2017': 3750
+    '2022': 4250
+  reference: 'Booklet chart p.9: married filing separate maximum, exactly half the joint amount in every vintage'
+std_head:
+  value:
+    '2017': 4700
+    '2022': 5200
+  reference: 'Booklet chart p.9: head of family maximum, $4,700 through TY2021 and $5,200 from TY2022'
+
+# The threshold is the LAST flat dollar, so the first step lands on the
+# chart's first stepped row.
+std_start_single:
+  value:
+    '2017': 20499
+    '2019': 23499
+    '2022': 25999
+  reference: 'Booklet chart p.9: the flat maximum runs through $20,499 in TY2017-2018, $23,499 in TY2019-2021 and $25,999 in TY2022-2025, with the first reduced row beginning at $20,500 / $23,500 / $26,000'
+std_start_married:
+  value:
+    '2017': 20499
+    '2019': 23499
+    '2022': 25999
+  reference: 'Booklet chart p.9, married filing joint column; same thresholds as single in every vintage'
+std_start_head:
+  value:
+    '2017': 20499
+    '2019': 23499
+    '2022': 25999
+  reference: 'Booklet chart p.9, head of family column; same thresholds as single in every vintage'
+std_start_mfs:
+  value:
+    '2017': 10249
+    '2019': 10749
+    '2022': 12999
+  reference: 'Booklet chart p.9, married filing separate column. NOTE the TY2019-2021 vintage is NOT half the joint schedule: the joint threshold rose $3,000 (20,500 to 23,500) while separate rose only $500 (10,250 to 10,750), and half of 23,500 would be 11,750. Vintages A and C are exactly half. The asymmetry is printed identically in the 2019, 2020 and 2021 booklets, so it is administered law rather than a misprint; whether the statute reads that way has not been checked'
+
+std_step_single:
+  value: 500
+  reference: 'Booklet chart p.9: the single/joint/head-of-family columns step every $500 of Alabama AGI'
+std_step_married:
+  value: 500
+  reference: 'Booklet chart p.9, married filing joint column'
+std_step_head:
+  value: 500
+  reference: 'Booklet chart p.9, head of family column'
+std_step_mfs:
+  value: 250
+  reference: 'Booklet chart p.9: the married-filing-separate column steps every $250, half the others'
+
+std_dec_single:
+  value: 25
+  reference: 'Booklet chart p.9: $25 per step. Check at the last stepped row (step 19): 2,500 - 19 x 25 = 2,025 in Vintage A and 3,000 - 475 = 2,525 in Vintage C, both matching the printed chart'
+std_dec_married:
+  value: 175
+  reference: 'Booklet chart p.9: $175 per step. Check at step 19: 7,500 - 3,325 = 4,175 (Vintage A) and 8,500 - 3,325 = 5,175 (Vintage C), both as printed'
+std_dec_mfs:
+  value: 88
+  reference: 'Booklet chart p.9: $88 per step. Check at step 19: 3,750 - 1,672 = 2,078 (Vintage A) and 4,250 - 1,672 = 2,578 (Vintage C), both as printed'
+std_dec_head:
+  value: 135
+  reference: 'Booklet chart p.9: $135 per step. Check at step 19: 4,700 - 2,565 = 2,135 (Vintage A) and 5,200 - 2,565 = 2,635 (Vintage C), both as printed'
+
+std_floor_single:
+  value:
+    '2017': 2000
+    '2022': 2500
+  reference: 'Booklet chart p.9 final row: $2,000 at Alabama AGI of $30,000 and over (TY2017-2018), $33,000 and over (TY2019-2021), then $2,500 at $35,500 and over (TY2022-2025)'
+std_floor_married:
+  value:
+    '2017': 4000
+    '2022': 5000
+  reference: 'Booklet chart p.9 final row, married filing joint'
+std_floor_mfs:
+  value:
+    '2017': 2000
+    '2022': 2500
+  reference: 'Booklet chart p.9 final row, married filing separate ($15,000 / $15,500 / $17,750 and over)'
+std_floor_head:
+  value:
+    '2017': 2000
+    '2022': 2500
+  reference: 'Booklet chart p.9 final row, head of family'
+
+std_po_base:
+  value: 2
+  reference: 'The chart''s own column header is "AL Adjusted Gross Income (AL Line 10)" -- Alabama AGI, not federal AGI'
+
+#-----------------------------------------------------------------------
+# Itemized deductions (Schedule A). Alabama's own schedule, not a
+# modification of the federal total.
+#-----------------------------------------------------------------------
+
+item_allowed:
+  value: 1
+  reference: 'Form 40 line 11a, Schedule A "Itemized Deductions"'
+item_coupling:
+  value: 0
+  reference: 'Booklet p.8: "You have the option to either itemize your deductions or you may claim the optional Standard Deduction. You should compute your deduction both ways to determine the option that gives you the larger deduction." Nothing ties the Alabama election to the federal one'
+item_component_style:
+  value: 1
+  reference: 'Alabama Schedule A is built from its own component lines rather than starting from the federal itemized total, so the state base is assembled from the components flagged below'
+item_include_medical:
+  value: 1
+  reference: 'Schedule A lines 1-4, medical and dental expenses over a 4% floor of Alabama AGI'
+item_include_mortgage:
+  value: 1
+  reference: 'Schedule A, qualified home mortgage interest'
+item_include_charity:
+  value: 1
+  reference: 'Schedule A, gifts to charity'
+item_include_casualty:
+  value: 1
+  reference: 'Schedule A, casualty and theft losses'
+item_include_prop_tax:
+  value: 1
+  reference: 'Schedule A "Taxes You CAN Deduct": real estate taxes are deductible, and Alabama applies no SALT cap'
+item_include_pers_tax:
+  value: 1
+  reference: 'Schedule A "Taxes You CAN Deduct": personal property taxes'
+item_add_payroll:
+  value: 1
+  reference: 'Schedule A lines 6-7 "Taxes You CAN Deduct": "You can deduct the FICA tax (Social Security and Medicare) withheld on your income by your employer", plus federal self-employment tax and Tier 1 railroad retirement tax. Verified present in all nine booklets 2017-2025. This is what pushes many Alabama filers to itemize despite taking the federal standard deduction'
+# item_include_income_sales_tax is deliberately left at 0: Alabama's Schedule A
+# lists state income tax under "Taxes You CANNOT Deduct" -- federal income tax
+# has its own line 12 instead.
+
+#-----------------------------------------------------------------------
+# Federal income tax deduction (Form 40 line 12).
+#-----------------------------------------------------------------------
+
+fed_tax_ded:
+  value: 1
+  reference: 'Form 40 line 12 "Federal tax deduction", entrenched by Ala. Const. Amendment 225 / section 211.03 and Ala. Code 40-18-15(a)(2). FULL and UNCAPPED -- there is no cap anywhere on the form or in the worksheet, only a floor at zero ("If amount is negative enter zero"). The worksheet anchors on 1040 line 22 from TY2020 (TY2017 "line 56", TY2018 "line 13", TY2019 "line 14" -- the same place on each vintage of the form), so the alternative minimum tax and excess advance premium tax credit repayment are IN the base while self-employment tax, additional Medicare tax and household employment taxes are OUT'
+fed_tax_ded_add_niit:
+  value: 1
+  reference: 'Federal income tax deduction worksheet line 2, every booklet: "Net Investment Income Tax. Enter amount from line 17, Form 8960". The net investment income tax rides Schedule 2 Part II and so never reaches 1040 line 22, which is why Alabama adds it back explicitly'
+fed_tax_ded_less_eitc:
+  value: 1
+  reference: 'Worksheet line 4a, earned income credit (1040 line 27 / 27a). Note the perverse consequence: claiming the federal earned income credit INCREASES Alabama taxable income'
+fed_tax_ded_less_ctc_ref:
+  value: 1
+  reference: 'Worksheet line 4b, additional child tax credit (1040 line 28). Alabama subtracts this where Missouri does not'
+fed_tax_ded_less_ed_ref:
+  value: 1
+  reference: 'Worksheet line 4c, refundable American Opportunity credit (1040 line 29)'
+# fed_tax_ded_less_ptc is deliberately NOT set: the net premium tax credit
+# (Schedule 3 line 9) appears nowhere on Alabama's worksheet, unlike
+# Missouri's. Nor do the recovery rebate credit or the refundable sick and
+# family leave credits.
+
+documented_not_modeled:
+  medical_floor:
+    reference: 'Alabama''s medical deduction floor is 4% of Alabama AGI, against the federal 7.5% of federal AGI. The model carries only the federal post-floor amount, so the extra 3.5 points of expenses Alabama would allow cannot be recovered, and the floor is applied to the wrong income base [understates Alabama itemized deductions, so overstates tax, for filers with medical expenses]'
+  form_2439_credits:
+    reference: 'Worksheet line 4d (4e from TY2025) subtracts credits from Form 2439, undistributed long-term capital gains of a regulated investment company. Not a model variable; negligible frequency'
+  refundable_adoption_credit_2025:
+    reference: 'From TY2025 the worksheet adds a line subtracting the federal refundable adoption credit (1040 line 30), the only structural change to the worksheet since 2018. Not a model variable'
+  ty2021_act_2022_37_recomputation:
+    reference: 'For TY2021 ONLY, the worksheet gained a Part II under Act 2022-37: the federal deduction is recomputed as if the child tax credit, earned income credit and child and dependent care credit had stayed at their December 31 2020 levels, and the taxpayer takes the GREATER of the actual-law and pre-ARPA figures. Not modeled -- it requires a full 2020-law federal recomputation on 2021 data [understates the deduction, so overstates Alabama tax, for TY2021 filers whose ARPA credits were large; concentrated among families with children]'
+  joint_federal_separate_alabama_apportionment:
+    reference: 'A couple filing jointly for federal purposes but separately in Alabama apportions the joint federal tax deduction by each spouse''s share of joint federal AGI (booklet p.8, identical wording all nine years). The model treats federally-joint couples as filing jointly in Alabama, so the apportionment never arises -- see the separate-return election note in the source packet'
+  itemized_election_and_split:
+    reference: 'Spouses filing separately must use the SAME method (standard or itemized) unless they lived apart all year, and neither may claim expenses the other paid. Not modeled, since separate Alabama returns are not modeled'
+  casualty_floor_condition:
+    reference: 'Schedule A applies the 10% casualty floor only where federal Form 4684 box B is checked, and otherwise no floor. The model carries the federal post-floor casualty amount'
+  vehicle_loan_interest:
+    reference: 'The TY2025 Schedule A adds a vehicle loan interest line. Not a model variable'

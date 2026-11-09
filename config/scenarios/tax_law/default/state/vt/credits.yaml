@@ -1,0 +1,113 @@
+---
+# Vermont: credits (Form IN-111 lines 12-14, Schedule IN-112 Part II).
+
+# Earned income tax credit (32 V.S.A. 5828b), refundable in every year. From
+# TY2025 Act 71 raised the match to 100% of the federal credit for filers with
+# NO qualifying children, leaving 38% for everyone else -- encoded through the
+# child-count-keyed family (slots 0 / 1 / 2 / 3+ children), which is why the
+# earlier concern about a childless match excluding married-filing-jointly
+# returns does not apply: the family keys on children only.
+eitc_match:
+  value:
+    '2017': 0.32
+    '2018': 0.36
+    '2022': 0.38
+  reference: '32 V.S.A. 5828b; IN-111 EITC line instructions 2017-2025. 32% (2017), 36% (2018-2021), 38% (2022+)'
+eitc_match_by_kids:
+  value:
+    '2017': [.na, .na, .na, .na]
+    '2025': [1.00, 0.38, 0.38, 0.38]
+  reference: 'Act 71 of 2025 (S.51): the credit equals 100% of the federal EITC for a filer with no qualifying children, 38% otherwise. Slots are 0/1/2/3+ federal qualifying children. NA before 2025 so the scalar eitc_match governs those years'
+eitc_refundable:
+  value: 1
+  reference: '32 V.S.A. 5828b(b): the credit is refundable, all years'
+
+# Child tax credit (32 V.S.A. 5828c, TY2022+): $1,000 refundable per qualifying
+# child, reduced $20 for each $1,000 -- OR FRACTION THEREOF -- of AGI over
+# $125,000, with the reduction applied PER CHILD. Both of those are why this
+# state needs ctc_po_per_child and ctc_po_round_up: reducing the aggregate
+# credit once would pay $800 to a two-child family at AGI $185,000 that Vermont
+# has phased out entirely at $175,000, and rounding the excess down (which
+# NY 2025, the other style-2 state, does) would drop the partial step.
+ctc_style:
+  value:
+    '2017': 0
+    '2022': 2
+  reference: '32 V.S.A. 5828c (Act 138 of 2022), first payable TY2022. Style 2 = flat per-child amount with a stepped phase-out'
+ctc_young_amount:
+  value: 1000
+  reference: '32 V.S.A. 5828c(a): $1,000 per qualifying child'
+ctc_old_amount:
+  value: 0
+  reference: 'Vermont has a single per-child amount -- there is no older-child tier'
+ctc_young_age_limit:
+  value:
+    '2017': 5
+    '2025': 6
+  reference: '32 V.S.A. 5828c(b) defines a qualifying child as age five or under; TY2025 reaches age six because the 2019 birth-year floor in the definition was not advanced'
+ctc_max_child_age:
+  value:
+    '2017': 5
+    '2025': 6
+  reference: 'Same bound as ctc_young_age_limit, so no child falls into the older tier'
+ctc_po_thresh:
+  value: 125000
+  reference: '32 V.S.A. 5828c(a); IN-112 child tax credit worksheet: the reduction begins above $125,000 of adjusted gross income. NOT indexed'
+ctc_po_rate:
+  value: 0.02
+  reference: '$20 per $1,000 of AGI over the threshold = 0.02 per dollar, so the credit is fully phased out at $175,000'
+ctc_po_base:
+  value: 1
+  reference: '32 V.S.A. 5828c(a) is keyed to federal adjusted gross income'
+ctc_po_per_child:
+  value: 1
+  reference: '32 V.S.A. 5828c(a) reduces the $1,000 allowed FOR EACH CHILD, so the credit floors at zero per child rather than once per return. PolicyEngine applies the reduction to the aggregate credit and therefore disagrees with the published table -- expect a PE-side residual here, not an our-side one'
+ctc_po_round_up:
+  value: 1
+  reference: '"for each $1,000, or fraction thereof" -- a partial step counts whole'
+ctc_refundable:
+  value: 1
+  reference: '32 V.S.A. 5828c(c): the credit is refundable'
+
+# Child and dependent care credit (32 V.S.A. 5828(b)): a share of the federal
+# credit, 24% nonrefundable through 2021 and 72% REFUNDABLE from TY2022.
+cdctc_match:
+  value:
+    '2017': 0.24
+    '2022': 0.72
+  reference: '32 V.S.A. 5828(b); Schedule IN-112 Part II instructions 2017-2025. Act 138 of 2022 replaced the 24% nonrefundable credit with a 72% refundable one'
+cdctc_refundable:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Act 138 of 2022 made the credit refundable from TY2022; nonrefundable before'
+
+# Charitable contribution credit (32 V.S.A. 5822(d)(3), TY2018+): 5% of the
+# first $20,000 of contributions -- a $1,000 maximum -- nonrefundable, and
+# available to ALL filers because it REPLACED itemization in the Act 11
+# restructure. It is therefore claimed broadly, not just by former itemizers,
+# which is why the WI-style item_credit_rate mechanic (rate x components less
+# the state standard deduction) would return roughly zero here.
+char_credit_rate:
+  value:
+    '2017': 0
+    '2018': 0.05
+  reference: '32 V.S.A. 5822(d)(3) (Act 11 of the 2018 special session); IN-111 line 13 instructions 2018-2025: "5% of the first $20,000 of charitable contributions"'
+char_credit_base_cap:
+  value:
+    '2017': .inf
+    '2018': 20000
+  reference: 'The $20,000 contribution ceiling, which is what produces the published $1,000 maximum credit at the 5% rate'
+
+documented_not_modeled:
+  low_income_refundable_cdcc_2017_2021:
+    reference: '32 V.S.A. 5828(c) (pre-Act 138): a low-income filer using an ACCREDITED provider could instead claim 50% of the federal credit, REFUNDABLE. The accreditation test is unobservable, so the 24% nonrefundable credit is applied to everyone 2017-2021 [understates the credit worst for units with no Vermont liability, where a nonrefundable 24% is worth about nothing against a refundable 50%]'
+  renter_credit:
+    reference: '32 V.S.A. 6066 (renter credit from TY2022, Renter Rebate before): a refundable credit keyed to household income and rent paid. Structural -- rent is not a tax-unit variable [understates VT refunds for renters; PolicyEngine models it]'
+  veteran_credit:
+    value: 250
+    reference: '32 V.S.A. 5828d, TY2025+: a $250 refundable credit for a qualifying veteran. Veteran status is not observable [understates VT refunds for veterans from 2025; PolicyEngine models it]'
+  elderly_and_disabled_credit:
+    reference: '32 V.S.A. 5822(d)(2): 24% of the federal credit for the elderly and disabled (Schedule R). The model does not compute the federal Schedule R credit, so there is no base to take a share of'
+  college_savings_529_credit:
+    reference: '32 V.S.A. 5825a: 10% of the first $2,500 contributed per beneficiary to a Vermont 529 account. Contributions are not observable'

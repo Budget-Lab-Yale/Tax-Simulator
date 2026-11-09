@@ -1,5 +1,7 @@
 # Tax-Simulator - Budget Lab at Yale
 
+> On the Yale HPC, cluster setup (R module load, Slurm, paths) lives in your user-level `~/.claude/CLAUDE.md`.
+
 ## Project Overview
 
 Tax-Simulator is a policy microsimulation model for analyzing the budgetary, distributional, and economic impacts of tax policy changes. It simulates individual tax units and calculates tax liability under different policy scenarios, then aggregates results for revenue and distributional projections.
@@ -39,8 +41,23 @@ Tax-Simulator/
 │   └── misc/
 │       ├── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
 │       └── scenario_config.R        # Economy/behavior leg resolution engine
+├── docs/                            # Shipped model documentation
+│   └── model_documentation.md       # The deep reference: data → calculator → outputs
+├── research/                        # State-tax research corpus
+│   ├── README.md                    # START HERE for the state workstreams
+│   ├── STATUS.md                    # What is true today
+│   ├── decisions_log.md             # Settled arguments (S-series)
+│   ├── CONVENTIONS.md               # Doc naming, front matter, releases
+│   ├── state_tax/                   # Workstream: per-state law encoding
+│   └── state_weights/               # Workstream: split weights + non-filers
 └── other/                           # Utility scripts and analysis tools
 ```
+
+**`src/` is sourced recursively.** `main.R` (and `slurm/setup.R`, `slurm/common.R`)
+walk `src/` and `source()` every `.R` file except `main.R` itself and `slurm/`.
+Two consequences: a script that *executes* rather than defining functions must not
+live under `src/`, and non-R assets are skipped by the `.R` filter but should still
+be rare there.
 
 ## Core Concepts
 
@@ -68,6 +85,11 @@ economy alternative's `wealth.yaml` (`financing_profile`, which accepts a
 profile folder name, `none`, or the `flat:<s>` shorthand); `assumptions` and
 `assumption.{channel}.{name}` → an economy alternative folder;
 `excess_growth*` → nothing, the machinery was removed from the model.
+The state tax columns went the same way: `states`, `state_weights_method` and
+`state_detail` → an economy alternative's `states.yaml` (`jurisdictions`,
+`weights_method`, `detail`); `dep.State-Weights.*` → its `interfaces.yaml`;
+`state_tax_law` → the tax law leg itself, whose layers carry state law under
+`state/` (see State Income Taxes below).
 
 **Runtime Parameters (command-line arguments, not in runscript CSV):**
 
@@ -730,6 +752,115 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 3. Reforms OVERWRITE baseline subparameters — include full time series and all indexation fields
 4. Create a runscript CSV referencing the reform's `tax_law` path
 
+## State Income Taxes
+
+State taxes ride on the same three legs as everything else:
+
+- **Law** is in the tax law leg. `config/scenarios/tax_law/default/state/{st}/`
+  holds each state's default law, alongside the registry (`jurisdictions.yaml`),
+  the conformity groups and the parameter schema. A tax law alternative changes a
+  state's law with files under its own `state/{st}/` folder, with the same
+  subparameter-replacement rules as federal law. So one `tax_law` cell sets both.
+- **Which states a run computes**, how records are split across them, and whether
+  the per-year state detail matrix is written, are in the economy leg's
+  `states.yaml` (`jurisdictions`, `weights_method`, `detail`). The default is
+  `none`: a federal-only run, which neither reads nor needs a State-Weights
+  vintage. The State-Weights pin is in `interfaces.yaml`.
+- Every counterfactual's jurisdictions must be among the baseline's, and every
+  scenario computing state taxes must read the baseline's State-Weights vintage.
+  Both are checked at parse time (`validate_scenario_states()`).
+
+Each rung that collects totals runs the state calculator on its own frame
+(`collect_totals()` in `src/sim/run.R`), writing `totals/state.csv`; a skipped
+rung reports the rung below, as for federal totals. Post-processing writes
+`supplemental/state_rev_est.csv` per rung, and stacked runs write
+`stacked_state_rev_est_{rung}.csv` at the vintage root.
+
+## State-Tax Development Protocol
+
+Use this protocol for every state-law research, configuration, or calculator task.
+
+1. Start by reading `config/scenarios/tax_law/default/state/README.md`,
+   `config/scenarios/tax_law/default/state/jurisdictions.yaml`,
+   `research/state_tax/state_parameter_rollout.csv`, and the relevant
+   `research/source_packets/{state}.md`. Also read the state
+   implementation plan when a design decision is involved.
+2. Treat each source packet as a living research record. As state-specific facts
+   are discovered, update it in the same change with primary sources, exact
+   effective dates and parameter values, worksheet cases, data limitations,
+   unresolved questions, and validation results. Update the rollout tracker at
+   the same time; do not leave completed YAML or tests recorded as `todo`.
+3. Use official state forms, instructions, statutes, and agency guidance as the
+   source of truth. Every YAML subparameter needs a `reference:` field. Record
+   projections, revenue-triggered provisions, and unobservable eligibility or
+   tax-base assumptions explicitly rather than presenting them as enacted law.
+4. Prefer general, parameterized state calculators and reusable program
+   components over state-specific code paths. Extend a generic tool when a rule
+   is shared or plausibly reusable across states (for example, tiered child
+   deductions, dependent credits, retirement exclusions, or state itemization).
+   Introduce a special program profile only for a genuinely distinct tax or
+   transfer base, and make that module reusable by program type rather than by
+   state name. Do not add `state == ...` branches without documenting why a
+   parameterized design is inadequate and adding focused regression tests.
+   For fixed or selective federal conformity, use the numeric group contract in
+   `config/scenarios/tax_law/default/state/conformity_groups.yaml`; build and validate a
+   shared reference-law overlay before setting a group to `ready: true`.
+5. Add a jurisdiction to the enabled registry only after its YAML profile,
+   source packet, worksheet tests, and parser/convention tests are complete.
+   State aggregate validation remains blocked until production state weights
+   are available; do not interpret placeholder-weight totals as estimates.
+
+**Where the research lives.** `research/README.md` is the index: two workstreams
+(`state_tax/` for encoding, `state_weights/` for split weights and the non-filer
+rework), each with **exactly one `plan.md`** that is the entry point. Read the
+plan before starting, `research/decisions_log.md` before re-arguing anything, and
+`research/CONVENTIONS.md` before adding a document. Per-state status is one row of
+`research/state_tax/state_parameter_rollout.csv` and nowhere else — do not restate
+it in a source packet. `research/STATUS.md` is the narrative status; documents
+carrying `true_as_of:` describe an older tree, not today's.
+
+## Writing about this workstream: name the thing, not the shorthand
+
+This workstream has coined a set of short abstract nouns — *the anchor*, *the
+pool*, *the margin*, *the netting*, *the residual*, *the frame*, *the split*.
+They are fine as index terms in a table heading. **In prose, do not use them as
+the subject of a sentence: write the thing they stand for.** A reader coming
+back after a week, or a co-author who never sat in the session where the term
+was coined, cannot resolve them — and glossing on first use is not enough when
+the bare noun then carries three more sentences.
+
+Do not write:
+
+> The anchor counts every non-filing adult. The pool cannot: adults claimed as
+> someone's dependent already occupy a slot on that filer's return.
+
+Write:
+
+> The residual count of non-filing adults includes everyone. The records we
+> emit cannot: adults claimed as someone's dependent already occupy a slot on
+> that filer's return.
+
+**`residual` is the worst offender, because it genuinely means two things
+here** and the collision is silent: the count of non-filing adults
+(`PEP adults − filing adults`), and the HT2 filing-status residual
+(`N1 − MARS1 − MARS2 − MARS4`, which is MFS plus qualifying surviving spouse).
+Never write it bare — say "the residual count of non-filing adults" or "the
+HT2 status residual".
+
+The rest, with what to write instead:
+
+| Shorthand | Say |
+|---|---|
+| the anchor | the residual count of non-filing adults / the target count |
+| the pool | the constructed non-filer records, the records we emit |
+| the margin | the state distribution of non-filers built from the ACS |
+| the netting | the adults excluded because a filer claims them as a dependent |
+| the frame | the survey's universe (and name the survey) |
+| the split | the separate-filer split, or the split state weights — never bare |
+| the identity | name it: state anchors summing to the national one, etc. |
+
+This is prose only. Variable and file names keep the short forms.
+
 ## Common Tasks
 
 ### Running a Simulation
@@ -794,6 +925,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 |-----------------------------------------------------|-------------------------------|
 | `run_sim()` totals-writing or `calc_receipts()` call | `src/slurm/aggregate.R` Phase 3a |
 | `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
+| `do_scenario()` baseline-only post-processing (e.g. `build_cbo_comparison()`) | `src/slurm/aggregate.R` Phase 3a (Phase 3b is counterfactual-only) |
 | `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
 | `run_frozen_pass()` or the kg mechanical state contract | `src/slurm/frozen.R` (Phase 1B) |
 | `run_wealth_bathtub_pass()` or the wealth state/detail contract | `src/slurm/wealth.R` (Phase 2W) and `src/slurm/mech_wealth.R` (Phase 2MW) |

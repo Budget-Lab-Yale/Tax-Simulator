@@ -1,0 +1,86 @@
+---
+# Louisiana's "combined personal exemption-standard deduction" (IT-540 line
+# 10 worksheet; La. R.S. 47:294).
+#
+# It is a single amount doing the work of both an exemption and a standard
+# deduction, which is why the whole of it is encoded here and ded.yaml
+# carries no standard deduction at all. It does NOT come off income before
+# the brackets -- it is relieved at the bottom of the schedule, which is what
+# st_ord.exempt_from_bottom in ord.yaml does.
+#
+# Structure through TY2024: a base amount by filing status, plus $1,000 for
+# each exemption beyond the first (single, separate and head of household) or
+# beyond the second (joint and surviving spouse). Since the taxpayer is
+# exemption one and a joint couple is exemptions one and two, that add-on
+# works out to $1,000 per dependant, per 65-or-older taxpayer and per blind
+# taxpayer in every status -- which is how it is encoded.
+#
+# HEAD OF HOUSEHOLD IS THE HYBRID and easy to get wrong: it takes the JOINT
+# base of $9,000 while its add-ons start after ONE exemption, and it takes
+# the SINGLE brackets. The research verified it against 1,344 head-of-
+# household table cells per year.
+#
+# TY2025 restructures completely (Act 11 of the 2024 Third Extraordinary
+# Session): the base rises to $12,500 and $25,000, head of household moves
+# to the full $25,000, and EVERY add-on is repealed -- no dependant
+# allowance of any kind survives.
+
+filing_status_mapper:
+  personal_amount:
+    '1': base_single
+    '2': base_joint
+    '3': base_single
+    '4': base_joint
+
+personal_per_return:
+  value: 1
+  reference: 'The base is a per-RETURN amount printed by filing status, not a per-taxpayer figure doubled for couples -- R.S. 47:294 sets $4,500 for single and $9,000 for joint directly'
+base_single:
+  value:
+    '2017': 4500
+    '2025': 12500
+  i_measure:
+    '2017': .na
+    '2026': cpi
+  i_base_year:
+    '2017': .na
+    '2026': 2025
+  i_direction: 0
+  i_increment: 1
+  reference: 'R.S. 47:294 and the IT-540 line 10 worksheet: $4,500 single and married filing separately, identical in every year TY2017-TY2024 and never indexed. Act 11 raised it to $12,500 for TY2025 and added a CPI-U adjustment, prior-year amount times the previous calendar year''s CPI-U increase, first adjustment January 1, 2026 (RIB 25-012)'
+base_joint:
+  value:
+    '2017': 9000
+    '2025': 25000
+  i_measure:
+    '2017': .na
+    '2026': cpi
+  i_base_year:
+    '2017': .na
+    '2026': 2025
+  i_direction: 0
+  i_increment: 1
+  reference: 'Same sources: $9,000 for married filing jointly, qualifying surviving spouse AND head of household through TY2024, rising to $25,000 for all three under Act 11. Head of household taking the joint base is unusual and booklet-verified'
+dep_amount:
+  value:
+    '2017': 1000
+    '2025': 0
+  reference: 'The $1,000 per-exemption add-on, which begins after one exemption for single, separate and head-of-household filers and after two for joint and surviving-spouse filers -- so it lands on each dependant in every status. Act 11 repealed every add-on for TY2025, leaving Louisiana with no dependant allowance at all'
+aged_addl:
+  value:
+    '2017': 1000
+    '2025': 0
+  reference: 'Age 65 or older counts as an additional exemption, worth the same $1,000 add-on, for taxpayer and spouse alike. Repealed for TY2025'
+blind_addl:
+  value:
+    '2017': 1000
+    '2025': 0
+  reference: 'Blindness likewise counts as an additional exemption. Repealed for TY2025'
+
+documented_not_modeled:
+  qualifying_surviving_spouse_extra_exemption:
+    reference: 'Qualifying surviving spouse status itself carries an additional exemption on top of the joint base. The model maps that status to married filing jointly, which supplies two taxpayers against the same base and reaches the same total for a surviving spouse with one dependant'
+  more_than_eight_exemptions:
+    reference: 'The published table rule for returns with more than eight exemptions is internally inconsistent in the booklet and was not resolved. The linear $1,000 add-on is applied without limit'
+  ty2026_indexed_amounts:
+    reference: 'Act 11''s CPI-U formula is enacted but the TY2026 dollar amounts are unpublished, and the rounding convention and base period are not specified in the statute. The amounts above are indexed with no rounding, which is the literal reading; if LDR publishes a rounding rule the TY2026+ figures should be replaced with transcriptions'

@@ -1,0 +1,21 @@
+---
+# Rhode Island: filing requirement (R.I.G.L. 44-30-51; RI-1040 instructions
+# "Who Must File A Return", identical text 2017-2025). Every resident required
+# to file a federal return must file an RI-1040; a resident NOT required to file
+# federally must file if income exceeds the sum of RI personal exemptions and
+# the applicable standard deduction.
+
+# 3 = no separate income test (federal filing requirement or any RI liability)
+req_type:
+  value: 3
+  reference: 'RI-1040 instructions "Who Must File A Return", TY2017-2025; R.I.G.L. 44-30-51'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for RI (no standalone dollar threshold; the federal requirement governs)'
+req_if_fed_filer:
+  value: 1
+  reference: '"Every resident individual of Rhode Island who is required to file a federal income tax return must file a Rhode Island individual income tax return (RI-1040)"'
+
+documented_not_modeled:
+  req_income_thresh_std_plus_exempt:
+    reference: 'The secondary test for non-federal-filers is income "in excess of the sum of his/her Rhode Island personal exemptions and applicable standard deduction". No parameter expresses std + exemptions (req_type 1 tests st_exempt alone), so it is not encoded. Immaterial: any unit failing that test has zero RI taxable income and therefore zero liability, and units WITH liability are already captured by the liability branch of st_filer'

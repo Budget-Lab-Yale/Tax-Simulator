@@ -1,0 +1,173 @@
+---
+# Virginia: deductions (Form 760 Lines 10-11; Virginia Schedule A from
+# TY2019; Va. Code 58.1-322.03(1)). Coupled itemization: the VA return must
+# use the same standard-vs-itemized election as the federal return, both
+# directions, all years.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_single
+  pease_thresh:
+    '1': pease_single
+    '2': pease_joint
+    '3': pease_mfs
+    '4': pease_hoh
+
+# Standard deduction (Form 760 Line 11; Line 12 in 2017-2018). MFS = the
+# single amount ("one-half of" the married amount); HoH files as Single in
+# VA and gets the single amount. Statutory schedule through the TY2030
+# reversion (2026 GA extension)
+std_single:
+  value:
+    '2017': 3000
+    '2019': 4500
+    '2022': 8000
+    '2024': 8500
+    '2025': 8750
+    '2027': 9200
+    '2028': 9300
+    '2030': 3000
+  reference: 'Form 760 Line 11/12 instructions, each 2017-2025 booklet; Va. Code 58.1-322.03(1) incl. 2026 c. 7 / Sp. Sess. I c. 1 schedule ($9,200 TY2027, $9,300 TY2028-29, $3,000 TY2030+)'
+std_joint:
+  value:
+    '2017': 6000
+    '2019': 9000
+    '2022': 16000
+    '2024': 17000
+    '2025': 17500
+    '2027': 18400
+    '2028': 18600
+    '2030': 6000
+  reference: 'Form 760 Line 11/12 instructions, each 2017-2025 booklet; Va. Code 58.1-322.03(1)'
+
+# Dependent filers: standard deduction limited to earned income (no floor,
+# unlike federal): style 1 with the default zero floor and zero add-on
+std_dependent_style:
+  value: 1
+  reference: 'Form 760 Line 11 "Dependent on Another''s Return" (identical text, 2017-2025 booklets); Va. Code 58.1-322.03(1) ("only with respect to earned income")'
+
+# Itemized deductions: allowed only when itemizing federally (coupled both
+# directions); state/local income taxes (incl. foreign) added back.
+# Component style: federal component amounts with property/personal-property
+# taxes uncapped (VA deconformed from the federal SALT cap for TY2019+;
+# income/sales taxes excluded via salt_addback). KNOWN-DIFFERENCES: the
+# TY2018-only federal SALT-cap flow-through (with addback proration) is not
+# reproduced (property taxes uncapped here in 2018); sales-tax electors'
+# capped-but-not-added-back treatment is not modeled; pre-TCJA misc 2%-floor
+# components use federal-law amounts
+item_allowed:
+  value: 1
+  reference: 'Form 760 Line 10 (2017-2025 booklets); Va. Code 58.1-322.03(1)(a)'
+item_coupling:
+  value: 1
+  reference: '"You must claim the same type of deductions... as you claimed on your federal return" (2017-2025 booklets, identical text; Va. Schedule A General Information 2019+)'
+salt_addback:
+  value: 1
+  reference: 'Form 760 Line 11 (2017-2018) / Va. Schedule A Line 18 (2019+): state/local (and foreign) income taxes deducted federally are added back; Va. Code 58.1-322.03(1)(a)'
+item_component_style:
+  value: 1
+  reference: 'Va. Schedule A (2019-2025): federal component definitions with VA taxes-you-paid treatment'
+item_include_medical:
+  value: 1
+  reference: 'Va. Schedule A Lines 1-4; VA retains the 10%-of-FAGI floor (deconformity; approximated with the federal deductible amount, known-difference 2017-2020 when the federal floor was 7.5%)'
+item_include_mortgage:
+  value: 1
+  reference: 'Va. Schedule A interest section (2019-2025)'
+item_include_investment:
+  value: 1
+  reference: 'Va. Schedule A interest section (2019-2025)'
+item_include_charity:
+  value: 1
+  reference: 'Va. Schedule A gifts-to-charity section (2019-2025)'
+item_include_casualty:
+  value: 1
+  reference: 'Va. Schedule A casualty section (2019-2025)'
+item_include_misc:
+  value: 1
+  reference: 'Va. Schedule A other-deductions section; federal-law amounts used (known-difference: VA allows pre-TCJA misc only insofar as federal law does post-2018 -- none)'
+item_include_other:
+  value: 1
+  reference: 'Va. Schedule A other-deductions section (2019-2025)'
+item_include_prop_tax:
+  value: 1
+  reference: 'Va. Schedule A Lines 5b-5c: real estate and personal property taxes NOT subject to the federal $10,000 limitation for TY2019+ (2019/2022/2024 Sch. A instructions)'
+item_include_pers_tax:
+  value: 1
+  reference: 'Va. Schedule A Line 5c (2019-2025)'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'State/local income taxes added back (salt_addback); sales-tax electors not modeled (known-difference)'
+
+# Virginia's own Pease-style overall limitation: federal Pease flows through
+# in 2017; none in 2018 (TCJA suspension conformed); VA deconforms from the
+# suspension for TY2019+ and applies its own limitation at VA-published
+# thresholds using FEDERAL filing status (HoH mapped separately). Thresholds
+# carried forward after 2025 (published annually; update on encoding pass)
+pease:
+  value:
+    '2017': 1
+    '2018': 0
+    '2019': 1
+  reference: '2017 booklet itemized-limitation worksheet (federal Pease); 2018: TCJA suspension conformed; 2019-2025: "Virginia deconforms from the suspension of the overall limitation" (each booklet What''s New; Va. Schedule A Limited Itemized Deduction Worksheet)'
+pease_single:
+  value:
+    '2017': 261500
+    '2019': 271700
+    '2021': 278450
+    '2022': 286600
+    '2023': 307400
+    '2024': 323650
+    '2025': 332700
+  reference: '2017 booklet (federal Rev. Proc. 2016-55); Va. Schedule A instructions 2019-2025 (2019=2020 as printed)'
+pease_joint:
+  value:
+    '2017': 313800
+    '2019': 326050
+    '2021': 334150
+    '2022': 343950
+    '2023': 368900
+    '2024': 388400
+    '2025': 399200
+  reference: '2017 booklet; Va. Schedule A instructions 2019-2025, MFJ/QW column'
+pease_mfs:
+  value:
+    '2017': 156900
+    '2019': 163025
+    '2021': 167075
+    '2022': 171975
+    '2023': 184450
+    '2024': 194200
+    '2025': 199600
+  reference: '2017 booklet; Va. Schedule A instructions 2019-2025, MFS column'
+pease_hoh:
+  value:
+    '2017': 287650
+    '2019': 298850
+    '2021': 306300
+    '2022': 315300
+    '2023': 338150
+    '2024': 356000
+    '2025': 365950
+  reference: '2017 booklet; Va. Schedule A instructions 2019-2025, HoH column (federal filing status governs the limitation)'
+
+# Child and dependent care expenses DEDUCTION (Schedule ADJ code 101): the
+# expenses on which the federal CDCTC is based, capped at $3,000 one /
+# $6,000 two-plus qualifying dependents in every year INCLUDING TY2021
+# (booklet retained the caps despite ARPA's federal $8k/$16k; booklet
+# treated as controlling). Qualifying dependents counted by age <= 12
+# (disabled dependents/spouses unobserved; known-difference)
+care_exp_ded:
+  value: 1
+  reference: 'Schedule ADJ deduction code 101 (2017-2025 booklets); Va. Code 58.1-322.03(4)'
+care_exp_ded_per_dep_cap:
+  value: 3000
+  reference: 'Code 101 instructions: "up to $3,000 for one dependent and $6,000 for two or more" (verbatim in every 2017-2025 booklet, incl. 2021)'
+care_exp_ded_dep_limit:
+  value: 2
+  reference: 'Code 101 instructions ($6,000 maximum = two qualifying dependents)'
+care_exp_ded_age_limit:
+  value: 12
+  reference: 'IRC 21 qualifying-person definition (under age 13), referenced by Va. Code 58.1-322.03(4)'

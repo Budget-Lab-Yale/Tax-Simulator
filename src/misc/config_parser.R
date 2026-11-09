@@ -34,6 +34,10 @@ RUNSCRIPT_RETIRED = c(
   'excess_growth_start_year' = GONE,
   'excess_growth_all_rev'  = GONE,
   'corp_incidence_phasein' = 'nothing (it was never read)',
+  'states'                 = paste0(ALT_HINT, 'states.yaml -> jurisdictions)'),
+  'state_weights_method'   = paste0(ALT_HINT, 'states.yaml -> weights_method)'),
+  'state_detail'           = paste0(ALT_HINT, 'states.yaml -> detail)'),
+  'state_tax_law'          = 'the tax_law column: state law lives under each tax law layer\'s state/ folder',
   'first_year'             = 'the years column ({start}:{end})',
   'last_year'              = 'the years column ({start}:{end})'
 )
@@ -273,7 +277,19 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
   output_root   = file.path(output_roots$production, 'model_data', output_branch)
   if (local == 1) {
-    output_root = file.path(output_roots$local, 'model_data', output_branch)
+
+    # The local root is per-user, so it is read from the environment rather than
+    # from this tracked config. A username committed here silently writes one
+    # user's run into another user's scratch, and the run still exits 0 -- hit
+    # 2026-09-21, where a two-branch A/B appeared to produce no output at all
+    # because the two branches carried different committed usernames.
+    local_root = Sys.getenv('TAXSIM_LOCAL_ROOT')
+    if (local_root == '') {
+      stop('parse_globals(): local = 1 but TAXSIM_LOCAL_ROOT is unset. Set it ',
+           'in ~/.Renviron, e.g.\n  TAXSIM_LOCAL_ROOT=/nfs/roberts/scratch/',
+           '<group>/<your-netid>', call. = FALSE)
+    }
+    output_root = file.path(local_root, 'model_data', output_branch)
   }
   dir.create(output_root, recursive = T, showWarnings = F)
 
@@ -336,6 +352,20 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
       stop(msg)
     }
   }
+
+  # A State-Weights vintage must have been fit on the Tax-Data vintage the
+  # scenario reads (its own dependencies.csv says which): otherwise ids mostly
+  # match, the join mostly succeeds, and the split is silently wrong
+  validate_state_weights_pins(
+    dependencies    = names(scenario_configs) %>%
+      map(.f = ~ tibble(
+        ID        = .x,
+        interface = 'Tax-Data',
+        vintage   = as.character(
+          scenario_configs[[.x]]$economy$values$interfaces$tax_data_vintage))) %>%
+      bind_rows(),
+    interface_paths = interface_paths
+  )
 
   # Write the run manifest
   write_run_manifest(
@@ -464,6 +494,12 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
         file.path(m$root, as.character(v), as.character(sid))
       })
 
+    # State weights are read only where the scenario computes state taxes, so a
+    # federal-only run neither depends on nor needs a State-Weights vintage
+    if (length(config_states(economy)) == 0) {
+      interface_paths[['State-Weights']] = NULL
+    }
+
     interface_vintages = config_interface_vintages(economy)
 
     config_check_staleness(
@@ -491,6 +527,8 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
                      interface_paths = interface_paths)
   }
 
+  validate_scenario_states(out)
+
   out
 }
 
@@ -513,14 +551,15 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
   # The input versions and vintages, in runscript order
   names(scenario_configs) %>%
     map(.f = function(id) {
-      eco = scenario_configs[[id]]$economy
+      eco  = scenario_configs[[id]]$economy
+      meta = interface_meta[names(scenario_configs[[id]]$interface_paths)]
       tibble(
         ID        = id,
-        interface = names(interface_meta),
-        version   = map_chr(interface_meta, .f = ~ as.character(.x$version)),
-        vintage   = map_chr(interface_meta,
+        interface = names(meta),
+        version   = map_chr(meta, .f = ~ as.character(.x$version)),
+        vintage   = map_chr(meta,
                             .f = ~ as.character(eco$values$interfaces[[paste0(.x$key, '_vintage')]])),
-        scenario  = map_chr(interface_meta,
+        scenario  = map_chr(meta,
                             .f = ~ as.character(eco$values$interfaces[[paste0(.x$key, '_id')]]))
       )
     }) %>%
@@ -659,6 +698,14 @@ get_scenario_info = function(id, g = globals) {
     mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
 
+  # State income taxes: the jurisdictions to compute, empty for a federal-only
+  # run, and how they are weighted and reported. State law follows the tax_law
+  # cell; see state_tax_law_overlay()
+  states = config_states(config$economy)
+  if (length(states) == 0) states = NULL
+  state_weights_method = as.character(config$economy$values$states$weights_method)
+  state_detail         = as.integer(config$economy$values$states$detail)
+
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
@@ -670,5 +717,121 @@ get_scenario_info = function(id, g = globals) {
               mtr_vars                 = mtr_vars,
               mtr_types                = mtr_types,
               resolved_economy         = config$economy,
-              resolved_behavior        = config$behavior))
+              resolved_behavior        = config$behavior,
+              states                   = states,
+              state_weights_method     = state_weights_method,
+              state_detail             = state_detail))
+}
+
+
+
+config_states = function(resolved_economy) {
+
+  #----------------------------------------------------------------------------
+  # Returns the jurisdictions a scenario computes state taxes for, from its
+  # economy leg's states channel.
+  #
+  # Parameters:
+  #   - resolved_economy (list) : a resolved economy leg; see config_resolve()
+  #
+  # Returns: uppercase vector of state codes, empty for a federal-only run
+  #          (str[]).
+  #----------------------------------------------------------------------------
+
+  x = resolved_economy$values$states$jurisdictions
+  if (is.null(x) || is.na(x) || tolower(str_trim(as.character(x))) == 'none') {
+    return(character(0))
+  }
+  parse_states_value(x)
+}
+
+
+
+parse_states_value = function(x) {
+
+  #----------------------------------------------------------------------------
+  # Parses a jurisdictions value: 'all' expands to enabled jurisdictions in the
+  # state registry; otherwise a space-delimited list of 2-letter postal codes.
+  #
+  # Parameters:
+  #   - x (str) : raw value
+  #
+  # Returns: uppercase vector of state codes (str[]).
+  #----------------------------------------------------------------------------
+
+  x = str_trim(as.character(x))
+  if (tolower(x) == 'all') {
+    return(get_enabled_state_jurisdictions())
+  }
+  return(toupper(str_split_1(x, ' ')))
+}
+
+
+
+get_enabled_state_jurisdictions = function() {
+
+  #----------------------------------------------------------------------------
+  # Lists the jurisdictions the state registry marks enabled (str[]).
+  #----------------------------------------------------------------------------
+
+  registry_path = file.path(state_tax_law_root(), 'jurisdictions.yaml')
+  if (!file.exists(registry_path)) {
+    stop('Missing state-tax jurisdiction registry: ', registry_path)
+  }
+
+  registry = read_yaml(registry_path)
+  enabled = names(registry)[map_lgl(registry, ~ isTRUE(.x$enabled))]
+  return(toupper(enabled))
+}
+
+
+
+validate_scenario_states = function(scenario_configs) {
+
+  #----------------------------------------------------------------------------
+  # Checks the state settings across scenarios. If a counterfactual computes
+  # state taxes, the baseline must compute them for at least the same
+  # jurisdictions, since state deltas need baseline state liability. Every
+  # scenario computing state taxes must read the baseline's State-Weights
+  # vintage: weights are a baseline product, and a counterfactual carrying
+  # different ones would score movement between states as policy.
+  #
+  # Parameters:
+  #   - scenario_configs (list) : resolved configurations by scenario ID; see
+  #                               resolve_all_scenarios()
+  #
+  # Returns: TRUE invisibly; stops on violation.
+  #----------------------------------------------------------------------------
+
+  bl = scenario_configs[['baseline']]
+  if (is.null(bl)) {
+    return(invisible(TRUE))
+  }
+  bl_states = config_states(bl$economy)
+  bl_pin    = bl$economy$values$interfaces[c('state_weights_vintage',
+                                             'state_weights_id')]
+
+  for (id in setdiff(names(scenario_configs), 'baseline')) {
+    eco       = scenario_configs[[id]]$economy
+    cf_states = config_states(eco)
+    if (length(cf_states) == 0) next
+    if (length(bl_states) == 0) {
+      stop("Scenario '", id, "' computes state taxes but the baseline does ",
+           'not; baseline state results are required for state deltas')
+    }
+    if (!all(cf_states %in% bl_states)) {
+      stop("Scenario '", id, "' computes state taxes for (",
+           paste(setdiff(cf_states, bl_states), collapse = ' '),
+           ') which the baseline does not')
+    }
+    cf_pin = eco$values$interfaces[c('state_weights_vintage', 'state_weights_id')]
+    if (!identical(map(cf_pin, as.character), map(bl_pin, as.character))) {
+      stop("Scenario '", id, "' reads State-Weights ",
+           paste(unlist(cf_pin), collapse = '/'), ' but the baseline reads ',
+           paste(unlist(bl_pin), collapse = '/'),
+           '; state weights are frozen across scenarios')
+    }
+  }
+  invisible(TRUE)
+}
 }

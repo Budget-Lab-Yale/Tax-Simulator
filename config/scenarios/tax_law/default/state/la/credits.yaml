@@ -1,0 +1,99 @@
+---
+# Louisiana credits (IT-540 Schedules F and J; La. R.S. 47:297.4, 297.8).
+#
+# The earned income credit is simple: a percentage of the federal credit,
+# fully refundable, with one step.
+#
+# The child care credit is not. It is TWO credits sharing a name, split at
+# $25,000 of federal AGI. At or below that line Louisiana computes the credit
+# from its own worksheet -- expenses capped at $3,000 or $6,000, limited to
+# the lesser spouse's earned income, times a sliding decimal, then HALVED --
+# and refunds it, claimable even by a filer who claimed no federal credit.
+# Above the line it is a percentage of the FEDERAL credit and nonrefundable,
+# with a $25 backstop above $60,000. Both branches are encoded, with the
+# switch and the income-conditional refundability carried as parameters.
+
+eitc_match:
+  value:
+    '2017': 0.035
+    '2019': 0.05
+    '2031': 0.035
+  reference: 'R.S. 47:297.8. 3.5% for TY2017 and TY2018; raised to 5% by Act 6 of the 2018 Second Extraordinary Session for years beginning on or after January 1, 2019. Act 453 of the 2021 Regular Session extended the 5% window to December 31, 2030, after which the statute reverts to the 3.5% baseline -- enacted law, encoded as such'
+eitc_refundable:
+  value: 1
+  reference: 'R.S. 47:297.8 makes the credit refundable in every year'
+
+cdctc_style:
+  value: 2
+  reference: 'At or below the $25,000 line the credit is computed from Louisiana''s own Refundable Child Care Credit Worksheet rather than as a share of the federal credit, so the expense-and-rate style applies'
+cdctc_style_switch_agi:
+  value: 25000
+  reference: 'R.S. 47:297.4: above $25,000 of federal AGI the credit becomes a percentage of the federal child care credit (federal Schedule 3 line 2) instead'
+cdctc_refundable:
+  value: 1
+  reference: 'The at-or-below-$25,000 branch is refundable and claimable even with no federal credit claimed, provided the IRC section 21 tests are met'
+cdctc_ref_agi_limit:
+  value: 25000
+  reference: 'Refundability stops at the same line: above $25,000 the credit is nonrefundable, with a five-year carryforward on Schedule J lines 2-3'
+cdctc_expense_caps:
+  value: [3000.0, 6000.0, 6000.0, 6000.0, 6000.0]
+  reference: 'Worksheet line 3: qualified expenses capped at $3,000 for one qualifying person and $6,000 for two or more'
+cdctc_expense_ei_limit:
+  value: 1
+  reference: 'Worksheet lines 4-6 take the least of expenses, taxpayer earned income and spouse earned income -- the federal 2441 rule'
+cdctc_rate_max:
+  value:
+    '2017': 0.175
+    '2021': 0.25
+    '2022': 0.175
+  reference: 'Worksheet line 8 decimal times the line 11 multiplier of 0.50, which is what makes the Louisiana credit HALF the computed amount. The top decimal is .35, so the effective top rate is .175. FOR TY2021 ONLY the whole decimal table collapses to a single row, $0 to $25,000 at .50, tracking the one-year ARPA expansion of the federal credit -- effective rate .25. An encoder who hard-codes the sliding scale understates the TY2021 credit'
+cdctc_rate_floor:
+  value:
+    '2017': 0.15
+    '2021': 0.25
+    '2022': 0.15
+  reference: 'The bottom of the decimal table is .30 at $23,000-$25,000, halved to .15. In TY2021 the flat .50 table means floor and maximum coincide'
+cdctc_rate_po_start:
+  value: 15000
+  reference: 'Worksheet line 8 table: the decimal holds at .35 through $15,000 and steps down above it'
+cdctc_rate_po_step:
+  value: 2000
+  reference: 'The table steps every $2,000 of federal AGI above $15,000 -- $15,000-17,000, $17,000-19,000, $19,000-21,000, $21,000-23,000, $23,000-25,000'
+cdctc_rate_po_per_1k:
+  value:
+    '2017': 0.005
+    '2021': 0.0
+    '2022': 0.005
+  reference: 'One percentage point of the decimal per step, halved by the 0.50 multiplier. Set to zero for TY2021, when the table is flat'
+cdctc_share_agi_bounds:
+  value: [0.0, 25001.0, 35001.0, 60001.0, 60001.0, 60001.0]
+  reference: 'R.S. 47:297.4 nonrefundable tiers, stated as "over $25,000 but not over $35,000" and so on. The anchors are set one dollar above each published boundary so that the boundary VALUES themselves -- $35,000 and $60,000, which do occur in the data -- land in the band the statute puts them in. Louisiana has three tiers where the family carries six slots, so the top bound is repeated to pad the width, the KY/IL convention: the repeated bands have zero width and never match, leaving the last slot to hold the open-ended top tier'
+cdctc_share_start:
+  value: [0.0, 0.30, 0.10, 0.10, 0.10, 0.10]
+  reference: 'Same tiers: 30% of the federal credit from $25,001 to $35,000, 10% from $35,001 to $60,000, and 10% above $60,000 subject to the cap below. Zero in the bottom band because the worksheet branch governs there, and the padded slots repeat the top share'
+cdctc_share_end:
+  value: [0.0, 0.30, 0.10, 0.10, 0.10, 0.10]
+  reference: 'The tiers are steps, not ramps, so each band''s share is constant -- start and end coincide'
+cdctc_cap_thresh:
+  value: 60000
+  reference: 'R.S. 47:297.4: over $60,000 of federal AGI the credit is limited to the lesser of $25 or 10% of the federal credit'
+cdctc_cap_amount:
+  value: 25.0
+  reference: 'The $25 backstop. In practice it always binds: 10% of the federal credit for a filer above $60,000 of AGI is at least $60 for one child'
+cdctc_cap_per_return:
+  value: 1
+  reference: 'The $25 is per RETURN however many children there are, unlike the per-qualifying-person cap the same machinery carries for Minnesota'
+
+documented_not_modeled:
+  school_readiness_credit:
+    reference: 'R.S. 47:6104 multiplies the child care credit by a Quality Start star rating for a qualified dependant under six who attended the facility -- 2.0 at five stars, 1.5 at four, 1.0 at three, 0.5 at two and nothing at one. Unchanged in all years 2017-2025. The star rating of a household''s childcare provider is not a model input [understates the credit for families using three-star-and-above facilities, and can double it at five stars]'
+  child_care_credit_qualifying_rules:
+    reference: 'The credit requires a dependant under 13, care to enable work, and a provider who is not the spouse, the child''s parent or a dependant. Married filing separately qualifies only if the spouses lived apart for the last six months, the child lived in the home more than half the year and the taxpayer paid more than half the cost of keeping up the home. The model applies the age test and the earned-income limit and cannot see the rest'
+  nonrefundable_carryforward:
+    reference: 'The above-$25,000 branch carries forward five years on Schedule J. The model is a cross-section and grants no carryforward'
+  la_citizens_property_insurance_credit:
+    reference: 'A refundable credit for 25% of the Louisiana Citizens Property Insurance assessment paid, available for TY2017-TY2019 only. Insurance assessments are not a model input'
+  credit_for_certain_federal_tax_credits:
+    reference: 'Schedule C line 4, sunset December 31, 2019, and the alternative to the foreign-tax-credit add-back recorded in ded.yaml'
+  acts_2025_no_473:
+    reference: 'An "Acts 2025, No. 473, eff. Jan 1 2026" amendment appears in the current text of R.S. 47:293. The 2025 session was not surveyed, so any credit or base change it makes is unencoded'

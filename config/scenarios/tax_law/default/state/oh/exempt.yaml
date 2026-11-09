@@ -1,0 +1,33 @@
+---
+# Ohio personal/dependent exemptions (ORC 5747.025): one amount per
+# exemption (taxpayer, spouse, each dependent), tiered by Ohio AGI
+# (2017-18) then modified AGI (2019+, HB 166: OAGI + business income
+# deduction, 5747.01(JJ); enum 7). Encoded via the tier_bounds/
+# tier_amounts family; income above the top bound gets zero, which
+# implements the HB 96 high-income denial (2025: MAGI >= $750,000;
+# 2026: > $500,000, boundary semantics TBD pending 2026 forms).
+# Indexation (GDP deflator, round UP to $50, from 2020): applied only in
+# 2020; suspended 2019 (HB 166), 2021-22 (HB 110), 2023-24 (HB 33),
+# 2025-26 (HB 96). 2027+ carries 2026 forward (projection). Dependent
+# filers get a zero exemption (5747.025(B)).
+
+tier_bounds:
+  value:
+    '2017': [40000.0, 80000.0, 999999999999.0]
+    '2025': [40000.0, 80000.0, 749999.0]
+    '2026': [40000.0, 80000.0, 500000.0]
+  reference: 'ORC 5747.025(A); IT 1040 booklet exemption charts 2017-2025 ("$40,000 or less" / "$40,001-$80,000" / above); 2025 chart adds "$750,000 or greater -> $0" (HB 96); 2026 cap $500,000 (LSC HB 96 p.457)'
+tier_amounts:
+  value:
+    '2017': [2300, 2050, 1800]
+    '2018': [2350, 2100, 1850]
+    '2020': [2400, 2150, 1900]
+  reference: 'IT 1040 booklet exemption charts: 2017 $2,300/$2,050/$1,800; 2018-19 $2,350/$2,100/$1,850; 2020-2025 $2,400/$2,150/$1,900 (single 2020 indexation, ORC 5747.025(B) round up to $50)'
+tier_income_base:
+  value:
+    '2017': 2
+    '2019': 7
+  reference: 'OAGI (IT 1040 line 3) through 2018; modified AGI (OAGI + BID, ORC 5747.01(JJ), HB 166) from 2019'
+dep_filer_zero:
+  value: 1
+  reference: 'ORC 5747.025(B): a person claimable as a dependent by another taxpayer receives a zero exemption'

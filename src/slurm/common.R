@@ -34,7 +34,7 @@ reconstitute_environment = function(staging_dir) {
   # defining do_{family}). Keep this predicate in lockstep with main.R and
   # setup.R.
   return_vars <<- list()
-  list.files('./src', recursive = T) %>%
+  list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
     walk(.f = ~ {
       if (.x != 'main.R' && !startsWith(.x, 'slurm/') &&
           !startsWith(.x, 'tests/') && !startsWith(.x, 'behavior/')) {

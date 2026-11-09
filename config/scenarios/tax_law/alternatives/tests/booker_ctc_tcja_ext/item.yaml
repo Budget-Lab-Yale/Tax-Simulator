@@ -29,6 +29,11 @@ filing_status_mapper:
     '2': salt_floor_thresh
     '3': salt_floor_thresh / 2
     '4': salt_floor_thresh
+  salt_po_rate:
+    '1': salt_po_rate
+    '2': salt_po_rate
+    '3': salt_po_rate / 2
+    '4': salt_po_rate
   mort_bal_limit:
     '1': mort_bal_limit_single
     '2': mort_bal_limit_married

@@ -1,0 +1,18 @@
+---
+# South Carolina: filing requirement (SC IIT Packet "Do I need to file";
+# tied to the federal filing requirement, with SC withholding as an independent
+# trigger). Residents under 65 must file if required to file a federal return
+# that included SC-taxable income (or had SC withholding); 65+ use a higher
+# gross-income threshold (federal threshold + $15,000, or +$30,000 MFJ both 65+).
+# Modeled with the federal-filer trigger; the 65+ elevated threshold is a
+# documented known-difference.
+
+req_type:
+  value: 3
+  reference: 'SC IIT Packet "Do I need to file a South Carolina Individual Income Tax return?"'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for SC (federal-filer trigger)'
+req_if_fed_filer:
+  value: 1
+  reference: 'SC IIT Packet (required to file a federal return that included SC-taxable income)'

@@ -1,0 +1,10 @@
+---
+# Alaska: no broad individual income tax.
+
+std_amount:
+  value: 0
+  reference: 'No broad individual income tax; Alaska Department of Revenue Tax Division tax programs; https://tax.alaska.gov'
+
+item_allowed:
+  value: 0
+  reference: 'No broad individual income tax; Alaska Department of Revenue Tax Division tax programs; https://tax.alaska.gov'

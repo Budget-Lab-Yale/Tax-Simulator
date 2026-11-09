@@ -1,0 +1,34 @@
+---
+# Mississippi filing requirement (Form 80-100 booklet, "Who Must File").
+#
+# The threshold is the filing-status exemption plus the standard deduction,
+# plus $1,500 per dependent -- so it moves only with the dependent count, and
+# nothing here is indexed.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_single
+    '4': req_head
+
+req_type:
+  value: 2
+  reference: 'Booklet "Who Must File": fixed gross-income thresholds by filing status'
+req_single:
+  value: 8300
+  reference: 'Booklet: single filers must file above $8,300 plus $1,500 per dependent -- exactly the $6,000 exemption plus the $2,300 standard deduction. Unchanged TY2017-TY2025'
+req_joint:
+  value: 16600
+  reference: 'Booklet: married filers must file above $16,600 plus $1,500 per dependent -- the $12,000 exemption plus the $4,600 standard deduction. Unchanged TY2017-TY2025'
+req_head:
+  value: 11400
+  reference: 'The head-of-family threshold is NOT STATED in any booklet -- see documented_not_modeled.head_of_family_threshold. The $11,400 encoded here is the arithmetic analogue ($8,000 exemption plus $3,400 standard deduction), consistent with how the single and married thresholds are constructed, and is flagged as UNVERIFIED rather than transcribed'
+
+documented_not_modeled:
+  head_of_family_threshold:
+    reference: 'UNVERIFIED. No head-of-family filing threshold is printed in any of the nine booklets. Single ($8,300) and married ($16,600) are stated and both equal exemption plus standard deduction, so the head-of-family analogue is $11,400 -- but that is arithmetic, not a transcription, and the research deliberately declined to assert it. The threshold governs only the filer flag, and any unit with positive liability is flagged regardless, so nothing material turns on it. Replace with the printed figure if one is ever found'
+  per_dependent_addition:
+    reference: 'Every threshold rises by $1,500 per dependent, matching the dependent exemption. Not carried here, for the same reason as above'
+  filing_statuses:
+    reference: 'Mississippi has five statuses, separating "married filing joint or combined" from "married - spouse died in tax year" and from "married filing separate returns". Joint and combined share one box and the same amounts, but COMBINED runs two parallel columns and the Schedule of Tax Computation takes each column slice -- so a two-earner couple gets TWO zero-brackets, sheltering $20,000 of taxable income at TY2025 rates where a one-earner couple shelters $10,000. That flips off if either column is negative, in which case the columns are netted and a single column is used. Not modeled: the model treats a joint couple as one column [overstates Mississippi tax for two-earner couples -- the largest structural Mississippi known difference, and it needs the same per-spouse machinery as Arkansas status 4]'

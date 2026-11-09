@@ -1,0 +1,27 @@
+---
+# Georgia rate schedule.  The 2024 and 2025 flat rates supersede the earlier
+# six-bracket schedule; future years carry the last verified published rate.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_mfs
+    '4': brackets_joint
+
+rates:
+  value:
+    '2017': [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.06, 0.06, 0.06, 0.06]
+    '2019': [0.01, 0.02, 0.03, 0.04, 0.05, 0.0575, 0.0575, 0.0575, 0.0575, 0.0575]
+    '2024': [0.0539, 0.0539, 0.0539, 0.0539, 0.0539, 0.0539, 0.0539, 0.0539, 0.0539, 0.0539]
+    '2025': [0.0519, 0.0519, 0.0519, 0.0519, 0.0519, 0.0519, 0.0519, 0.0519, 0.0519, 0.0519]
+  reference: 'Georgia Form 500 tax-rate tables, 2017-2025; O.C.G.A. 48-7-20'
+brackets_single:
+  value: [0, 750, 2250, 3750, 5250, 7000, 7000, 7000, 7000, 7000]
+  reference: 'Georgia Form 500 tax-rate table, 2017-2023 (single)'
+brackets_joint:
+  value: [0, 1000, 3000, 5000, 7000, 10000, 10000, 10000, 10000, 10000]
+  reference: 'Georgia Form 500 tax-rate table, 2017-2023 (joint and Head of Household)'
+brackets_mfs:
+  value: [0, 500, 1500, 2500, 3500, 5000, 5000, 5000, 5000, 5000]
+  reference: 'Georgia Form 500 tax-rate table, 2017-2023 (married filing separately)'

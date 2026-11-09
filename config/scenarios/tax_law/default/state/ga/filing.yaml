@@ -1,0 +1,10 @@
+---
+req_type:
+  value: 3
+  reference: 'Georgia Form 500 instructions, Who Must File, 2017-2025'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for federal-filer-or-liability filing rule'
+req_if_fed_filer:
+  value: 1
+  reference: 'Georgia Form 500 instructions, Who Must File, 2017-2025'

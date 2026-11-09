@@ -3,3 +3,7 @@
 # Whether credit is refundable
 refundable:
   value: 0
+
+# Whether credit is repealed. 2017 law has no end date for the credit.
+repeal:
+  value: 0

@@ -1,0 +1,41 @@
+---
+# District of Columbia rate schedule (D.C. Code 47-1806.03; D-40 Calculation I).
+#
+# ONE graduated schedule for EVERY filing status. 47-1806.03(e) makes each
+# spouse filing separately "a single person", so there is no married column at
+# all -- which is what makes the married-filing-separately-on-the-SAME-return
+# status (Calculation J, see ded.yaml combined_sep) so valuable in DC.
+#
+# Two regimes, and only the TOP END was restructured -- the four lowest bands
+# are identical across both:
+#   2017-2021, 47-1806.03(a)(10): 4 / 6 / 6.5 / 8.5 / 8.75 / 8.95%
+#   2022-2025, (a)(11) per D.C. Law 24-45 s. 7222: adds a seventh band and
+#     moves the top three, 4 / 6 / 6.5 / 8.5 / 9.25 / 9.75 / 10.75%
+#
+# The published base amounts (400 / 2,200 / 3,500 / 28,150 / 85,025 and
+# 400 / 2,200 / 3,500 / 19,650 / 42,775 / 91,525) reproduce exactly from these
+# marginal rates, so no base_amounts family is needed -- DC has no cliffs.
+#
+# Seven-element uniform schedules; the six-band 2017-2021 regime repeats its
+# top bound so the top rate still runs to infinity.
+
+rates:
+  value:
+    '2017': [0.04, 0.06, 0.065, 0.085, 0.0875, 0.0895, 0.0895]
+    '2022': [0.04, 0.06, 0.065, 0.085, 0.0925, 0.0975, 0.1075]
+  reference: 'D.C. Code 47-1806.03(a)(10) for tax years beginning after December 31, 2015, and (a)(11) as enacted by D.C. Law 24-45 s. 7222 for tax years beginning after December 31, 2021; D-40 booklet Calculation I, all nine years 2017-2025'
+brackets:
+  value:
+    '2017': [0, 10000, 40000, 60000, 350000, 1000000, 1000000]
+    '2022': [0, 10000, 40000, 60000, 250000, 500000, 1000000]
+  reference: 'D.C. Code 47-1806.03(a)(10)/(a)(11); D-40 Calculation I. Not indexed -- the thresholds are fixed in statute and moved only by the 2022 restructure'
+
+# Married filing separately ON THE SAME RETURN (Schedule S Calculation J).
+# Because DC runs one graduated schedule for everyone, splitting a couple's
+# income across two columns is genuinely valuable, and the election is common.
+combined_sep:
+  value: 1
+  reference: 'D-40 Schedule S Calculation J "Married/registered domestic partners filing separately on the same return"; D.C. Code 47-1806.03(e) makes each separate filer a single person'
+combined_sep_std_share:
+  value: 0.5
+  reference: 'Calculation J lets a couple allocate the joint standard deduction "as you wish"; we split it evenly. The TOTAL is exact, the split is not optimised'

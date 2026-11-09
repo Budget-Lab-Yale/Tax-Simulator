@@ -1,0 +1,66 @@
+---
+# Montana exemptions (Form 2; MCA 15-30-2114).
+#
+# Through TY2023 Montana granted a flat indexed amount per EXEMPTION, and
+# the exemption count is a straightforward tally: yourself, your spouse on a
+# joint return, each dependant, one more for each of you who is 65 or older,
+# and one more for each of you who is blind. Every exemption is worth the
+# same dollar amount, which is why the aged and blind add-ons below repeat
+# the personal amount.
+#
+# From TY2024 the exemption is gone -- Form 2 (2024) page 1 has no exemption
+# line, because the federal standard deduction already embeds the TCJA
+# repeal. What replaces it is much narrower: a subtraction for taxpayers 65
+# and older only. It sits below the deduction on the form, so it is encoded
+# here rather than as an AGI subtraction, and it lands on exactly the
+# per-person basis the aged add-on already provides.
+
+personal_amount:
+  value:
+    '2017': 2400
+    '2018': 2440
+    '2019': 2510
+    '2020': 2560
+    '2021': 2580
+    '2022': 2710
+    '2023': 2960
+    '2024': 0
+  reference: 'Form 2 line 16 (line 12 in the 2018 layout, line 13 in 2019): "Exemptions. Multiply $2,960 by your total number of exemptions" (TY2023). Amounts from the rate sheets 2017-2021 p.1 and the Form 2 exemption line for 2022-2023. Repealed from TY2024 -- the TY2024 form runs federal AGI to federal deduction to additions to subtractions to the 65+ subtraction to taxable income, with no exemption line at all'
+dep_amount:
+  value:
+    '2017': 2400
+    '2018': 2440
+    '2019': 2510
+    '2020': 2560
+    '2021': 2580
+    '2022': 2710
+    '2023': 2960
+    '2024': 0
+  reference: 'inst_2023 p.9: each dependant counts as one exemption, worth the same amount as the taxpayer''s own'
+aged_addl:
+  value:
+    '2017': 2400
+    '2018': 2440
+    '2019': 2510
+    '2020': 2560
+    '2021': 2580
+    '2022': 2710
+    '2023': 2960
+    '2024': 5500
+    '2025': 5660
+  reference: 'Through TY2023 this is one additional EXEMPTION for each of taxpayer and spouse aged 65 or older (inst_2023 p.9), worth the standard exemption amount. From TY2024 it becomes the SB 399 subtraction, MCA 15-30-2120(3)(g): "Taxpayers aged 65 and over receive a $5,500 subtraction from federal taxable income. If filing jointly and both spouses are 65 and over, the subtraction is equal to $11,000" (inst_2024 p.i) -- exactly per 65-plus person, indexed from TY2025 to $5,660 (form2_2025 p.1 line 6). Note there is no intermediate amount for a joint couple with one spouse 65+: they get $5,500'
+blind_addl:
+  value:
+    '2017': 2400
+    '2018': 2440
+    '2019': 2510
+    '2020': 2560
+    '2021': 2580
+    '2022': 2710
+    '2023': 2960
+    '2024': 0
+  reference: 'One additional exemption for each of taxpayer and spouse who is blind (inst_2023 p.9). No blindness relief survives SB 399 -- the age-65 subtraction is the only demographic adjustment left from TY2024'
+
+documented_not_modeled:
+  disabled_child_double_exemption:
+    reference: 'inst_2023 p.9 grants TWO exemptions for each dependant who is a disabled child. Disability status is not a model input [understates the exemption for those units through TY2023]'

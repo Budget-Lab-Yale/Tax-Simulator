@@ -36,9 +36,8 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'div_ord',       # (dbl) non-qualified dividend income
     'div_pref',      # (dbl) qualified dividend income
     'txbl_kg',       # (dbl) net capital gain included in AGI
-    'sch_e',         # (dbl) Schedule E net income
-    'part_scorp',    # (dbl) net partnership and S corporation income
-    'r.eitc_precert',# (dbl) random number for EITC pre-certification check
+    'net_rent',      # (dbl) net rental and royalty income
+    'net_estate',    # (dbl) net estate and trust income
 
     # Tax law attributes
     'eitc.pi_rate_0',     # (dbl) credit phase-in rate for filers with no qualifying children
@@ -63,6 +62,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'eitc.ei_prior_yr',   # (int) whether prior year earned income can be elected
     'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns
     'eitc.parent_precert', # (int) whether parents are required to pre-certify their eligibility
+    'r.eitc_precert', # (dbl) random number for the pre-certification check
     'ei_prior_yr'          # (dbl) prior year earned income (aggregate)
   )
   
@@ -72,26 +72,36 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
       
-      # Determine qualifying earned income based on age
+      # Determine qualifying earned income based on age. Without a qualifying
+      # child, a joint return qualifies if either spouse meets the age test, and
+      # the credit is then based on the couple's combined earned income (IRC
+      # 32(c)(1)(A)(ii) and 32(c)(2))
       qual1 = (n_dep_eitc > 0) | (age1 >= eitc.min_age & age1 <= eitc.max_age),
       qual2 = if_else(
         !is.na(age2),
         (n_dep_eitc > 0) | (age2 >= eitc.min_age & age2 <= eitc.max_age),
         F
       ),
-      ei = (ei1 * qual1) + if_else(filing_status == 2, ei2 * qual2, 0),
+      ei = (ei1 + if_else(filing_status == 2, ei2, 0)) * (qual1 | (filing_status == 2 & qual2)),
 
       # Potentially deny eligibility based on dependent and filing status
       ei = ei * (!dep_status & (eitc.mfs_eligible == 1 | filing_status != 3)),
       
-      # Potentially deny eligibility based on investment income
+      # Potentially deny eligibility based on investment income. Net rental,
+      # royalty, estate and trust income count; partnership and S corporation
+      # income is left out of the test.
       inv_inc = txbl_int + 
                 exempt_int + 
                 div_ord + 
                 div_pref + 
                 pmax(0, txbl_kg) + 
-                pmax(0, (sch_e - part_scorp)),
+                pmax(0, (net_rent + net_estate)),
       ei = ei * (inv_inc <= eitc.inv_inc_limit),
+      
+      # Record eligibility apart from earned income, for the prior-year election
+      eligible = (qual1 | (filing_status == 2 & qual2)) &
+                 !dep_status & (eitc.mfs_eligible == 1 | filing_status != 3) &
+                 (inv_inc <= eitc.inv_inc_limit),
             
       # Assign credit parameters based on number of children
       pi_rate = case_when(
@@ -122,15 +132,18 @@ calc_eitc = function(tax_unit, fill_missings = F) {
         T               ~ eitc.po_thresh_3
       ),
       
-      # Calculate credit value with current-year EI
-      max_eitc = pmin(ei, pi_end) * pi_rate,
-      eitc     = pmax(0, max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate),
+      # Calculate credit value with current-year EI: the smaller of the phase-in
+      # amount and the maximum credit less the phase-out amount (IRC 32(a)(2))
+      max_eitc = pi_end * pi_rate,
+      eitc     = pmax(0, pmin(pmin(ei, pi_end) * pi_rate,
+                              max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate)),
 
       # Prior-year EI election: if enabled, compute EITC using prior-year EI
-      # and take the larger of the two
-      ei_prior = ei_prior_yr * (ei > 0),
-      max_eitc_prior = pmin(ei_prior, pi_end) * pi_rate,
-      eitc_prior     = pmax(0, max_eitc_prior - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate),
+      # and take the larger of the two. An eligible filer may elect it with no
+      # current-year earned income, as under the 2021 election (ARPA sec. 9626)
+      ei_prior = ei_prior_yr * eligible,
+      eitc_prior     = pmax(0, pmin(pmin(ei_prior, pi_end) * pi_rate,
+                                    max_eitc - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate)),
       eitc           = if_else(eitc.ei_prior_yr == 1, pmax(eitc, eitc_prior), eitc),
       
       # Adjust for pre-certification changes. r.eitc_precert is an id-keyed

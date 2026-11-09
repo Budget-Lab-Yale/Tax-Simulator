@@ -1,0 +1,15 @@
+---
+# Wisconsin: filing requirement (gross income thresholds near the sliding
+# standard deduction); the federal-requirement prong is the modeled gate.
+
+req_type:
+  value: 3
+  reference: 'Form 1 booklet Who Must File; thresholds approximate the standard deduction'
+
+req_income_thresh:
+  value: 0
+  reference: 'n/a'
+
+req_if_fed_filer:
+  value: 1
+  reference: 'Federal-filer gate used'

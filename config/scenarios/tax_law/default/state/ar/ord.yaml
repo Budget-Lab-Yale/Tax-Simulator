@@ -1,0 +1,84 @@
+---
+# Arkansas rate schedule (Form AR1000F lines 28-30).
+#
+# The taxpayer booklet prints a dense $100-step Regular Income Tax Table, not
+# a schedule. DFA separately publishes a one-page memo, "<year> Indexed Tax
+# Brackets", giving the closed form the table is built from, as
+# `rate x income - minus adjustment`. That memo is the authoritative
+# machine-readable form and is what is encoded here, converted to the
+# base-amount shape the calculator uses: base_j = rate_j x bracket_j - adj_j
+# makes base_j + rate_j x (TI - bracket_j) identically equal to
+# rate_j x TI - adj_j. Every band was converted programmatically from the
+# transcribed memo rather than by hand, and eight published points across
+# four years were checked back against the minus-adjustment form exactly.
+#
+# TWO FEATURES THE BASE-AMOUNT SHAPE EXISTS FOR:
+#
+# (1) A genuine NOTCH at the top of the fourth bracket through TY2021. The
+# statute runs three separate whole-income tables selected by income level,
+# so crossing the boundary re-taxes the whole income on a higher table: in
+# TY2020 net taxable income of $22,899 owes $537 and $22,900 owes $717.29.
+# A smooth marginal schedule cannot express that and would understate tax by
+# about $180 just above the boundary. Act 1 of 2022 merged the rows and
+# ended it.
+#
+# (2) A RECAPTURE TAIL at the top, which claws back the benefit of the lower
+# brackets. Through TY2021 it is a handful of ~$1,000-wide rows whose minus
+# adjustment drops $100 at each boundary -- encoded band for band, cliffs
+# intact. From TY2022 it becomes granular: $100-wide rows dropping $10 each,
+# roughly 30 to 60 of them. Those are encoded as ONE ramp band whose rate is
+# the average slope over the range, which reproduces both endpoints exactly
+# and sits within $10 of the staircase in between; above the tail the final
+# published adjustment is encoded exactly. See documented_not_modeled.
+#
+# The schedule applies to NET TAXABLE INCOME (AR1000F line 28 = Arkansas AGI
+# less the standard or itemized deduction). Arkansas grants personal CREDITS
+# rather than exemptions, so nothing else comes out of the base.
+
+brackets:
+  value:
+    '2017': [0.0, 4400.0, 8700.0, 13100.0, 21700.0, 36300.0, 77401.0, 78401.0, 79401.0, 80601.0, 81601.0, 82601.0]
+    '2018': [0.0, 4500.0, 8900.0, 13400.0, 22200.0, 37200.0, 79301.0, 80301.0, 81301.0, 82501.0, 83601.0, 84601.0]
+    '2019': [0.0, 4600.0, 9100.0, 13700.0, 22600.0, 37900.0, 80801.0, 81801.0, 82801.0, 84101.0, 85201.0, 86201.0]
+    '2020': [0.0, 4700.0, 9200.0, 13900.0, 22900.0, 38500.0, 82001.0, 83001.0, 84001.0, 85301.0, 86401.0, 87501.0]
+    '2021': [0.0, 4800.0, 9500.0, 14300.0, 23600.0, 39700.0, 84501.0, 85501.0, 86501.0, 87901.0, 89001.0, 90101.0]
+    '2022': [0.0, 5100.0, 10300.0, 14700.0, 24300.0, 87000.0, 91800.0, 91800.0, 91800.0, 91800.0, 91800.0, 91800.0]
+    '2023': [0.0, 5300.0, 10600.0, 15100.0, 25000.0, 89600.0, 94200.0, 94200.0, 94200.0, 94200.0, 94200.0, 94200.0]
+    '2024': [0.0, 5500.0, 10900.0, 15600.0, 25700.0, 92300.0, 95500.0, 95500.0, 95500.0, 95500.0, 95500.0, 95500.0]
+    '2025': [0.0, 5600.0, 11200.0, 16000.0, 26400.0, 94700.0, 97800.0, 97800.0, 97800.0, 97800.0, 97800.0, 97800.0]
+  reference: 'DFA one-page memo "<year> Indexed Tax Brackets" [BRK 2017 through BRK 2025], bracket floors for every year. Converted programmatically from the transcribed memo; TY2017-TY2021 carry the published recapture rows band for band, and TY2022-TY2025 carry five ordinary bands plus a ramp band and a final band (see the header note). Padded to twelve elements by repeating the top band'
+
+rates:
+  value:
+    '2017': [0.009, 0.024, 0.034, 0.044, 0.05, 0.06, 0.069, 0.069, 0.069, 0.069, 0.069, 0.069]
+    '2019': [0.0, 0.02, 0.03, 0.034, 0.05, 0.06, 0.069, 0.069, 0.069, 0.069, 0.069, 0.069]
+    '2020': [0.0, 0.02, 0.03, 0.034, 0.05, 0.059, 0.066, 0.066, 0.066, 0.066, 0.066, 0.066]
+    '2021': [0.0, 0.02, 0.03, 0.034, 0.05, 0.059, 0.059, 0.059, 0.059, 0.059, 0.059, 0.059]
+    '2022': [0.0, 0.02, 0.03, 0.034, 0.049, 0.14296875, 0.049, 0.049, 0.049, 0.049, 0.049, 0.049]
+    '2023': [0.0, 0.02, 0.03, 0.034, 0.047, 0.14344565, 0.047, 0.047, 0.047, 0.047, 0.047, 0.047]
+    '2024': [0.0, 0.02, 0.03, 0.034, 0.039, 0.13664375, 0.039, 0.039, 0.039, 0.039, 0.039, 0.039]
+    '2025': [0.0, 0.02, 0.03, 0.034, 0.039, 0.14243871, 0.039, 0.039, 0.039, 0.039, 0.039, 0.039]
+  reference: 'Same memos. Top-rate path 6.9% (2017-2019) to 6.6% (2020), 5.9% (2021), 4.90% (2022), 4.70% (2023) and 3.90% (2024-2025); Act 182 of 2019 also cut the lower rates and zeroed the bottom bracket. The sixth band in TY2022-TY2025 is not a statutory rate but the average slope of the granular recapture tail, which reproduces both of its endpoints exactly'
+
+base_amounts:
+  value:
+    '2017': [0.0, 39.61, 142.82, 292.43, 688.14, 1418.15, 3960.129, 4129.129, 4298.129, 4480.929, 4649.929, 4758.929]
+    '2018': [0.0, 40.51, 146.12, 299.13, 704.04, 1454.05, 4069.029, 4238.029, 4407.029, 4589.829, 4765.729, 4874.729]
+    '2019': [0.0, 0.02, 90.03, 228.03, 708.54, 1473.55, 4153.629, 4322.629, 4491.629, 4681.329, 4857.229, 4966.229]
+    '2020': [0.0, 0.02, 90.03, 231.03, 717.29, 1497.3, 4156.366, 4322.366, 4488.366, 4674.166, 4846.766, 4959.366]
+    '2021': [0.0, 0.02, 94.03, 238.03, 740.04, 1545.05, 4298.059, 4457.059, 4616.059, 4798.659, 4963.559, 5068.459]
+    '2022': [0.0, 0.02, 104.03, 236.03, 562.45, 3634.75, 4331.0, 4331.0, 4331.0, 4331.0, 4331.0, 4331.0]
+    '2023': [0.0, 0.02, 106.03, 241.03, 577.65, 3613.8498, 4273.7, 4273.7, 4273.7, 4273.7, 4273.7, 4273.7]
+    '2024': [0.0, 0.02, 108.03, 249.03, 592.44, 3189.84, 3637.1, 3637.1, 3637.1, 3637.1, 3637.1, 3637.1]
+    '2025': [0.0, 0.02, 112.03, 256.03, 609.64, 3273.34, 3724.9, 3724.9, 3724.9, 3724.9, 3724.9, 3724.9]
+  reference: 'Derived from the same memos'' minus adjustments as base_j = rate_j x bracket_j - adj_j, which makes base_j + rate_j x (TI - bracket_j) identically equal to the published rate_j x TI - adj_j. Verified back against the published form at eight points across TY2017, TY2022, TY2023, TY2024 and TY2025, exact in every case'
+
+documented_not_modeled:
+  midpoint_table_convention:
+    reference: 'DFA computes each printed table entry at the MIDPOINT of its $100 band and states so explicitly: "If you use a formula to calculate Arkansas income tax, the results must match the table exactly. The calculations in the table are made at the midpoint of each income level." The continuous schedule is encoded, so a filer at the bottom of a band pays up to about $2.45 more than the table and one at the top about $2.45 less [averages to roughly zero across a population]'
+  granular_recapture_tail_2022_onward:
+    reference: 'From TY2022 the recapture tail is 30 to 60 rows of $100 each whose minus adjustment falls $10 per row, and it is encoded as a single ramp band at the average slope. The endpoints are exact and the maximum deviation inside the range is one $10 step [a few dollars, confined to net taxable income within roughly $5,000 of the top bracket]. Encoding every row would need up to 60 bands for a difference no larger than the midpoint convention already introduces'
+  low_income_tax_tables:
+    reference: 'Arkansas publishes five Low Income Tax Tables that a qualifying filer may use INSTEAD of this schedule and instead of any deduction, and the booklet makes it an explicit taxpayer election. Modelling it properly means computing both paths and taking the better, which is the generic minimum-liability election pass already queued for the Wisconsin Act 15 retirement election and Alabama separate returns. NOT ENCODED [overstates Arkansas tax for low-income filers -- the tables zero out tax entirely below their thresholds, so this is the largest Arkansas known difference. Per-year thresholds are in the source packet]'
+  per_spouse_schedule_under_status_4:
+    reference: 'Under filing status 4 (married filing separately on the same return) Arkansas applies this schedule SEPARATELY to each spouse column and adds the two, and the low-income tables are unavailable. Not modeled -- see the source packet'

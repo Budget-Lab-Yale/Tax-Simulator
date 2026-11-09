@@ -1,0 +1,82 @@
+---
+# Kansas rate schedule (K.S.A. 79-32,110; K-40 line 8). Two schedules:
+# married filing joint, and "all other individuals" (single/MFS/HoH).
+#
+# Three regimes:
+#   2017 (SB 30, enacted June 2017 RETROACTIVE to the full tax year --
+#     final enacted law encoded): 2.9 / 4.9 / 5.2% at 15k/30k (30k/60k MFJ)
+#   2018-2023: 3.1 / 5.25 / 5.7%, same thresholds
+#   2024+ (SB 1, 2024 special session, sec. 16): 5.2 / 5.58% at 23k (46k MFJ)
+#
+# LOW-INCOME ZERO-TAX CLIFF (through 2023): the statute's bottom band is
+# "not over $X: 0%" and the NEXT band taxes the FULL amount ("3.1% of Kansas
+# taxable income", not of the excess) -- a cliff, not a zero bracket.
+# Verified in the booklet tax tables (2017: single 0 through $5,000 then
+# $146 at 5,001-5,050; married 0 through $12,500; 2018/2021/2023: single 0
+# through $2,500 then $78, married 0 through $5,000) and computation
+# worksheets. Encoded via the OH-style base_amounts family, which preserves
+# published discontinuities: tax = base_j + rate_j x (TI - bracket_j).
+# SB 1 REPEALED the cliff for 2024+ (2024/2025 tables tax from $26; Notice
+# 24-08 schedule has no zero band). Above the cliff the schedule is
+# marginal-equivalent (base amounts continuous at 15k/30k etc.).
+# Boundary note: at TI exactly equal to a cliff threshold the form gives 0;
+# st_band_index_lower places the exact bound in the upper band (measure-zero
+# in continuous microdata; same convention as OH).
+# 10-element uniform schedules padded by repeating the top value.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_single
+  base_amounts:
+    '1': base_single
+    '2': base_married
+    '3': base_single
+    '4': base_single
+
+rates:
+  value:
+    '2017': [0.0, 0.029, 0.049, 0.052, 0.052, 0.052, 0.052, 0.052, 0.052, 0.052]
+    '2018': [0.0, 0.031, 0.0525, 0.057, 0.057, 0.057, 0.057, 0.057, 0.057, 0.057]
+    '2024': [0.052, 0.0558, 0.0558, 0.0558, 0.0558, 0.0558, 0.0558, 0.0558, 0.0558, 0.0558]
+  reference: 'K.S.A. 79-32,110; SB 30 (2017): 2017 booklet p.1 (2.9/4.9/5.2 retroactive) + Tax Computation Worksheet; 2018-2023 booklets (3.1/5.25/5.7); SB 1 (2024 s.s.) sec. 16 / Notice 24-08 (5.2/5.58, "Over $23,000: $1,196 plus 5.58% of excess"); 2024-2025 worksheets'
+
+# Single / MFS / HoH ("all other individuals", 79-32,110(a)(2))
+brackets_single:
+  value:
+    '2017': [0, 5000, 15000, 30000, 30000, 30000, 30000, 30000, 30000, 30000]
+    '2018': [0, 2500, 15000, 30000, 30000, 30000, 30000, 30000, 30000, 30000]
+    '2024': [0, 23000, 23000, 23000, 23000, 23000, 23000, 23000, 23000, 23000]
+  reference: '2017 worksheet ($5,001-$15,000 / $15,001 / $30,001) and tax table (0 through $5,000); 2018-2023 tables (0 through $2,500; SB 30 zero band from TY2018); Notice 24-08 ("not over $23,000")'
+brackets_married:
+  value:
+    '2017': [0, 12500, 30000, 60000, 60000, 60000, 60000, 60000, 60000, 60000]
+    '2018': [0, 5000, 30000, 60000, 60000, 60000, 60000, 60000, 60000, 60000]
+    '2024': [0, 46000, 46000, 46000, 46000, 46000, 46000, 46000, 46000, 46000]
+  reference: '2017 worksheet ($12,501-$30,000 / $30,001 / $60,001) and tax table (0 through $12,500); 2018-2023 tables (0 through $5,000); Notice 24-08 ("not over $46,000")'
+
+# Published base amounts (tax at the bracket lower bound; cliffs preserved).
+# 2017 single: 2.9%x5,000=145 (cliff); 2.9%x15,000=435; 435+4.9%x15,000=1,170
+# 2017 married: 2.9%x12,500=362.50 (cliff); 2.9%x30,000=870; 870+4.9%x30,000=2,340
+# 2018+ single: 3.1%x2,500=77.50 (cliff); 3.1%x15,000=465; 465+5.25%x15,000=1,252.50
+# 2018+ married: 3.1%x5,000=155 (cliff); 3.1%x30,000=930; 930+5.25%x30,000=2,505
+# 2024+ (no cliff): 5.2%x23,000=1,196; 5.2%x46,000=2,392 (statutory amounts)
+base_single:
+  value:
+    '2017': [0.0, 145.0, 435.0, 1170.0, 1170.0, 1170.0, 1170.0, 1170.0, 1170.0, 1170.0]
+    '2018': [0.0, 77.5, 465.0, 1252.5, 1252.5, 1252.5, 1252.5, 1252.5, 1252.5, 1252.5]
+    '2024': [0.0, 1196.0, 1196.0, 1196.0, 1196.0, 1196.0, 1196.0, 1196.0, 1196.0, 1196.0]
+  reference: 'Derived from K.S.A. 79-32,110(a)(2) as published; verified vs 2017 table ($146 at 5,001-5,050) and worksheet subtraction constants ($300/$390 2017); Notice 24-08 $1,196'
+base_married:
+  value:
+    '2017': [0.0, 362.5, 870.0, 2340.0, 2340.0, 2340.0, 2340.0, 2340.0, 2340.0, 2340.0]
+    '2018': [0.0, 155.0, 930.0, 2505.0, 2505.0, 2505.0, 2505.0, 2505.0, 2505.0, 2505.0]
+    '2024': [0.0, 2392.0, 2392.0, 2392.0, 2392.0, 2392.0, 2392.0, 2392.0, 2392.0, 2392.0]
+  reference: 'Derived from K.S.A. 79-32,110(a)(1); verified vs 2017 worksheet ($600/$780 constants), 2021/2023 tables ($1,732 at 45,251-45,300), 2024 table ($2,391 at 45,951-46,000); Notice 24-08 $2,392'
+
+# 2026+: SB 1 rates are "for tax year 2024, and all tax years thereafter"
+# and carry forward. SB 269 (2025) enacts revenue-triggered future rate
+# REDUCTIONS contingent on budget-director certification -- not encoded
+# (uncertified projection; see packet).

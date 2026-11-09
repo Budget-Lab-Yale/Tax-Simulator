@@ -1,0 +1,32 @@
+---
+# Alabama: credits.
+#
+# There is nothing to encode. Alabama has no state earned income credit, no
+# state child tax credit and no state child and dependent care credit -- every
+# credit on Schedule OC is certificated, pre-approved through My Alabama Taxes,
+# employer-side or activity-specific.
+#
+# The one place the federal earned income credit appears in Alabama law is on
+# the federal income tax deduction worksheet, where it REDUCES the deduction
+# (see ded.yaml fed_tax_ded_less_eitc). So in Alabama, claiming the federal
+# earned income credit increases state taxable income -- the opposite of a
+# state match.
+
+# Stated explicitly rather than left to the default, both to record the
+# finding and because a parameter file consisting only of documentation has
+# nothing for the parser to build a law row from.
+eitc_match:
+  value: 0
+  reference: 'Alabama has no state earned income credit. Verified by searching all nine Form 40 booklets 2017-2025: the only "earned income credit" references are on the federal income tax deduction worksheet, where the FEDERAL credit reduces the Alabama deduction'
+
+documented_not_modeled:
+  no_state_eitc_or_ctc:
+    reference: 'Verified by searching all nine Form 40 booklets 2017-2025: no Alabama earned income credit, child credit or dependent care credit exists. The only "earned income credit" references are on the federal income tax deduction worksheet'
+  credit_for_taxes_paid_to_other_states:
+    reference: 'Schedule CR gives residents the lesser of the tax actually due to the other state and the amount Alabama would charge on the same income (booklet p.10, p.22). The model assigns each record wholly to one state, so it never applies'
+  pass_through_entity_credit:
+    reference: 'Form 40 line 26 carries a REFUNDABLE credit for the owner''s pro rata share of Alabama income tax paid by an electing pass-through entity (Act 2021-423, TY2021 forward) -- the Alabama version of the SALT-cap workaround. Election status is not in the microdata [understates Alabama refunds for pass-through owners in electing entities]'
+  certificated_credits:
+    reference: 'Schedule OC carries roughly thirty credits, all narrow: Enterprise Zone, Basic Skills Education, Rural Physician, Coal, Full Employment Act, Veterans Employment, Irrigation/Reservoir, Accountability Act school transfer and scholarship granting organization, Adoption (raised to $2,000 by Act 2022-299 from TY2023), Historic Rehabilitation, Career Technical Dual Enrollment, Jobs Act investment, Port, Growing Alabama, Railroad Modernization, Storm Shelter (lesser of $3,000 or 50% of cost, Act 2021-540), Volunteer Emergency Responders (Act 2022-298, TY2023), Innovate Alabama (Act 2023-33, TY2023), Volunteer First Responder Mileage (Act 2023-510, TY2024), Preceptor Tax Incentive (Act 2023-519, TY2024), Workforce Housing, Employer, Childcare Facility, Employer Provider and Income Tax Capital. Most now require pre-approval through My Alabama Taxes. Award histories are not in the microdata'
+  consumer_use_tax_and_addons:
+    reference: 'Form 40 line 19 pulls consumer use tax and catastrophe savings tax from Schedule ATP Part I, line 20 a $1-$2 voluntary political party contribution, line 31 penalties and line 34 refund check-offs. All sit inside the form''s "total tax liability" line 21 but none belongs in an income tax liability figure, and none is modeled'

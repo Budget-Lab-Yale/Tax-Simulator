@@ -1,0 +1,73 @@
+---
+# West Virginia: tax rate schedules (IT-140 line 8; W. Va. Code 11-21-4e /
+# 11-21-4g / 11-21-4i). Rates apply to WV taxable income (line 7).
+#
+# TWO schedules, both filing-status mapped:
+#   RATE SCHEDULE I  -- single, head of household, married filing joint, and
+#     widow(er) with a dependent child. Model statuses 1, 2 and 4.
+#   RATE SCHEDULE II -- married filing separately. Every threshold is EXACTLY
+#     half of Schedule I; transcribed independently from each booklet rather
+#     than divided, and confirmed identical in all nine years.
+#
+# RATE VINTAGES -- each read off the published "TAX RATE SCHEDULES" page of
+# that year's booklet AND cross-checked against the year's tax table:
+#   2017-2022 (11-21-4e, unchanged since 1987): 3 / 4 / 4.5 / 6 / 6.5%
+#   2023-2024 (11-21-4g, HB 2526 of 2023, a 21.25% across-the-board cut
+#     retroactive to 1/1/2023): 2.36 / 3.15 / 3.54 / 4.72 / 5.12%
+#     *** THERE WAS NO 2024 RATE CHANGE. *** The TY2023 and TY2024 rate
+#     schedules and tax tables are identical row for row (taxable income
+#     5,900-6,000 -> $140 in both years; 2025 -> $132). The HB 2526 rates ran
+#     for two years. A reviewer expecting a 2024 cut is mistaken.
+#   2025 (11-21-4i, SB 2033 of the 2024 SECOND SPECIAL SESSION -- a further
+#     6% cut off the 4g rates): 2.22 / 2.96 / 3.33 / 4.44 / 4.82%
+#     11-21-4i(f) records that the August 2024 trigger certification under
+#     11-21-4h had produced a 4% cut for TY2025 and that SB 2033 SUPERSEDES
+#     both 11-21-4g and that administrative notice. The TY2025 rates in force
+#     are therefore LEGISLATED, not certified: reconstructing them from the
+#     certification alone lands on 2.27/3.02/3.40/4.53/4.92 and is ~2% wrong.
+#
+# The 11-21-4h revenue trigger is NOT projected: as amended it first tests
+# collections on 2026-08-15 and applies "for all taxable years beginning on
+# and after January 1, 2027", capped at a 10% reduction from the 4e rates.
+#
+# TY2026 IS enacted law -- 11-21-4j (SB 392, 2026 RS): 2.11 / 2.81 / 3.16 /
+# 4.22 / 4.58%. The '2026' key is carried deliberately, departing from the
+# RI/KS practice of stopping at the window edge, because this is a discrete
+# ~5% enacted rate cut rather than indexation: letting 2025 rates carry
+# forward into 2026+ would be a known, material misstatement of state revenue.
+#
+# 5 bands padded to the 10-element uniform schedule. No recapture, no spouse
+# tax adjustment, no business carve-out, no combined-separate option, no
+# surtax, and no bracket has ever been moved or indexed.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_sched1
+    '2': brackets_sched1
+    '3': brackets_sched2
+    '4': brackets_sched1
+
+rates:
+  value:
+    '2017': [0.03, 0.04, 0.045, 0.06, 0.065, 0.065, 0.065, 0.065, 0.065, 0.065]
+    '2023': [0.0236, 0.0315, 0.0354, 0.0472, 0.0512, 0.0512, 0.0512, 0.0512, 0.0512, 0.0512]
+    '2025': [0.0222, 0.0296, 0.0333, 0.0444, 0.0482, 0.0482, 0.0482, 0.0482, 0.0482, 0.0482]
+    '2026': [0.0211, 0.0281, 0.0316, 0.0422, 0.0458, 0.0458, 0.0458, 0.0458, 0.0458, 0.0458]
+  reference: 'IT-140 "TAX RATE SCHEDULES", Rate Schedule I, transcribed for all nine years. 2017-2022 = W. Va. Code 11-21-4e ("$300.00 plus 4% ... $2,775.00 plus 6.5% of excess over $60,000"), booklet-verified each year. 2023 AND 2024 = 11-21-4g ("$236.00 plus 3.15% ... $2,183.50 plus 5.12%"), both booklets printing identical schedules and identical tax tables -- NO 2024 cut. 2025 = 11-21-4i ("$222.00 plus 2.96% ... $2,053.50 plus 4.82%"). 2026 = 11-21-4j (SB 392, 2026 RS). Arithmetic checks against the booklets'' own EXAMPLE boxes: TY2023 taxable 117,635 -> 2,183.50 + 5.12% x 57,635 = 5,134.41; TY2025 -> 2,053.50 + 4.82% x 57,635 = 4,831.51, both exactly as printed'
+
+brackets_sched1:
+  value: [0, 10000, 25000, 40000, 60000, 60000, 60000, 60000, 60000, 60000]
+  reference: 'Rate Schedule I thresholds, unchanged in every year 2017-2026: 11-21-4e(a), 4g(a), 4i(a), 4j(a). HB 2526 and SB 2033 cut rates only; no bracket was ever moved or indexed'
+brackets_sched2:
+  value: [0, 5000, 12500, 20000, 30000, 30000, 30000, 30000, 30000, 30000]
+  reference: 'Rate Schedule II (married filing separately) thresholds, unchanged 2017-2026: 11-21-4e(b), 4g(b), 4i(b), 4j(b). Exactly half of Schedule I; transcribed independently from each booklet. TY2025 MFS base amounts 111 / 333 / 582.75 / 1,026.75 reproduce 2.22/2.96/3.33/4.44% on the halved widths'
+
+documented_not_modeled:
+  tax_table_rounding:
+    reference: 'Filers with taxable income under $100,000 in statuses 1/2/4 must use the WEST VIRGINIA TAX TABLE, banded ($100 wide to $25,000, then $60, then $50) and printing the schedule tax at the band midpoint rounded to whole dollars; MFS filers "MUST use RATE SCHEDULE II" and get no table. We apply the continuous schedule throughout. Bound about +/-$2. Verified: TY2025 band 99,650-99,700 prints $3,966 against 2,053.50 + 4.82% x 39,675 = 3,965.84'
+  mid_year_rate_change_proration:
+    reference: 'W. Va. Code 11-21-4f prorates tentative taxes across a mid-year rate change by months. Not needed in this window: HB 2526 (2023) and SB 2033 (2025) both took effect on January 1 of their first year, so no calendar-year filer straddles a change'
+  future_trigger_reductions:
+    reference: 'W. Va. Code 11-21-4h revenue-triggered reductions first certify 2026-08-15 and apply for taxable years beginning on and after 2027-01-01, capped at 10% of the 11-21-4e rates. Contingent on general-revenue collections; NOT projected'
+  private_trust_company_trusts:
+    reference: '11-21-4g(c)/4i(c)/4j(c): non-grantor trusts administered by licensed private trust companies bear no tax. Out of scope (individual returns only)'

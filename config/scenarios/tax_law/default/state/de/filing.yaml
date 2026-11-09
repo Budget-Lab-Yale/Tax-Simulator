@@ -1,0 +1,46 @@
+---
+# Delaware: filing requirement (PIT-RES "Who Must File"; Form 200-01 "Who
+# Must File" in 2017-2020). A full-year resident must file if individual
+# DELAWARE adjusted gross income exceeds an age- and status-keyed threshold.
+# Delaware does NOT impose a file-if-you-filed-federally rule, so
+# req_if_fed_filer = 0 and the DE-AGI test governs (type 2).
+#
+# The published table varies with age and blindness:
+#   Under 60:       9,400 (FS 1/5) / 15,450 (FS 2) / 9,400 (FS 3/4)
+#   60 to 64:      12,200          / 17,950        / 12,200
+#   65+ OR blind:  14,700          / 20,450        / 14,700
+#   65+ AND blind: 17,200          / 22,950        / 17,200
+#   Claimed as a dependent: 5,250 (under 60) / 7,750 (65+ or blind)
+# Only the modal under-60 row is encodable in the scalar parameters; the age
+# and blindness rows are a documented known-difference affecting FILER COUNTS
+# only (the age/blind increments equal the additional standard deduction, so
+# affected records have zero liability either way). Thresholds are unindexed
+# and identical in the TY2019 through TY2025 booklets.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_thresh_single
+    '2': req_thresh_joint
+    '3': req_thresh_single
+    '4': req_thresh_single
+
+# 2 = state base above a fixed threshold
+req_type:
+  value: 2
+  reference: 'PIT-RES "Who Must File" item 1: "you must file a tax return... if, based on your Age/Status, your individual Delaware adjusted gross income (AGI) exceeds the amount shown below" (identical text 2019-2025)'
+req_thresh_single:
+  value: 9400
+  reference: 'PIT-RES Who Must File table, Under 60 row, filing statuses 1/3/4/5 ($9,400); verified identical in the TY2019, TY2020, TY2021, TY2022, TY2024 and TY2025 booklets; reinforced by the Filing Status note "separate returns... will be advantageous if both spouses have Delaware adjusted gross income in excess of $9,400" [TY2017/TY2018 rows inferred: the base 2017 booklet PDF is unavailable and the values are unindexed]'
+req_thresh_joint:
+  value: 15450
+  reference: 'PIT-RES Who Must File table, Under 60 row, filing status 2 ($15,450), TY2019-TY2025 booklets'
+req_income_thresh_dep:
+  value: 5250
+  reference: 'PIT-RES Who Must File table, "Claimed as a dependent on another person''s return" column, Under 60 row ($5,250); TY2019-TY2025 booklets'
+req_if_fed_filer:
+  value: 0
+  reference: 'The Delaware filing requirement is stated purely in terms of Delaware AGI exceeding the table amount; no federal-filing trigger appears in the PIT-RES "Who Must File" section (2017-2025)'
+
+documented_not_modeled:
+  filing_threshold_by_age:
+    reference: 'Age/blindness rows of the Who Must File table (60-64: 12,200/17,950; 65+ or blind: 14,700/20,450; 65+ and blind: 17,200/22,950; dependent filers 7,750) are not encodable in the scalar thresholds; affects filer counts only, since the increments equal the additional standard deduction'

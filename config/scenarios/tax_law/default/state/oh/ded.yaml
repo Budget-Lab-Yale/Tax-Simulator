@@ -1,0 +1,15 @@
+---
+# Ohio: deductions. Ohio has NO standard or itemized deductions; the
+# exemption allowance (exempt.yaml) is the only base offset.
+std_amount:
+  value: 0
+  reference: 'No standard deduction in Ohio; IT 1040 lines 1-7 structure, 2017-2025'
+item_allowed:
+  value: 0
+  reference: 'No itemized deductions in Ohio; IT 1040 structure'
+item_coupling:
+  value: 0
+  reference: 'n/a for OH'
+salt_addback:
+  value: 0
+  reference: 'n/a for OH (no itemized deductions)'

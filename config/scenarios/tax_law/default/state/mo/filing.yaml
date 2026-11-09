@@ -1,0 +1,33 @@
+---
+# Missouri filing requirement (MO-1040 booklets 2017-2025, "Filing
+# Requirements").
+#
+# The rule is stated as a set of exemptions FROM filing: a resident need
+# not file if no federal return is required, or if Missouri adjusted gross
+# income is less than $1,200, or if Missouri AGI is less than the standard
+# deduction for the filing status. So the binding resident threshold is the
+# standard deduction itself, with the $1,200 floor mattering only where the
+# standard deduction is smaller (it never is over this window).
+#
+# Encoded as the federal-filer trigger plus the $1,200 Missouri AGI floor.
+# The standard-deduction leg is left to the nonzero-liability trigger: a
+# unit with Missouri AGI below the standard deduction has no Missouri
+# taxable income and no liability, so it is not flagged as a filer anyway.
+
+req_type:
+  value: 2
+  reference: 'MO-1040 booklets 2017-2025, "Filing Requirements": a fixed Missouri-AGI test rather than a federal-taxable-income one'
+req_if_fed_filer:
+  value: 1
+  reference: 'MO-1040 booklets: "You do not have to file a Missouri return if you are not required to file a federal return", so a federal filing obligation is the first trigger (RSMo 143.481)'
+req_income_thresh:
+  value: 1200
+  reference: 'MO-1040 booklets 2017-2025: a resident need not file where Missouri adjusted gross income is less than $1,200 (nonresidents, less than $600 of Missouri income). Not indexed and unchanged across the window'
+
+documented_not_modeled:
+  standard_deduction_leg:
+    reference: 'The booklets also excuse a resident whose Missouri AGI is less than the standard deduction for the filing status (the 2017 wording adds "plus the exemption amount"). Not encoded as a threshold because such a unit has zero Missouri taxable income and is already excluded by the nonzero-liability filer trigger'
+  nonresident_threshold:
+    reference: 'Nonresidents must file with $600 or more of Missouri income. The model assigns each record wholly to one state, so the nonresident leg never binds'
+  filing_status_conformity:
+    reference: 'MO-1040 requires the same filing status as the federal return, and spouses filing jointly for federal purposes MUST file a Missouri combined return (RSMo 143.031). Missouri''s "married filing separate (spouse not filing)" status has no model equivalent and is folded into married filing separate'

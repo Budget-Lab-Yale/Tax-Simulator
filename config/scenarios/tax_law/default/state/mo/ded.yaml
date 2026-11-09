@@ -1,0 +1,175 @@
+---
+# Missouri: deductions (MO-1040 lines 8-25; Form MO-A Part 2).
+#
+# Missouri's "Exemptions and Deductions" block pools several things this
+# model usually keeps apart, and the ORDER is what matters: Missouri AGI
+# (line 6) is struck first, and every item below then comes off it. So the
+# federal income tax deduction (lines 9-13), the standard or itemized
+# deduction (line 14), the head-of-household exemption (line 15) and the
+# pension/Social Security exemption (line 8) are all deductions against a
+# line-6 figure that none of them has touched. That is why the retirement
+# exemption is here rather than in agi.yaml -- putting it upstream would
+# shrink the Missouri AGI that the federal-tax-deduction percentage bands
+# read, and understate the deduction.
+
+filing_status_mapper:
+  fed_tax_ded_cap:
+    '1': fed_ded_cap_single
+    '2': fed_ded_cap_combined
+    '3': fed_ded_cap_single
+    '4': fed_ded_cap_single
+  retire_exempt_ss_limit:
+    '1': retire_limit_single
+    '2': retire_limit_combined
+    '3': retire_limit_single
+    '4': retire_limit_single
+  retire_exempt_priv_limit:
+    '1': priv_limit_single
+    '2': priv_limit_combined
+    '3': priv_limit_mfs
+    '4': priv_limit_single
+
+#-----------------------------------------------------------------------
+# Standard deduction: Missouri adopts the FEDERAL amount by reference, so
+# the calculator takes each unit's own federal standard deduction rather
+# than a transcribed copy. That carries the aged and blind add-ons and the
+# dependent-filer limitation exactly, and cannot drift from federal law.
+#-----------------------------------------------------------------------
+
+std_equals_federal:
+  value: 1
+  reference: 'RSMo 143.131.2 defines the Missouri standard deduction as the federal standard deduction; MO-1040 line 14 instruction: "If you claimed the standard deduction on your federal return, enter the standard deduction amount for your filing status", with the federal figures printed on the form line each year (TY2024: $14,600 single or married filing separate, $29,200 married filing combined or qualifying widow(er), $21,900 head of household). The additional age-65+ and blindness amounts follow federal too (2024 booklet p.8: +$1,950 single/head of household, +$1,550 married filing combined/separate/qualifying widow(er); 2025 booklet p.8: +$2,000 and +$1,600)'
+
+#-----------------------------------------------------------------------
+# Itemized deductions (MO-A Part 2). Missouri starts from the FEDERAL
+# itemized total, ADDS the taxpayer's own payroll and self-employment
+# taxes, and SUBTRACTS state and local income taxes. The election is
+# coupled in both directions.
+#-----------------------------------------------------------------------
+
+item_allowed:
+  value: 1
+  reference: 'Form MO-A Part 2 "Missouri Itemized Deductions"'
+item_coupling:
+  value: 1
+  reference: 'MO-A Part 2 preamble: "You cannot itemize your Missouri deductions if you took the standard deduction on your federal return... You must itemize your Missouri deductions if you were required to itemize on your federal return" (2024 booklet p.16, same wording every year). Not a best-of election'
+salt_addback:
+  value: 1
+  reference: 'MO-A Part 2 line 11 subtracts state and local income taxes from the federal itemized total (RSMo 143.141). Kansas City and St. Louis earnings taxes stay deductible and are netted out of that subtraction on the form -- not modeled separately, since local earnings taxes are not a model input [slightly understates Missouri itemized deductions for the two cities'' residents]'
+item_add_payroll:
+  value: 1
+  reference: 'MO-A Part 2 lines 2-7 add, per spouse, Social Security tax withheld (capped at the year''s OASDI maximum -- $10,453 for TY2024, 2024 booklet p.16), Medicare tax, railroad retirement Tier I and Tier II, and self-employment tax. RSMo 143.141(2). This is a substantial add-back that many secondary implementations omit'
+
+# Pre-TCJA Pease limitation, TY2017 only: MO-A Part 2 carried its own
+# worksheet keyed to the federal limitation that TCJA then suspended.
+pease:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: '2017 MO-A Part 2 worksheet (2017 booklet p.22), which prorates the state-income-tax subtraction by the federal Itemized Deduction Worksheet result; the underlying federal limitation was suspended from TY2018'
+pease_thresh:
+  value:
+    '2017': 261500
+    '2018': .inf
+  reference: 'IRC 68(b) TY2017 thresholds as printed on the 2017 MO-A Part 2 worksheet ($261,500 single, $313,800 married filing combined/qualifying widow(er), $287,650 head of household, $156,900 married filing separate). Encoded at the single threshold for every status because Missouri''s worksheet is return-level [overstates the limitation for combined filers between $261,500 and $313,800]'
+
+#-----------------------------------------------------------------------
+# Federal income tax deduction (MO-1040 lines 9-13; RSMo 143.171).
+#-----------------------------------------------------------------------
+
+fed_tax_ded:
+  value: 1
+  reference: 'RSMo 143.171; MO-1040 line 13 "Federal income tax deduction". The deductible base is federal tax after nonrefundable credits and before other taxes, with the alternative minimum tax subtracted on the "tax from federal return" line and added straight back on the "other federal tax" line -- so AMT is IN the base. Self-employment, FICA and railroad retirement taxes are excluded by name in every year''s "other federal tax" instruction'
+fed_tax_ded_less_eitc:
+  value: 1
+  reference: 'MO-1040 line 9 instructions: "If you have an earned income credit, you must subtract the credit... If a negative amount is calculated, enter 0" (2017-2025 booklets)'
+fed_tax_ded_less_ed_ref:
+  value: 1
+  reference: 'MO-1040 line 9 instructions subtract the refundable American Opportunity credit (2017 line 68; 2018 line 17c; 2019 line 18c; 2020+ line 29)'
+fed_tax_ded_less_ptc:
+  value: 1
+  reference: 'MO-1040 line 9 instructions subtract the net premium tax credit (2017 line 69; 2019+ Schedule 3 Part 2 line 9)'
+# fed_tax_ded_less_ctc_ref is deliberately NOT set: the additional child tax
+# credit is absent from every year's subtraction list (2017 line 67, 2018
+# line 17b, 2019 line 18b, 2020+ line 28), so it does not reduce the base.
+# Alabama, by contrast, does subtract it.
+fed_ded_cap_single:
+  value: 5000
+  reference: 'RSMo 143.171.2; MO-1040 line 13: "your federal tax deduction may not exceed $5,000" for any status other than married filing combined. Not indexed; unchanged 2017-2025'
+fed_ded_cap_combined:
+  value: 10000
+  reference: 'RSMo 143.171.2; MO-1040 line 13: "If you selected married filing combined, your federal tax cannot exceed $10,000". Not indexed; unchanged 2017-2025'
+
+fed_tax_ded_band_base:
+  value: 2
+  reference: 'MO-1040 line 12: "This percentage is based on the Missouri Adjusted Gross Income reported on Line 6" -- Missouri AGI, before every deduction in this file'
+
+# AGI-tiered percentage, TY2019 onward (HB 2540 of 2018). Hard steps, not a
+# phase-out, and the SAME bands for every filing status -- there is no
+# doubling for combined filers, which is a genuine marriage penalty and a
+# common error in secondary implementations. TY2017-2018 have no percentage
+# at all, encoded as a single 100% band.
+fed_tax_ded_band_upper:
+  value:
+    '2017': [999999999999.0, 999999999999.0, 999999999999.0, 999999999999.0, 999999999999.0]
+    '2019': [25000.0, 50000.0, 100000.0, 125000.0, 999999999999.0]
+  reference: 'MO-1040 line 12 chart, "Missouri Adjusted Gross Income Range (Line 6)": $25,000 or less / $25,001 to $50,000 / $50,001 to $100,000 / $100,001 to $125,000 / $125,001 or more. Identical in the 2019 through 2025 booklets and in RSMo 143.171.2. Band membership is (lower, upper], and Missouri AGI is a whole-dollar figure, so the band edges land exactly as printed'
+fed_tax_ded_band_share:
+  value:
+    '2017': [1.0, 1.0, 1.0, 1.0, 1.0]
+    '2019': [0.35, 0.25, 0.15, 0.05, 0.0]
+  reference: 'MO-1040 line 12 chart, "Federal Tax Percentage": 35% / 25% / 15% / 5% / 0%. TY2017 and TY2018 had no percentage -- the deduction was simply the capped federal tax (2017 booklet p.7 line 14; 2018 booklet p.7 line 12) -- encoded as a flat 100% band'
+
+#-----------------------------------------------------------------------
+# Pension and Social Security exemption (MO-1040 line 8; MO-A Part 3).
+# Only the pieces that survive the PUF's inability to tell a public
+# pension from a private one are encoded here; see agi.yaml
+# documented_not_modeled for the public pension exemption itself.
+#-----------------------------------------------------------------------
+
+retire_exempt_ss:
+  value: 1
+  reference: 'MO-A Part 3 Section C; RSMo 143.125. One hundred percent of federally taxable Social Security and Social Security disability benefits is exempt'
+retire_exempt_ss_min_age:
+  value: 62
+  reference: 'MO-A Part 3 Section C line 4 instruction: "To take the social security exemption, you must be age 62 or older", with the age checkbox on MO-1040 page 1. Social Security DISABILITY benefits carry no age test (Section C line 5) but disability status is unobserved [understates the exemption for under-62 SSDI recipients]'
+retire_exempt_less_ss:
+  value: 1
+  reference: 'MO-A Part 3 Sections A-C all compute the income test as line 1 (Missouri AGI from MO-1040 line 6) minus line 2 (taxable Social Security benefits)'
+retire_limit_single:
+  value:
+    '2017': 85000
+    '2024': 999999999999.0
+  reference: 'MO-A Part 3 Section C income limit for single, head of household, qualifying widow(er) and married filing separate, 2017-2023 booklets; RSMo 143.125.3. SB 190 (2023) removed the limit from TY2024 -- the 2024 and 2025 Section C worksheets have no income lines at all ("regardless of the taxpayer''s filing status or the amount of the taxpayer''s Missouri adjusted gross income")'
+retire_limit_combined:
+  value:
+    '2017': 100000
+    '2024': 999999999999.0
+  reference: 'MO-A Part 3 Section C income limit for married filing combined, 2017-2023 booklets; removed from TY2024 by SB 190 (2023)'
+
+retire_exempt_priv_cap:
+  value: 6000
+  reference: 'MO-A Part 3 Section B; RSMo 143.124.3. Up to $6,000 per spouse of taxable private pension, annuity and IRA income. Not indexed and unchanged 2017-2025 -- SB 190 did NOT touch this exemption or its income limits, only the public pension and Social Security ones'
+priv_limit_single:
+  value: 25000
+  reference: 'MO-A Part 3 Section B income limit, single/head of household/qualifying widow(er), every booklet 2017-2025; RSMo 143.124.3'
+priv_limit_combined:
+  value: 32000
+  reference: 'MO-A Part 3 Section B income limit, married filing combined, every booklet 2017-2025'
+priv_limit_mfs:
+  value: 16000
+  reference: 'MO-A Part 3 Section B income limit, married filing separate, every booklet 2017-2025'
+
+documented_not_modeled:
+  public_pension_exemption_placement:
+    reference: 'The public pension exemption (MO-A Part 3 Section A) is not modeled at all -- see baseline/mo/agi.yaml documented_not_modeled.public_pension_exemption for the rule, the reason and the direction of the bias. Its absence also removes the Section A offset by which the Social Security exemption reduces the public pension exemption, which is moot while Section A is unmodeled'
+  per_spouse_retirement_worksheet:
+    reference: 'MO-A Part 3 runs per spouse: each spouse''s own pension income against an own $6,000 cap, and taxable Social Security allocated between spouses by each one''s share of benefits received (Worksheet for Lines 4 and 5). The PUF has neither split, so the private cap is applied as two caps against the couple''s pooled pension income and the taxable Social Security that qualifies is prorated by how many spouses meet the age test [right in total for couples who both qualify; approximate where only one spouse has pension income or reaches 62]'
+  itemized_salt_convention:
+    reference: 'The model''s state itemized base replaces the capped federal SALT deduction with UNCAPPED property and personal-property taxes, while MO-A Part 2 starts from the federal Schedule A total (SALT already capped) and removes the income-tax component -- prorated by the worksheet the booklet supplies when Schedule A line 5d exceeds the federal cap. A model-wide v1 convention, not a Missouri choice [overstates Missouri itemized deductions post-2018 for high-property-tax filers]'
+  cultural_contributions:
+    reference: 'MO-A Part 2 line 1 lets the federal itemized total be increased by approved literary, musical, scholastic or artistic contributions to a non-profit institution (cash contributions do not qualify). Unobserved in the PUF'
+  farmland_beginning_farmer:
+    reference: 'MO-1040 line 21 deducts gains on farmland sold, rented, leased or crop-shared to a beginning farmer (RSMo 143.121.3). Unobserved'
+  first_time_homebuyer_and_dignity_savings:
+    reference: 'MO-1040 lines 22-24 carry the first-time home buyer, long-term dignity savings and foster parent deductions. All are unobserved contribution- or status-based amounts'

@@ -1,0 +1,17 @@
+---
+# Nebraska: NO personal exemption allowance.
+#
+# Nebraska grants a per-exemption CREDIT against tax (Neb. Rev. Stat.
+# 77-2715.07(2)(a)) rather than a deduction from income, so nothing subtracts
+# from the base here. The credit is encoded in credits.yaml as the per-person
+# credit family, nonrefundable, at $132 (2017) rising to $176 (2026).
+#
+# This file exists because every broad-IIT state carries the same six files;
+# the explicit zero is the statement that the allowance is absent, not missing.
+
+personal_amount:
+  value: 0
+  reference: 'Neb. Rev. Stat. 77-2716.01 builds Nebraska taxable income as federal AGI less the standard or itemized deduction only -- there is no exemption allowance. The per-exemption relief is a nonrefundable CREDIT under 77-2715.07(2)(a), encoded in credits.yaml'
+dep_amount:
+  value: 0
+  reference: 'Same: dependents generate credit, not an income allowance'

@@ -150,10 +150,46 @@ build_tax_law = function(scenario_info, indexes, write = TRUE) {
   #
   # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
-  
+
+  tax_law = build_tax_law_from_id(
+    tax_law_id = scenario_info$tax_law_id,
+    years      = scenario_info$years,
+    indexes    = indexes
+  )
+
+  # Write tax law then return
+  if (write) {
+    c('static', 'mechanical', 'conventional') %>%
+      map(.f = ~ scenario_info$output_path %>%
+            file.path(.x, 'supplemental', 'tax_law.csv') %>%
+            write_csv(x = tax_law, file = .))
+  }
+
+  return(tax_law)
+}
+
+
+
+build_tax_law_from_id = function(tax_law_id, years, indexes) {
+
+  #----------------------------------------------------------------------------
+  # Parses the default tax law plus a named layer without writing scenario
+  # output. State conformity contexts also use it, to build one federal
+  # reference law per conformity group.
+  #
+  # Parameters:
+  #   - tax_law_id (str) : a runscript tax_law cell, `default` or a path under
+  #                        alternatives/
+  #   - years (int[])    : simulation years to return
+  #   - indexes (df)     : long-format dataframe containing growth rates of
+  #                        index measures
+  #
+  # Returns: tibble wide in subparam, long in year and filing status (df).
+  #----------------------------------------------------------------------------
+
   # Read counterfactual tax law parameter changes
-  changes_from_baseline = scenario_info$tax_law_id %>% 
-    tax_law_path() %>% 
+  changes_from_baseline = tax_law_id %>%
+    tax_law_path() %>%
     load_tax_law_input()
   
   # Read baseline YAML files
@@ -173,7 +209,7 @@ build_tax_law = function(scenario_info, indexes, write = TRUE) {
   # every parameter the reform leaves untouched. The test is on content rather than
   # on whether the parameter was listed as an override, so that a reform restating
   # a parameter unchanged still hits the cache.
-  years_to_parse  = 2014:max(scenario_info$years)
+  years_to_parse  = 2014:max(years)
   parsed_baseline = if (tax_law_cache_enabled()) {
     get_parsed_baseline(baseline_raw, years_to_parse, indexes)
   } else {
@@ -192,31 +228,29 @@ build_tax_law = function(scenario_info, indexes, write = TRUE) {
                 }) %>%
     bind_rows() %>%
 
-    # Split subparameters into scalars and vectors 
-    filter(!is.na(value)) %>% 
-    group_by(parameter, subparameter) %>% 
-    mutate(scalar = max(element) == 1) %>% 
-    ungroup() %>% 
-    
-    # Reshape wide
-    mutate(name = parameter %>% 
-             paste0('.') %>% 
-             paste0(subparameter) %>% 
-             paste0(ifelse(scalar, '', element))) %>% 
-    select(-contains('arameter'), -element, -scalar) %>% 
-    pivot_wider(names_from  = name,
-                values_from = value) %>% 
-    filter(year %in% scenario_info$years)
+  tax_law %>%
+    map2(.f      = parse_param,
+         .y      = names(.),
+         years   = 2014:max(years),
+         indexes = indexes) %>%
+    bind_rows() %>%
 
-  # Write tax law then return
-  if (write) {
-    c('static', 'mechanical', 'conventional') %>%
-      map(.f = ~ scenario_info$output_path %>% 
-            file.path(.x, 'supplemental', 'tax_law.csv') %>%
-            write_csv(x = tax_law, file = .))
-  }
-  
-  return(tax_law)
+    # Split subparameters into scalars and vectors
+    filter(!is.na(value)) %>%
+    group_by(parameter, subparameter) %>%
+    mutate(scalar = max(element) == 1) %>%
+    ungroup() %>%
+
+    # Reshape wide
+    mutate(name = parameter %>%
+             paste0('.') %>%
+             paste0(subparameter) %>%
+             paste0(ifelse(scalar, '', element))) %>%
+    select(-contains('arameter'), -element, -scalar) %>%
+    pivot_wider(names_from  = name,
+                values_from = value) %>%
+    filter(year %in% years) %>%
+    return()
 }
 
 
@@ -378,23 +412,34 @@ parse_param = function(raw_input, name, years, indexes) {
   raw_input$indexation_defaults  = NULL
   raw_input$filing_status_mapper = NULL
   
-  # Parse subparameters and bind together
-  subparams = raw_input %>% 
+  # Parse subparameters, bind together, and apply indexation rules
+  indexed = raw_input %>%
     parse_subparams(indexation_defaults, years, indexes) %>% 
-    bind_rows() %>% 
-    
-    # Apply indexation rules, keeping only final values in wide format
+    bind_rows() %>%
     pivot_wider(names_from  = variable, 
-                values_from = value) %>% 
-    apply_indexation() %>% 
+                values_from = value) %>%
+    apply_indexation()
+
+  # Keep only final values in wide format
+  subparams = indexed %>%
     select(subparameter, year, element, value) %>% 
     pivot_wider(names_from  = subparameter, 
-                values_from = value) %>% 
+                values_from = value) %>%
     arrange(year, element) 
-  
+
+  # Mapper expressions can also reference each subparameter's indexed value
+  # before rounding, as {name}__unrounded, for amounts the statute rounds only
+  # after combining (e.g. the EITC joint phase-out threshold, IRC 32(j)(2)(A))
+  unrounded = indexed %>%
+    mutate(subparameter = paste0(subparameter, '__unrounded')) %>%
+    select(subparameter, year, element, value = value_unrounded) %>%
+    pivot_wider(names_from  = subparameter, 
+                values_from = value)
+
   # Map subparameters to filing status
   unmapped_vars = get_unmapped_subparams(raw_input, filing_status_mapper)
   subparams %>%
+    left_join(unrounded, by = c('year', 'element')) %>%
     agg_by_filing_status(filing_status_mapper) %>% 
     
     # Join unmapped vars
@@ -536,9 +581,14 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   #
   # Returns: dataframe long in year and element (df).
   #----------------------------------------------------------------------------
-  
+
+  # Tolerate and ignore metadata keys: "reference" holds source citations (form
+  # line / statute / URL) and is not parsed. Must be stripped before the
+  # indexation logic below, which treats all non-"value" keys as indexation info
+  raw_input$reference = NULL
+
   # Extract base values and convert to time series
-  base_values = raw_input$value %>% 
+  base_values = raw_input$value %>%
     parse_inf() %>%
     generate_time_series(years, 'base_value') %>% 
     unnest_if_nested() %>% 
@@ -663,9 +713,10 @@ apply_indexation = function(df) {
   #   - df (df) : dataframe with BaseValue column, plus, optionally, i_index, 
   #               i_direction, and i_increment
   #
-  # Returns: dataframe with Value column (df).
+  # Returns: dataframe with Value column, plus the indexed value before
+  #          rounding in value_unrounded (df).
   #----------------------------------------------------------------------------
-  
+
   if ('i_index' %in% colnames(df)) {
     df %>% 
       mutate(
@@ -675,11 +726,15 @@ apply_indexation = function(df) {
           i_direction ==  1  ~ ceiling(base_value * i_index / i_increment) * i_increment,
           i_direction ==  0  ~ round(base_value   * i_index / i_increment) * i_increment, 
           T                  ~ -1
-        )) %>%
+        ),
+        value_unrounded = if_else(is.na(i_direction) | is.na(i_index),
+                                  base_value,
+                                  base_value * i_index)) %>%
       return()
-  } else { 
+  } else {
     df %>% 
-      mutate(value = base_value) %>%
+      mutate(value           = base_value,
+             value_unrounded = base_value) %>%
       return()
   }
 }
@@ -803,11 +858,13 @@ get_unmapped_subparams = function(raw_input, filing_status_mapper) {
     return(names(raw_input))
   }
   
-  # Get symbols used in mapper expressions
+  # Get symbols used in mapper expressions, reading {name}__unrounded as a use
+  # of {name}
   symbols = filing_status_mapper %>% 
     unlist() %>% 
-    str_split(' ') %>% 
+    map(~ all.names(parse_expr(as.character(.x)))) %>%
     unlist() %>% 
+    str_remove('__unrounded$') %>%
     unique()
   
   # Select subparameter names that do not show up in expression symbols
@@ -890,8 +947,8 @@ walk_atomic = function(value, fn) {
 parse_inf = function(value) {
 
   #----------------------------------------------------------------------------
-  # Helper function to replace string "Inf" with R's infinity (Inf) object in
-  # a potentially multi-level nested list
+  # Helper function to replace string "Inf" / "-Inf" with R infinity objects
+  # in a potentially multi-level nested list
   #
   # Parameters:
   #   - value (list | any atomic) : value of raw input
@@ -901,7 +958,7 @@ parse_inf = function(value) {
   #----------------------------------------------------------------------------
 
   walk_atomic(value, function(x) {
-    if (any(x == 'Inf')) as.numeric(x) else x
+    if (any(x %in% c('Inf', '-Inf'))) as.numeric(x) else x
   })
 }
 

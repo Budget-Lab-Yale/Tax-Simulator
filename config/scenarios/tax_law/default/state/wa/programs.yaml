@@ -1,0 +1,19 @@
+---
+# Washington has no broad personal income tax. These independent programs are
+# carried as component entries in the state individual fiscal ledger.
+broad_iit:
+  value: 0
+  reference: 'Washington Department of Revenue, Capital Gains Tax: https://dor.wa.gov/taxes-rates/other-taxes/capital-gains-tax'
+narrow_iit:
+  value: 0
+  reference: 'Washington has no NH/TN-style investment income tax'
+ltcg_excise:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Washington capital gains excise tax first applies to tax year 2022: https://dor.wa.gov/taxes-rates/other-taxes/capital-gains-tax'
+wftc:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Working Families Tax Credit is available beginning in 2022: https://workingfamiliescredit.wa.gov/laws-and-rules'

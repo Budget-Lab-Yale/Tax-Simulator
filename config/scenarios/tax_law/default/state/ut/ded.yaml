@@ -1,0 +1,16 @@
+---
+# Utah: deductions. Utah has NO deduction from taxable income -- the federal
+# standard/itemized deduction enters only as an input to the taxpayer tax
+# credit (credits.yaml ded_credit_* parameters; UC 59-10-1018).
+std_amount:
+  value: 0
+  reference: 'No state deduction from Utah taxable income; TC-40 lines 4-9 structure, 2017-2025'
+item_allowed:
+  value: 0
+  reference: 'No state itemized deduction; federal deductions feed the taxpayer tax credit only (UC 59-10-1018)'
+item_coupling:
+  value: 0
+  reference: 'n/a for UT'
+salt_addback:
+  value: 0
+  reference: 'n/a for UT (the income-tax component is removed inside the taxpayer tax credit, not the base)'

@@ -1,0 +1,69 @@
+---
+# New Jersey: credits (NJ-1040 lines 55-59).
+#
+# Two broad credits are encoded: the New Jersey Earned Income Tax Credit, a
+# straight percentage of the federal credit, and the New Jersey Child Tax
+# Credit, a refundable per-child amount tiered on New Jersey TAXABLE income
+# with a hard cliff. The child and dependent care credit is documented as the
+# top follow-up -- it needs a banded percentage-of-federal-credit mechanism
+# the calculator does not have yet.
+
+eitc_match:
+  value:
+    '2017': 0.35
+    '2018': 0.37
+    '2019': 0.39
+    '2020': 0.40
+  reference: 'NJ-1040 line 58; N.J.S.A. 54A:4-7. The percentage stepped up on a legislated schedule -- 35% (TY2017), 37% (TY2018), 39% (TY2019) and 40% from TY2020, unchanged since'
+eitc_refundable:
+  value: 1
+  reference: 'The New Jersey earned income credit is fully refundable; it appears in the payments and credits block of the NJ-1040 and is paid out where it exceeds liability'
+
+# New Jersey Child Tax Credit: refundable, per child aged 5 or under, tiered
+# on New Jersey taxable income with a cliff at $80,000. Introduced TY2022 --
+# not TY2023, as secondary summaries often say -- and doubled for TY2023.
+ctc_style:
+  value: 2
+  reference: 'A flat amount per qualifying child within each income tier, the Colorado-style tiered shape'
+ctc_tier_income_base:
+  value: 9
+  reference: 'The tiers test New Jersey TAXABLE income (NJ-1040 line 42), not gross income and not federal AGI'
+ctc_max_child_age:
+  value: 5
+  reference: '2022-2025 booklets: the credit is allowed for each dependent child age 5 or younger at the end of the tax year'
+ctc_tier1_bound:
+  value: 30000
+  reference: 'Tier 1 upper bound: taxable income of $30,000 or less'
+ctc_tier2_bound:
+  value: 40000
+  reference: 'Tier 2: over $30,000 but not over $40,000'
+ctc_tier3_bound:
+  value: 50000
+  reference: 'Tier 3: over $40,000 but not over $50,000'
+ctc_tier4_bound:
+  value: 60000
+  reference: 'Tier 4: over $50,000 but not over $60,000'
+ctc_tier5_bound:
+  value: 80000
+  reference: 'Tier 5: over $60,000 but not over $80,000. Above $80,000 the credit is zero, which the tier machinery expresses by treating income past the LAST bound as ineligible rather than clamping into the bottom tier'
+ctc_tier_amounts:
+  value:
+    '2017': [0.0, 0.0, 0.0, 0.0, 0.0]
+    '2022': [500.0, 400.0, 300.0, 200.0, 100.0]
+    '2023': [1000.0, 800.0, 600.0, 400.0, 200.0]
+  reference: '2022 booklet p.43 "Calculating your credit"; 2023 booklet p.44; 2024 and 2025 booklets p.44. The credit began at $500 per child in TY2022 and DOUBLED to $1,000 for TY2023, with each tier doubling in step. Introduced TY2022, not TY2023'
+ctc_refundable:
+  value: 1
+  reference: 'The New Jersey Child Tax Credit is refundable, and is claimed in the payments and credits block'
+
+documented_not_modeled:
+  child_and_dependent_care_credit:
+    reference: 'THE TOP NEW JERSEY FOLLOW-UP. NJ-1040 line 57 gives a percentage of the FEDERAL child and dependent care credit, tiered on New Jersey taxable income. Introduced TY2018 at 50%/40%/30%/20%/10% across $20k/$30k/$40k/$50k/$60k of taxable income, nonrefundable, and capped in dollars at $500 for one qualifying person or $1,000 for two or more (Worksheet J lines 5-7). Restructured for TY2021: the income ceiling rose to $150,000, the dollar cap was removed, and the credit became REFUNDABLE. Not encoded because the calculator has no banded percentage-of-the-federal-credit mechanism -- the existing care machinery interpolates a share of EXPENSES rather than stepping a share of the federal credit [understates credits for working families with care expenses, by up to $1,000 before TY2021 and by more after]'
+  eitc_childless_minimum_age_and_floor:
+    reference: 'New Jersey extends its earned income credit to childless filers below the federal minimum age -- 21 and over from TY2020, 18 and over from TY2021 -- and pays those filers a FLAT minimum amount where the percentage match would be smaller ($215 in TY2020, $601 in TY2021, $224 in TY2022, $240, $253 and $260 thereafter). Both features sit outside the plain percentage match encoded above [understates the credit for young childless workers, who receive nothing here when the federal credit is zero because of the federal age floor]'
+  eitc_mfs_rule:
+    reference: 'The credit is barred to married filing separately in TY2018-TY2021, and from TY2023 a conditional rule allows it where the filer has a qualifying child and lived apart for the last six months. TY2022 is genuinely undocumented in the booklet. Not gated here; a separate filer rarely holds a federal credit to match'
+  property_tax_credit:
+    reference: 'The flat $50 property tax credit is the alternative to the property tax deduction and is documented in ded.yaml, where the election is explained'
+  other_credits:
+    reference: 'NJ-1040 also carries the credit for income taxes paid to other jurisdictions (Schedule NJ-COJ), the excess unemployment/disability/family leave contribution credits (which return over-withheld employee contributions and are a payments item rather than an income tax credit), the wounded/injured veterans credit and the pass-through business alternative income tax credit. None is a broad income-conditioned credit reconstructible from the microdata'

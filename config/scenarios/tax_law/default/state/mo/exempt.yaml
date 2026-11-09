@@ -1,0 +1,53 @@
+---
+# Missouri: exemptions (MO-1040 lines 9-10, 16-17 in TY2017; line 15 from
+# TY2022).
+#
+# Missouri's exemptions are tied by statute to the federal personal
+# exemption, so TCJA zeroing that exemption zeroed Missouri's too from
+# TY2018 -- the 2018 through 2021 forms have no exemption lines at all.
+# One piece came back: the head-of-household and qualifying widow(er)
+# additional exemption reappeared as its own line on the TY2022 form and
+# has stayed since. Sources that say "Missouri has had no exemptions since
+# 2018" miss it, and sources that carry the full 2017 schedule forward are
+# wrong the other way.
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_single
+    '3': personal_single
+    '4': personal_head
+
+# Per TAXPAYER (doubled for married filing combined by the calculator), so
+# the 2017 combined amount of $4,200 is encoded as $2,100.
+personal_single:
+  value:
+    '2017': 2100
+    '2018': 0
+  reference: '2017 MO-1040 line 9 exemption boxes: A single $2,100, C married filing combined $4,200 (= 2 x $2,100), D married filing separate $2,100, E married filing separate with spouse not filing $4,200. RSMo 143.151. Zero from TY2018 because RSMo 143.151 grants the exemption only where a federal personal exemption is allowed, and TCJA set that to zero -- confirmed by the absence of any exemption line on the 2018-2025 MO-1040'
+
+# Head of household and qualifying widow(er): $3,500 in TY2017 (the $2,100
+# base plus the $1,400 additional exemption), nothing 2018-2021, then the
+# $1,400 additional exemption alone from TY2022.
+personal_head:
+  value:
+    '2017': 3500
+    '2018': 0
+    '2022': 1400
+  reference: '2017 MO-1040 line 9 boxes F (head of household) and G (qualifying widow(er)), $3,500 each; RSMo 143.161.3 supplies the $1,400 component. From TY2022 the MO-1040 carries line 15 "Additional Exemption for Head of Household and Qualifying Widow(er)" at $1,400 on its own (2022 booklet p.9, and the 2023, 2024 and 2025 forms). Not indexed'
+
+dep_amount:
+  value:
+    '2017': 1200
+    '2018': 0
+  reference: '2017 MO-1040 line 16, $1,200 per dependent claimed on the federal return (2017 booklet p.9); RSMo 143.161.1. Zero from TY2018 with the rest of the exemption schedule -- no dependent line appears on the 2018-2025 MO-1040'
+
+documented_not_modeled:
+  aged_dependent_exemption_2017:
+    reference: '2017 MO-1040 line 17 added $1,000 per dependent aged 65 or older who received neither state funding nor Medicaid (2017 booklet p.9). The institutional-support test is unobserved, and dependents that old are rare [understates the TY2017 exemption for the few affected returns]'
+  qualifying_widower_exemption:
+    reference: 'The $1,400 additional exemption reaches qualifying widow(er)s as well as heads of household, but the model folds qualifying widow(er) into married filing jointly (filing_status 2) and has no separate status for it, so only heads of household receive it [overstates Missouri tax for qualifying widow(er)s, a small population, in TY2017 and from TY2022]'
+  additional_personal_exemption_2017:
+    reference: '2017 MO-1040 line 10 added a $500 exemption for a spouse where Missouri AGI was under $20,000 (2017 booklet p.7). One year only, income-tested, and small; not encoded'
+  hoh_qw_exemption_statutory_basis:
+    reference: 'The legislative mechanism that reactivated the $1,400 head-of-household and qualifying widow(er) exemption for TY2022 was not traced to a specific act. The form evidence is unambiguous (the line is absent 2018-2021 and present 2022-2025) and the form is what is encoded [UNVERIFIED as to statutory vehicle only, not as to the amount or the years]'

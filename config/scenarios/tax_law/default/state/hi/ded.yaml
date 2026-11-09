@@ -1,0 +1,121 @@
+---
+# Hawaii: deductions (Form N-11 lines 21-24). Hawaii kept its own pre-TCJA
+# deduction architecture through the whole window: its own (small) standard
+# deduction with the Act 46 SLH 2024 ramp through TY2031, and itemized
+# deductions computed on HAWAII AGI with an independent election (a filer
+# may itemize for Hawaii even after taking the federal standard deduction),
+# the high-income state-income-tax disallowance (Worksheet A-2), and the
+# retained pre-TCJA-style overall limitation at fixed thresholds (Total
+# Itemized Deductions Worksheet).
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  salt_addback_agi_thresh:
+    '1': salt_thresh_single
+    '2': salt_thresh_joint
+    '3': salt_thresh_single
+    '4': salt_thresh_head
+  pease_thresh:
+    '1': pease_thresh_full
+    '2': pease_thresh_full
+    '3': pease_thresh_half
+    '4': pease_thresh_full
+
+std_single:
+  value:
+    '2017': 2200
+    '2024': 4400
+    '2026': 8000
+    '2028': 9000
+    '2030': 10000
+    '2031': 12000
+  reference: 'HRS 235-2.4(a); 2017-2023 booklets ($2,200 single and MFS, e.g. 2017 p.22); Act 46 SLH 2024 sec. 1(2)(E)-(I) ramp: $4,400 (2024, printed on the 2024 form line 23 and 2025 booklet p.20), $8,000 (2026), $9,000 (2028), $10,000 (2030), $12,000 (2031+). NOT indexed; Hawaii did not adopt the federal TCJA standard-deduction increases (2018 booklet p.22 "Act 27, SLH 2018")'
+std_joint:
+  value:
+    '2017': 4400
+    '2024': 8800
+    '2026': 16000
+    '2028': 18000
+    '2030': 20000
+    '2031': 24000
+  reference: 'Same sources: married filing jointly and qualifying surviving spouse ($4,400 through 2023; Act 46 ramp)'
+std_head:
+  value:
+    '2017': 3212
+    '2024': 6424
+    '2026': 12000
+    '2028': 13500
+    '2030': 15000
+    '2031': 18000
+  reference: 'Same sources: head of household ($3,212 through 2023; Act 46 ramp)'
+
+# Dependent filers: greater of $500 or earned income, capped at the full
+# standard deduction (the pre-TCJA federal shape, retained by Act 46)
+std_dependent_style:
+  value: 1
+  reference: '2017 booklet p.22 "Standard Deduction for Dependents" worksheet; Act 46 sec. 1(3) keeps the $500 rule'
+std_dependent_floor:
+  value: 500
+  reference: 'Worksheet line B minimum amount, $500 all years'
+
+# Itemized deductions: independent election on Hawaii AGI. The state
+# itemized base is the model-wide default (pre-limitation federal itemized
+# with the capped SALT component replaced by uncapped property/personal-
+# property taxes -- Hawaii did not adopt the federal $10,000 SALT cap), and
+# the income/sales-tax component is excluded only at or above the Worksheet
+# A-2 federal-AGI thresholds
+item_allowed:
+  value: 1
+  reference: 'N-11 lines 21a-21f (Worksheets A-1..A-6 on Hawaii AGI), all years'
+item_coupling:
+  value: 0
+  reference: '"If you did not itemize deductions on your federal return, complete Worksheet A-2" (2017 booklet pp.17-18) -- the Hawaii election is independent of the federal one'
+salt_addback:
+  value: 1
+  reference: 'Worksheet A-2 (line 21b): the state-income-tax deduction is denied above the thresholds below, so the exclusion is threshold-gated'
+salt_thresh_single:
+  value: 100000
+  reference: 'Worksheet A-2 note (2017 booklet pp.18/38; identical 2024 booklet p.16 and 2025 booklet): state and local, and foreign, income taxes deductible only if federal AGI is under $100,000 for single or married filing separately, "for taxable years beginning after December 31, 2010" -- permanent, all years'
+salt_thresh_joint:
+  value: 200000
+  reference: 'Worksheet A-2 note: under $200,000 for married filing jointly and qualifying widow(er)s'
+salt_thresh_head:
+  value: 150000
+  reference: 'Worksheet A-2 note: under $150,000 for heads of household'
+
+# Overall limitation (Total Itemized Deductions Worksheet): the pre-TCJA
+# Pease shape on HAWAII AGI at FIXED thresholds -- 3% of the excess over
+# $166,800 ($83,400 MFS), capped at 80% of non-protected deductions.
+# Protected: medical, investment interest, casualty/theft (the worksheet
+# also protects gambling losses inside line A-6; that slice of other_item
+# is not separable -- documented below). Hawaii "did not adopt the federal
+# provision that suspends the overall limitation for tax years 2018
+# through 2025" (2024 booklet p.19)
+pease:
+  value: 1
+  reference: 'Total Itemized Deductions Worksheet (2017 booklet p.38; 2024 p.32; 2025 p.34); N-11 line 22 instructions'
+pease_thresh_full:
+  value: 166800
+  reference: 'Worksheet line 7: $166,800 -- grep-verified identical in all nine booklets 2017-2025 (never indexed)'
+pease_thresh_half:
+  value: 83400
+  reference: 'Worksheet line 7: $83,400 married filing separately, all years'
+pease_agi_base:
+  value: 2
+  reference: 'Worksheet line 6 is N-11 line 20, Hawaii AGI (not federal AGI)'
+
+documented_not_modeled:
+  medical_floor_10pct:
+    reference: 'Worksheet A-1 applies a 10%-of-Hawaii-AGI medical floor for ALL taxpayers, all years (Act 91 SLH 2011; 2017 booklet pp.2/17) -- Hawaii never adopted the federal 7.5% floor. The model''s medical component carries the FEDERAL floor [overstates the Hawaii medical deduction by up to 2.5% of AGI for medical itemizers]'
+  misc_2pct_deductions_post_tcja:
+    reference: 'Hawaii retained the 2%-floor miscellaneous itemized deductions after the TCJA repealed them federally (2018-2025 booklets, line 21f). The federal misc component is zero from 2018, so the Hawaii amount is unobservable [understates Hawaii itemized deductions from 2018]'
+  pease_gambling_loss_protection:
+    reference: 'The worksheet protects gambling and casualty/theft losses reported in Worksheet A-6 from the overall limitation; the gambling slice of other_item_ded is not separable [slightly overstates the limitation for gamblers]'
+  home_equity_and_pre_tcja_mortgage_limits:
+    reference: 'Hawaii retained home-equity interest deductibility and the pre-TCJA mortgage-principal limits (annual conformity acts). The model''s mortgage component reflects federal current law [understates Hawaii itemized deductions for the affected filers]'
+  sales_tax_election:
+    reference: 'Worksheet A-2 allows electing general sales taxes instead of income taxes (useful above the income-tax disallowance thresholds). salt_inc_sales is excluded wholesale above the threshold [understates Hawaii itemized deductions for high-AGI filers who would elect sales taxes]'

@@ -1,0 +1,112 @@
+---
+# Oklahoma: income base (Form 511 lines 1-7; Schedule 511-A additions,
+# Schedule 511-B subtractions).
+
+start_point:
+  value: 1
+  reference: 'Form 511 line 1 "Federal adjusted gross income"; 68 O.S. 2353(12) defines Oklahoma adjusted gross income from federal AGI'
+
+conformity_group:
+  value: 0
+  reference: '68 O.S. 2353(1)-(3) reference the Internal Revenue Code with no fixed date -- rolling conformity -> conformity_groups.yaml group 0'
+
+# Out-of-state municipal interest is added back; Oklahoma's own obligations
+# stay exempt (Schedule 511-A line 1)
+add_exempt_int:
+  value: 1
+  reference: 'Schedule 511-A line 1 "State and municipal bond interest"; 68 O.S. 2358(A)(2). Interest on obligations of other states and their subdivisions is added to Oklahoma AGI'
+own_state_exempt:
+  value: 1
+  reference: 'Schedule 511-A line 1 instructions exempt Oklahoma''s own obligations and those of its political subdivisions. The own-state share of exempt_int is unobserved, so the model adds back the uniform 25% out-of-state complement'
+sub_us_int:
+  value: 1
+  reference: 'Schedule 511-B line 1 subtracts interest on U.S. obligations. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates OK tax for Treasury holders]'
+sub_state_ref:
+  value: 1
+  reference: 'Schedule 511-B line 2 subtracts taxable refunds of state and local income taxes reported in federal AGI. PolicyEngine omits this subtraction -- expect a PE-high wedge on units with a prior-year state refund'
+
+# Social Security: Oklahoma subtracts ALL federally taxable Social Security,
+# with no age or income test
+ss_sub_share:
+  value: 1
+  reference: 'Schedule 511-B line 3 "Social Security benefits ... may be subtracted"; 68 O.S. 2358(E)(1)(a). Full subtraction, unconditional'
+
+# Retirement exclusion (68 O.S. 2358(E)(13)): up to $10,000 per person of
+# retirement benefits, shared across public and private plans. The age-65 and
+# Oklahoma-AGI conditions in (E)(13)(a)-(b) EXPIRED for tax years beginning
+# after 2004 and 2009 respectively, and no 2017-2025 Form 511 packet imposes
+# either -- hence no minimum age here. That is a substantive reading of the
+# statute and worth a probe against the external models.
+pension_excl_under65:
+  value: 10000
+  reference: '68 O.S. 2358(E)(13); Schedule 511-B lines 4-5, "Retirement benefits ... maximum of $10,000 per individual", 2017-2025 packets'
+pension_excl_65plus:
+  value: 10000
+  reference: 'Same $10,000 cap regardless of age -- the age-65 condition in 2358(E)(13)(a) expired for tax years beginning after 2004'
+pension_excl_min_age:
+  value: 0
+  reference: 'No age gate: the age-65 and Oklahoma-AGI conditions of 2358(E)(13)(a)-(b) expired after tax years 2004 and 2009, and no 2017-2025 packet imposes either'
+pension_excl_incl_ira:
+  value: 1
+  reference: 'Schedule 511-B line 4 covers benefits from any of the listed plan types plus IRAs; the cap is shared across them'
+
+# Age-65 special exemption (68 O.S. 2358(C)/(D)) -- encoded as a SUBTRACTION,
+# not an exemption add-on, and the reason matters. The exemption is $1,000 per
+# 65-or-older person but ONLY where FEDERAL AGI is at or below a hard
+# per-status limit. st_exempt has no per-add-on income test (its po_thresh
+# zeroes the WHOLE allowance, which is not the law), so encoding it as
+# aged_addl = 1000 with no test would grant roughly $47.50 to every 65+
+# Oklahoman regardless of income -- on the order of $25M/yr of tax cut that
+# does not exist. The VA-style age_ded family instead subtracts $1,000 per
+# qualifying person, reduced dollar for dollar above the threshold: form-exact
+# outside a $1,000-per-person AGI ramp where the statute has a cliff, with
+# bounded error of $47.50 per person inside it.
+#
+# CONSEQUENCE: the $1,000 lands in st_subtractions, so reported st_agi runs
+# $1,000-$2,000 below Form 511 line 7 for these units. Nothing else in the
+# Oklahoma encoding reads state AGI, so nothing downstream is affected.
+age_ded_amount:
+  value: 1000
+  reference: '68 O.S. 2358(D); Form 511 "Special Exemption" box, $1,000 per taxpayer or spouse aged 65 or over, 2017-2025 packets'
+age_ded_min_age:
+  value: 65
+  reference: '68 O.S. 2358(D): age 65 or over at the close of the tax year'
+age_ded_po_base:
+  value: 1
+  reference: 'The special-exemption test is on FEDERAL adjusted gross income, per the Form 511 instruction box'
+
+filing_status_mapper:
+  age_ded_po_thresh:
+    '1': age_limit_single
+    '2': age_limit_joint
+    '3': age_limit_mfs
+    '4': age_limit_head
+
+age_limit_single:
+  value: 15000
+  reference: 'Form 511 Special Exemption instructions: single filers with federal AGI of $15,000 or less'
+age_limit_joint:
+  value: 25000
+  reference: 'Married filing jointly (and surviving spouse), $25,000 or less'
+age_limit_mfs:
+  value: 12500
+  reference: 'Married filing separately, $12,500 or less'
+age_limit_head:
+  value: 19000
+  reference: 'Head of household, $19,000 or less. NOTE this is $19,000, not the $20,000 assumed in earlier drafts, and there is no broader gross-income variant of the test -- the footnote alongside it is a Roth-conversion carve-out'
+
+documented_not_modeled:
+  military_retirement_exclusion:
+    reference: '68 O.S. 2358(E)(20): the GREATER of 75% or $10,000 of Armed Forces retired pay (TY2017-2021), rising to 100% from TY2022. Military retiree status is not observable, so these units receive only the general $10,000 retirement exclusion [OVERSTATES their liability -- THE LARGEST SINGLE OMISSION in this state. Order of magnitude on ~40,000 Oklahoma resident returns at ~$28,000 average retired pay: ~$550/return (~$22M/yr) pre-2022 and ~$855/return (~$34M/yr) from TY2022, roughly 0.6-1.0% of OK individual income tax receipts. Both TAXSIM and PolicyEngine model it]'
+  per_person_retirement_cap_pooled:
+    reference: 'st_sub_pens_raw pools the two $10,000 caps at unit level, so a couple where ONE spouse holds all the retirement income can reach $20,000 where Oklahoma allows $10,000 [over-excludes up to $10,000 of base, at most about $475 of tax]. The same limitation Delaware documents'
+  csrs_in_lieu_of_social_security:
+    reference: '68 O.S. 2358(E)(9): 100% of federal civil service retirement received in lieu of Social Security. An unobservable subset of txbl_pens_dist'
+  railroad_retirement_and_tribal_income:
+    reference: 'Railroad Retirement Board benefits (2358(E)(8)) and income exempt by treaty or federal law for members of federally recognized tribes (potentially material in Oklahoma after McGirt). Neither is separable in the PUF'
+  active_duty_military_pay:
+    reference: '68 O.S. 2358(E)(21): active-duty pay of members of the Armed Forces. Unobservable'
+  capital_gain_deduction_form_561:
+    reference: '68 O.S. 2358(D): a deduction for qualifying gains on Oklahoma property held three years or on stock of an Oklahoma corporation. The Oklahoma-source test is unobservable'
+  depletion_nol_and_pte_items:
+    reference: 'Oklahoma depletion at 22% (2358(E)(17)), bonus-depreciation decoupling, the Oklahoma NOL, out-of-state losses, 529/OklahomaDream and ABLE contributions, and pass-through-entity election income. All unobservable; the net effect overstates the Oklahoma base'

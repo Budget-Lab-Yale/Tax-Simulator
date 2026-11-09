@@ -1,0 +1,14 @@
+TAXSIM-35, Oklahoma, TY2019, single, wages 300,000, mortgage input
+30,000 (in our source data roughly half of this class is charitable
+contributions).
+
+Expected: 68 O.S. 2358(D)(1) caps OK itemized deductions at 17,000
+from TY2018 but EXEMPTS charitable contributions and medical
+expenses, so allowed = min(17000, base - charity - medical) +
+charity + medical. TAXSIM applies a flat 17,000: v35 = exactly
+17,000 on 91% of our OK itemizers in every cap year, and 'our
+itemized = TAXSIM 17,000 + charity + medical' holds to the dollar
+on 69% of them. TY2017 (no cap) is a clean control with no hits.
+Note the input-coverage angle: TAXSIM-35 has no separate charitable
+or medical inputs (both ride inside 'mortgage'/'otheritem'), so the
+statutory exemptions cannot be honored without new inputs.

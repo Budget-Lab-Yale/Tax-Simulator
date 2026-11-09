@@ -1,0 +1,78 @@
+---
+# Nebraska: income base (Form 1040N lines 5-13; Schedules I and II).
+
+start_point:
+  value: 1
+  reference: 'Form 1040N line 5 "Federal adjusted gross income"; Neb. Rev. Stat. 77-2716.01'
+
+conformity_group:
+  value: 0
+  reference: 'Neb. Rev. Stat. 77-2714 adopts the Internal Revenue Code as amended, with no fixed date -- rolling conformity, group 0'
+
+add_exempt_int:
+  value: 1
+  reference: 'Form 1040N Schedule I line 1 "Interest income from all state and local obligations exclusive of Nebraska"; 77-2716(1)(b)'
+own_state_exempt:
+  value: 1
+  reference: 'Schedule I line 1 exempts Nebraska''s own obligations. The own-state share of exempt_int is unobserved and the model applies its uniform 75% out-of-state convention, which is ALMOST CERTAINLY TOO HIGH for a state this small [understates the Nebraska addback, understating tax, for holders of municipal bonds]'
+sub_us_int:
+  value: 1
+  reference: 'Schedule I line 4 subtracts U.S. government obligation interest. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates NE tax for Treasury holders]'
+
+# Social Security: the statute grants the GREATER of two rules, and the
+# calculator's ss_full_share is already a pmax over the flat share and the
+# all-ages AGI-limited subtraction, so both are encoded directly:
+#   PERCENTAGE rule (ss_sub_share): 0 through 2020, then 5% (LB 64, 2021),
+#     40% (LB 873, 2022), 60% (2023), 100% (LB 754, 2024+)
+#   THRESHOLD rule (ss_full_sub_allages + ss_allages_agi_limit): a FULL
+#     exclusion at or below an indexed federal-AGI limit, at any age
+# The threshold rule was repealed as unnecessary from TY2024, when the
+# percentage reached 100% -- encoded as an infinite limit, which is the same
+# thing once the percentage is 1.
+ss_sub_share:
+  value:
+    '2017': 0.0
+    '2021': 0.05
+    '2022': 0.40
+    '2023': 0.60
+    '2024': 1.0
+  reference: 'Neb. Rev. Stat. 77-2716(14)(a); LB 64 (2021), LB 873 (2022) and LB 754 (2023), which accelerated the ramp to 100% for TY2024. Form 1040N Schedule I Social Security worksheet each year'
+ss_full_sub_allages:
+  value: 1
+  reference: '77-2716(14)(a) grants the exclusion on an income test alone, with NO age condition'
+
+filing_status_mapper:
+  ss_allages_agi_limit:
+    '1': ss_limit_other
+    '2': ss_limit_joint
+    '3': ss_limit_other
+    '4': ss_limit_other
+
+ss_limit_joint:
+  value:
+    '2017': 58000
+    '2020': 59100
+    '2021': 59960
+    '2022': 61760
+    '2023': 66510
+    '2024': .inf
+  reference: 'Form 1040N Schedule I Social Security worksheet, married filing jointly, 2017-2023 (indexed annually). Infinite from TY2024, when the 100% percentage rule made the threshold rule redundant and it was repealed'
+ss_limit_other:
+  value:
+    '2017': 43000
+    '2020': 43820
+    '2021': 44460
+    '2022': 45790
+    '2023': 49310
+    '2024': .inf
+  reference: 'Same worksheet, all other filing statuses. NOTE the printed TY2020 booklet says $43,000; the erratum on its own cover corrects it to $43,820, which PolicyEngine also uses'
+
+documented_not_modeled:
+  property_tax_credits_form_ptc:
+    reference: 'The school-district property tax credit (LB 1107, TY2020-2023) and the community-college credit (LB 873, TY2022+), both claimed on Form PTC: refundable and keyed to property taxes paid, which are unobservable. THE LARGEST SINGLE OMISSION in this state -- on the order of $0.5-1.0 billion a year statewide across claimant types at its 2022-2023 peak [understates Nebraska refunds enormously in those years]. From TY2024 the school-district piece leaves the return entirely (LB 34 moved it to the property-tax statement), shrinking the omission to the community-college credit. ANY NEBRASKA AGGREGATE BENCHMARK FOR 2020-2023 MUST BE NET OF PTC or it will look wildly off'
+  military_retirement_exclusion:
+    reference: 'Neb. Rev. Stat. 77-2716(15): 100% of military retirement benefits excluded from TY2022 (a 50%/60% election before). Military retiree status is not observable [overstates NE tax for military retirees]'
+  schedule_i_subtractions:
+    reference: 'Railroad Retirement benefits, federal CSRS annuities (TY2024+), Nebraska 529/ABLE contributions, long-term care insurance, Form 4797N special capital gains on employer securities, and the Nebraska NOL. All unobservable subsets of income or unavailable inputs'
+  other_tax_and_elderly_credit:
+    reference: 'Nebraska "other tax" is 29.6% of federal Form 4972 lump-sum and early-distribution taxes, which the model does not compute; the elderly-or-disabled credit is 100% of the federal Schedule R credit, which the model also does not compute'

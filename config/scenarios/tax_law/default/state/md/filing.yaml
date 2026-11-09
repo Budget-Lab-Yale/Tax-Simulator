@@ -1,0 +1,18 @@
+---
+# Maryland: filing requirement. Residents must file if required to file
+# federally and gross income meets the federal filing thresholds
+# (Instruction 1, per year) -- the federal-requirement prong is the
+# modeled gate.
+
+# 3 = federal filing requirement or any state liability
+req_type:
+  value: 3
+  reference: 'Resident Booklet Instruction 1, 2017-2025: federal filing requirement with federal gross-income thresholds'
+
+req_income_thresh:
+  value: 0
+  reference: 'n/a (federal-requirement passthrough)'
+
+req_if_fed_filer:
+  value: 1
+  reference: 'Instruction 1: must file if required to file federally'

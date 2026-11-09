@@ -1,0 +1,7 @@
+# Computes state income taxes for all, writing the state detail matrix.
+
+jurisdictions:
+  value: all
+
+detail:
+  value: 1

@@ -1,0 +1,107 @@
+---
+# Oklahoma: deductions (Form 511 line 10; Schedule 511-D).
+#
+# The standard deduction is FROZEN IN STATUTE at pre-TCJA federal levels and
+# has not moved since TY2017 -- 68 O.S. 2358(F) sets the dollar amounts
+# directly rather than referencing the federal figure, so TCJA and OBBBA both
+# passed Oklahoma by. This is a genuine statutory freeze, not a stale
+# transcription.
+#
+# Itemization is COUPLED IN BOTH DIRECTIONS: "If you claimed itemized
+# deductions on your federal return, you must claim itemized deductions on your
+# Oklahoma return. This is true even if the Oklahoma itemized deductions are
+# less than the Oklahoma standard deduction." So a harness flagging Oklahoma
+# units taking a $3,000 itemized deduction against a $6,350 standard deduction
+# is seeing correct behaviour, not a bug.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_married
+    '3': std_single
+    '4': std_head
+  pease_thresh:
+    '1': pease_single
+    '2': pease_married
+    '3': pease_mfs
+    '4': pease_head
+
+std_single:
+  value: 6350
+  reference: '68 O.S. 2358(F); Form 511 line 10 instructions, identical in all nine packets 2017-2025 ($6,350 single and married filing separately). Frozen at the TY2017 federal level'
+std_married:
+  value: 12700
+  reference: '68 O.S. 2358(F); Form 511 line 10 instructions 2017-2025 (married filing jointly and surviving spouse)'
+std_head:
+  value: 9350
+  reference: '68 O.S. 2358(F); Form 511 line 10 instructions 2017-2025 (head of household)'
+
+item_allowed:
+  value: 1
+  reference: 'Schedule 511-D "Oklahoma Itemized Deductions", all years'
+item_coupling:
+  value: 1
+  reference: 'Form 511 line 10 instructions: a federal itemizer MUST itemize in Oklahoma, even where the Oklahoma itemized total is smaller than the Oklahoma standard deduction. Not a best-of election'
+salt_addback:
+  value: 1
+  reference: 'Schedule 511-D removes state and local income (or general sales) taxes from the federal itemized total; 68 O.S. 2358(D)'
+
+# $17,000 cap on Oklahoma itemized deductions (TY2018+), with charitable
+# contributions and medical expenses EXEMPT from the cap. Applied as
+# min(cap, base - exempt) + exempt, after the other limitations and before the
+# itemize election.
+item_flat_cap:
+  value:
+    '2017': .inf
+    '2018': 17000
+  reference: '68 O.S. 2358(D)(1) as amended by HB 1011XX (2018 2nd Ex. Sess.); Schedule 511-D line instructions 2018-2025. No cap existed in TY2017, so that year is exact'
+item_flat_cap_excl_medical:
+  value: 1
+  reference: 'Schedule 511-D: medical expenses are excluded from the $17,000 limitation'
+item_flat_cap_excl_charity:
+  value: 1
+  reference: 'Schedule 511-D: charitable contributions are excluded from the $17,000 limitation'
+# These two flags normally declare which components make up a state base built
+# under item_component_style 1. Oklahoma builds its base the default way, so
+# they do not affect the base here -- but the cap exemption reads them to size
+# the exempt amount, and both components ARE in the Oklahoma base, so both are
+# declared. Without them the cap would swallow charity and medical too.
+item_include_medical:
+  value: 1
+  reference: 'Schedule 511-D carries the federal medical expense deduction into the Oklahoma total, and 68 O.S. 2358(D)(1) exempts it from the $17,000 limitation'
+item_include_charity:
+  value: 1
+  reference: 'Schedule 511-D carries federal charitable contributions into the Oklahoma total, and 68 O.S. 2358(D)(1) exempts them from the $17,000 limitation'
+
+# Pre-TCJA Pease limitation, TY2017 only. Form 511 line 10A reads "the amount
+# of your ALLOWABLE itemized deductions", and the TY2017 packet carries its own
+# high-income worksheet.
+pease:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: 'Form 511 (2017) line 10A "allowable itemized deductions" plus the packet''s high-income worksheet; the federal limitation it references was suspended by TCJA from TY2018. NOTE our calculator applies Pease AFTER removing the income/sales component while the form prorates that component by the Pease cut first -- second-order, high-income only'
+pease_single:
+  value:
+    '2017': 261500
+    '2018': .inf
+  reference: 'IRC 68(b) threshold for TY2017, single'
+pease_married:
+  value:
+    '2017': 313800
+    '2018': .inf
+  reference: 'IRC 68(b) threshold for TY2017, married filing jointly and surviving spouse'
+pease_mfs:
+  value:
+    '2017': 156900
+    '2018': .inf
+  reference: 'IRC 68(b) threshold for TY2017, married filing separately'
+pease_head:
+  value:
+    '2017': 287650
+    '2018': .inf
+  reference: 'IRC 68(b) threshold for TY2017, head of household'
+
+documented_not_modeled:
+  itemized_salt_convention:
+    reference: 'st_item_default replaces the capped federal SALT deduction with UNCAPPED property and personal-property taxes, while Schedule 511-D starts from the federal Schedule A total (SALT already capped) and removes only the income/sales component [overstates Oklahoma itemized deductions post-2018 for high-property-tax filers, understating liability]. A model-wide v1 convention, not an Oklahoma-specific choice'

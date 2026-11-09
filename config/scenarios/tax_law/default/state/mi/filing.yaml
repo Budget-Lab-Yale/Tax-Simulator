@@ -1,0 +1,10 @@
+---
+req_type:
+  value: 1
+  reference: 'Michigan MI-1040 instructions, filing requirement based on Michigan AGI relative to exemptions, 2017-2025'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for exemption-linked filing proxy'
+req_if_fed_filer:
+  value: 0
+  reference: 'Michigan filing rule is modeled with the Michigan-AGI/exemption test'

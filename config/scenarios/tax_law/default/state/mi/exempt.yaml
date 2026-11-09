@@ -1,0 +1,35 @@
+---
+personal_amount:
+  value:
+    '2017': 4050
+    '2019': 4400
+    '2020': 4750
+    '2021': 4900
+    '2022': 5000
+    '2023': 5400
+    '2024': 5600
+    '2025': 5800
+  reference: 'Michigan MI-1040 instructions and Tax Year Information pages, 2017-2025'
+dep_amount:
+  value:
+    '2017': 4050
+    '2019': 4400
+    '2020': 4750
+    '2021': 4900
+    '2022': 5000
+    '2023': 5400
+    '2024': 5600
+    '2025': 5800
+  reference: 'Michigan MI-1040 instructions and Tax Year Information pages, 2017-2025'
+aged_addl:
+  value: 0
+  reference: 'Michigan special exemptions require disability, stillbirth, veteran, or other status inputs not in the baseline PUF'
+blind_addl:
+  value: 0
+  reference: 'Michigan special exemptions require disability, stillbirth, veteran, or other status inputs not in the baseline PUF'
+po_thresh:
+  value: .inf
+  reference: 'Michigan personal exemption has no broad AGI phaseout, 2017-2025'
+po_type:
+  value: 0
+  reference: 'n/a for Michigan (no broad AGI phaseout)'

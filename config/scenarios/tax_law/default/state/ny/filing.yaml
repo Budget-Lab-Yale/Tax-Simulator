@@ -1,0 +1,29 @@
+---
+# New York: filing requirement (Tax Law §651(a); IT-201-I "Who must file?")
+# Resident must file if required to file federally, OR if federal AGI plus NY
+# additions (§612(b)) exceeds $4,000 ($3,100 for a single filer claimable as
+# a dependent -- the statute's "NY standard deduction, if lower" test).
+# Thresholds unindexed and unchanged 2017-2026.
+
+# Filing requirement type:
+#   1 = state base income > exemption allowance (IL)
+#   2 = state AGI-plus-additions > fixed threshold (NY)
+#   3 = any state liability or federal filing requirement (CO-style)
+req_type:
+  value: 2
+  reference: 'Tax Law 651(a); 2017 IT-201-I p.6; 2025 IT-201-I p.3'
+
+# Fixed dollar filing threshold (FAGI + NY additions)
+req_income_thresh:
+  value: 4000
+  reference: 'Tax Law 651(a) ("in excess of four thousand dollars")'
+
+# Threshold for single filers claimable as dependents
+req_income_thresh_dep:
+  value: 3100
+  reference: 'Tax Law 651(a) ("in excess of his New York standard deduction, if lower"); IT-201-I'
+
+# Whether a federal filing requirement forces a state return
+req_if_fed_filer:
+  value: 1
+  reference: 'Tax Law 651(a)(1)(A)'

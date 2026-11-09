@@ -1,0 +1,24 @@
+---
+# Hawaii: personal exemptions (Form N-11 line 25). $1,144 per exemption for
+# taxpayer, spouse and each dependent, with ONE ADDITIONAL exemption per
+# aged-65-or-over taxpayer/spouse (the form's line 6a/6b "Age 65 or over"
+# ovals double the aged person's count). No income phase-out ("your personal
+# exemptions will no longer be reduced if your AGI is above a certain
+# amount", post-2015), and Hawaii did not adopt the TCJA suspension.
+# Unchanged 2017-2025 and not indexed.
+
+personal_amount:
+  value: 1144
+  reference: '"Residents are allowed $1,144 for each exemption... Multiply $1,144 by the total number of exemptions you claimed on line 6e" -- identical sentence in every booklet 2017-2025 (2017 p.22; 2025 p.20); HRS 235-54(a)'
+dep_amount:
+  value: 1144
+  reference: 'N-11 lines 6c/6d: one exemption per dependent at the same $1,144'
+aged_addl:
+  value: 1144
+  reference: 'N-11 lines 6a/6b: a taxpayer or spouse age 65 or over (as of January 1 following the tax year) fills a second oval and counts twice -- $2,288 total (2017 booklet pp.9/22)'
+
+documented_not_modeled:
+  disability_exemption_7000:
+    reference: 'HRS 235-54(c): a person certified blind, deaf or totally disabled (Form N-172) may claim a $7,000 exemption IN LIEU OF all other exemptions on the return (including dependents and the aged doubling; printed maxima $7,000 single / $14,000 both spouses disabled; earned income over $30,000 presumes not totally disabled). Certification is unobservable and the federal blind flag is a poor proxy for the in-lieu election, which can even lose money for filers with dependents [understates HI exemptions for certified-disabled filers without dependents]'
+  aged_age_test_january_1:
+    reference: 'The aged oval tests age 65 as of January 1 FOLLOWING the tax year, so a filer turning 65 late in the year already qualifies; the model tests age within the tax year [misses filers who turn 65 between year-end and January 1 -- essentially nobody at integer ages]'

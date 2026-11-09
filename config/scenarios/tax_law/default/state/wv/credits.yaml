@@ -1,0 +1,171 @@
+---
+# West Virginia: credits.
+#
+#   - FAMILY TAX CREDIT (Schedule FTC-1; W. Va. Code 11-21-22 / 22a / 22b).
+#     WV's low-income mechanism, and structurally the PA Schedule SP shape --
+#     a PERCENTAGE OF PRE-CREDIT TAX, not a dollar credit and not an amount
+#     table. 100% of the tax when modified federal AGI is at or below the
+#     federal poverty guideline for the unit's family size, then 10 percentage
+#     points less for each $300 ($150 MFS) or fraction thereof above it,
+#     reaching zero more than $2,700 ($1,350 MFS) above the guideline --
+#     which 11-21-22a(e)(3) also makes the eligibility ceiling.
+#       * Family size = exemption boxes (a)+(b)+(c) -- taxpayer, spouse and
+#         dependents -- EXCLUDING the surviving-spouse exemption
+#         (11-21-22a(b)), capped at 8.
+#       * Modified federal AGI = federal AGI + increasing WV modifications +
+#         federally reported tax-exempt interest not already in the additions
+#         (FTC-1 lines 1-4; 11-21-22a(d)).
+#       * "Individuals who file their income tax return with zero exemptions
+#         cannot claim the credit" -- exactly the forgive machinery's
+#         dependent-filer exclusion.
+#       * Nonrefundable (RECAP line 2 -> IT-140 line 9).
+#     The forgive_* family reproduces this EXACTLY, both boundaries included:
+#     st_step_reduction's ceiling() rounding puts modified AGI exactly at the
+#     guideline in the 100% band and exactly $300 above it in the 90% band,
+#     matching the tables' "Greater Than / Equal To or Less Than" columns, and
+#     10 steps take the share to zero precisely at guideline + $2,700.
+#     Base and increment are the HHS poverty guideline for one person and the
+#     per-additional-person increment for that calendar year, transcribed from
+#     the published table for EVERY year 2017-2025 -- never uprated or
+#     inferred. base(single/HoH) = FPG(1); base(MFJ/QSS) = FPG(2); base(MFS) =
+#     FPG(1)/2.
+#
+#   - CHILD AND DEPENDENT CARE CREDIT (11-21-26; RECAP line 18): 50% of the
+#     credit taken on federal Form 2441, TY2024 onward, nonrefundable.
+#
+#   - NO STATE EITC in any year, and NO STATE CTC in any year (zero hits for
+#     "earned income credit" or "child tax credit" in any of the nine
+#     booklets; the 2024 and 2025 RECAP schedules carry no such line). A WV
+#     child tax credit was proposed but did not pass.
+
+filing_status_mapper:
+  forgive_base:
+    '1': fpg_one_person
+    '2': fpg_two_person
+    '3': fpg_one_person_half
+    '4': fpg_one_person
+  forgive_dep_amount:
+    '1': fpg_increment
+    '2': fpg_increment
+    '3': fpg_increment_half
+    '4': fpg_increment
+  forgive_step:
+    '1': forgive_step_std
+    '2': forgive_step_std
+    '3': forgive_step_mfs
+    '4': forgive_step_std
+
+forgive_style:
+  value: 1
+  reference: 'W. Va. Code 11-21-22b; Schedule FTC-1 lines 6-8 (a percentage of the income tax due from IT-140 line 8), structurally identical in all nine booklets'
+
+# Federal poverty guideline for ONE person -- the family-size-1 100% bound in
+# Table 1 of each year's FAMILY TAX CREDIT TABLES
+fpg_one_person:
+  value:
+    '2017': 12060
+    '2018': 12140
+    '2019': 12490
+    '2020': 12760
+    '2021': 12880
+    '2022': 13590
+    '2023': 14580
+    '2024': 15060
+    '2025': 15650
+  reference: 'FAMILY TAX CREDIT TABLES, Table 1 (single / HoH / widow(er) / MFJ), family size 1, "100%" row, transcribed per year. Each equals that calendar year''s HHS poverty guideline for one person, as 11-21-22a(a) requires. Every value double-checked against the family-size-5 bound (= FPG1 + 4 x increment) and against the MFS table (= FPG1/2)'
+fpg_two_person:
+  value:
+    '2017': 16240
+    '2018': 16460
+    '2019': 16910
+    '2020': 17240
+    '2021': 17420
+    '2022': 18310
+    '2023': 19720
+    '2024': 20440
+    '2025': 21150
+  reference: 'Same tables, family size 2 100% bound (the base for a joint return before dependents). Equals fpg_one_person + fpg_increment in every year'
+fpg_one_person_half:
+  value:
+    '2017': 6030
+    '2018': 6070
+    '2019': 6245
+    '2020': 6380
+    '2021': 6440
+    '2022': 6795
+    '2023': 7290
+    '2024': 7530
+    '2025': 7825
+  reference: 'FAMILY TAX CREDIT TABLES, Table 2 (married filing separately), family size 1 100% bound -- exactly 50% of the guideline per 11-21-22b(c). Transcribed from the published table, not divided'
+fpg_increment:
+  value:
+    '2017': 4180
+    '2018': 4320
+    '2019': 4420
+    '2020': 4480
+    '2021': 4540
+    '2022': 4720
+    '2023': 5140
+    '2024': 5380
+    '2025': 5500
+  reference: 'Per-additional-family-member increment, read as the difference between consecutive family-size 100% bounds in Table 1 and confirmed across sizes 1 through 8 in every year (e.g. TY2025: 15,650 / 21,150 / 26,650 / 32,150 / 37,650 / 43,150 / 48,650 / 54,150). Applied per DEPENDENT here, which reproduces WV family size exactly: single/HoH base FPG(1) + n_dep, MFJ base FPG(2) + n_dep'
+fpg_increment_half:
+  value:
+    '2017': 2090
+    '2018': 2160
+    '2019': 2210
+    '2020': 2240
+    '2021': 2270
+    '2022': 2360
+    '2023': 2570
+    '2024': 2690
+    '2025': 2750
+  reference: 'Table 2 (MFS) increment, half the Table 1 increment, confirmed across sizes 1-8 in every year (e.g. TY2025: 7,825 / 10,575 / 13,325 / 16,075 / 18,825 / 21,575 / 24,325 / 27,075)'
+
+forgive_step_std:
+  value: 300
+  reference: 'W. Va. Code 11-21-22b(b): the ten $300 bands above the poverty guideline; the tables step $300 per 10-point column in every year 2017-2025'
+forgive_step_mfs:
+  value: 150
+  reference: 'W. Va. Code 11-21-22b(c): $150 bands above 50% of the guideline for separate returns; Table 2 columns step $150 in every year'
+forgive_step_share:
+  value: 0.10
+  reference: '11-21-22b(b)(2)-(10) and (c)(2)-(10): 90%, 80%, ... 10%, then zero above guideline + $2,700 (MFS + $1,350). Table columns read 100% / 90% / ... / 10% / 0% in all nine years'
+forgive_income_base:
+  value: 3
+  reference: 'Schedule FTC-1 lines 1-2 and 11-21-22a(d): modified federal AGI starts from federal AGI plus the increasing WV modifications -> st_income_base enum 3'
+forgive_add_exempt_int:
+  value: 0.75
+  reference: 'Schedule FTC-1 line 3: "Tax-exempt interest reported on federal tax return ... that is not already included on line 2". The non-WV 25% share of exempt interest is already in the additions under the own-state-muni convention, so only the WV-obligation 75% share is added here -- the same construction PA uses for Schedule SP line 2'
+forgive_add_alimony:
+  value: 0
+  reference: 'The WV modified-AGI definition (11-21-22a(d)) has no nontaxable-additions list; alimony received is already inside federal AGI where taxable'
+
+cdctc_match:
+  value:
+    '2017': 0
+    '2024': 0.5
+  reference: 'W. Va. Code 11-21-26; RECAP line 18, TY2024 and TY2025 booklets: "The allowable credit is 50% of the credit taken on Form 2441 of the federal return". FIRST APPEARS TY2024 -- there is no child and dependent care line and no Form 2441 reference anywhere in the 2017, 2019, 2022 or 2023 booklets (PE agrees: 2024-01-01)'
+cdctc_refundable:
+  value: 0
+  reference: 'Claimed on the Tax Credit Recap Schedule, whose total reduces IT-140 tax due; not listed among the refundable credits (the SCTC and HEPTC are the only refundable ones)'
+
+eitc_match:
+  value: 0
+  reference: 'West Virginia has NO state earned income credit in any year 2017-2025: zero occurrences of "earned income credit" or "earned income tax credit" in the 2019, 2023 or 2025 booklets, and no such line on any RECAP schedule'
+
+documented_not_modeled:
+  senior_citizens_tax_credit:
+    reference: 'W. Va. Code 11-21-21; IT-140 line 18 / Schedule SCTC-A. REFUNDABLE credit equal to the ad valorem property tax paid on the first $20,000 of taxable assessed value above the homestead exemption, for Homestead Exemption participants whose household income is at or below 150% of the federal poverty guideline. Tier-1 blocked: property tax paid, assessed value and Homestead Exemption participation are all unobserved. Understates refunds for low-income aged/disabled WV homeowners. PE models it -> pre-register a systematic PE wedge on that population. NOTE 11-21-21 is the property-tax credit, NOT the family tax credit (which is 11-21-22a/22b)'
+  homestead_excess_property_tax_credit:
+    reference: 'W. Va. Code 11-21-23; HEPTC worksheet. Refundable, capped at $1,000, for owner-occupants whose property tax net of the SCTC exceeds 4% of gross household income, with income below 300% of the federal poverty guideline. Same Tier-1 block; PE models it'
+  credit_for_tax_paid_to_another_state:
+    reference: 'W. Va. Code 11-21-20; Schedule E. Material in WV given commuting to OH/PA/MD/VA/KY, and the booklet devotes a section to reciprocity with those five states. Out-of-state source income is not identified in the PUF'
+  amt_payer_ineligibility:
+    reference: 'Schedule FTC-1, all years: "Persons who pay the federal alternative minimum tax are not eligible to claim this credit" (and 11-21-21(a)(2) disqualifies AMT payers from the SCTC). Not encoded: the forgive machinery has no AMT gate. Immaterial -- a unit paying federal AMT is far above the poverty guideline, so its family credit share is already zero'
+  adoption_and_volunteer_credits:
+    reference: 'W. Va. Code 11-21-10a adoption credit ($4,000 per child, nonrefundable, carryforward) and 11-13JJ volunteer firefighter credit (RECAP line 24, Schedule VFTC-1). Adoption events and volunteer status are unobserved'
+  business_and_investment_credits:
+    reference: 'RECAP lines 12-25: Neighborhood Investment Program, Historic Rehabilitated Buildings, Film Industry Investment, Build WV, Jumpstart Savings (employer), Industrial Advancement, Capital Investment in Child-Care Property, Operating Costs of Child Care Facility, the elective PTE-tax credit (EK-1) and the SAAM credit. Entity-level and unobserved'
+  no_state_ctc:
+    reference: 'No West Virginia child tax credit exists in any year 2017-2025 (verified: zero booklet hits, no RECAP line). Proposals in the 2023-2024 sessions did not pass'

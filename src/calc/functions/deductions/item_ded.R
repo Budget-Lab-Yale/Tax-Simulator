@@ -3,10 +3,19 @@
 #-------------------------------------------
 
 # Set return variables for function
-return_vars$calc_item_ded = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
-                              'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
-                              'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
+return_vars$calc_item_ded = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded',
+                              'inv_int_item_ded', 'int_item_ded', 'char_item_ded',
+                              'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
                               'item_ded_ex_limits', 'item_ded')
+
+# As-if-itemizing copies preserved by do_1040() before its non-itemizer
+# zeroing, for state calculators whose law lets federal standard-deduction
+# takers itemize on the state return (see src/calc/state/st_ded.R)
+return_vars$item_ded_potential = paste0(
+  c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 'inv_int_item_ded',
+    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
+    'item_ded_ex_limits', 'item_ded'),
+  '_potential')
 
 
 calc_item_ded = function(tax_unit, fill_missings = F) {

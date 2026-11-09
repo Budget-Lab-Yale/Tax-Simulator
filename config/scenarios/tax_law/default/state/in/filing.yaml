@@ -1,0 +1,10 @@
+---
+req_type:
+  value: 1
+  reference: 'Indiana IT-40 booklet, Who Must File, 2017-2025 (gross-income threshold proxied by modeled exemptions)'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for exemption-linked filing proxy'
+req_if_fed_filer:
+  value: 0
+  reference: 'Indiana IT-40 filing rules use gross income and exemptions; federal-filer proxy is not used'

@@ -1,0 +1,21 @@
+---
+# Illinois: tax rates. Flat rate on net income; encoded as a 10-element
+# rates/brackets schedule (the uniform state schema width, sized to NY's
+# 2021-2032 ten-bracket schedule; see plan D3) with all brackets at 0, which
+# integrate_rates_brackets() collapses to a flat rate.
+#
+# 2017: rate rose 3.75% -> 4.95% on 2017-07-01 (P.A. 100-0022); IL DOR
+# prescribed a day-weighted blended rate of 4.3549% for calendar-year filers,
+# which is what an annual model should use.
+
+# Marginal rates
+rates:
+  value:
+    '2017': [0.043549, 0.043549, 0.043549, 0.043549, 0.043549, 0.043549, 0.043549, 0.043549, 0.043549, 0.043549]
+    '2018': [0.0495, 0.0495, 0.0495, 0.0495, 0.0495, 0.0495, 0.0495, 0.0495, 0.0495, 0.0495]
+  reference: '35 ILCS 5/201(b)(5.3)-(5.4); 2017 IL-1040 Instr. p.1 (blended 4.3549%); IL DOR Bulletin FY 2018-02 and FY 2026-15'
+
+# Bracket thresholds (flat tax: all zero)
+brackets:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'Flat-rate structure; 35 ILCS 5/201'

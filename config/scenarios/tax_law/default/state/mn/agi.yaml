@@ -1,0 +1,209 @@
+---
+# Minnesota: base and additions/subtractions (Form M1, Schedule M1M; Minn.
+# Stat. 290.0131-290.0132). Starting point by year:
+#   2017: federal TAXABLE income (M1 line 1) -- federal deductions and
+#     exemptions flow through; the state income/sales tax addback is in
+#     ded.yaml (salt_addback). MN's 2017 incremental Pease and exemption
+#     phase-out addbacks (M1M lines 1-2, MN thresholds below the federal
+#     ones) are NOT modeled [known-difference, affects AGI ~$186-314k
+#     itemizers in 2017 only].
+#   2018+: federal ADJUSTED GROSS income with MN's own deduction stack
+#     (ded.yaml/exempt.yaml). The TY2018 nonconformity year is encoded per
+#     the research recommendation: TCJA-law FAGI + MN's own 2018 pre-TCJA
+#     deduction/exemption amounts; residual Schedule M1NC items (niche
+#     business/foreign provisions) are skipped [known-difference].
+# Conformity: fixed-date, updated regularly (Dec 31 2018 by the 2019 act;
+# May 1 2023 by the 2023 act). Modeled as rolling (group 0): the AGI-level
+# footprint of current nonconformity on PUF individuals is minimal (OBBBA
+# marquee items are below-AGI and never reach MN's own deduction stack).
+
+start_point:
+  value:
+    '2017': 2
+    '2018': 1
+  reference: '2017 Form M1 line 1 (federal taxable income, 1040 line 43); 2018+ Form M1 line 1 (federal adjusted gross income), verified every year 2018-2025'
+
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'Minn. Stat. 290.01 subd. 19/31: IRC as of Dec 16 2016 (TY2017-18 as filed), Dec 31 2018 (2019 act, retroactive to 2018), May 1 2023 (2023 act). Modeled rolling; 2025 OBBBA nonconformity (Schedule M1NC-25) documented -- marquee individual items are below-AGI [known-difference, low priority]'
+  m1nc_2018_residuals:
+    value: 0
+    reference: '2018 Schedule M1NC (Rev. 1/23): post-retroactivity residual items (tuition/fees, CARES excess business loss, TCDTR business items, moving expenses, 529-to-K12 earnings, opportunity-zone deferral) skipped; the big pre-TCJA restorations live on MN''s own 2018 lines (encoded)'
+  bonus_depreciation:
+    value: 0
+    reference: 'M1M/M1MB: 80% bonus-depreciation addback with one-fifth recovery over the following five years; not modelable from the PUF [known-difference]'
+  qpen_public_pension:
+    value: 0
+    reference: 'Minn. Stat. 290.0132 subd. 34 (TY2023+, Schedule M1QPEN): max 25,000/12,500 for non-SS-covered public-safety pensions, phased 10% per 2,000 over 100k/78k/50k AGI; pension source unobservable in the PUF; omitted [known-difference; PolicyEngine imputes it]'
+  military_pension:
+    value: 0
+    reference: 'M1M military pension/SBP subtraction (all years): military pension share of PUF pensions unobservable; omitted [known-difference, small MN incidence]'
+  k12_and_other_subtractions:
+    value: 0
+    reference: 'K-12 education expense subtraction (1,625/2,500 per child), 529 subtraction, M1R age-65+/disabled subtraction (de minimis unindexed thresholds), first-time-homebuyer, organ donor: data-limited; omitted'
+
+# Non-MN municipal interest addback (M1M lines 1-2); MN munis exempt.
+# Own-state share unobserved: model convention 75%
+add_exempt_int:
+  value: 1
+  reference: 'Schedule M1M lines 1-2 (interest and exempt-interest dividends from non-Minnesota state/local bonds), all years 2017-2025'
+
+own_state_exempt:
+  value: 1
+  reference: 'Schedule M1M line 1: Minnesota-source municipal interest not added back; own-state share unobserved, model convention 75% [known-difference]'
+
+sub_us_int:
+  value: 1
+  reference: 'Schedule M1M US-government-obligation interest subtraction (line 14 in 2023 numbering); PUF share unobserved [known-difference]'
+
+sub_state_ref:
+  value: 1
+  reference: 'Form M1 line 6 (2019+) / M1M (2017-18): state income tax refund subtraction, all years'
+
+# Social Security: sliding partial subtraction 2017-2022 (Minn. Stat.
+# 290.0132 subd. 26); from 2023 the GREATER of the frozen sliding method
+# and the simplified full subtraction with a 10%-per-$4,000 phase-out
+# (HF1938). Provisional income = AGI - taxable SS + 50% gross SS + exempt
+# interest (M1M worksheet)
+filing_status_mapper:
+  ss_partial_max:
+    '1': ss_partial_max_single
+    '2': ss_partial_max_joint
+    '3': ss_partial_max_mfs
+    '4': ss_partial_max_single
+  ss_partial_thresh:
+    '1': ss_partial_thresh_single
+    '2': ss_partial_thresh_joint
+    '3': ss_partial_thresh_mfs
+    '4': ss_partial_thresh_single
+  ss_allages_agi_limit:
+    '1': ss_allages_limit_single
+    '2': ss_allages_limit_joint
+    '3': ss_allages_limit_mfs
+    '4': ss_allages_limit_single
+  ss_allages_po_step:
+    '1': ss_allages_step_regular
+    '2': ss_allages_step_regular
+    '3': ss_allages_step_mfs
+    '4': ss_allages_step_regular
+
+ss_partial_rate:
+  value: 0.20
+  reference: 'M1M SS subtraction worksheets 2017-2025: 20% phase-out rate on provisional income over the threshold, all years'
+
+ss_partial_max_joint:
+  value:
+    '2017': 4500
+    '2019': 5150
+    '2020': 5240
+    '2021': 5290
+    '2022': 5450
+    '2023': 5840
+  reference: 'M1M SS worksheet maxima, MFJ/QW: 4,500 (2017-18), 5,150/5,240/5,290/5,450 (2019-2022); frozen at 5,840 as the 2023+ alternative method (DOR memos: not indexed)'
+
+ss_partial_max_single:
+  value:
+    '2017': 3500
+    '2019': 4020
+    '2020': 4090
+    '2021': 4130
+    '2022': 4260
+    '2023': 4560
+  reference: 'M1M SS worksheet maxima, single/HoH; frozen at 4,560 from 2023'
+
+ss_partial_max_mfs:
+  value:
+    '2017': 2250
+    '2019': 2575
+    '2020': 2620
+    '2021': 2645
+    '2022': 2725
+    '2023': 2920
+  reference: 'M1M SS worksheet maxima, MFS; frozen at 2,920 from 2023'
+
+ss_partial_thresh_joint:
+  value:
+    '2017': 77000
+    '2018': 78530
+    '2019': 78180
+    '2020': 79480
+    '2021': 80270
+    '2022': 82770
+    '2023': 88630
+  reference: 'M1M SS worksheet provisional-income thresholds, MFJ/QW (2019 dip is as printed -- the 2019 act re-based indexation); frozen at 88,630 from 2023'
+
+ss_partial_thresh_single:
+  value:
+    '2017': 60200
+    '2018': 61400
+    '2019': 61080
+    '2020': 62090
+    '2021': 62710
+    '2022': 64670
+    '2023': 69250
+  reference: 'M1M SS worksheet thresholds, single/HoH; frozen at 69,250 from 2023'
+
+ss_partial_thresh_mfs:
+  value:
+    '2017': 38500
+    '2018': 39270
+    '2019': 39090
+    '2020': 39740
+    '2021': 40135
+    '2022': 41385
+    '2023': 44315
+  reference: 'M1M SS worksheet thresholds, MFS; frozen at 44,315 from 2023'
+
+ss_full_sub_allages:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: '2023 omnibus (HF1938), Minn. Stat. 290.0132 subd. 26: simplified full subtraction of taxable SS from TY2023, greater-of election vs the frozen sliding method'
+
+ss_allages_limit_joint:
+  value:
+    '2017': .inf
+    '2023': 100000
+    '2024': 105380
+    '2025': 108320
+  reference: 'Simplified-method AGI thresholds, MFJ/QSS (2023 M1M line 12; DOR TY2024/25 memos). 2026+ carries 2025 [indexed in law]'
+
+ss_allages_limit_single:
+  value:
+    '2017': .inf
+    '2023': 78000
+    '2024': 82190
+    '2025': 84490
+  reference: 'Simplified-method AGI thresholds, single/HoH'
+
+ss_allages_limit_mfs:
+  value:
+    '2017': .inf
+    '2023': 50000
+    '2024': 52690
+    '2025': 54160
+  reference: 'Simplified-method AGI thresholds, MFS'
+
+ss_allages_step_regular:
+  value: 4000
+  reference: 'Minn. Stat. 290.0132 subd. 26: subtraction reduced 10% for each $4,000, or fraction, of AGI above the threshold'
+
+ss_allages_step_mfs:
+  value: 2000
+  reference: 'Same provision: $2,000 steps for MFS'
+
+ss_allages_po_share:
+  value: 0.10
+  reference: 'Same provision: 10% per step; fully phased out at threshold + 40,000/20,000'
+
+# Charitable contributions for non-itemizers: 50% of the excess over $500
+# (all years 2017-2025). Keys on MN itemizing, proxied by the federal
+# election [known-difference]
+sub_char_nonitem_floor:
+  value: 500
+  reference: 'Schedule M1M charitable subtraction for non-itemizers (2017 line 20; 2023 line 11 worksheet): contributions over $500'
+
+sub_char_nonitem_share:
+  value: 0.5
+  reference: 'Same provision: 50% of the excess'

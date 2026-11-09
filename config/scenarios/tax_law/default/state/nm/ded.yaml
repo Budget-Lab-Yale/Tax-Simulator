@@ -1,0 +1,199 @@
+---
+# New Mexico: deductions (PIT-1 line 12, "federal standard or itemized
+# deduction amount").
+#
+# THIS FILE IS A MIRROR OF THE FEDERAL config/scenarios/tax_law/baseline/
+# std.yaml, parameter for parameter, INCLUDING the indexation blocks, because
+# PIT-1 line 12 is literally the amount claimed on the federal return. The
+# duplication is the price of not starting from federal taxable income --
+# see the start_point note in agi.yaml for why that trade is worth $304 of
+# tax on a single return.
+#
+# Keep the two in lockstep: test_nm_std_mirrors_federal() asserts NM's
+# std_amount / std_aged_addl / std_blind_addl / std_dependent_floor /
+# std_dependent_earned_add equal the federal std.value / std.bonus /
+# std.dep_floor / std.dep_earned_bonus for every year from 2018 and every
+# filing status, under the same index. If a federal standard-deduction
+# parameter changes, that test fails until this file is updated.
+#
+# The 2017 zero is deliberate: start_point 2 that year puts the federal
+# deduction in the base already, so subtracting it here would double-count.
+#
+# What is deliberately NOT mirrored: std.bonus_other. It is the "any other
+# reason" federal bonus slot, and NM's line 12 is the standard-or-itemized
+# amount only. It is zero throughout the federal baseline, so this is a
+# structural statement, not a numerical difference.
+
+indexation_defaults:
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': 1987
+    '2018': 2017
+    '2026': 2024
+  i_direction: -1
+  i_increment: 50
+
+filing_status_mapper:
+  std_amount:
+    '1': std_base_single
+    '2': std_base_single * 2
+    '3': std_base_single
+    '4': std_base_head
+  std_aged_addl:
+    '1': std_bonus_single
+    '2': std_bonus_married
+    '3': std_bonus_single
+    '4': std_bonus_single
+  std_blind_addl:
+    '1': std_bonus_single
+    '2': std_bonus_married
+    '3': std_bonus_single
+    '4': std_bonus_single
+  item_prop_tax_cap:
+    '1': salt_cap_single
+    '2': salt_cap_single
+    '3': salt_cap_mfs
+    '4': salt_cap_single
+
+# Mirrors federal std.yaml value_single (with the 2017 zero described above)
+std_base_single:
+  value:
+    '2017': 0
+    '2018': 12000
+    '2026': 15750
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  reference: 'PIT-1 line 12 (the federal standard deduction as claimed); IRC 63(c)(2)/(7). Mirrors config/scenarios/tax_law/baseline/std.yaml value_single -- TCJA $12,000 (2018), OBBBA $15,750 -- value for value and indexation block for indexation block. 2017 is zero because start_point 2 already carries the deduction that year'
+# Mirrors federal std.yaml value_head
+std_base_head:
+  value:
+    '2017': 0
+    '2018': 18000
+    '2026': 23625
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml value_head (head-of-household standard deduction); IRC 63(c)(2)(B)'
+# Mirrors federal std.yaml bonus_single / bonus_married. NM allows the federal
+# AGED and BLIND add-ons, since they are part of the line 12 amount -- test
+# NM-3 turns on this (an MFJ couple both 70 get the couple's two add-ons)
+std_bonus_single:
+  value:
+    '2017': 0
+    '2018': 750
+  i_measure: default
+  i_base_year: 1987
+  i_direction: default
+  i_increment: default
+  reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml bonus_single; IRC 63(f) aged/blind additional standard deduction for unmarried filers, part of the line 12 amount'
+std_bonus_married:
+  value:
+    '2017': 0
+    '2018': 600
+  i_measure: default
+  i_base_year: 1987
+  i_direction: default
+  i_increment: default
+  reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml bonus_married; IRC 63(f) per-instance amount for married filers -- test NM-3 turns on this (an MFJ couple both 70 claim two)'
+
+# Dependent-filer worksheet: min(regular std, max(floor, earned + add)).
+# Mirrors federal std.yaml dep_floor / dep_earned_bonus
+std_dependent_style:
+  value: 1
+  reference: 'IRC 63(c)(5) as claimed on the federal return and carried to PIT-1 line 12; the state calculator''s style 1 is the same min/max worksheet as calc_std_ded'
+std_dependent_floor:
+  value:
+    '2017': 0
+    '2018': 500
+  i_measure: default
+  i_base_year: 1987
+  i_direction: default
+  i_increment: default
+  reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml dep_floor; IRC 63(c)(5)(A) minimum standard deduction for a dependent filer'
+std_dependent_earned_add:
+  value:
+    '2017': 0
+    '2018': 250
+  i_measure: default
+  i_base_year: 1997
+  i_direction: default
+  i_increment: default
+  reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml dep_earned_bonus; IRC 63(c)(5)(B) amount added to a dependent filer''s earned income'
+
+# Itemized deductions: NM has no schedule of its own. Line 12 is whatever the
+# federal return claimed, so the election is coupled in both directions, and
+# the state amount is rebuilt from the federal components with the SALT
+# INCOME/SALES tax portion left out (it is added back on PIT-1 line 10).
+item_allowed:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'PIT-1 line 12 instructions, 2018-2025 ("the standard or itemized deduction amount from your federal return"). Off in 2017 because start_point 2 already carries it'
+item_coupling:
+  value: 1
+  reference: 'PIT-1 line 12 is the federal amount, so a state-level election does not exist -- the federal choice governs in both directions'
+item_component_style:
+  value: 1
+  reference: 'Components are selected rather than taking the federal total, so the income/sales-tax portion can be dropped (PIT-1 line 10 addback)'
+salt_addback:
+  value: 1
+  reference: 'PIT-1 line 10 "state and local tax deduction addback"; NMSA 7-2-2(S). The addback is the income/sales-tax share of the SALT deduction claimed'
+item_include_medical:
+  value: 1
+  reference: 'Federal Schedule A line 4, unmodified by New Mexico'
+item_include_mortgage:
+  value: 1
+  reference: 'Federal Schedule A line 10'
+item_include_investment:
+  value: 1
+  reference: 'Federal Schedule A line 9'
+item_include_charity:
+  value: 1
+  reference: 'Federal Schedule A line 14'
+item_include_casualty:
+  value: 1
+  reference: 'Federal Schedule A line 15'
+item_include_misc:
+  value: 1
+  reference: 'Federal Schedule A other itemized deductions (line 16 post-TCJA; the pre-TCJA 2%-floor miscellaneous class is data-limited and not reconstructed, a model-wide known difference)'
+item_include_other:
+  value: 1
+  reference: 'Federal Schedule A line 16'
+item_include_prop_tax:
+  value: 1
+  reference: 'Federal Schedule A line 5b/5c real and personal property taxes -- NOT added back by PIT-1 line 10, which reaches income and sales taxes only'
+item_include_pers_tax:
+  value: 1
+  reference: 'Federal Schedule A line 5c personal property taxes; same treatment as real property'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'PIT-1 line 10 adds back the income/sales-tax portion of the SALT deduction, so it is excluded here'
+
+# SALT-CAP INTERACTION, a documented approximation. PIT-1 pro-rates the CAPPED
+# SALT deduction between the property and income/sales legs and adds back the
+# income/sales share. We instead let property fill the cap first. The two are
+# IDENTICAL whenever total SALT is at or under the cap (most post-2018
+# itemizers): pro-rating $X of uncapped SALT by the property share returns
+# exactly the property amount. Above the cap we deduct
+# min(prop + pers, cap) where the form allows cap x property_share, so we
+# over-deduct and understate NM tax for itemizers with large state income tax
+# on top of already-capped property tax.
+salt_cap_single:
+  value:
+    '2017': .inf
+    '2018': 10000
+    '2025': 40000
+    '2030': 10000
+  reference: 'IRC 164(b)(6) as enacted by TCJA ($10,000) and raised by OBBBA for TY2025-2029 ($40,000, reverting in 2030); mirrors the federal item.yaml salt_limit_married series. The OBBBA income-based phase-down toward the $10,000 floor above ~$500,000 of AGI is NOT mirrored (no phase-down machinery on a flat component cap) [over-deducts property tax, understating NM tax, for itemizers above the phase-down threshold in TY2025-2029]'
+salt_cap_mfs:
+  value:
+    '2017': .inf
+    '2018': 5000
+    '2025': 20000
+    '2030': 5000
+  reference: 'IRC 164(b)(6): half the cap for married filing separately'

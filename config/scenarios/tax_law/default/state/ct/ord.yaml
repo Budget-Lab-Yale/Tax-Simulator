@@ -1,0 +1,125 @@
+---
+# Connecticut: rate schedule and recapture (CGS 12-700; CT-1040 Tax
+# Calculation Schedule). Statutory nominal amounts, NOT indexed (Tables
+# hash-identical across the 2017-2025 booklets except the enacted 2024
+# changes). MFS uses the single rate schedule; Table C (phase-out add-back)
+# has its own MFS column, and Table D (recapture) uses the single column
+# for MFS.
+#
+# Stepped recapture segments (step_recap_*): segment 1 = Table C lowest-rate
+# phase-out add-back; segments 2-4 = Table D tiers 0/1/2 (tier 0 exists only
+# from 2024 -- amount 0 before). Each adds
+#   min(ceil((CT AGI - start)/incr) x amount, max)
+# when CT AGI exceeds the segment start. All keyed to CT AGI.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_head
+  step_recap_start:
+    '1': recap_start_single
+    '2': recap_start_married
+    '3': recap_start_mfs
+    '4': recap_start_head
+  step_recap_incr:
+    '1': recap_incr_single
+    '2': recap_incr_married
+    '3': recap_incr_mfs
+    '4': recap_incr_head
+  step_recap_amount:
+    '1': recap_amount_single
+    '2': recap_amount_married
+    '3': recap_amount_single
+    '4': recap_amount_head
+  step_recap_max:
+    '1': recap_max_single
+    '2': recap_max_married
+    '3': recap_max_single
+    '4': recap_max_head
+
+# Marginal rates: 3/5/5.5/6/6.5/6.9/6.99% through 2023; PA 23-204 376 cut
+# the bottom two to 2% and 4.5% from 2024 (brackets unchanged)
+rates:
+  value:
+    '2017': [0.03, 0.05, 0.055, 0.06, 0.065, 0.069, 0.0699]
+    '2024': [0.02, 0.045, 0.055, 0.06, 0.065, 0.069, 0.0699]
+  reference: 'CT-1040 booklets 2017-2025 Tax Calculation Schedule/rate schedule; PA 23-204 376; OLR 2025-R-0080 Tables 9-10'
+
+# Bracket lower bounds (statutory, unchanged 2017-2025)
+brackets_single:
+  value: [0, 10000, 50000, 100000, 200000, 250000, 500000]
+  reference: 'CGS 12-700(a); CT-1040 booklets (single/MFS schedule); NOT indexed'
+brackets_married:
+  value: [0, 20000, 100000, 200000, 400000, 500000, 1000000]
+  reference: 'CGS 12-700(a); CT-1040 booklets (MFJ/QSS schedule); NOT indexed'
+brackets_head:
+  value: [0, 16000, 80000, 160000, 320000, 400000, 800000]
+  reference: 'CGS 12-700(a); CT-1040 booklets (HoH schedule); NOT indexed'
+
+# Segment starts: [Table C, Tier 0, Tier 1, Tier 2]
+recap_start_single:
+  value: [56500, 105000, 200000, 500000]
+  reference: '2017/2025 booklets Tables C-D (single); tier 0 from PA 23-204 (inert pre-2024 via amount 0)'
+recap_start_mfs:
+  value: [50250, 105000, 200000, 500000]
+  reference: '2017/2025 booklets: Table C MFS column; Table D MFS uses the single column'
+recap_start_married:
+  value: [100500, 210000, 400000, 1000000]
+  reference: '2017/2025 booklets Tables C-D (MFJ/QSS)'
+recap_start_head:
+  value: [78500, 168000, 320000, 800000]
+  reference: '2017/2025 booklets Tables C-D (HoH)'
+
+# Segment increment sizes
+recap_incr_single:
+  value: [5000, 5000, 5000, 5000]
+  reference: '2017/2025 booklets Tables C-D (single)'
+recap_incr_mfs:
+  value: [2500, 5000, 5000, 5000]
+  reference: '2017/2025 booklets: Table C MFS $2,500 bands; Table D single column'
+recap_incr_married:
+  value: [5000, 10000, 10000, 10000]
+  reference: '2017/2025 booklets Tables C-D (MFJ/QSS)'
+recap_incr_head:
+  value: [4000, 8000, 8000, 8000]
+  reference: '2017/2025 booklets Tables C-D (HoH)'
+
+# Add-back/recapture per increment. Table C re-scaled with the 2024 rate
+# cuts ($1,000 shifted from the lowest to the second bracket costs 2.0pp
+# through 2023, 2.5pp after); Table D tier 0 begins 2024
+recap_amount_single:
+  value:
+    '2017': [20, 0, 90, 50]
+    '2024': [25, 25, 90, 50]
+  reference: '2017-2023 booklets ($20/increment Table C; $90/$50 Table D); 2024/2025 booklets ($25/$25/$90/$50); PA 23-204'
+recap_amount_married:
+  value:
+    '2017': [40, 0, 180, 100]
+    '2024': [50, 50, 180, 100]
+  reference: '2017-2023 booklets ($40; $180/$100); 2024/2025 booklets ($50/$50/$180/$100)'
+recap_amount_head:
+  value:
+    '2017': [32, 0, 140, 80]
+    '2024': [40, 40, 140, 80]
+  reference: '2017-2023 booklets ($32; $140/$80); 2024/2025 booklets ($40/$40/$140/$80)'
+
+# Segment maxima (Table C fully phases out the lowest-bracket benefit; Table
+# D combined maxima $3,150/$6,300/$4,920 through 2023, $3,400/$6,800/$5,320
+# with tier 0 from 2024)
+recap_max_single:
+  value:
+    '2017': [200, 250, 2700, 450]
+    '2024': [250, 250, 2700, 450]
+  reference: '2017/2025 booklets Tables C-D (single; tier 0 max moot pre-2024 with amount 0)'
+recap_max_married:
+  value:
+    '2017': [400, 500, 5400, 900]
+    '2024': [500, 500, 5400, 900]
+  reference: '2017/2025 booklets Tables C-D (MFJ/QSS)'
+recap_max_head:
+  value:
+    '2017': [320, 400, 4200, 720]
+    '2024': [400, 400, 4200, 720]
+  reference: '2017/2025 booklets Tables C-D (HoH)'

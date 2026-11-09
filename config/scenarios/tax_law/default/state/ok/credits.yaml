@@ -1,0 +1,81 @@
+---
+# Oklahoma: credits (Form 511 lines 16-17; Schedules 511-F and 511-G).
+
+# Earned income credit (68 O.S. 2357.43(A)): 5% of the federal credit,
+# NONREFUNDABLE 2017-2021 and REFUNDABLE from TY2022 (HB 2962 of 2021 restored
+# refundability).
+eitc_match:
+  value: 0.05
+  reference: '68 O.S. 2357.43(A); Form 511 line 16 / Schedule 511-F instructions, 5% of the federal earned income credit in every year 2017-2025'
+eitc_refundable:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Refundability was removed for TY2017-2021 and restored from TY2022 by HB 2962 (2021), which also froze the federal base (see documented_not_modeled)'
+
+# Child care / child tax credit (68 O.S. 2357.43(B)): the GREATER of 20% of
+# the federal child and dependent care credit and 5% of the federal child tax
+# credit, denied outright above $100,000 of federal AGI. Both are
+# nonrefundable.
+#
+# THE TWO LEGS ARE ALTERNATIVES, NOT A SUM. st_ctc and st_cdctc are added
+# together by the calculator, so encoding both without the election would
+# overstate every care-expense unit by min(20%CDCC, 5%CTC); encoding only the
+# care leg would zero the credit for the far larger population of families with
+# children and no care expenses. ctc_cdctc_greater_of zeroes the smaller leg,
+# so both columns report what was actually claimed.
+ctc_cdctc_greater_of:
+  value: 1
+  reference: '68 O.S. 2357.43(B): "a credit equal to the GREATER of twenty percent (20%) of the credit for child care expenses or five percent (5%) of the child tax credit allowed on the federal return"'
+
+# 5%-of-federal-CTC leg. Encoded through the tiered-share style with a SINGLE
+# tier whose bound is the $100,000 cliff: a return at or under the bound takes
+# the share, a return above it falls out of the tier ladder entirely and gets
+# zero, which is exactly the statutory cliff. ctc_max_child_age 16 makes the
+# style's under-age/under-17 ratio identically 1, so the credit is a clean 5%
+# of the federal credit claimed rather than a share of it.
+ctc_style:
+  value: 1
+  reference: '68 O.S. 2357.43(B); Schedule 511-G. Style 1 = share of the federal child tax credit actually claimed'
+ctc_tier1_bound:
+  value: 100000
+  reference: '68 O.S. 2357.43(C): no credit is allowed where federal adjusted gross income exceeds $100,000. A single-tier ladder reproduces the cliff -- above the last bound the tier selector returns ineligible'
+ctc_tier_shares:
+  value: [0.05, 0.0, 0.0]
+  reference: '68 O.S. 2357.43(B): five percent of the federal child tax credit. Only the FIRST element is reachable -- one tier bound is declared, so an eligible return is always in tier 1 and an ineligible one is out of the ladder entirely. The trailing zeros exist because vector families are addressed by numbered element (shares1, shares2, ...), and a bare scalar would land in a suffix-less column the family reader cannot see'
+ctc_max_child_age:
+  value: 16
+  reference: 'Matches the federal CTC qualifying-child age, so every CTC-qualifying child counts in both the numerator and the denominator of the style''s age ratio and the credit is exactly 5% of the federal amount'
+ctc_refundable:
+  value: 0
+  reference: '68 O.S. 2357.43: the credit may not exceed the tax, in every year'
+
+# 20%-of-federal-CDCC leg, under the same $100,000 cliff. The cap machinery
+# with a zero amount and a zero phase-out rate zeroes the credit above the
+# threshold, which is the cliff.
+cdctc_match:
+  value: 0.20
+  reference: '68 O.S. 2357.43(B): twenty percent of the federal credit for child care expenses'
+cdctc_refundable:
+  value: 0
+  reference: '68 O.S. 2357.43: nonrefundable in every year'
+cdctc_cap_thresh:
+  value: 100000
+  reference: '68 O.S. 2357.43(C), the same $100,000 federal-AGI cliff that applies to the child-credit leg'
+cdctc_cap_amount:
+  value: 0
+  reference: 'Zero above the threshold -- with cdctc_cap_po_rate also zero this is a cliff, not a phase-out, matching the statute'
+
+documented_not_modeled:
+  sales_tax_relief_credit_538s:
+    value: 40
+    reference: '68 O.S. 5010-5012; Form 538-S. A $40 refundable credit per household member. THREE blockers: (a) st_credits.percap_* has no income test at all; (b) the measure is gross HOUSEHOLD income -- "the total amount of gross income received by ALL persons living in the same household whether the income was taxable or not", explicitly including public assistance, child support, workers'' compensation, scholarships, VA disability, gross Social Security including Medicare, dependents'' income and the EIC received, with negative amounts prohibited -- which matches no st_income_base enum and is not a tax-unit concept; (c) the $50,000 tier needs a dependent / 65+ / disability gate and TANF receipt in any month disqualifies. Encoding percap_amount = 40 without the test would pay roughly $95M/yr against about $36M actual [understates Oklahoma refunds by up to $40 x (filers + dependents), roughly $30-40M/yr; BOTH external models grant it, so expect point masses at $40 multiples on low-income units in every year]. The Kansas food-sales-tax-credit precedent'
+  property_tax_relief_credit_538h:
+    value: 200
+    reference: '68 O.S. 2904-2911; Form 538-H. Refundable, up to $200, for filers 65 or older or disabled with gross household income of $12,000 or less. Same household-gross-income measure as 538-S [understates Oklahoma refunds for low-income seniors; PolicyEngine models it]'
+  frozen_ty2020_eitc_base:
+    reference: 'HB 2962 (2021) restored refundability but froze the base at the federal credit "in effect for the 2020 income tax year". We apply 5% to the CURRENT federal credit instead of building reference-law machinery [OVERSTATES the Oklahoma EITC from TY2022. Plateau wedge = 5% x (current max - 2020 max): TY2022 $1.10/$7.45/$12.20/$13.75 for 0/1/2/3+ children, TY2023 $3.10/$20.55/$34.20/$38.50, TY2024 $4.70/$31.45/$52.00/$58.50, TY2025 $5.55/$37.20/$61.60/$69.30. Larger in the phase-out range since the frozen phase-out start is also unindexed, and the frozen $3,650 investment-income limit against $11,600 (2024) makes some federally eligible units entirely ineligible in Oklahoma where we pay the full 5%. Aggregate roughly 5-7% of a ~$42M/yr credit by 2024-2025]. TY2021 is deliberately NOT frozen -- no vintage clause existed then, so Oklahoma''s 5% applied to the ARPA-expanded credit'
+  ok_agi_proration_of_eitc_and_child_credit:
+    reference: 'Schedules 511-F and 511-G prorate both credits by the ratio of Oklahoma AGI to federal AGI, for FULL-YEAR residents, whenever Oklahoma AGI is lower -- i.e. anyone with a Social Security, retirement, military, tribal, 529 or out-of-state modification. No machinery scales a credit by a base ratio [overstates both credits for units with any Oklahoma subtraction. PolicyEngine models it; this is our-side]'
+  credit_menu_511cr:
+    reference: 'Credit for tax paid to another state, the Form 511-CR menu, the Parental Choice tax credit (TY2024+), the natural disaster credit, the Form 578 zero-emission credit, Form 573 farm income averaging, the HSA additional tax and IRC 965(h) installments: none modeled'

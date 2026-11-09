@@ -1,0 +1,56 @@
+---
+# Louisiana income base (IT-540 line 7; La. R.S. 47:293).
+#
+# Federal adjusted gross income in every year, with the Schedule E exclusions
+# taken against it. Retirement is where nearly all the action is: Social
+# Security is 100% exempt in every year, the named Louisiana and federal
+# retirement systems are 100% exempt, and everyone 65 or older gets a
+# per-person exclusion against IRA and pension income that doubled for
+# TY2025.
+
+start_point:
+  value: 1
+  reference: 'IT-540 line 7 is federal adjusted gross income in every year 2017-2025; R.S. 47:293(10) defines Louisiana tax table income by reference to it'
+
+ss_sub_share:
+  value: 1
+  reference: 'Schedule E code 07E, "taxable amount of Social Security" -- enter federal 1040 line 6b, 100% exempt. R.S. 47:44.2, which also covers federal and Railroad Retirement benefits. Unchanged in every year 2017-2025, including under Act 11'
+
+pension_excl_65plus:
+  value:
+    '2017': 6000
+    '2025': 12000
+  i_measure:
+    '2017': .na
+    '2026': cpi
+  i_base_year:
+    '2017': .na
+    '2026': 2025
+  i_direction: 0
+  i_increment: 1
+  reference: 'Schedule E code 06E, the annual retirement income exemption. Worksheet text identical in every year 2017-2025; only the cap moves. R.S. 47:44.1(A). Act 11 of the 2024 Third Extraordinary Session doubled it to $12,000 and added a CPI-U adjustment with the first adjustment on January 1, 2026 (RIB 25-012 section 5)'
+pension_excl_under65:
+  value: 0
+  reference: 'The exclusion is an age test and nothing else -- 65 or older, with no income phase-out and no service requirement. A taxpayer under 65 gets none of it'
+pension_excl_min_age:
+  value: 65
+  reference: 'Worksheet line 5, "For EACH taxpayer 65 or older". TY2025 line 6A of the return is a pure age-designation checkbox existing solely to support this exclusion'
+pension_excl_incl_ira:
+  value: 1
+  reference: 'Worksheet line 1 is "retirement income reported on Federal 1040/1040-SR lines 4b and 5b" -- taxable IRA distributions AND taxable pensions and annuities. Both are in the base'
+
+documented_not_modeled:
+  per_person_exclusion_is_per_spouse_income:
+    reference: 'The exclusion is per person against that person''s OWN retirement income: "up to $[cap] of the annual retirement income that each taxpayer receives may be exempt". A joint return with both spouses 65 or older and both receiving retirement income gets twice the cap; one with all the income on one spouse gets one cap. The model pools the couple''s income against the summed cap [overstates the exclusion for single-pension couples]'
+  louisiana_and_federal_retirement_systems:
+    reference: 'Schedule E codes 02E to 05E exempt 100% of LASERS, Louisiana State Teachers'' Retirement, FEDERAL retirement including the military survivor benefit plan, and a long list of other named Louisiana systems -- school employees, State Police, municipal employees and police, parochial employees, firefighters, Assessors, Clerks of Court, District Attorneys, Registrars of Voters and Sheriffs. Codes 02E-05E are also netted out of the age-65 worksheet first, so there is no double-dipping. None of these systems is separable from pension income in the model [understates the exclusion for retirees of the named systems, which in Louisiana is a large share of public retirees]'
+  disability_income_exclusion:
+    reference: 'A SEPARATE $6,000 exclusion for permanent and total disability income, R.S. 47:44.1(B), claimed under the catch-all Schedule E code 49E and never indexed -- distinct from the age-65 exclusion and not increased by Act 11. Disability status is not a model input'
+  military_pay_exclusion:
+    reference: 'Schedule E code 10E excludes active-duty pay for 120 or more consecutive days served outside Louisiana. Duty location is not a model input'
+  net_capital_gain_deduction:
+    reference: 'Schedule E code 20E, the deduction for net capital gain on the sale of a Louisiana business, survives for sales perfected before January 1, 2025 despite RIB 25-012 describing it as repealed. Business-sale gains are not separable from capital gains generally'
+  hurricane_disaster_relief_credits:
+    reference: 'Filers claiming the Hurricane Katrina and Rita federal disaster relief credits had to compute a "modified federal income tax deduction" on Schedule H instead of the ordinary worksheet, in every year 2017-2021. Negligible for microsimulation and ignored'
+  additions_and_subtractions_beyond_retirement:
+    reference: 'The full R.S. 47:293 addition and subtraction list was not enumerated beyond the retirement items. Anything in it other than the items above is not encoded'

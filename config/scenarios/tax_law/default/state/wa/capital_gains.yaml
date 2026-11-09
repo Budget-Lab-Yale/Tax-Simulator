@@ -1,0 +1,46 @@
+---
+# Amounts through 2025 are published values. Values after the last published
+# year are deliberately held at the 2025 law until an annual source update;
+# they are not represented as an official forecast.
+model_coverage_share:
+  value: 1
+  reference: 'Modeling assumption: the observed kg_lt base is used before asset-level exclusions; see WA source packet'
+standard_deduction:
+  value:
+    '2017': 0
+    '2022': 250000
+    '2023': 262000
+    '2024': 270000
+    '2025': 278000
+  reference: 'Washington DOR capital gains tax standard deduction amounts, 2022-2025: https://dor.wa.gov/taxes-rates/other-taxes/capital-gains-tax'
+charitable_threshold:
+  value:
+    '2017': Inf
+    '2022': 250000
+    '2023': 262000
+    '2024': 270000
+    '2025': 278000
+  reference: 'RCW 82.87.080 charitable deduction threshold, adjusted annually'
+charitable_max_deduction:
+  value:
+    '2017': 0
+    '2022': 100000
+    '2023': 105000
+    '2024': 108000
+    '2025': 111000
+  reference: 'RCW 82.87.080 charitable deduction maximum, adjusted annually'
+base_rate:
+  value:
+    '2017': 0
+    '2022': 0.07
+  reference: 'RCW 82.87.040(1): 7 percent tax rate'
+surtax_rate:
+  value:
+    '2017': 0
+    '2025': 0.029
+  reference: 'RCW 82.87.040(2): additional 2.9 percent rate effective tax year 2025'
+surtax_threshold:
+  value:
+    '2017': Inf
+    '2025': 1000000
+  reference: 'RCW 82.87.040(2): additional rate applies to taxable Washington capital gains over $1 million'

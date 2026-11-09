@@ -1,0 +1,78 @@
+---
+# Missouri: adjusted gross income (MO-1040 lines 1-6; Form MO-A Part 1).
+#
+# Missouri AGI = federal AGI + MO-A Part 1 additions - MO-A Part 1
+# subtractions. NOTE what is NOT here: the pension/Social Security exemption
+# is MO-1040 line 8, struck AFTER Missouri AGI, so it lives in ded.yaml as a
+# deduction (st_ded.retire_exempt_*). That placement is load-bearing --
+# line 6 is the income the federal-tax-deduction percentage bands key on.
+#
+# Conformity is rolling: RSMo 143.091 gives every undefined term "the same
+# meaning as when used in a comparable context in the laws of the United
+# States relating to federal income taxes", with no fixed date.
+
+start_point:
+  value: 1
+  reference: 'MO-1040 line 1 "Federal adjusted gross income from your federal return"; RSMo 143.121.1 defines Missouri adjusted gross income as the taxpayer''s federal adjusted gross income subject to the modifications in RSMo 143.121'
+
+add_exempt_int:
+  value: 1
+  reference: 'MO-A Part 1 line 1 "Interest on state and local obligations other than Missouri source"; RSMo 143.121.2(1). Missouri''s own obligations stay exempt'
+own_state_exempt:
+  value: 1
+  reference: 'MO-A Part 1 line 1 excludes Missouri-source obligations from the addition; the Missouri share of exempt_int is approximated by the model-wide own-state constant'
+
+sub_us_int:
+  value: 1
+  reference: 'MO-A Part 1 line 8 "Interest from exempt federal obligations included in federal adjusted gross income" (31 U.S.C. 3124); 2017-2025 booklets, MO-A Part 1 subtractions'
+sub_state_ref:
+  value: 1
+  reference: 'MO-A Part 1 line 9 "State income tax refund included in federal adjusted gross income"; RSMo 143.121.3(1)'
+
+# 100% subtraction of federally reported capital gains, new for TY2025
+# (HB 594, 2025). MO-A Part 1 line 18 takes federal Form 1040 line 7 and
+# instructs "if the amount is negative, enter $0" -- a gain-only subtraction
+# with no loss add-back, which cap_gains_excl_share reproduces because the
+# calculator applies the share to the gain floored at zero
+cap_gains_excl_share:
+  value:
+    '2017': 0.0
+    '2025': 1.0
+  reference: 'HB 594 (2025), RSMo 143.121.3; 2025 MO-1040 instructions MO-A Part 1 "Line 18 - Capital Gain": "Missouri allows a subtraction from federal adjusted gross income for 100 percent of your federally reported capital gains"'
+
+# Missouri source business income deduction (RSMo 143.022): a share of net
+# profit from Schedule C, Schedule E Part 2 (partnerships and S corps), and
+# -- in the later worksheet vintages -- Schedule F and Form 4835, less
+# agricultural disaster relief payments. Phased in on revenue triggers to a
+# 20% statutory maximum reached in TY2023. Every percentage below was read
+# off that year's own worksheet, not inferred from the statutory schedule:
+# the phase-in stalled at 10% for three years, so the even 5-point-per-year
+# reading of RSMo 143.022 is wrong
+bus_excl_share:
+  value:
+    '2017': 0.0
+    '2018': 0.05
+    '2019': 0.10
+    '2022': 0.15
+    '2023': 0.20
+  reference: 'RSMo 143.022 (5-point steps to a 20% maximum, each contingent on net general revenue growth); MO-A Part 1 "Worksheet for Missouri Source Business Deduction" in each booklet -- TY2018 "Multiply Line 3 by 5%", TY2019/2020/2021 "in the amount of 10 percent", TY2022 "15 percent", TY2023 "20 percent for Missouri-source business income, including total combined profit by farmers", TY2024 p.16 line 6 and TY2025 likewise 20%. The TY2017 booklet has no business income deduction at all'
+
+documented_not_modeled:
+  public_pension_exemption:
+    reference: 'MO-A Part 3 Section A exempts public pension income (federal, state, or local government plans) up to the year''s maximum Social Security benefit -- $37,089 in TY2017 rising to $47,633 in TY2025 -- per spouse, net of the Social Security exemption claimed, and (through TY2023) reduced dollar-for-dollar by Missouri AGI net of taxable Social Security above $85,000 single / $100,000 combined; SB 190 removed those income limits from TY2024. NOT MODELED because the public/private split of txbl_pens_dist is unobserved in the PUF, the same data limit that leaves the New York government-pension exclusion unmodeled. Missouri instead receives only the $6,000 private pension exemption on the whole pension pool [materially OVERSTATES Missouri tax for government retirees -- this is Missouri''s largest known difference, and the state has an unusually large public-retiree population. Clears with the Tier 1 pension-source imputation]'
+  military_retirement:
+    reference: 'Military retirement benefits are fully subtracted -- MO-A Part 3 Section D through TY2020, then MO-A Part 1 line 10 from TY2021 (RSMo 143.174). Military retiree status is unobserved in the PUF [overstates Missouri tax for military retirees]'
+  active_duty_pay:
+    reference: 'MO-1040 lines 18-19 deduct active duty and inactive duty military pay for nonresident/reserve members. Service status is unobserved'
+  able_and_529:
+    reference: 'MO-A Part 1 lines 13-15 subtract contributions to MOST 529 accounts (up to $8,000 single / $16,000 combined) and to Missouri ABLE accounts. Contributions are unobserved in the PUF [overstates Missouri tax for contributors]'
+  long_term_care_premiums:
+    reference: 'MO-1040 line 16 deducts qualified long-term care insurance premiums (RSMo 135.096). Premiums are unobserved'
+  health_care_sharing_ministry:
+    reference: 'MO-1040 line 17 deducts payments to a health care sharing ministry (RSMo 143.119). Payments are unobserved'
+  depreciation_adjustment:
+    reference: 'MO-A Part 1 carries Missouri/federal bonus depreciation timing differences in both directions (RSMo 143.121.2(3), 143.121.3(9)). Asset-level basis histories are not in the PUF'
+  agriculture_disaster_relief:
+    reference: 'MO-A Part 1 line 16 subtracts qualifying agricultural disaster relief payments, which are also netted out of the business income deduction base on its worksheet line 4. Not separable in the PUF'
+  food_pantry_and_other_additions:
+    reference: 'MO-A Part 1 adds back food pantry contributions claimed on federal Schedule A (RSMo 135.647) and nonqualified 529 distributions. Both are unobserved'

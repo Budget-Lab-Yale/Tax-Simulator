@@ -1,0 +1,82 @@
+---
+# Vermont rate schedule (32 V.S.A. 5822; IN-111 line 8, from the rate schedules
+# in the instruction booklet). Five brackets in 2017; Act 11 of the 2018 special
+# session cut to four and lowered every rate, and the four rates have not
+# changed since. Thresholds are CPI-indexed annually per filing status.
+#
+# TRANSCRIPTION TRAP: from TY2023 the PRINTED married-filing-jointly schedule
+# splits its first bracket at $75,000 -- an artifact of the tax TABLES covering
+# income under $75,000, not a rate change. The economically distinct second
+# threshold is 75,850 / 79,950 / 82,500, which is what is encoded here.
+#
+# Printed base-tax amounts are rounded to whole dollars, so a continuous
+# schedule differs from the published one by at most $0.05 (test VT-1 lands
+# $5,743.35 against the schedule's $5,743.30).
+#
+# Five-element uniform schedules; the four-bracket regimes repeat the top bound
+# so the top rate still runs to infinity. Thresholds are transcribed through
+# TY2025 and held flat after -- vector families have no indexation precedent in
+# any encoded state [understates VT tax in out-years as real income grows into
+# unindexed brackets; revisit with each year's published schedule].
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_mfs
+    '4': brackets_head
+
+rates:
+  value:
+    '2017': [0.0355, 0.0680, 0.0780, 0.0880, 0.0895]
+    '2018': [0.0335, 0.0660, 0.0760, 0.0875, 0.0875]
+  reference: '32 V.S.A. 5822(a); IN-111 rate schedules 2017 (3.55/6.80/7.80/8.80/8.95%) and 2018-2025 (3.35/6.60/7.60/8.75%, unchanged across the eight years) following Act 11 of the 2018 special session'
+
+brackets_single:
+  value:
+    '2017': [0, 37900, 91850, 191650, 416650]
+    '2018': [0, 38700, 93700, 195450, 195450]
+    '2019': [0, 39600, 96000, 200200, 200200]
+    '2020': [0, 40350, 97800, 204000, 204000]
+    '2021': [0, 40950, 99200, 206950, 206950]
+    '2022': [0, 42150, 102200, 213150, 213150]
+    '2023': [0, 45400, 110050, 229550, 229550]
+    '2024': [0, 47900, 116000, 242000, 242000]
+    '2025': [0, 49400, 119700, 249700, 249700]
+  reference: '32 V.S.A. 5822(a); IN-111 rate schedule for single filers, each year 2017-2025'
+brackets_joint:
+  value:
+    '2017': [0, 63300, 153100, 233300, 416650]
+    '2018': [0, 64600, 156150, 237950, 237950]
+    '2019': [0, 66150, 159950, 243750, 243750]
+    '2020': [0, 67450, 163000, 248350, 248350]
+    '2021': [0, 68400, 165350, 251950, 251950]
+    '2022': [0, 70450, 170300, 259500, 259500]
+    '2023': [0, 75850, 183400, 279450, 279450]
+    '2024': [0, 79950, 193300, 294600, 294600]
+    '2025': [0, 82500, 199450, 304000, 304000]
+  reference: '32 V.S.A. 5822(a); IN-111 rate schedule for married filing jointly and surviving spouse, 2017-2025. The 2023-2025 second thresholds are the ECONOMIC ones (75,850 / 79,950 / 82,500), not the printed $75,000 tax-table split'
+brackets_mfs:
+  value:
+    '2017': [0, 31650, 76550, 116650, 208325]
+    '2018': [0, 32300, 78075, 118975, 118975]
+    '2019': [0, 33075, 79975, 121875, 121875]
+    '2020': [0, 33725, 81500, 124175, 124175]
+    '2021': [0, 34200, 82675, 125975, 125975]
+    '2022': [0, 35225, 85150, 129750, 129750]
+    '2023': [0, 37925, 91700, 139725, 139725]
+    '2024': [0, 39975, 96650, 147300, 147300]
+    '2025': [0, 41250, 99725, 152000, 152000]
+  reference: '32 V.S.A. 5822(a); IN-111 rate schedule for married filing separately, 2017-2025 (its own schedule, transcribed rather than derived as half the joint one)'
+brackets_head:
+  value:
+    '2017': [0, 50800, 131200, 212450, 416650]
+    '2018': [0, 51850, 133850, 216700, 216700]
+    '2019': [0, 53100, 137050, 221950, 221950]
+    '2020': [0, 54100, 139650, 226200, 226200]
+    '2021': [0, 54850, 141700, 229450, 229450]
+    '2022': [0, 56500, 145950, 236350, 236350]
+    '2023': [0, 60850, 157150, 254500, 254500]
+    '2024': [0, 64200, 165700, 268300, 268300]
+    '2025': [0, 66200, 171000, 276850, 276850]
+  reference: '32 V.S.A. 5822(a); IN-111 rate schedule for head of household, 2017-2025'

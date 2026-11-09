@@ -14,3 +14,6 @@ above_limit_single:
     '2014': 0
     '2020': 0
     '2022': 0
+
+nonitem_limit_single:
+  value: 0

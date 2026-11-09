@@ -1,0 +1,73 @@
+---
+# Oklahoma rate schedule (68 O.S. 2355; Form 511 line 15).
+#
+# RECOVERED, NOT TRANSCRIBED. No Form 511 packet prints a bracket schedule in
+# any year 2017-2025 -- tax is published only as (i) a Tax Table in $50 ranges
+# up to $100,000 and (ii) a printed "over $100,000" constant. The schedule
+# below was recovered from those two and cross-checked both ways:
+#   - back-solving each printed constant to cumulative tax at the top-bracket
+#     knot, and independently summing the recovered schedule, agree in all five
+#     published cases ($171.50 / $255.00 single/MFJ for 2017-2021, $153.50 /
+#     $224.50 for 2022-2023, $307.00 MFJ for 2024-2025)
+#   - table cells reproduce at the MIDPOINT of each $50 range rounded to whole
+#     dollars, verified at eight cells across TY2017/2019/2022/2024/2025
+# There is no separate low-income table and NO zero-tax cliff (unlike KS/OH).
+#
+# The top band begins at only $7,200 of taxable income ($12,200 married), so
+# essentially every Oklahoman with liability sits on the top marginal rate.
+#
+# HEAD OF HOUSEHOLD SHARES THE MARRIED COLUMN -- verified on the table column
+# header and 2355(C)(2) in all three vintages. (HoH still gets only ONE
+# personal exemption; see exempt.yaml.)
+#
+# THREE VINTAGE LINES, and the third is the state's highest-risk one:
+#   2022: HB 2962 (2021) cut EVERY rate by 0.25pp (the enrolled text strikes
+#     and replaces each of the six; a partial cut is the plausible error)
+#   2024: HB 1040X (2023 1st Ex. Sess.) changed ONE NUMBER -- the married
+#     fifth increment, $2,400 -> $4,600, moving the married top-bracket start
+#     from $12,200 to $14,400. Invisible in the single column, no rate change,
+#     no printed schedule. Triple-confirmed: enrolled text, the OTC Summary of
+#     2023 Tax Legislation, and the TY2025 cell 14,400-14,450 = $308 (which
+#     $12,200 would make $330). DO NOT SIMPLIFY THIS AWAY.
+#   2026: HB 2764 (2025) collapses the bottom three bands into a 0% band and
+#     leaves four rates
+#
+# TY2026 thresholds are INFERRED (no Form 511 exists yet) and then confirmed
+# against the packet's independently derived forward-check constants: the
+# schedule below puts tax at $100,000 at $4,285.25 single and $4,070.50
+# married, against expected printed constants of $4,285 + 4.5% and
+# $4,071 + 4.5%. The 2355(E) trigger reductions are NOT encoded -- they are
+# contingent on Board of Equalization certifications that have not occurred
+# (earliest possible effect TY2028), the NC / KS SB 269 precedent.
+#
+# Six-element uniform schedules; the four-band 2026 regime repeats the top
+# bound so the top rate still runs to infinity.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_married
+
+rates:
+  value:
+    '2017': [0.005, 0.01, 0.02, 0.03, 0.04, 0.05]
+    '2022': [0.0025, 0.0075, 0.0175, 0.0275, 0.0375, 0.0475]
+    '2026': [0.0, 0.025, 0.035, 0.045, 0.045, 0.045]
+  reference: '68 O.S. 2355(C); recovered from the Form 511 Tax Table and printed top-bracket constants, 2017-2025. HB 2962 (2021) cut each of the six rates by 0.25pp from TY2022; HB 2764 (2025) sets the TY2026 schedule at 0 / 2.5 / 3.5 / 4.5%'
+
+# Single and married filing separately -- unchanged 2017-2025
+brackets_single:
+  value:
+    '2017': [0, 1000, 2500, 3750, 4900, 7200]
+    '2026': [0, 3750, 4900, 7200, 7200, 7200]
+  reference: '68 O.S. 2355(C)(1); recovered schedule, verified against the Form 511 Tax Table midpoints and the printed constants $4,812 + 5% (2017-2021) and $4,562 + 4.75% (2022-2025). TY2026 per HB 2764 collapses the first three bands into a 0% band ending at $3,750; the resulting tax at $100,000 is $4,285.25 against the expected printed $4,285 + 4.5%'
+# Married filing jointly, head of household and surviving spouse. NOTE this is
+# NOT twice the single column before TY2024
+brackets_married:
+  value:
+    '2017': [0, 2000, 5000, 7500, 9800, 12200]
+    '2024': [0, 2000, 5000, 7500, 9800, 14400]
+    '2026': [0, 7500, 9800, 14400, 14400, 14400]
+  reference: '68 O.S. 2355(C)(2); recovered schedule. The TY2024 change is HB 1040X (2023 1st Ex. Sess.), which altered only the fifth increment ($2,400 -> $4,600): enrolled text, OTC Summary of 2023 Tax Legislation, and the TY2024/2025 tax tables. Printed constants $4,645 + 5% (2017-2021), $4,395 + 4.75% (2022-2023), $4,373 + 4.75% (2024-2025). TY2026 per HB 2764 gives tax at $100,000 of $4,070.50 against the expected printed $4,071 + 4.5%'

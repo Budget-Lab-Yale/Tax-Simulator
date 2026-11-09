@@ -1,0 +1,90 @@
+---
+# Delaware: credits (Form PIT-RES Lines 27a-34; 30 Del. C. 1110-1117).
+# Delaware's "personal credit" is a $110 nonrefundable CREDIT per exemption,
+# not an exemption amount, plus a second $110 for each filer age 60 or over.
+# The credit order on the form is personal -> aged -> other-state -> volunteer
+# firefighter -> PIT-CRS -> child care -> EITC, with the whole nonrefundable
+# block capped at tax ("The total of all non-refundable credits... is limited
+# to the amount of your Delaware tax liability"), which is how st_liab
+# aggregates them.
+#
+# All amounts are constant 2017-2025; the only change in the window is the
+# TY2021 arrival of the refundable-EITC election.
+
+# Personal credits (PIT-RES Line 27a; Line 26a in 2021-2023, Line 9a in
+# 2017-2020): $110 per exemption -- one per taxpayer, one per spouse, one per
+# dependent. Dependent filers get zero ("You are not entitled to a Delaware
+# Personal Credit if you are listed as a dependent on another individual's
+# Federal return"), which st_credits_household enforces via dep_status
+exempt_credit_style:
+  value: 1
+  reference: '30 Del. C. 1110(b)(1); PIT-RES Line 27a (Line 26a 2021-2023, Form 200-01 Line 9a 2017-2020)'
+exempt_credit_personal:
+  value: 110
+  reference: '30 Del. C. 1110(b)(1) ("$110 for each personal exemption", tax years after December 31, 1995); PIT-RES Line 27a: "If you filed your federal return as married filing jointly and have no dependents, enter $220"; TY2017 Form 200-01 Line 9a'
+exempt_credit_dep:
+  value: 110
+  reference: 'PIT-RES Line 27a: "Enter the total number of dependents listed on your federal return, multiply by $110"; 30 Del. C. 1110(b)(1)'
+exempt_credit_aged:
+  value: 0
+  reference: 'Delaware''s additional personal credit is age 60, not 65 (1110(b)(2)); it is encoded through the age_credit family below because exempt_credit_aged tests age 65'
+exempt_credit_blind:
+  value: 0
+  reference: 'Delaware gives no blind CREDIT; the blind benefit is the $2,500 additional standard deduction (1108(b)(1))'
+
+# Additional personal credit for age 60 or over (PIT-RES Line 27b; Line 26b in
+# 2021-2023, Line 9b in 2017-2020): a flat $110 per filer age 60+, no income
+# test, nonrefundable
+age_credit_amount:
+  value: 110
+  reference: '30 Del. C. 1110(b)(2) ("An additional $110 in the case of each resident person age 60 or over"); PIT-RES Line 27b: "If you and/or your spouse were 60 years of age or over... multiply the number of boxes checked by $110"'
+age_credit_min_age:
+  value: 60
+  reference: '30 Del. C. 1110(b)(2) ("age 60 or over"); PIT-RES Line 27b, constant 2017-2025'
+
+# Child care credit (PIT-RES Line 31; Line 30 in 2021-2023, Line 13 in
+# 2017-2020): 50% of the federal child and dependent care credit,
+# nonrefundable
+cdctc_match:
+  value: 0.50
+  reference: '30 Del. C. 1114 ("50 percent of the child and dependent care expense credit allowable for federal income tax purposes"); PIT-RES Line 31 worksheet ("multiply by 50% (.50)"), verbatim in the TY2017 amended instructions Line 13 and every booklet through TY2025'
+cdctc_refundable:
+  value: 0
+  reference: 'PIT-RES Line 32: "The total of all non-refundable credits (Lines 27a through 31) is limited to the amount of your Delaware tax liability"'
+
+# Earned income tax credit (PIT-RES Line 34; Line 33 in 2021-2023, Line 14 in
+# 2017-2020). 2017-2020: a 20% NONREFUNDABLE credit only. 2021+: the taxpayer
+# elects EITHER the 20% nonrefundable credit OR a 4.5% REFUNDABLE credit
+# (HB 80 of the 150th GA / HB 16 of the 151st GA, signed 2021-08-10) -- the VA
+# greater-of machinery
+eitc_match:
+  value: 0.20
+  reference: '30 Del. C. 1117 ("20% of the corresponding federal earned income tax credit, not to exceed the tax otherwise due"); PIT-RES Line 34 and PIT-RSS Schedule II Line 15; TY2017 amended instructions Line 14; TY2020 Form 200-01 Line 14 (20%, nonrefundable only)'
+eitc_refundable:
+  value: 0
+  reference: '30 Del. C. 1117: the 20% option is capped at "the tax otherwise due"; PIT-RSS Schedule II Line 17 ("NONREFUNDABLE EARNED INCOME TAX CREDIT... enter the smaller amount")'
+eitc_match_alt:
+  value:
+    '2017': 0.0
+    '2021': 0.045
+  reference: '30 Del. C. 1117 ("4.5% of the corresponding federal earned income tax credit", excess refundable), HB 80 (150th GA) / HB 16 (151st GA, signed 2021-08-10); the TY2021 PIT-RES booklet is the first to print the election ("a refundable credit of 4.5% of the federal earned income credit or a nonrefundable credit of 20%") with the PIT-RSS Schedule II worksheet; the TY2020 booklet offers the 20% nonrefundable credit only [vintage flagged: TAXSIM probe recommended, see packet]'
+eitc_refundable_alt:
+  value: 1
+  reference: '30 Del. C. 1117; PIT-RSS Schedule II Line 16 ("REFUNDABLE EARNED INCOME TAX CREDIT"); inert in 2017-2020 where eitc_match_alt = 0'
+
+documented_not_modeled:
+  # Credit for taxes paid to another state: the largest unmodeled DE credit by
+  # dollar value -- many DE residents work in PA, MD and NJ. Out of scope for
+  # a resident-only simulation, and shared with every other state
+  other_state_credit:
+    reference: '30 Del. C. 1111; PIT-RES Line 28 worksheet (2017-2025). Out of scope for a resident-only simulation (no other-state liability is computed); DE exposure is above average'
+  volunteer_firefighter_credit:
+    value:
+      '2017': 400
+      '2021': 1000
+    reference: '30 Del. C. 1113; PIT-RES Line 29 ("a credit of $1,000... who are active firefighters", 2021-2025); TY2017 amended instructions Line 11 ($400); membership unobservable'
+  pit_crs_credits:
+    reference: 'Economic development, green industry, brownfield, R&D, land and historic resource, historic preservation, neighborhood assistance and AED credits (nonrefundable), plus business finder''s fee, organ donation ($10,000) and New Economy Jobs credits (refundable) -- all certification-gated (PIT-RES Lines 30 and 38; Form 700 pre-2021)'
+  relief_rebate:
+    value: 300
+    reference: 'DE HB 360 (2022): $300 per adult resident, paid as a mailed check OUTSIDE the return, so outside our liability concept (the P5 rebate-netting class). PolicyEngine models it as a refundable credit dated 2020 [PE disagreement, pre-registered]'

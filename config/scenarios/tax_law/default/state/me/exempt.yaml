@@ -1,0 +1,171 @@
+---
+# Maine: personal exemption (Form 1040ME lines 13/18; 36 M.R.S. 5126-A).
+#
+# TY2017 is structurally different: the Maine exemption equals the FEDERAL
+# exemption as claimed (federal 1040 line 42) -- $4,050 per exemption
+# INCLUDING dependents, already net of the federal high-income PEP
+# phase-out (encoded here as the 2017 stepped 2%-per-$2,500 reduction at
+# the federal 2017 thresholds, on federal AGI).
+#
+# From TY2018, 5126-A grants the exemption for the TAXPAYER AND SPOUSE ONLY
+# (dependents moved to the dependent exemption tax credit in credits.yaml),
+# indexed annually, with a LINEAR phase-out over $125,000 ($62,500 MFS) of
+# Maine AGI above the threshold (4-decimal worksheet ratio; the $1-step
+# machinery is within half a basis point).
+
+filing_status_mapper:
+  po_thresh:
+    '1': po_thresh_single
+    '2': po_thresh_joint
+    '3': po_thresh_mfs
+    '4': po_thresh_head
+  po_step:
+    '1': po_step_full
+    '2': po_step_full
+    '3': po_step_half
+    '4': po_step_full
+  po_share_per_step:
+    '1': po_share_full
+    '2': po_share_full
+    '3': po_share_half
+    '4': po_share_full
+
+personal_amount:
+  value:
+    '2017': 4050
+    '2018': 4150
+    '2019': 4200
+    '2020': 4300
+    '2022': 4450
+    '2023': 4700
+    '2024': 5000
+    '2025': 5150
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: '2017: federal exemption amount as claimed ($4,050; 2017 booklet p.2 quick facts and line 18 instruction). 2018-2025: 5126-A amounts from each booklet''s p.4 chart ($4,150 -> $5,150; $4,300 published for both 2020 and 2021). Indexed per 5403(8)'
+dep_amount:
+  value:
+    '2017': 4050
+    '2018': 0
+  reference: '2017 only: the federal line-42 amount counts dependents. From 2018, 5126-A grants no dependent exemption -- dependents are carried by the dependent exemption tax credit (credits.yaml)'
+
+po_type:
+  value: 1
+  reference: 'Stepped/linear reduction rather than a cliff in both regimes'
+po_agi_base:
+  value:
+    '2017': 1
+    '2018': 2
+  reference: '2017: the federal PEP ran on federal AGI. 2018+: the 5126-A(2) worksheet uses Maine adjusted gross income (Form 1040ME line 16)'
+po_thresh_single:
+  value:
+    '2017': 261500
+    '2018': 266700
+    '2019': 271650
+    '2020': 276350
+    '2021': 279500
+    '2022': 286200
+    '2023': 305150
+    '2024': 323900
+    '2025': 333450
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: '2017: federal PEP threshold for single filers. 2018-2025: booklet p.4 chart thresholds (statutory $266,700 base indexed per 5403(8))'
+po_thresh_joint:
+  value:
+    '2017': 313800
+    '2018': 320000
+    '2019': 325950
+    '2020': 331600
+    '2021': 335400
+    '2022': 343400
+    '2023': 366100
+    '2024': 388650
+    '2025': 400100
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: '2017: federal PEP threshold, MFJ/QW. 2018-2025: booklet thresholds (statutory $320,000 base)'
+po_thresh_mfs:
+  value:
+    '2017': 156900
+    '2018': 160000
+    '2019': 162975
+    '2020': 165800
+    '2021': 167700
+    '2022': 171700
+    '2023': 183050
+    '2024': 194325
+    '2025': 200050
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 25
+  reference: '2017: federal PEP threshold, MFS. 2018-2025: half the joint threshold (booklet charts)'
+po_thresh_head:
+  value:
+    '2017': 287650
+    '2018': 293350
+    '2019': 298800
+    '2020': 304000
+    '2021': 307450
+    '2022': 314800
+    '2023': 335650
+    '2024': 356300
+    '2025': 366750
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: '2017: federal PEP threshold, HoH. 2018-2025: booklet thresholds (statutory $293,350 base)'
+po_step_full:
+  value:
+    '2017': 2500
+    '2018': 1.0
+  reference: '2017: the federal PEP reduces 2% per $2,500 (or fraction) of excess. 2018+: $1 steps approximate the 4-decimal linear worksheet ratio'
+po_step_half:
+  value:
+    '2017': 1250
+    '2018': 1.0
+  reference: '2017: $1,250 steps for MFS (federal rule); 2018+: $1 steps'
+po_share_full:
+  value:
+    '2017': 0.02
+    '2018': 8.0e-06
+  reference: '2017: 2% of the exemption per step. 2018+: 1/125,000 of the exemption per dollar of Maine AGI over the threshold (5126-A(2): linear to zero over $125,000)'
+po_share_half:
+  value:
+    '2017': 0.02
+    '2018': 1.6e-05
+  reference: '2017: 2% per $1,250 step (MFS). 2018+: 1/62,500 per dollar (the MFS width is $62,500)'
+
+documented_not_modeled:
+  mfs_no_income_spouse_two_exemptions:
+    reference: '5126-A(1) as amended by P.L. 2019 c. 659 (TY2020+): an MFS filer whose spouse has no Maine-source income and is not claimed by another may claim 2 exemptions. Spouse income of MFS units is unobservable [understates the exemption for the affected MFS filers]'
+  worksheet_ratio_rounding:
+    reference: 'The 2018+ phase-out ratio is rounded to 4 decimal places on the worksheet; the $1-step machinery differs by at most 0.00005 x the exemption (~25 cents)'

@@ -1,0 +1,10 @@
+---
+# Arkansas: exemptions.
+#
+# Arkansas grants personal tax CREDITS rather than exemptions, so there is no
+# exemption allowance at all. Stated explicitly so the zero is a recorded
+# finding rather than an omission; the credits themselves are in credits.yaml.
+
+personal_amount:
+  value: 0
+  reference: 'Form AR1000F has no exemption line. Line 7A and 7B are personal tax CREDITS applied against tax, not allowances against income (Ark. Code Ann. 26-51-501), which is why net taxable income at line 28 is Arkansas AGI less only the standard or itemized deduction'

@@ -1,0 +1,37 @@
+---
+# Rhode Island: tax rate schedule (RI-1040 line 8; R.I.G.L. 44-30-2.6(c)(2)(A)).
+# Rates apply to RI taxable income (line 7 = modified federal AGI - standard
+# deduction - exemptions).
+#
+# ONE schedule for ALL filing statuses -- the worksheet is headed "FOR ALL
+# FILING STATUS TYPES" in every year, with no MFS or HoH column. There is
+# therefore no filing_status_mapper here (CO/IL-style uniform form). This is
+# the source of RI's large marriage penalty: the MFJ bracket widths equal the
+# single widths, which is correct behavior, not a transcription error.
+#
+# Rates are constant 3.75 / 4.75 / 5.99% across 2017-2025; only the two
+# thresholds are indexed (CPI, rounded down to the nearest $50). Every
+# threshold is transcribed from that year's published Tax Rate Schedule.
+# 10-element uniform schedule; padded by repeating the top rate/threshold.
+
+rates:
+  value: [0.0375, 0.0475, 0.0599, 0.0599, 0.0599, 0.0599, 0.0599, 0.0599, 0.0599, 0.0599]
+  reference: 'RI Tax Rate Schedule 2017-2025 (3.75/4.75/5.99%, unchanged all years); R.I.G.L. 44-30-2.6(c)(2)(A)'
+
+brackets:
+  value:
+    '2017': [0, 61300, 139400, 139400, 139400, 139400, 139400, 139400, 139400, 139400]
+    '2018': [0, 62550, 142150, 142150, 142150, 142150, 142150, 142150, 142150, 142150]
+    '2019': [0, 64050, 145600, 145600, 145600, 145600, 145600, 145600, 145600, 145600]
+    '2020': [0, 65250, 148350, 148350, 148350, 148350, 148350, 148350, 148350, 148350]
+    '2021': [0, 66200, 150550, 150550, 150550, 150550, 150550, 150550, 150550, 150550]
+    '2022': [0, 68200, 155050, 155050, 155050, 155050, 155050, 155050, 155050, 155050]
+    '2023': [0, 73450, 166950, 166950, 166950, 166950, 166950, 166950, 166950, 166950]
+    '2024': [0, 77450, 176050, 176050, 176050, 176050, 176050, 176050, 176050, 176050]
+    '2025': [0, 79900, 181650, 181650, 181650, 181650, 181650, 181650, 181650, 181650]
+  reference: 'RI Tax Rate Schedule and Worksheets, per year 2017-2025 (2017-2020 via the NBER historical mirror; 2021-2025 tax.ri.gov); TY2022 also confirmed in ADV 2021-53. Arithmetic check: 3.75% x 77,450 = 2,904.38 and 2,904.38 + 4.75% x (176,050 - 77,450) = 7,587.88, both matching the published "Pay" constants'
+
+# No tax-benefit recapture and no spouse tax adjustment in RI:
+# recapture_agi_start / recapture_width / sta_max are omitted and default off.
+# RI has no high-income surtax in 2017-2025 (the 1% surtax over $1,000,000 of
+# taxable income begins TY2027 -- documented in credits.yaml).

@@ -1,0 +1,56 @@
+---
+# Alabama rate schedule (Ala. Code 40-18-5; Form 40 line 17).
+#
+# 2% / 4% / 5%, UNCHANGED in every year 2017-2025. The booklets never print a
+# rate schedule -- they print a tax TABLE covering $0-$100,000 plus an
+# over-$100,000 worksheet -- so the ladder is recovered from the worksheet
+# constants, which are identical in all nine booklets: "$4,958.00" for
+# single/MFS/head of family and "$4,918.00" for married filing jointly, each
+# added to 5% of income over $100,000.
+#
+# Those constants are $2 below the exact tax at $100,000 ($4,960 and $4,920)
+# because Alabama's tax table is a MIDPOINT table and the worksheet carries
+# forward its last row. At the $99,950 midpoint the exact tax is $4,957.50 and
+# $4,917.50, which round to the printed figures. The schedule encoded here is
+# the statutory one, so it differs from the published table by up to a few
+# dollars of midpoint rounding for filers under $100,000 -- a table-rounding
+# difference, not a rate difference, documented below.
+#
+# HEAD OF FAMILY SHARES THE SINGLE LADDER. The tax table has only two tax
+# columns, "Single / Married filing separately / Head of family" and "Married
+# filing jointly". Head of family gets its own standard deduction and the
+# $3,000 personal exemption, but not a widened bracket.
+#
+# The married-joint brackets are exactly twice the single ones, so Alabama's
+# rate schedule is perfectly split-neutral: filing separately can never beat
+# filing jointly on the schedule alone. The Alabama marriage advantage comes
+# from the standard deduction slide and the dependent exemption cliffs, both
+# of which key on each spouse's own Alabama AGI -- see ded.yaml.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_single
+
+rates:
+  value:
+    '2017': [0.02, 0.04, 0.05]
+  reference: 'Ala. Code 40-18-5; recovered from the "Over $100,000" worksheet in every Form 40 booklet 2017-2025 (p.30), which multiplies the excess over $100,000 by .05, and from the tax table body. Verified unchanged across all nine years by the invariant worksheet constants'
+brackets_single:
+  value:
+    '2017': [0.0, 500.0, 3000.0]
+  reference: 'Ala. Code 40-18-5(a); Form 40 booklets 2017-2025 p.30 over-$100,000 worksheet plus the tax table. Reconciliation at $100,000: 2% x 500 + 4% x 2,500 + 5% x 97,000 = $4,960, against the worksheet''s midpoint-derived $4,958. Applies to single, married filing separately AND head of family -- the tax table has one column for all three'
+brackets_married:
+  value:
+    '2017': [0.0, 1000.0, 6000.0]
+  reference: 'Ala. Code 40-18-5(a); Form 40 booklets 2017-2025 p.30. Reconciliation at $100,000: 2% x 1,000 + 4% x 5,000 + 5% x 94,000 = $4,920, against the worksheet''s $4,918'
+
+documented_not_modeled:
+  tax_table_midpoint_rounding:
+    reference: 'Alabama publishes a midpoint tax table for taxable income up to $100,000: the tax for a $100 band is computed at the band midpoint, so a filer at the bottom of a band pays about $2.50 more than the statutory schedule and one at the top about $2.50 less. The statutory schedule is encoded [differences of a few dollars per return below $100,000, averaging to roughly zero across a population]'
+  overtime_pay_exemption:
+    reference: 'Alabama exempted certain overtime pay from state income tax (commonly attributed to Act 2023-421). It appears NOWHERE in the Form 40 booklets -- zero occurrences of "overtime" in all nine text extractions -- because it operates through employer withholding and the state wage figure reported on Schedule W-2, so it never reaches the Form 40 instructions. UNVERIFIED: effective and sunset dates, whether it reaches only full-time hourly employees, what counts as exempt overtime, whether it is capped, and whether it has lapsed. A real hole for TY2024-TY2025 wage income [understates the exclusion, so overstates Alabama tax for overtime earners]. Must be resolved from the Schedule W-2 instructions or the act text before Alabama TY2024+ results are relied on'
+  ty2026_parameters:
+    reference: 'The TY2025 booklet is the latest published. No rate, bracket or bracket-bound change is reflected through TY2025, and nothing is indexed, so TY2025 law carries forward. Proposals to phase out the 2% bracket have circulated but none is confirmed enacted [UNVERIFIED for TY2026 onward]'

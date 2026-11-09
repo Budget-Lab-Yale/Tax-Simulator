@@ -1,0 +1,325 @@
+---
+# Maine: deductions (Form 1040ME line 17; Schedule 2; 36 M.R.S. 5124-B/
+# 5124-C/5125). Three interacting pieces, all encoded:
+#
+#  1. STANDARD deduction = the federal basic + additional (aged/blind)
+#     amounts (2025 uses the pre-OBBBA federal amounts because Maine
+#     conforms to the IRC as of December 31, 2024).
+#  2. ITEMIZED (Schedule 2): federal itemized less ALL federal taxes-paid,
+#     plus real-estate and personal-property taxes PAID (so property taxes
+#     escape the federal $10,000 SALT cap, 5125(3)(A-1)); capped at the
+#     indexed line-5 maximum with ONLY MEDICAL exempt from the cap
+#     (charitable is NOT exempt -- the pre-2016 carve-out was repealed by
+#     P.L. 2015 c. 267). Only federal itemizers may itemize, taking the
+#     better of the two (the MD item_fed_gate election).
+#  3. The DEDUCTION PHASE-OUT (every year 2017-2025): whichever deduction
+#     is taken phases out linearly to zero over $75,000 / $112,500 /
+#     $150,000 of Maine AGI above the filing-status threshold (worksheet
+#     ratio rounded to 4 decimals -- the continuous slide here differs by
+#     at most ~half a basis point of the deduction). The itemized cap
+#     applies BEFORE the phase-out (Schedule 2 line 5 versus the line-17
+#     worksheet), matching the calculator's ordering.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  std_aged_addl:
+    '1': aged_addl_unmarried
+    '2': aged_addl_married
+    '3': aged_addl_married
+    '4': aged_addl_unmarried
+  std_blind_addl:
+    '1': aged_addl_unmarried
+    '2': aged_addl_married
+    '3': aged_addl_married
+    '4': aged_addl_unmarried
+  std_po_thresh:
+    '1': dedpo_thresh_single
+    '2': dedpo_thresh_joint
+    '3': dedpo_thresh_single
+    '4': dedpo_thresh_head
+  std_po_share_per_step:
+    '1': dedpo_share_single
+    '2': dedpo_share_joint
+    '3': dedpo_share_single
+    '4': dedpo_share_head
+  item_limit_po_thresh:
+    '1': dedpo_thresh_single
+    '2': dedpo_thresh_joint
+    '3': dedpo_thresh_single
+    '4': dedpo_thresh_head
+  item_limit_po_width:
+    '1': dedpo_width_single
+    '2': dedpo_width_joint
+    '3': dedpo_width_single
+    '4': dedpo_width_head
+
+std_single:
+  value:
+    '2017': 11600
+    '2018': 12000
+    '2019': 12200
+    '2020': 12400
+    '2021': 12550
+    '2022': 12950
+    '2023': 13850
+    '2024': 14600
+    '2025': 15000
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Booklet standard-deduction chart, each year (2017 booklet p.4 through the 2025 general instructions p.4). 2016-17 statutory basis 5124-B ($11,600 single, x1.5 HoH, x2 MFJ); 2018+ 5124-C equals the federal amount; 2025 = the pre-OBBBA federal $15,000 per the December 31, 2024 conformity date. MFS = single'
+std_joint:
+  value:
+    '2017': 23200
+    '2018': 24000
+    '2019': 24400
+    '2020': 24800
+    '2021': 25100
+    '2022': 25900
+    '2023': 27700
+    '2024': 29200
+    '2025': 30000
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Same charts: married filing jointly and surviving spouses'
+std_head:
+  value:
+    '2017': 17400
+    '2018': 18000
+    '2019': 18350
+    '2020': 18650
+    '2021': 18800
+    '2022': 19400
+    '2023': 20800
+    '2024': 21900
+    '2025': 22500
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Same charts: heads of household'
+
+aged_addl_unmarried:
+  value:
+    '2017': 1550
+    '2018': 1600
+    '2019': 1650
+    '2021': 1700
+    '2022': 1750
+    '2023': 1850
+    '2024': 1950
+    '2025': 2000
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Booklet charts (boxes 12a-12d): additional standard deduction per aged/blind box, unmarried (single or head of household), each year'
+aged_addl_married:
+  value:
+    '2017': 1250
+    '2018': 1300
+    '2021': 1350
+    '2022': 1400
+    '2023': 1500
+    '2024': 1550
+    '2025': 1600
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Booklet charts: additional amount per box if married (jointly or separately) or a surviving spouse. The MFS spouse boxes count only where a spouse exemption is claimable (documented below)'
+
+# Dependent filers: the federal worksheet (greater of the minimum or earned
+# income plus the increment, capped at the full standard deduction) --
+# Maine standard deduction = federal, DC/MN/NM convention
+std_dependent_style:
+  value: 1
+  reference: 'Maine standard deduction equals the federal amount, including the IRC 63(c)(5) dependent limitation'
+std_dependent_floor:
+  value:
+    '2017': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1250
+    '2024': 1300
+    '2025': 1350
+  reference: 'Federal IRC 63(c)(5)(A) minimum, by year (pre-OBBBA amount for 2025 per the conformity date)'
+std_dependent_earned_add:
+  value:
+    '2017': 350
+    '2022': 400
+    '2024': 450
+  reference: 'Federal IRC 63(c)(5)(B) earned-income increment, by year'
+
+# Itemized deductions (Schedule 2): only federal itemizers may itemize,
+# taking the better of the Maine standard and Maine itemized amounts
+item_allowed:
+  value: 1
+  reference: 'Schedule 2, all years; 36 M.R.S. 5125'
+item_fed_gate:
+  value: 1
+  reference: '5125(1): "an individual who has claimed itemized deductions from federal adjusted gross income" may claim Maine itemized deductions; a federal standard-deduction taker MUST use the Maine standard deduction, and a federal itemizer falls back to it when Schedule 2 line 7 is smaller (2025 general instructions p.4; identical rule 2017-2024)'
+salt_addback:
+  value: 1
+  reference: 'Schedule 2 line 2a backs out ALL federal Schedule A taxes paid; lines 3b/3c add back real-estate and personal-property taxes PAID -- so income/sales taxes are disallowed and property taxes are allowed WITHOUT the federal $10,000 cap (5125(3)(A-1)), which is exactly the model''s default state itemized base'
+item_flat_cap:
+  value:
+    '2017': 28600
+    '2018': 29050
+    '2019': 29550
+    '2020': 30050
+    '2021': 30400
+    '2022': 31150
+    '2023': 33200
+    '2024': 35250
+    '2025': 36300
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Schedule 2 line 5 maximum allowable itemized deduction (statutory $28,350 base, 5125(4), indexed): printed on each year''s Schedule 2 / quick facts -- $28,600 (2017, NOT the unindexed $28,350) through $36,300 (2025)'
+item_flat_cap_excl_medical:
+  value: 1
+  reference: 'Schedule 2 pulls medical/dental (line 2d) out before the cap and adds it back after (line 7 = line 6 + medical) -- only medical escapes the cap; charitable does NOT (the 5125(5) carve-out was repealed by P.L. 2015 c. 267)'
+# The include flag normally declares a component of an item_component_style-1
+# base. Maine builds its base the default way, so it does not affect the base
+# here -- but the cap exemption reads it to size the exempt medical amount,
+# and medical IS in the Maine base (the OK convention)
+item_include_medical:
+  value: 1
+  reference: 'Federal Schedule A medical rides into the Schedule 2 total (line 1) and is pulled out of the cap via line 2d'
+
+# Deduction phase-out (5124-C(2)/5125(7); the line-17 worksheet): BOTH the
+# standard and itemized deduction phase out linearly to zero over the
+# width above the Maine-AGI threshold. The standard side uses the stepped
+# machinery at a $1 step (the worksheet's 4-decimal ratio, within half a
+# basis point); the itemized side is the share-based limitation with
+# share1 = 1 over the same thresholds
+std_po_base:
+  value: 2
+  reference: 'Worksheet line 1 is Form 1040ME line 16, Maine adjusted gross income'
+std_po_step:
+  value: 1.0
+  reference: 'Continuous approximation of the 4-decimal worksheet ratio'
+dedpo_thresh_single:
+  value:
+    '2017': 70000
+    '2018': 80000
+    '2019': 81450
+    '2020': 82900
+    '2021': 83850
+    '2022': 85850
+    '2023': 91500
+    '2024': 97150
+    '2025': 100000
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Worksheet threshold, single and married filing separately (booklet p.4 each year); indexed per 5403(4)'
+dedpo_thresh_joint:
+  value:
+    '2017': 140000
+    '2018': 160000
+    '2019': 162950
+    '2020': 165800
+    '2021': 167700
+    '2022': 171700
+    '2023': 183050
+    '2024': 194300
+    '2025': 200050
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Worksheet threshold, married filing jointly and surviving spouses'
+dedpo_thresh_head:
+  value:
+    '2017': 105000
+    '2018': 120000
+    '2019': 122200
+    '2020': 124350
+    '2021': 125750
+    '2022': 128750
+    '2023': 137300
+    '2024': 145750
+    '2025': 150000
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 50
+  reference: 'Worksheet threshold, heads of household'
+dedpo_share_single:
+  value: 1.3333333333e-05
+  reference: 'Phase-out width $75,000 (worksheet line 4, all years): 1/75,000 of the deduction per dollar of excess. MFS uses the single threshold AND width'
+dedpo_share_joint:
+  value: 6.6666666667e-06
+  reference: 'Width $150,000 for married filing jointly and surviving spouses'
+dedpo_share_head:
+  value: 8.8888888889e-06
+  reference: 'Width $112,500 for heads of household'
+item_limit_share1:
+  value: 1
+  reference: 'The itemized deduction phases ENTIRELY to zero (the same worksheet applies to Schedule 2 line 7)'
+dedpo_width_single:
+  value: 75000
+  reference: 'Worksheet line 4 width, single/MFS, all years'
+dedpo_width_joint:
+  value: 150000
+  reference: 'Worksheet line 4 width, MFJ/QSS, all years'
+dedpo_width_head:
+  value: 112500
+  reference: 'Worksheet line 4 width, HoH, all years'
+
+documented_not_modeled:
+  mfs_same_method_rule:
+    reference: 'MFS spouses must both itemize or both take the standard deduction; the model elects per record [minor, MFS only]'
+  mfs_spouse_aged_boxes:
+    reference: 'The MFS additional standard deduction for the spouse''s aged/blind boxes applies only where a spouse exemption is claimable (no-income spouse); the model counts spouse boxes only on joint returns, which drops the rare MFS case'
+  phaseout_ratio_rounding:
+    reference: 'The worksheet rounds the phase-out ratio to 4 decimal places; the continuous slide differs by at most 0.00005 x the deduction (~$1.50)'
+  itemized_medical_inside_phaseout:
+    reference: 'The phased amount is Schedule 2 line 7 INCLUDING the cap-exempt medical component -- the calculator matches this (cap first, then the whole-deduction phase-out)'

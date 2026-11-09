@@ -65,3 +65,16 @@ estate_tax_distribution_id:
   value: baseline
   kind: structural
   note: Pins the Estate-Tax-Distribution scenario ID the simulation reads.
+
+state_weights_vintage:
+  value: 'dryrun_B_2022_2023'
+  kind: structural
+  note: >
+    Pins the State-Weights vintage (each record's split across states, fit by
+    Tax-Data) read where a scenario computes state taxes. Provisional weights:
+    2022-2023 fitted, 2024-2025 carried.
+
+state_weights_id:
+  value: baseline
+  kind: structural
+  note: Pins the State-Weights scenario ID read where a scenario computes state taxes.

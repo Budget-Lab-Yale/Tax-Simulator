@@ -1,0 +1,91 @@
+---
+# Pennsylvania: credits.
+#   - Tax Forgiveness (Schedule SP, 72 P.S. 7304): PA's low-income mechanism.
+#     Forgiveness share = 100% at or below the poverty income limit ($6,500
+#     unmarried / $13,000 married -- joint income required even for MFS --
+#     plus $9,500 per dependent), dropping 10pp per $250 or fraction thereof
+#     above it; zero above limit + $2,250. Statutory amounts unchanged and
+#     unindexed 2017-2025. Eligibility income = PA taxable income plus
+#     nontaxable additions; the model adds the nontaxable 75% share of
+#     exempt interest (the other 25% is already taxable in the base under
+#     the own-state-muni convention) and alimony received. Gifts, insurance
+#     proceeds, inheritances, outside-household support, nontaxable military
+#     pay, and educational assistance are unobserved (known-difference:
+#     forgiveness is overstated). Applies to tax after the resident credit
+#     (not modeled) and before withholding; nonrefundable in-model.
+#   - Child and Dependent Care Enhancement credit (Schedule DC): 30% of the
+#     federal CDCTC for TY2022 (Act 53 of 2022), 100% from TY2023 (Act 34 of
+#     2023), refundable. The statute bases the match on the TENTATIVE federal
+#     credit (Form 2441 line 9a, before the federal liability cap); the model
+#     applies it to the limited federal credit (known-difference: understates
+#     the PA credit for low-federal-liability filers).
+#   - Working Pennsylvanians Tax Credit (TY2025+): 10% of the federal EITC,
+#     refundable, enacted Nov 2025 (2025-26 budget; Tax Reform Code Article
+#     XVI-W.2 per PolicyEngine cite). No state EITC before TY2025; no state
+#     CTC in any year.
+
+filing_status_mapper:
+  forgive_base:
+    '1': forgive_base_single
+    '2': forgive_base_married
+    '3': forgive_base_married
+    '4': forgive_base_single
+
+forgive_style:
+  value: 1
+  reference: '72 P.S. 7304; PA-40 Schedule SP and Eligibility Income Tables, verified identical 2017-2025'
+
+forgive_base_single:
+  value: 6500
+  reference: '72 P.S. 7304 ("$6,500 or less"); SP Eligibility Income Table 1 (unmarried/separated/deceased), 100% column, 0 dependents, 2017-2025'
+
+forgive_base_married:
+  value: 13000
+  reference: '72 P.S. 7304 ("$13,000 or less"); SP Eligibility Income Table 2 (married, even if filing separately -- joint eligibility income required), 2017-2025. MFS combined-spouse income unobserved; own income used [known-difference]'
+
+forgive_dep_amount:
+  value: 9500
+  reference: '72 P.S. 7304 ("$9,500 for each dependent"); SP tables row increments, 2017-2025'
+
+forgive_step:
+  value: 250
+  reference: 'SP Eligibility Income Tables: columns step $250 from the 100% column, 2017-2025'
+
+forgive_step_share:
+  value: 0.10
+  reference: '72 P.S. 7304 partial-forgiveness schedule (90% if excess <= $250 ... 10% if <= $2,250); SP table decimals 1.0 down to .10'
+
+forgive_income_base:
+  value: 2
+  reference: 'PA-40 Schedule SP Section III line 1: eligibility income starts from PA taxable income (PA-40 line 9)'
+
+forgive_add_exempt_int:
+  value: 0.75
+  reference: 'SP Section III line 2 (nontaxable interest/dividends/gains): US and PA-obligation interest counts in eligibility income; equals the nontaxable 75% share under the own-state-muni convention (the taxable 25% is already in line 1)'
+
+forgive_add_alimony:
+  value: 1
+  reference: 'SP Section III line 3: alimony received counts in eligibility income (not child support)'
+
+# Working Pennsylvanians Tax Credit (TY2025+)
+eitc_match:
+  value:
+    '2017': 0
+    '2025': 0.10
+  reference: 'PA DOR Working Pennsylvanians Tax Credit page (10% of federal EITC, refundable, beginning with TY2025 returns); 2025-26 budget signed 2025-11-12; Tax Reform Code Article XVI-W.2 sec. 1603-W.2(c) per PolicyEngine parameter cite. No state EITC 2017-2024 (absent from all booklets)'
+
+eitc_refundable:
+  value: 1
+  reference: 'PA DOR WPTC page: refundable; DOR computes from the federal EITC claimed'
+
+# Child and Dependent Care Enhancement credit (TY2022+)
+cdctc_match:
+  value:
+    '2017': 0
+    '2022': 0.30
+    '2023': 1.00
+  reference: 'Act 53 of 2022 (Article XIX-G): 30% of the federal sec. 21 credit, TY2022 (2022 Schedule DC line 3); Act 34 of 2023: 100% from TY2023 (2023-2025 Schedule DC). Statutory base is federal Form 2441 line 9a (pre-liability-cap); model applies the match to the limited federal credit [known-difference]'
+
+cdctc_refundable:
+  value: 1
+  reference: '2024/2025 Schedule DC instructions ("This credit is refundable"); PA DOR CDCTC page; 2022 refundability implied by PA-40 line 23/24 payments-and-credits placement [2022 primary wording unverified]'

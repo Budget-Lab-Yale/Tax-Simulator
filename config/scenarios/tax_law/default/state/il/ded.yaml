@@ -1,0 +1,27 @@
+---
+# Illinois: deductions. Illinois has NO standard or itemized deductions; the
+# exemption allowance (exempt.yaml) is the only base offset. State-specific
+# structural parameters (NY itemized-limitation tiers, CO add-back caps) are
+# encoded only in states that have them; the calc layer treats absent
+# parameters (NA after bind_rows) as feature-not-present.
+
+# Standard deduction amount
+std_amount:
+  value: 0
+  reference: 'No standard deduction in Illinois; IL-1040 structure'
+
+# Whether itemized deductions are allowed at the state level
+item_allowed:
+  value: 0
+  reference: 'No itemized deductions in Illinois; IL-1040 structure'
+
+# Itemized/standard coupling: 0 = independent choice, 1 = must match federal,
+# 2 = federal itemizers may choose
+item_coupling:
+  value: 0
+  reference: 'n/a for IL'
+
+# Whether state income tax deducted federally is added back
+salt_addback:
+  value: 0
+  reference: 'n/a for IL (no itemized deductions)'

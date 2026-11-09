@@ -1,0 +1,6 @@
+---
+# South Dakota: no broad individual income tax.
+
+eitc_match:
+  value: 0
+  reference: 'No broad individual income tax or state EITC in v1 scope; South Dakota Governor''s Office of Economic Development tax climate; https://sdgoed.com/build-your-business/tax-incentives/'

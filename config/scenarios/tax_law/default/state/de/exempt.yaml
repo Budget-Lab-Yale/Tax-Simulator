@@ -1,0 +1,20 @@
+---
+# Delaware: exemptions. NONE -- Delaware replaced the personal exemption with
+# a $110 per-exemption nonrefundable CREDIT in 1996 (30 Del. C. 1110), which
+# is encoded in credits.yaml (exempt_credit_* and age_credit_*). The aged and
+# blind benefits are likewise not exemptions: age 65+/blind gives an extra
+# $2,500 STANDARD DEDUCTION (ded.yaml), and age 60+ gives an extra $110
+# CREDIT (credits.yaml).
+
+personal_amount:
+  value: 0
+  reference: '30 Del. C. 1110 replaced the personal exemption with a $110 credit for tax years after December 31, 1995; Form PIT-RES has no exemption line'
+dep_amount:
+  value: 0
+  reference: '30 Del. C. 1110; the dependent benefit is the $110 credit on PIT-RES Line 27a'
+aged_addl:
+  value: 0
+  reference: 'The Delaware aged benefits are the $2,500 additional standard deduction (1108(b)) and the $110 age-60 credit (1110(b)(2)), not an exemption'
+blind_addl:
+  value: 0
+  reference: 'The Delaware blind benefit is the $2,500 additional standard deduction (1108(b)(1)), not an exemption'

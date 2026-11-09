@@ -1,0 +1,820 @@
+---
+# params_schema.yaml
+#
+# Single source of truth for the state law parameter contract (2026-07-17
+# review item #4): the set of legal parameter names, their neutral
+# no-feature defaults, the vector families, and the feature-gate sentinels.
+# Read once per session by st_param_schema() (st_utils.R) and consumed by:
+#   - ensure_st_params()          (backfilling defaults)
+#   - validate_state_param_names() (load-time name validation, items #1/#2)
+#
+# A parameter read by any state calculator MUST appear under scalars (or
+# match a family pattern) or the name validator rejects every state that
+# encodes it. Conventions:
+#   - a bare value is the default; a mapping form {default: x, ...} is also
+#     legal and reserved for future metadata (units per_taxpayer/per_return
+#     for item #5, consumer file, modeled flag)
+#   - .inf / -.inf for infinities (bare "Inf" would parse as a string)
+#   - null means NA (deferred default; only std_dependent, which falls back
+#     to std_amount inside ensure_st_params)
+#   - params named *_base / *_income_base use the uniform st_income_base
+#     enum (review item #8): 1 = federal AGI, 2 = state AGI, 3 = federal
+#     AGI + state additions, 4 = earned income, 5 = federal AGI less
+#     taxable Social Security
+#   - units metadata (review item #5) marks person/return-ambiguous
+#     amounts; the form's published unit governs what states transcribe
+#     (see st_exempt.personal_per_return for the CT per-return case)
+
+scalars:
+
+  # programs.yaml
+  st_programs.broad_iit: 1
+  st_programs.narrow_iit: 0
+  st_programs.ltcg_excise: 0
+  st_programs.wftc: 0
+
+  # agi.yaml
+  st_agi.start_point: 1
+  st_agi.add_exempt_int: 0
+  st_agi.own_state_exempt: 0
+  st_agi.sub_us_int: 0
+  st_agi.sub_state_ref: 0
+  st_agi.ss_sub_share: 0
+  st_agi.ss_full_sub_65plus: 0
+  st_agi.ss_full_sub_5564: 0
+  st_agi.ss_5564_agi_limit: .inf
+  st_agi.ss_full_sub_allages: 0
+  st_agi.ss_allages_agi_limit: .inf
+  st_agi.pension_excl_under65: {default: 0, units: per_person}
+  st_agi.pension_excl_65plus: {default: 0, units: per_person}
+  st_agi.pension_excl_min_age: .inf
+  st_agi.pension_cap_incl_ss: 0
+  st_agi.pension_excl_incl_ira: 1   # 0 = IRA distributions ineligible (MD)
+  st_agi.pension_excl_agi_limit: .inf   # AGI cliff for the exclusion (WI $5k at 65+)
+  # Linear phase-out of the pension exclusion on federal AGI (ME 5122(2)(M-3)
+  # TY2025+: reduced by (FAGI - threshold)/width to zero); .inf = none
+  st_agi.pension_excl_po_thresh: .inf
+  st_agi.pension_excl_po_width: 1
+  # Where a rate is set the phase-out is in DOLLARS per dollar above the
+  # threshold instead (MT: $2 of exemption per $1 of federal AGI)
+  st_agi.pension_excl_po_rate: 0
+  st_agi.pension_cap_less_gross_ss: 0   # cap reduced by GROSS SS received (MD)
+  st_agi.sub_ui_agi_limit: .inf   # AGI cliff for the UI subtraction (MD RELIEF)
+  # Two-income married couple subtraction (MD): the lesser earner's
+  # earned income up to the cap
+  st_agi.twoearner_sub_max: {default: 0, units: per_return}
+  st_agi.age_ded_less_pension_sub: 0   # aged deduction reduced by the pension subtraction taken (SC 12-6-1170(B))
+  st_agi.age_ded_less_ss_sub: 0   # aged deduction reduced by the Social Security subtraction taken (WV 11-21-12(c)(9), Schedule M line 47 box (d))
+  st_agi.retirement_excl_style: 0
+  st_agi.retirement_excl_min_age: .inf
+  st_agi.retirement_excl_under65: {default: 0, units: per_person}
+  st_agi.retirement_excl_65plus: {default: 0, units: per_person}
+  st_agi.retirement_excl_earned_cap: {default: 0, units: per_person}
+  st_agi.pension_excl_band_per_return: 0   # band amounts per return, older-spouse age (MI)
+  # Income-banded pension exclusion (NJ-1040 line 28a): in each band the
+  # exclusion is min(cap, share x eligible pension income), tested on TOTAL
+  # income before the exclusion itself
+  st_agi.pension_excl_tier_min_age: .inf
+  # Unclaimed portion of the banded exclusion (NJ-1040 line 28b Part I): the
+  # same bands measured against TOTAL income rather than pension income,
+  # less whatever the pension exclusion already used, for filers at or below
+  # an EARNED-income ceiling
+  st_agi.pension_excl_orie: 0
+  st_agi.pension_excl_orie_earned_max: 0
+  st_agi.senior_inv_cap: {default: 0, units: per_return}
+  st_agi.senior_inv_min_age: .inf
+  # Senior INTEREST exemption, a per-return amount on interest alone
+  # (MT $800 single / $1,600 joint with either spouse 65+)
+  st_agi.int_excl_senior: {default: 0, units: per_return}
+  st_agi.int_excl_min_age: 0
+  # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
+  # Standard Deduction), mutually exclusive with the pension subtraction
+  # (the unit takes the better); ages test the OLDER spouse
+  st_agi.senior_std_amount: {default: 0, units: per_return}
+  st_agi.senior_std_min_age: .inf
+  st_agi.senior_std_no_net_min_age: .inf   # at/above: full amount (MI Tier 2)
+  st_agi.senior_std_ineligible_min_age: .inf   # at/above: not eligible (MI Tier 1)
+  st_agi.senior_std_net_ss_share: 0   # share of taxable SS netted below no_net age
+  st_agi.sub_char_nonitem_floor: .inf
+  st_agi.sub_char_nonitem_share: 1   # share of the excess subtracted (MN 0.5)
+  # Sliding partial Social Security subtraction (MN 2017-2022 and the frozen
+  # 2023+ alternative): min(taxable SS, max - rate x (provisional income
+  # over the threshold)), provisional income = AGI - taxable SS + 50% of
+  # gross SS + exempt interest
+  st_agi.ss_partial_max: {default: 0, units: per_return}
+  st_agi.ss_partial_thresh: .inf
+  st_agi.ss_partial_rate: 0
+  # Stepped phase-out for the all-ages full SS subtraction (MN 2023+:
+  # 10% per $4,000 over the AGI limit); .inf step = cliff (CT/ND behavior)
+  st_agi.ss_allages_po_step: .inf
+  st_agi.ss_allages_po_share: 0
+  # Minimum age for the all-ages full SS subtraction, where the state gates
+  # it on BOTH age and an AGI limit (RI full-retirement-age + AGI cliff);
+  # -.inf = no age gate, preserving the pure AGI-cliff behavior
+  st_agi.ss_allages_min_age: -.inf
+  # Share of taxable SS subtracted BELOW the AGI limit, for states that gate a
+  # PARTIAL subtraction on income (WV 35% in TY2020, 65% in TY2021, both only
+  # at or below $50,000/$100,000 of federal AGI); 1 = full subtraction
+  st_agi.ss_allages_sub_share: 1
+  st_agi.add_overtime_ded: 0
+  # Federal above-the-line HSA deduction reversed (state does not conform
+  # to IRC 223; CA)
+  st_agi.add_hsa: 0
+  # State per-year net-capital-loss limit; addback = federal loss used
+  # (capped at $3,000) minus this. Default = the federal limit (no addback).
+  st_agi.cap_loss_limit: 3000
+  st_agi.cap_gains_excl_share: 0
+  # Flat-dollar alternative to the share, taken as the GREATER of the two and
+  # capped at the eligible gain (VT 32 V.S.A. 5811(21)(B)(ii): $5,000)
+  st_agi.cap_gains_excl_flat: 0
+  # Ceiling on the whole gain/dividend exclusion, as a share of FEDERAL
+  # taxable income (VT IN-153 Part III line 20: 40%); .inf = no ceiling
+  st_agi.cap_gains_excl_txbl_share: .inf
+  st_agi.div_excl_share: 0
+  st_agi.ss_taxable_gross_cap_share: .inf
+  st_agi.pension_sub_share: 0
+  st_agi.ira_sub_share: 0
+  st_agi.age_ded_amount: {default: 0, units: per_person}
+  st_agi.age_ded_min_age: .inf
+  st_agi.age_ded_no_test_min_age: .inf
+  st_agi.age_ded_po_thresh: .inf
+  st_agi.age_ded_po_base: 1   # st_income_base enum (VA uses 5 = AFAGI)
+  st_agi.retire_sub_factor_income_base: 1   # st_income_base enum
+  st_agi.age_excl_eitc: 0
+  st_agi.sub_ui_share: 0
+  st_agi.bus_carveout: 0
+  st_agi.bus_ded_cap: .inf
+  # Flat share of (zero-floored) business income subtracted, as against the
+  # Ohio cap-and-carve-out above (MO 143.022 business income deduction)
+  st_agi.bus_excl_share: 0
+  # Own-base income classes (start_point 0 states: PA; later NJ/AL/AR/MS).
+  # Class shares multiply PUF income concepts; ob_class_floor = 1 floors
+  # each class at zero after the share (no cross-class loss offsets -- the
+  # PA/NJ gross-income-class rule)
+  st_agi.ob_class_floor: 0
+  st_agi.ob_comp_share: 0
+  st_agi.ob_int_share: 0
+  st_agi.ob_div_share: 0
+  st_agi.ob_bus_share: 0
+  st_agi.ob_gains_share: 0
+  st_agi.ob_rent_share: 0
+  # Pension/annuity distributions and IRA distributions carry SEPARATE shares:
+  # Alabama exempts defined benefit plans (IRC 414(j)) but taxes IRAs, which
+  # by definition cannot be defined benefit
+  # Long-term and other gains take ob_gains_share; SHORT-TERM gains take
+  # their own share, because Massachusetts holds them out of the ordinary
+  # base and taxes them at a different rate (st_ord.st_gains_rate)
+  st_agi.ob_st_gains_share: 0
+  st_agi.ob_retirement_share: 0
+  st_agi.ob_ira_share: 0
+  st_agi.ob_ss_share: 0
+  st_agi.ob_ui_share: 0
+  st_agi.ob_alimony_share: 0
+  st_agi.ob_other_share: 0
+
+  # ded.yaml
+  # Adopt the federal standard deduction by reference (MO RSMo 143.131.2):
+  # takes the unit's own federal std_ded, aged/blind add-ons and
+  # dependent-filer limitation included, instead of a transcribed copy
+  st_ded.std_equals_federal: 0
+  st_ded.std_amount: 0
+  st_ded.std_dependent: null   # NA: falls back to std_amount
+  st_ded.std_dependent_style: 0
+  st_ded.std_dependent_floor: 0
+  st_ded.std_dependent_earned_add: 0
+  st_ded.std_aged_addl: {default: 0, units: per_instance}
+  st_ded.std_blind_addl: {default: 0, units: per_instance}
+  st_ded.std_char_share: 0
+  st_ded.std_char_floor: 0
+  st_ded.item_allowed: 0
+  st_ded.item_coupling: 0
+  st_ded.item_fed_gate: 0   # itemizing allowed ONLY for federal itemizers, best-of election (MD)
+  st_ded.salt_addback: 0
+  # Federal-AGI threshold at/above which the salt_addback exclusion of
+  # income/sales taxes applies (HI Worksheet A-2: the state-income-tax
+  # deduction is denied only at FAGI >= 100k/150k/200k). -.inf = the
+  # exclusion is unconditional, preserving every other salt_addback state
+  st_ded.salt_addback_agi_thresh: -.inf
+  st_ded.item_component_style: 0
+  st_ded.item_include_medical: 0
+  st_ded.item_include_mortgage: 0
+  st_ded.item_include_investment: 0
+  st_ded.item_include_charity: 0
+  st_ded.item_include_casualty: 0
+  st_ded.item_include_misc: 0
+  st_ded.item_include_other: 0
+  st_ded.item_include_prop_tax: 0
+  st_ded.item_include_pers_tax: 0
+  st_ded.item_include_income_sales_tax: 0
+  st_ded.item_prop_tax_cap: .inf
+  st_ded.pease: 0
+  st_ded.pease_thresh: .inf
+  st_ded.pease_thresh2: .inf   # second tier start (MN 2023+)
+  st_ded.pease_rate2: 0        # second tier rate (MN 0.10)
+  st_ded.pease_flat_thresh: .inf   # above: flat 80% reduction (MN $1M-indexed)
+  st_ded.pease_incl_std: 0     # limitation also reduces the standard deduction (MN)
+  st_ded.pease_agi_base: 1     # limitation income base, st_income_base enum (HI: 2 = state AGI)
+  # Sliding standard deduction (WI 71.05(22)): reduced std_po_rate per
+  # dollar of the enum income base above the threshold, to zero
+  st_ded.std_po_thresh: .inf
+  st_ded.std_po_rate: 0
+  st_ded.std_po_base: 2   # st_income_base enum (WI: state AGI)
+  st_ded.std_amount2: 0   # second sliding pair; deduction = max of the two (WI HoH floor)
+  st_ded.std_po_rate2: 0
+  # STEPPED standard-deduction phase-out (RI-1040 Standard Deduction
+  # Worksheet: share_per_step of the deduction removed per increment, or
+  # fraction thereof, of the income base over std_po_thresh). Mirrors the
+  # st_exempt.po_share_per_step machinery; .inf step = use the linear slide
+  st_ded.std_po_step: .inf
+  st_ded.std_po_share_per_step: 0
+  # Dollar decrement per step with a floor (AL Form 40 standard deduction
+  # chart), as against RI's share-per-step. A positive amount_per_step
+  # selects the dollar shape
+  st_ded.std_po_amount_per_step: 0
+  st_ded.std_po_floor: 0
+  # FLAT-DOLLAR itemized cap (OK 68 O.S. 2358(E)(3)(b): $17,000 from TY2018,
+  # with charity and medical exempt). Distinct from item_limit_* (income-based)
+  # and from the NY share-based tiers; .inf = no cap
+  # Only the EXCESS of the selected itemized components over the FEDERAL
+  # standard deduction is deductible, floored at zero (LA IT-540 lines 8A-8D)
+  st_ded.item_less_fed_std: 0
+  st_ded.item_flat_cap: .inf
+  st_ded.item_flat_cap_excl_medical: 0
+  st_ded.item_flat_cap_excl_charity: 0
+  # Percent-of-income standard deduction (MD 15% of state AGI, bounded)
+  st_ded.std_pct_rate: 0
+  st_ded.std_pct_min: {default: 0, units: per_return}
+  st_ded.std_pct_max: .inf
+  st_ded.item_limit_style: 0
+  st_ded.item_limit_agi_base: 2
+  st_ded.item_limit_thresh: .inf
+  st_ded.item_limit_rate: 0
+  st_ded.item_limit_max_nonprotected_share: 0
+  st_ded.item_limit_protect_medical: 0
+  st_ded.item_limit_protect_investment: 0
+  st_ded.item_limit_protect_casualty: 0
+  st_ded.item_limit_protect_other: 0
+  st_ded.item_limit_po_thresh: .inf
+  st_ded.item_limit_po_width: 50000
+  st_ded.item_limit_share1: 0
+  st_ded.item_limit_tier2_thresh: .inf
+  st_ded.item_limit_tier2_width: 50000
+  st_ded.item_limit_share2: 0
+  st_ded.char_only_thresh1: .inf
+  st_ded.char_only_share1: 1
+  st_ded.char_only_thresh2: .inf
+  st_ded.char_only_share2: 1
+  st_ded.addback_cap_thresh: .inf
+  st_ded.addback_cap: .inf
+  st_ded.addback_incl_std: 0
+  st_ded.care_exp_ded: 0
+  st_ded.care_exp_ded_per_dep_cap: 0
+  st_ded.care_exp_ded_dep_limit: 0
+  st_ded.care_exp_ded_age_limit: -1
+  # Flat per-qualifying-member alternative to the care-expense deduction,
+  # taken instead of it when larger (MA Form 1 line 13)
+  st_ded.care_hh_member_amt: 0
+  st_ded.care_hh_member_age_limit: -1
+  st_ded.care_ded_mfs_ineligible: 0
+  # Employee payroll and self-employment taxes added to the state itemized
+  # base (MO-A Part 2 lines 2-7)
+  st_ded.item_add_payroll: 0
+  # Per-person deduction of the filer's own payroll and government-retirement
+  # contributions (MA Form 1 lines 11a/11b, $2,000 each spouse)
+  st_ded.payroll_ded_cap: {default: 0, units: per_person}
+  # Capped deduction for property taxes paid on a principal residence
+  # (NJ-1040 line 41). Zero means the state has no such deduction
+  st_ded.prop_tax_ded_cap: {default: 0, units: per_return}
+  # Retirement exemption taken as a DEDUCTION rather than an AGI subtraction
+  # (MO-1040 line 8): the state's AGI is struck before the exemption, so a
+  # feature keyed on state AGI (MO's federal-tax-deduction bands) sees the
+  # pre-exemption figure. Both pieces fall $1-for-$1 with income above their
+  # own limit
+  st_ded.retire_exempt_ss: 0
+  st_ded.retire_exempt_ss_min_age: .inf
+  st_ded.retire_exempt_ss_limit: {default: .inf, units: per_return}
+  st_ded.retire_exempt_priv_cap: {default: 0, units: per_person}
+  st_ded.retire_exempt_priv_limit: {default: .inf, units: per_return}
+  st_ded.retire_exempt_less_ss: 0
+  # Federal income tax deduction (MO/OR/AL). The deductible base is federal
+  # tax after nonrefundable credits but before other taxes (1040 line 22 =
+  # liab_bc - nonref), so AMT and excess APTC repayment are IN and
+  # self-employment/household-employment taxes are OUT. Add-back items some
+  # forms carry (retirement-plan penalty taxes, recapture, MO's foreign tax
+  # credit line) are not modeled -- document per state
+  st_ded.fed_tax_ded: 0
+  # The net investment income tax rides Schedule 2 Part II and so is NOT in
+  # 1040 line 22; a state whose worksheet adds it back sets this (AL)
+  st_ded.fed_tax_ded_add_niit: 0
+  # Refundable credits come off the base, floored at zero -- one flag each,
+  # because the states' lists genuinely differ. MO subtracts EITC, refundable
+  # AOC and net PTC but not the ACTC; AL subtracts EITC, ACTC and refundable
+  # AOC but not net PTC
+  st_ded.fed_tax_ded_less_eitc: 0
+  st_ded.fed_tax_ded_less_ctc_ref: 0
+  st_ded.fed_tax_ded_less_ed_ref: 0
+  st_ded.fed_tax_ded_less_ptc: 0
+  # Excess advance premium tax credit repayment stripped back out of the
+  # base: it reaches 1040 line 22 via Schedule 2 Part I, but Oregon's
+  # subtraction is limited to income tax (MO and AL both leave it in)
+  st_ded.fed_tax_ded_less_excess_ptc: 0
+  # Recovery rebate / economic stimulus payments reduce the deductible federal
+  # tax base (OR Form OR-40 line 10 worksheet, TY2020-TY2021)
+  st_ded.fed_tax_ded_less_rebate: 0
+  st_ded.fed_tax_ded_cap: {default: .inf, units: per_return}
+  st_ded.fed_tax_ded_band_base: 2   # st_income_base enum (MO: state AGI, Line 6)
+  # The federal tax deduction sits INSIDE the itemized schedule rather than
+  # alongside it (MT pre-2024), so it reaches only itemizers and feeds the
+  # itemize-versus-standard election
+  st_ded.fed_tax_ded_in_itemized: 0
+
+  # exempt.yaml
+  st_exempt.personal_amount: {default: 0, units: per_taxpayer unless personal_per_return}
+  st_exempt.personal_per_return: {default: 0, units: flag}
+  st_exempt.dep_amount: {default: 0, units: per_dependent}
+  st_exempt.aged_addl: {default: 0, units: per_instance}
+  st_exempt.blind_addl: {default: 0, units: per_instance}
+  st_exempt.aged_blind_addl_excl_eitc: 0
+  st_exempt.po_thresh: .inf
+  st_exempt.po_type: 0
+  st_exempt.po_step: 1
+  st_exempt.po_reduction_per_step: 0
+  st_exempt.po_share_per_step: 0   # share of the gross exemption per step (MN 2%)
+  st_exempt.po_agi_base: 1
+  st_exempt.tier_income_base: 2   # st_income_base enum (OH: 2 then 7 from 2019)
+  # Income-tiered DEPENDENT exemption (AL Form 40 dependent chart), as
+  # against tier_bounds/tier_amounts above, which set one amount for
+  # taxpayer, spouse and dependents alike
+  st_exempt.dep_tier_income_base: 2   # st_income_base enum (AL: Alabama AGI)
+  st_exempt.dep_filer_zero: 0
+  # Federal Schedule A medical/dental deduction allowed as a state EXEMPTION,
+  # itemizer or not (MA Form 1 line 2e)
+  st_exempt.medical_exempt: 0
+
+  # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
+  st_child_ded.style: 0
+  # Number of qualifying children excluded from the count, for states whose
+  # per-dependent deduction reaches only the SECOND and later dependents
+  # (NM 7-2-39: "Subtract 1 from total dependents")
+  st_child_ded.count_offset: 0
+
+  # ord.yaml (recapture, spouse tax adjustment)
+  st_ord.rates1: 0
+  st_ord.brackets1: 0
+  st_ord.recapture_agi_start: .inf
+  st_ord.recapture_width: 50000
+  st_ord.sta_max: {default: 0, units: per_return}
+  st_ord.bus_rate: 0   # flat rate on business income above the carve-out cap (OH 3%)
+  # Separate rate on short-term capital gains, which ob_st_gains_share holds
+  # out of the ordinary base (MA Part A: 12% to TY2022, 8.5% from TY2023)
+  st_ord.st_gains_rate: 0
+  # Preferential rate schedule on net LONG-TERM capital gain, stacked on top
+  # of ordinary income like the federal 0/15/20% pattern (MT HB 221 from
+  # TY2024: 3.0% below the state's own low-bracket top, 4.1% above it).
+  # A zero low rate switches the feature off
+  st_ord.kg_pref_rate_low: 0
+  st_ord.kg_pref_rate_high: 0
+  st_ord.kg_pref_thresh: {default: 0, units: per_return}
+  st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
+  # MARRIED-SEPARATE ELECTION (st_split.R): rerun the WHOLE pipeline per
+  # spouse and keep the cheaper of joint and split. Generalizes
+  # combined_sep, which reruns the rate schedule only -- needed where a
+  # state computes the deduction, exemption or federal-tax deduction on
+  # each spouse's own income (MT status 2a, AL separate returns,
+  # AR status 4, MS combined returns)
+  st_ord.split_election: 0
+  st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
+  # Per-column standard deduction stated outright, for a state whose
+  # married-separate amount is not a clean fraction of its joint one
+  # (IA $2,210 each against $5,450 joint); 0 = use the share above
+  st_ord.combined_sep_std_amount: {default: 0, units: per_person}
+  # Married filing combined (MO): deductions pooled at the return level, then
+  # TAXABLE income split by each spouse's share of state AGI and the schedule
+  # run on each share. Mandatory for federal-joint couples, so unlike
+  # combined_sep there is no better-of election
+  st_ord.combined_split: 0
+  st_ord.combined_split_round: .inf   # rounding increment for the shares (MO: 0.01, whole percent); .inf = unrounded
+  # The exemption is relieved at the LOWEST brackets rather than subtracted
+  # before the schedule: tax = sched(income) - sched(exemption), with the
+  # bracket bounds anchored to unreduced income (LA R.S. 47:32(A)(1)/294/295(B))
+  st_ord.exempt_from_bottom: 0
+  st_exempt.dep_child_addl: {default: 0, units: per_dependent}   # additional exemption per dependent child (IN $1,500)
+  st_exempt.dep_child_max_age: 0   # max tracked dependent age for the child add-on (IN: 23, proxying under-19-or-student-under-24)
+
+  # Alternative maximum rate on net capital gain (HI 235-51(f): the Tax on
+  # Capital Gains Worksheet taxes gain above a filing-status floor at 7.25%
+  # when that beats the schedule). The base is kg_pref (the IRC 1222 net
+  # capital gain -- qualified dividends excluded, matching the HI worksheet).
+  # .inf = no alternative rate. Assumes no recapture, base-amount, or
+  # combined-separate machinery in the same state (like combined_sep)
+  st_ord.kg_alt_rate: .inf
+  st_ord.kg_alt_floor: {default: 0, units: per_return}
+
+  # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
+  st_surtax.taxable_income_threshold: .inf
+  st_surtax.taxable_income_rate: 0
+  st_surtax.taxable_income_round: 0
+  st_surtax.per_return_amount: {default: 0, units: per_return}
+  st_surtax.per_return_blind_exempt: 0
+  # Net-investment-income add-on tax (MN 2024+: 1% over $1,000,000)
+  st_surtax.inv_income_rate: 0
+  st_surtax.inv_income_thresh: .inf
+  # Capital-gains surtax gated on federal AGI (MD 2025+: 2% over $350k FAGI)
+  st_surtax.kg_rate: 0
+  st_surtax.kg_agi_thresh: .inf
+
+  # credits.yaml
+  # Limited income credit / no-tax status (MA Form 1 lines 27 and 29): the
+  # credit reduces total tax to lic_rate of the excess of the enum income
+  # base over lic_thresh (+ lic_per_dep per dependent). A filer at or below
+  # the threshold owes nothing, which is how No Tax Status is expressed
+  st_credits.lic_rate: 0
+  st_credits.lic_thresh: {default: 0, units: per_return}
+  st_credits.lic_per_dep: {default: 0, units: per_dependent}
+  st_credits.lic_income_base: 2   # st_income_base enum (MA: state AGI)
+  # Higher threshold where either filer meets an age test (IA's elderly
+  # alternate tax: $32,000/$24,000 against the ordinary $13,500/$9,000)
+  st_credits.lic_thresh_aged: {default: 0, units: per_return}
+  st_credits.lic_aged_min_age: .inf
+  # Nonrefundable credit as a share of net capital gain (MT 2% through TY2023)
+  st_credits.kg_credit_rate: 0
+  st_credits.eitc_match: 0
+  # Higher match where a dependent is under a stated age (OR 12% vs 9% for a
+  # dependent younger than 3), as against the child-COUNT-keyed
+  # eitc_match_by_kids family
+  st_credits.eitc_match_young: 0
+  st_credits.eitc_match_young_max_age: -1
+  st_credits.eitc_refundable: 1
+  # Childless-filer EITC override (MD 2021+: 100% of the federal EIC,
+  # capped, refundable, replacing both regular options)
+  st_credits.eitc_childless_match: 0
+  st_credits.eitc_childless_cap: .inf
+  # Two-earner credit (WI married couple credit): rate x the lesser
+  # earner's earned income, capped
+  st_credits.twoearner_rate: 0
+  st_credits.twoearner_max: 0
+  # Itemized-deduction credit (WI 71.07(5)): rate x the excess of the
+  # component sum (flags below) over the state standard deduction
+  st_credits.item_credit_rate: 0
+  st_credits.item_credit_incl_medical: 0
+  st_credits.item_credit_incl_mortgage: 0
+  st_credits.item_credit_incl_investment: 0
+  st_credits.item_credit_incl_charity: 0
+  st_credits.item_credit_incl_casualty: 0
+  # Charitable contribution CREDIT (VT 5822(d)(3)): rate on the first
+  # char_credit_base_cap of contributions, available to ALL filers whether or
+  # not they itemize -- distinct from the WI item_credit above, whose base is
+  # the excess of itemized components over the state standard deduction
+  st_credits.char_credit_rate: 0
+  st_credits.char_credit_base_cap: 0
+  st_credits.eitc_match_alt: 0
+  st_credits.eitc_refundable_alt: 0
+  st_credits.eitc_wage_cap: 0   # cap the match at W-2 wages (UT 2023+)
+  st_credits.eitc_liab_cap_thresh: .inf   # OH 2017-18 50%-of-remaining-tax limit
+  st_credits.eitc_liab_cap_share: 1
+  st_credits.eitc_liab_cap_base: 1   # st_income_base enum
+  st_credits.cli_amount: {default: 0, units: per_exemption}
+  st_credits.cli_poverty_addl: 0
+  st_credits.eitc_cli_excl_age_package: 0
+  st_credits.eitc_less_household_credit: 0
+  st_credits.eitc_child_bonus: {default: 0, units: per_return}
+  st_credits.dep_credit_style: 0
+  st_credits.dep_credit_young_amount: 0
+  st_credits.dep_credit_other_amount: 0
+  st_credits.dep_credit_po_thresh: .inf
+  st_credits.dep_credit_po_per_1k: 0
+  st_credits.ctc_style: 0
+  st_credits.ctc_match_share: 0
+  st_credits.ctc_fed_base_per_child: 1000
+  st_credits.ctc_min_per_child: 0
+  st_credits.ctc_min_child_age: 0
+  st_credits.ctc_max_child_age: 16
+  st_credits.ctc_young_age_limit: 0
+  st_credits.ctc_young_amount: 0
+  st_credits.ctc_old_amount: 0
+  st_credits.ctc_po_thresh: .inf
+  st_credits.ctc_po_rate: 0
+  st_credits.ctc_po_base: 1   # st_income_base enum (UT style 3 uses 3 = MAGI proxy)
+  # Income base the TIERED (Colorado-style) child credit selects its tier on:
+  # CO and NM test federal AGI, NJ its own taxable income (enum 9)
+  st_credits.ctc_tier_income_base: 1
+  # Step size for the style-1/2 stepped phase-out; the per-step reduction is
+  # ctc_po_rate x ctc_po_step (ME 2025 DETC: $20 per $500 -> rate 0.04, step
+  # 500; NY/VT/ME-2018 use the default $1,000)
+  st_credits.ctc_po_step: 1000
+  # 0/1: reduce the PER-CHILD amount by the phase-out and then multiply by the
+  # child count (VT's published CTC table works that way -- see research/source_packets/
+  # vt.md), rather than reducing the aggregate credit once. Only differs once
+  # the reduction exceeds one child's amount, where per-child floors at zero
+  # per child
+  st_credits.ctc_po_per_child: 0
+  # 0/1: count a partial step as a whole one in the style-2 stepped phase-out
+  # ("or fraction thereof" -- VT). NY 2025, the encoded style-2 state, rounds
+  # the excess DOWN, so 0 keeps that
+  st_credits.ctc_po_round_up: 0
+  st_credits.ctc_refundable: 1   # UT CTC is nonrefundable
+  st_credits.ctc_pct_of_eitc: 0
+  st_credits.ctc_max_age: 16
+  st_credits.cdctc_match: 0
+  # Cap on the REFUNDABLE portion of the care credit (ME 5218: "refundable
+  # up to $500", remainder nonrefundable). .inf with cdctc_refundable = 1
+  # keeps a fully refundable credit; irrelevant when cdctc_refundable = 0
+  st_credits.cdctc_ref_cap: .inf
+  # Federal AGI at or below which the care credit is refundable (LA $25,000);
+  # above it the credit is nonrefundable
+  st_credits.cdctc_ref_agi_limit: .inf
+  # 0/1: the child credit and the child/dependent care credit are ALTERNATIVES,
+  # the taxpayer claiming whichever is larger (OK 68 O.S. 2357.43 grants the
+  # greater of its two federal matches), not both. The losing leg is zeroed so
+  # st_ctc and st_cdctc still report what was actually claimed
+  st_credits.ctc_cdctc_greater_of: 0
+  st_credits.cdctc_refundable: 1
+  st_credits.cdctc_style: 0
+  st_credits.cdctc_rate_max: 0
+  st_credits.cdctc_rate_floor: 0
+  st_credits.cdctc_rate_po_per_1k: 0
+  st_credits.cdctc_rate_po_start: .inf
+  # Stepped own-rate reduction (HI Schedule X: the rate falls 0.01 per
+  # $5,000 band of Hawaii AGI over $25,000, floored at 15%). When finite,
+  # cdctc_rate_po_per_1k is read as the PER-STEP decrement instead of a
+  # per-$1,000 slope; .inf keeps the continuous slide (NY style 2)
+  st_credits.cdctc_rate_po_step: .inf
+  # 0/1: cap style-2 expenses at each spouse's earned income (the federal
+  # 2441 rule, which HI Schedule X carries; NY 2026 is encoded without it)
+  st_credits.cdctc_expense_ei_limit: 0
+  st_credits.prop_tax_credit_rate: 0
+  st_credits.prop_tax_credit_rate_cap: .inf   # cap on the rate-style credit (WI $300)
+  st_credits.credit_agi_limit: .inf
+  st_credits.prop_tax_credit_max: 0
+  st_credits.prop_tax_credit_po_thresh: .inf
+  st_credits.prop_tax_credit_po_step: 1
+  st_credits.prop_tax_credit_po_rate: 0
+  st_credits.prop_tax_credit_restrict_aged_dep: 0
+  st_credits.fatc_young_amount: 0
+  st_credits.fatc_old_amount: 0
+  st_credits.fatc_young_age_limit: 0
+  st_credits.fatc_max_child_age: 16
+  st_credits.fatc_po_start: 0
+  st_credits.fatc_po_step: 5000
+  st_credits.fatc_po_zero: 0
+  st_credits.hh_mfs_half: 0
+  st_credits.family_credit_style: 0
+  st_credits.family_credit_income_base: 3   # st_income_base enum (KY: AGI + additions)
+  st_credits.exempt_credit_style: 0
+  st_credits.exempt_credit_personal: 0
+  st_credits.exempt_credit_aged: 0
+  st_credits.exempt_credit_blind: 0
+  st_credits.exempt_credit_dep: 0
+  st_credits.exempt_credit_po_thresh: .inf
+  st_credits.exempt_credit_po_width: 1
+  st_credits.exempt_credit_po_per_step: 0
+  st_credits.exempt_credit_po_base: 1   # st_income_base enum (OH: 6 then 8)
+  # Credit in lieu of deductions/exemptions (UT taxpayer tax credit)
+  st_credits.ded_credit_rate: 0
+  st_credits.ded_credit_exempt_taxpayer: {default: 0, units: per_taxpayer}
+  st_credits.ded_credit_exempt_dep: {default: 0, units: per_dependent}
+  st_credits.ded_credit_dep_age0_extra: 0
+  st_credits.ded_credit_salt_cap: .inf
+  st_credits.ded_credit_po_rate: 0
+  st_credits.ded_credit_po_thresh: .inf
+  st_credits.ded_credit_po_base: 2   # st_income_base enum (UT: state taxable = state AGI)
+  # Retirement-age credit family (UT retirement/SS credits; OH banded
+  # retirement + senior credits)
+  st_credits.age_credit_amount: {default: 0, units: per_person}
+  st_credits.age_credit_min_age: .inf
+  st_credits.age_credit_po_thresh: .inf
+  st_credits.age_credit_po_rate: 0
+  st_credits.age_credit_income_base: 1   # st_income_base enum
+  st_credits.ss_credit_rate: 0
+  st_credits.ss_credit_po_thresh: .inf
+  st_credits.ss_credit_po_rate: 0
+  st_credits.ss_credit_income_base: 1   # st_income_base enum
+  st_credits.ss_age_credit_exclusive: 0
+  st_credits.retire_credit_income_limit: .inf
+  st_credits.retire_credit_income_base: 1   # st_income_base enum
+  st_credits.senior_credit_amount: {default: 0, units: per_return}
+  st_credits.senior_credit_one65_amount: null   # NA: falls back to senior_credit_amount (MD joint one-spouse-65 tier)
+  st_credits.senior_credit_min_age: 65
+  st_credits.senior_credit_income_limit: .inf
+  st_credits.senior_credit_income_base: 1   # st_income_base enum
+  # Joint filing credit (OH percentage-of-remaining-tax, banded)
+  st_credits.jfc_cap: .inf
+  st_credits.jfc_min_each_income: 0
+  st_credits.jfc_income_base: 1   # st_income_base enum
+  st_credits.jfc_magi_limit: .inf
+  st_credits.jfc_magi_limit_base: 1   # st_income_base enum
+  st_credits.cdctc_share_income_base: 2   # st_income_base enum (NY tables use state AGI)
+  st_credits.earned_credit_style: 0
+  st_credits.earned_credit_age_min: .inf
+  # Upper age bound on the childless earned-income credit (DC 25-64; MN flags
+  # the same ceiling). .inf = floor only, no ceiling
+  st_credits.earned_credit_age_max: .inf
+  st_credits.earned_credit_agi_limit: .inf
+  st_credits.earned_credit_earned_limit: .inf
+  # Disqualifying investment-income ceiling for the independent earned-income
+  # credit (FTB 3514 has its own limit, distinct from the federal EITC's).
+  # .inf = no state-side test
+  st_credits.earned_credit_inv_inc_limit: .inf
+  st_credits.earned_credit_round: 0
+  st_credits.earned_credit_refundable: 0
+  st_credits.earned_credit_mfs_eligible: 0
+  st_credits.young_child_credit_style: 0
+  st_credits.young_child_credit_amount: 0
+  st_credits.young_child_credit_max_age: -1
+  st_credits.young_child_credit_phaseout_start: .inf
+  st_credits.young_child_credit_phaseout_per_100: 0
+  st_credits.young_child_credit_zero_income_enabled: 0
+  st_credits.young_child_credit_zero_income_wage_limit: -.inf
+  st_credits.young_child_credit_zero_income_loss_limit: -.inf
+  st_credits.young_child_credit_zero_income_agi_limit: -.inf
+
+  # Poverty-based forgiveness credit (PA Schedule SP): share of pre-credit
+  # tax, 100% at/below the family-size eligibility-income limit, stepping
+  # down forgive_step_share per forgive_step (or fraction thereof) above it
+  st_credits.forgive_style: 0
+  st_credits.forgive_base: {default: 0, units: per_return}
+  st_credits.forgive_dep_amount: {default: 0, units: per_dependent}
+  st_credits.forgive_step: 1
+  st_credits.forgive_step_share: 0
+  st_credits.forgive_income_base: 2   # st_income_base enum (PA: state AGI)
+  st_credits.forgive_add_exempt_int: 0   # share of exempt interest added
+  st_credits.forgive_add_alimony: 0      # share of alimony received added
+  # Per-person credit (ID grocery credit): flat amount per taxpayer and
+  # dependent, with an aged add-on per 65+ filer
+  st_credits.percap_amount: {default: 0, units: per_person}
+  st_credits.percap_aged_addl: {default: 0, units: per_instance}
+  st_credits.percap_refundable: 1
+  # Household base credit from a dense published table (ME sales tax
+  # fairness credit, 5213-A): a per-return refundable amount keyed by
+  # filing status and capped dependent count, with the stepped income
+  # phase-out baked into the table rows (credit_tables.csv, credit_id
+  # stfc). MFS ineligibility is encoded by omitting filing-status-3 rows.
+  # The income concept is the enum base plus optional add-backs for
+  # nontaxable Social Security and exempt interest (ME's broad "total
+  # income"; loss add-backs are a documented approximation)
+  st_credits.stfc_income_base: 1
+  st_credits.stfc_add_nontax_ss: 0
+  st_credits.stfc_add_exempt_int: 0
+  st_credits.stfc_refundable: 1
+  # Income base for the BANDED per-person amount published as a dense table
+  # (HI Form N-311 food/excise credit: per-exemption amount by federal-AGI
+  # band, in the state's credit_tables.csv under credit_id percap_credit).
+  # The table amount adds to the flat percap_amount; a state without table
+  # rows gets zero from the lookup
+  st_credits.percap_table_income_base: 1
+  # Combined child + working-family credit (MN M1CWFC, 2023+): CTC per
+  # young child + a small earned-income component + fixed older-child
+  # amounts, with ONE joint phase-out on max(earned income, AGI)
+  st_credits.cwfc_style: 0
+  st_credits.cwfc_ctc_amount: {default: 0, units: per_child}
+  st_credits.cwfc_ctc_max_age: 17
+  st_credits.cwfc_wfc_rate: 0
+  st_credits.cwfc_wfc_earned_cap: 0
+  st_credits.cwfc_po_rate: 0
+  st_credits.cwfc_po_rate_older_only: 0
+  st_credits.cwfc_po_thresh: .inf
+  # Two-earner marriage credit (MN M1MA): joint-schedule tax less the two
+  # spouses' single-schedule tax on imputed shares (lesser earner = own
+  # earned income less the share offset), subject to eligibility floors
+  # and a cap; nonrefundable
+  st_credits.mc_style: 0
+  st_credits.mc_min_lesser_income: .inf
+  st_credits.mc_min_joint_txbl: .inf
+  st_credits.mc_max: .inf
+  st_credits.mc_share_offset: 0
+  # CDCTC cap above an income threshold (MN M1CD): min(cap per qualifying
+  # person, up to two, less po_rate x excess AGI)
+  st_credits.cdctc_cap_amount: .inf
+  st_credits.cdctc_cap_thresh: .inf
+  st_credits.cdctc_cap_po_rate: 0
+  st_credits.cdctc_cap_per_return: 0   # the cap is per RETURN, not per child (LA $25)
+  # Above this federal AGI the credit switches to style 1, a share of the
+  # federal credit, whatever style is otherwise in force (LA $25,000)
+  st_credits.cdctc_style_switch_agi: .inf
+
+  # filing.yaml
+  st_filing.req_type: 0
+  st_filing.req_income_thresh: .inf
+  st_filing.req_income_thresh_dep: .inf
+  st_filing.req_if_fed_filer: 0
+  st_filing.no_tax_below_thresh: 0
+
+  # investment_income.yaml (NH/TN-style narrow taxes)
+  st_investment_income.interest_share: 0
+  st_investment_income.ordinary_div_share: 0
+  st_investment_income.qualified_div_share: 0
+  st_investment_income.exemption_amount: 0
+  st_investment_income.filing_threshold: .inf
+  st_investment_income.age_exemption: 0
+  st_investment_income.blind_exemption: 0
+  st_investment_income.rate: 0
+  st_investment_income.full_age_min_age: .inf
+  st_investment_income.full_age_income_limit: -.inf
+  st_investment_income.age_100_full_exempt: 0
+  st_investment_income.blind_full_exempt: 0
+  st_investment_income.blind_mfj_exempt_share: 0
+
+  # capital_gains.yaml (Washington-style excise tax)
+  st_capital_gains.model_coverage_share: 0
+  st_capital_gains.standard_deduction: .inf
+  st_capital_gains.charitable_threshold: .inf
+  st_capital_gains.charitable_max_deduction: 0
+  st_capital_gains.base_rate: 0
+  st_capital_gains.surtax_rate: 0
+  st_capital_gains.surtax_threshold: .inf
+
+  # transfers.yaml (Washington Working Families Tax Credit)
+  st_transfers.wftc_min_age: .inf
+  st_transfers.wftc_max_age: -.inf
+  st_transfers.wftc_mfs_eligible: 0
+  st_transfers.wftc_inv_inc_limit: -.inf
+  st_transfers.wftc_phaseout_width1: 1
+  st_transfers.wftc_phaseout_width2: 1
+  st_transfers.wftc_phaseout_width3: 1
+  st_transfers.wftc_phaseout_width4: 1
+  st_transfers.wftc_max_amount1: 0
+  st_transfers.wftc_max_amount2: 0
+  st_transfers.wftc_max_amount3: 0
+  st_transfers.wftc_max_amount4: 0
+  st_transfers.wftc_min_amount: 0
+  st_transfers.wftc_max_income_single1: 0
+  st_transfers.wftc_max_income_single2: 0
+  st_transfers.wftc_max_income_single3: 0
+  st_transfers.wftc_max_income_single4: 0
+  st_transfers.wftc_max_income_joint1: 0
+  st_transfers.wftc_max_income_joint2: 0
+  st_transfers.wftc_max_income_joint3: 0
+  st_transfers.wftc_max_income_joint4: 0
+
+# Live parameter names read outside the calculators (no default needed)
+extra_scalars:
+  - st_agi.conformity_group   # consumed by state_conformity_groups_for_law()
+
+# First-element column names that gate vector-family features:
+# ensure_st_params() adds an NA sentinel when a state's law lacks the
+# family entirely, so calculators can test any(!is.na(col1))
+sentinels:
+  - st_agi.pension_excl_band_ages1
+  - st_agi.pension_excl_tier_bounds1
+  - st_credits.eitc_match_by_kids1
+  - st_credits.hh_agi_bounds_single1
+  - st_credits.hh_agi_bounds_other1
+  - st_credits.ctc_tier1_bound
+  - st_child_ded.agi_bounds1
+  - st_ord.step_recap_start1
+  - st_ord.base_amounts1
+  - st_exempt.tier_bounds1
+  - st_exempt.dep_tier_bounds1
+  - st_credits.jfc_bounds1
+  - st_credits.retire_credit_bounds1
+  - st_ded.fed_tax_ded_band_upper1
+
+# Vector-family name patterns (element count varies by state). The \d*
+# suffix is optional because a single-element vector parses to a
+# suffix-less column. `consumer` names the calculator file that reads the
+# family (documentation only)
+families:
+  - pattern: '^st_agi\.pension_excl_tier_(bounds|caps|shares)\d*$'
+    consumer: st_agi.R   # NJ income-banded pension exclusion
+  - pattern: '^st_agi\.pension_excl_band_(ages|amounts)\d*$'
+    consumer: st_agi.R   # age-banded per-person retirement exclusion (MI tiers)
+  - pattern: '^st_ord\.(rates|brackets)\d*$'
+    consumer: st_tax.R   # rate schedule + NY-style recapture
+  - pattern: '^st_ord\.base_amounts\d*$'
+    consumer: st_tax.R   # OH-style published base-amount schedule (with cliffs)
+  - pattern: '^st_ord\.step_recap_(start|incr|amount|max)\d*$'
+    consumer: st_tax.R   # CT-style stepped recapture segments
+  - pattern: '^st_exempt\.tier_(bounds|amounts)\d*$'
+    consumer: st_exempt.R   # OH-style income-tiered per-exemption amounts
+  - pattern: '^st_exempt\.dep_tier_(bounds|amounts)\d*$'
+    consumer: st_exempt.R   # AL income-tiered dependent exemption
+  - pattern: '^st_ded\.fed_tax_ded_band_(upper|share|cap)\d*$'
+    consumer: st_ded.R   # MO AGI-tiered percentage / OR AGI-banded cap on the federal tax deduction
+  - pattern: '^st_credits\.jfc_(bounds|rates)\d*$'
+    consumer: st_credits.R   # OH joint filing credit rate bands
+  - pattern: '^st_credits\.retire_credit_(bounds|amounts)\d*$'
+    consumer: st_credits_senior.R   # OH banded retirement income credit
+  - pattern: '^st_child_ded\.(agi_bounds|amounts)\d*$'
+    consumer: st_child_ded.R   # NC-style AGI-tabled child deduction
+  - pattern: '^st_credits\.hh_agi_bounds_(single|other)\d*$'
+    consumer: st_credits.R   # NY household credit tables
+  - pattern: '^st_credits\.hh_amount_single\d*$'
+    consumer: st_credits.R
+  - pattern: '^st_credits\.hh_(base|incr)_other\d*$'
+    consumer: st_credits.R
+  - pattern: '^st_credits\.cdctc_share_(agi_bounds|start|end)\d*$'
+    consumer: st_credits.R   # NY-style CDCTC share anchors
+  - pattern: '^st_credits\.cdctc_expense_caps\d*$'
+    consumer: st_credits.R
+  - pattern: '^st_credits\.ctc_tier\d+_bound$'
+    consumer: st_credits.R   # CO-style tiered CTC (tier anchor mid-name)
+  - pattern: '^st_credits\.ctc_tier_(shares|amounts)\d*$'
+    consumer: st_credits.R
+  - pattern: '^st_credits\.earned_credit_(phasein_rate|max|phaseout_start|phaseout_rate|agi_safe_harbor)\d*$'
+    consumer: st_credits_earned.R   # CalEITC-style child-count-binned params
+  - pattern: '^st_credits\.cwfc_older_amounts\d*$'
+    consumer: st_credits_child.R   # MN M1CWFC older-child amounts (1/2/3+)
+  - pattern: '^st_credits\.eitc_match_by_kids\d*$'
+    consumer: st_credits_earned.R   # child-count-keyed EITC match (WI/MD)
+  - pattern: '^st_credits\.mc_single_brackets\d*$'
+    consumer: st_credits.R   # MN marriage credit single-schedule brackets

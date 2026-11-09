@@ -1,0 +1,75 @@
+---
+# Idaho: credits.
+#   - Grocery credit (63-3024A): REFUNDABLE per-person credit for the filer,
+#     spouse, and each dependent ($100 through 2022; $120 from 2023 per 2022
+#     HB509; $155 from 2025 per 2025 HB231), plus a 65+ add-on for the filer
+#     and spouse only ($20 through 2024; eliminated by HB231 from 2025).
+#     Claimable with no tax due; not available to dependent filers (their
+#     amount goes to the claiming return). The SNAP/incarceration month
+#     proration and the 2025 receipts option (up to $250 with receipts) are
+#     unobservable/ignored (known-differences).
+#   - Idaho Child Tax Credit (63-3029L): $205 per qualifying child under 17,
+#     NONREFUNDABLE, TY2018-TY2025 only (none in 2017; statute sunsets for
+#     tax years beginning on/after Jan 1, 2026 and was not extended).
+#   - No state EITC in any year.
+#   - Not modeled: credit for maintaining a home for aged/developmentally
+#     disabled ($100/person, max 3), other-state tax credit, donation checkoffs.
+
+# Grocery / food tax credit
+percap_amount:
+  value:
+    '2017': 100
+    '2023': 120
+    '2025': 155
+  reference: 'Idaho Code 63-3024A; Form 40 line 43 instructions: $100 per exemption 2017-2022, $120 from TY2023 (2022 HB509 ch.268), $155 from TY2025 (2025 HB231 ch.56, Food Tax Credit worksheet $12.92/month)'
+
+percap_aged_addl:
+  value:
+    '2017': 20
+    '2025': 0
+  reference: 'Form 40 grocery credit worksheets 2017-2024: additional $20 for filer/spouse age 65+; eliminated by 2025 HB231 (flat $155, no aged add-on). Add-on never applied to dependents'
+
+percap_refundable:
+  value: 1
+  reference: 'Idaho Code 63-3024A ("If taxes due are less than the total credit allowed, the taxpayer shall be paid a refund"); claimable by 65+ non-filers via Form 24'
+
+# Idaho Child Tax Credit (style 3 = flat per-child amount, continuous
+# phase-out machinery unused: no phase-out)
+ctc_style:
+  value:
+    '2017': 0
+    '2018': 3
+    '2026': 0
+  reference: 'Idaho Code 63-3029L, enacted 2018 HB463 as amended by 2018 HB675 ($205 before taking effect); no credit in 2017 (absent from the 2017 packet); sunset for taxable years beginning on/after Jan 1, 2026 (not extended; 2026 SB1450 failed)'
+
+ctc_young_amount:
+  value:
+    '2017': 0
+    '2018': 205
+    '2026': 0
+  reference: 'Form 40 packets 2018-2025 (2018 What''s New: "$205 per qualifying child"): amount constant TY2018-TY2025'
+
+ctc_min_child_age:
+  value: 0
+  reference: 'IRC 24(c) qualifying child, incorporated by 63-3029L'
+
+ctc_max_child_age:
+  value: 16
+  reference: 'Form 40 instructions 2018-2025: qualifying child "age 16 or under as of December 31"'
+
+ctc_po_thresh:
+  value: .inf
+  reference: 'Idaho CTC has no income phase-out (63-3029L)'
+
+ctc_po_rate:
+  value: 0
+  reference: 'n/a for Idaho (no phase-out)'
+
+ctc_refundable:
+  value: 0
+  reference: 'Idaho Code 63-3029L: nonrefundable (limited to tax after other-state and 39R/44 credits)'
+
+# Explicit no-op: Idaho has no earned-income credit (documents the absence)
+eitc_match:
+  value: 0
+  reference: 'No Idaho EITC on Form 40 or in any packet 2017-2025; no statute'

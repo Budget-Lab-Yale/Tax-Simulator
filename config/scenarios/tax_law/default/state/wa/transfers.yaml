@@ -1,0 +1,54 @@
+---
+# WFTC amounts and limits through 2025 are exact published values. Later years
+# are held at 2025 pending the annual Washington DOR amount update.
+wftc_min_age:
+  value: 25
+  reference: 'RCW 82.08.0206(2)(a), qualifying-child-free claimant age requirement: https://app.leg.wa.gov/Rcw/default.aspx?cite=82.08.0206'
+wftc_max_age:
+  value: 64
+  reference: 'RCW 82.08.0206(2)(a), qualifying-child-free claimant age requirement'
+wftc_mfs_eligible:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'Washington Working Families Tax Credit eligibility, married filing separately eligible beginning in 2023: https://workingfamiliescredit.wa.gov/eligibility'
+wftc_inv_inc_limit:
+  value:
+    '2017': 0
+    '2022': 10300
+    '2023': 11000
+    '2024': 11600
+    '2025': 11950
+  reference: 'Washington DOR Working Families Tax Credit annual application instructions; mirrors federal EITC investment-income limit'
+wftc_phaseout_width:
+  value: [2500, 5000, 5000, 5000]
+  reference: 'RCW 82.08.0206(4), phaseout width by number of qualifying children'
+wftc_max_amount:
+  value:
+    '2017': [0, 0, 0, 0]
+    '2022': [300, 600, 900, 1200]
+    '2023': [315, 625, 940, 1255]
+    '2024': [325, 640, 965, 1290]
+    '2025': [335, 660, 995, 1330]
+  reference: 'Washington DOR Working Families Tax Credit annual maximum amounts and RCW 82.08.0206'
+wftc_min_amount:
+  value:
+    '2017': 0
+    '2022': 50
+  reference: 'RCW 82.08.0206(5), $50 minimum credit amount'
+wftc_max_income_single:
+  value:
+    '2017': [0, 0, 0, 0]
+    '2022': [16480, 43492, 49399, 53057]
+    '2023': [17640, 46560, 52918, 56838]
+    '2024': [18591, 49084, 55768, 59899]
+    '2025': [19104, 50434, 57310, 61555]
+  reference: 'Washington DOR Working Families Tax Credit annual income eligibility tables'
+wftc_max_income_joint:
+  value:
+    '2017': [0, 0, 0, 0]
+    '2022': [22610, 49622, 55529, 59187]
+    '2023': [24210, 53120, 59478, 63398]
+    '2024': [25511, 56004, 62688, 66819]
+    '2025': [26214, 57554, 64430, 68675]
+  reference: 'Washington DOR Working Families Tax Credit annual income eligibility tables'

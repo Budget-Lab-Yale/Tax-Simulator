@@ -18,7 +18,12 @@ derive_vars = function(tax_unit) {
   tax_unit %>% 
     mutate(
       
-      # Schedule E related variables
+      # Schedule E related variables. The loss pieces are the losses allowed
+      # on the return, so Schedule E income is the net partnership and S
+      # corporation amount, gain or loss, plus net rent and net estate and
+      # trust income. part_scorp and part_scorp_loss split the net
+      # pass-through amount into its positive and negative halves for
+      # reporting.
       part            = part_active + part_passive - part_active_loss - 
                         part_passive_loss - part_179,
       scorp           = scorp_active + scorp_passive - scorp_active_loss - 
@@ -28,7 +33,7 @@ derive_vars = function(tax_unit) {
       pt              = part + scorp + sole_prop,
       net_rent        = rent - rent_loss,
       net_estate      = estate - estate_loss,
-      sch_e           = part_scorp + net_rent + net_estate
+      sch_e           = part + scorp + net_rent + net_estate
       
     ) %>% 
     return()
@@ -274,9 +279,8 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
   #   - y (str)               : column name for conditioning income variable y
   #   - x (str)               : column name for income variable x on which tax
   #                             is being assessed
-  #   - inclusive (bool)      : whether x is included in y. If so, tax is
-  #                             limited to smaller of y and (x - y) in order to
-  #                             properly account for case when x > y i.e. y < 0
+  #   - inclusive (bool)      : whether x is included in y. If so, x is taxed
+  #                             as the top slice of y
   #   - output_name (str)     : name for function output variables
   #   - by_bracket (bool)     : whether to include bracket-specific output
   #                             columns
@@ -344,3 +348,30 @@ get_n_cols = function(df, prefix) {
 
 
 
+
+
+
+fed_calc_vars = function(incl_payroll = T) {
+
+  #----------------------------------------------------------------------------
+  # Lists the FEDERAL calculated variable names registered in return_vars,
+  # excluding the state calculator's calc_st_* registrations (state variables
+  # are computed in a separate downstream pass and never exist on federally-
+  # calculated tax units; plan §2.4).
+  #
+  # Parameters:
+  #   - incl_payroll (bool) : whether to include payroll (calc_pr) variables
+  #
+  # Returns: character vector of calculated variable names (str[]).
+  #----------------------------------------------------------------------------
+
+  out = return_vars %>%
+    `[`(!str_detect(names(.), '^calc_st_'))
+  if (!incl_payroll) {
+    out %<>% remove_by_name('calc_pr')
+  }
+  out %>%
+    unlist() %>%
+    set_names(NULL) %>%
+    return()
+}

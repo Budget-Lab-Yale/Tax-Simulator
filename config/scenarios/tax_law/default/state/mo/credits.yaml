@@ -1,0 +1,33 @@
+---
+# Missouri: credits (MO-1040 lines 31-44).
+#
+# Missouri has exactly one broad credit worth encoding -- the Working
+# Family Tax Credit, a nonrefundable match on the federal earned income
+# credit that began in TY2023. The property tax circuit breaker is real
+# money for elderly and disabled renters and owners but is keyed to
+# household income and rent or property tax paid, so it waits on the Tier 1
+# tenure/rent imputation like the Wisconsin and Michigan homestead credits.
+
+eitc_match:
+  value:
+    '2017': 0.0
+    '2023': 0.10
+    '2024': 0.20
+  reference: 'RSMo 143.177; Form MO-WFTC. The TY2023 form states "The Missouri Working Family Tax Credit is equal to 10% of your Federal Earned Income Credit for tax year 2023" (2023 booklet p.39) and the TY2024 and TY2025 forms "equal to 20% of your Federal Earned Income Credit" (2024 booklet p.38; 2025 booklet p.44). Twenty percent is the statutory maximum, reached after the one revenue trigger in RSMo 143.177 was met, so no further increase is possible'
+eitc_refundable:
+  value: 0
+  reference: 'Form MO-WFTC line 9 limits the credit to tax remaining after the property tax credit and miscellaneous credits (MO-1040 line 36 less lines 42 and 43), and the credit carries forward nowhere. Nonrefundable in every year it has existed'
+
+documented_not_modeled:
+  wftc_credit_ordering:
+    reference: 'Form MO-WFTC applies the credit against Missouri tax remaining AFTER the property tax credit and certificated miscellaneous credits, whereas the calculator applies it against tax remaining after the credits it models. Neither of the two credits ahead of it in the queue is modeled, so the limitation binds later here than on the form [overstates the Working Family Tax Credit for units that would have exhausted their liability on the property tax credit first]'
+  wftc_eligibility_gates:
+    reference: 'Form MO-WFTC also requires Missouri residency, excludes married filing separate, and imposes an investment income cap of $4,050 (TY2023), $4,300 (TY2024) and $4,400 (TY2025). The investment cap mirrors the federal earned income credit test, which the federal calculator has already applied, and married filing separate filers rarely hold a federal earned income credit to match; neither gate is encoded separately'
+  property_tax_credit:
+    reference: 'Form MO-PTS / MO-PTC "circuit breaker": up to $750 for renters and $1,100 for owner-occupiers, for filers aged 65 or older, 100 percent disabled, disabled veterans, or aged 60 or older receiving surviving-spouse Social Security benefits, phased out on a statutory net-household-income schedule (RSMo 135.010-135.035; not available above roughly $27,200-$27,500 for renters and $30,000 for owners). Blocked on two counts: rent paid and property tax paid are Tier 1 imputation targets, and "net household income" adds back otherwise-exempt income on its own schedule [overstates Missouri tax for elderly and disabled low-income filers -- the Wisconsin and Michigan homestead precedent]'
+  resident_credit_and_income_percentage:
+    reference: 'MO-1040 lines 31-32 carry the resident credit for taxes paid to other states (Form MO-CR) and the Missouri income percentage for nonresidents (Form MO-NRI). The model assigns each record wholly to one state, so neither applies'
+  certificated_credits:
+    reference: 'Form MO-TC carries dozens of certificated economic-development, historic-preservation and charitable credits (MO-1040 line 43). Award histories are not in the microdata'
+  self_employed_health_insurance_credit:
+    reference: 'MO-1040 carries a qualified health insurance premium credit computed on Form 5695 for the self-employed. Premium amounts are unobserved'

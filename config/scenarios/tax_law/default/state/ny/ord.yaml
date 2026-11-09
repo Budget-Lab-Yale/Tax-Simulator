@@ -1,0 +1,79 @@
+---
+# New York: tax rate schedule (NY Tax Law §601; IT-201-I "NYS tax rate
+# schedule" each year). Brackets are statutory nominal amounts, NOT indexed
+# (verified: thresholds identical 2017-2033+ in statute and instructions).
+#
+# 10-element uniform schedule. Shorter years are padded: pre-2021 (8 brackets)
+# repeats the 8.82% top rate/threshold; 2022+ keeps the (merged) pre-2022
+# fourth threshold with equal rates on both sides, which is mathematically
+# identical to the published merged schedule.
+#
+# Rate history encoded: middle-class phase-down 2018-2021 (§601(B)(i)-(iv));
+# 2022 acceleration to 5.85/6.25 then 5.5/6.0 in 2023 (Ch.59 L.2022);
+# 2021 top rates 9.65/10.3/10.9 (Ch.59 L.2021), extended through 2032
+# (Ch.59 L.2025); FY2026-budget cuts to the bottom five rates: -0.1pp in 2026,
+# -0.1pp more in 2027 (§601(B)(vii)-(viii)); 2033+: top three brackets revert
+# to a single 8.82% bracket (§601(B)(ix)).
+#
+# NOTE: the schedule applies directly only when NY AGI <= $107,650; above
+# that the tax-benefit recapture worksheets apply (see recapture_* params;
+# calc implementation in Phase 3).
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_head
+
+# Marginal rates (MFS uses the single schedule per §601(c), hence the mapper
+# above maps status 3 to brackets_single, not married/2)
+rates:
+  value:
+    '2017': [0.04, 0.045, 0.0525, 0.059, 0.0645, 0.0665, 0.0685, 0.0882, 0.0882, 0.0882]
+    '2018': [0.04, 0.045, 0.0525, 0.059, 0.0633, 0.0657, 0.0685, 0.0882, 0.0882, 0.0882]
+    '2019': [0.04, 0.045, 0.0525, 0.059, 0.0621, 0.0649, 0.0685, 0.0882, 0.0882, 0.0882]
+    '2020': [0.04, 0.045, 0.0525, 0.059, 0.0609, 0.0641, 0.0685, 0.0882, 0.0882, 0.0882]
+    '2021': [0.04, 0.045, 0.0525, 0.059, 0.0597, 0.0633, 0.0685, 0.0965, 0.103, 0.109]
+    '2022': [0.04, 0.045, 0.0525, 0.0585, 0.0585, 0.0625, 0.0685, 0.0965, 0.103, 0.109]
+    '2023': [0.04, 0.045, 0.0525, 0.055, 0.055, 0.06, 0.0685, 0.0965, 0.103, 0.109]
+    '2026': [0.039, 0.044, 0.0515, 0.054, 0.054, 0.059, 0.0685, 0.0965, 0.103, 0.109]
+    '2027': [0.038, 0.043, 0.0505, 0.053, 0.053, 0.058, 0.0685, 0.0965, 0.103, 0.109]
+    '2033': [0.038, 0.043, 0.0505, 0.053, 0.053, 0.058, 0.0685, 0.0882, 0.0882, 0.0882]
+  reference: 'NY Tax Law 601(a)-(c)(1)(B)(i)-(ix); IT-201-I rate schedules 2017-2025 (tax.ny.gov/pdf/{yr}/inc/it201i_{yr}.pdf); Ch.59 L.2021 Part A; Ch.59 L.2022 Part A Subpart A; Ch.59 L.2025'
+
+# Bracket lower bounds, single filers (and MFS)
+brackets_single:
+  value:
+    '2017': [0, 8500, 11700, 13900, 21400, 80650, 215400, 1077550, 1077550, 1077550]
+    '2021': [0, 8500, 11700, 13900, 21400, 80650, 215400, 1077550, 5000000, 25000000]
+    '2033': [0, 8500, 11700, 13900, 21400, 80650, 215400, 1077550, 1077550, 1077550]
+  reference: 'NY Tax Law 601(c); IT-201-I rate schedules; NOT inflation-indexed'
+
+# Bracket lower bounds, married filing jointly / qualifying surviving spouse
+brackets_married:
+  value:
+    '2017': [0, 17150, 23600, 27900, 43000, 161550, 323200, 2155350, 2155350, 2155350]
+    '2021': [0, 17150, 23600, 27900, 43000, 161550, 323200, 2155350, 5000000, 25000000]
+    '2033': [0, 17150, 23600, 27900, 43000, 161550, 323200, 2155350, 2155350, 2155350]
+  reference: 'NY Tax Law 601(a); IT-201-I rate schedules; NOT inflation-indexed'
+
+# Bracket lower bounds, head of household
+brackets_head:
+  value:
+    '2017': [0, 12800, 17650, 20900, 32200, 107650, 269300, 1616450, 1616450, 1616450]
+    '2021': [0, 12800, 17650, 20900, 32200, 107650, 269300, 1616450, 5000000, 25000000]
+    '2033': [0, 12800, 17650, 20900, 32200, 107650, 269300, 1616450, 1616450, 1616450]
+  reference: 'NY Tax Law 601(b); IT-201-I rate schedules; NOT inflation-indexed'
+
+# Tax-benefit recapture (supplemental tax): above recapture_agi_start of NY
+# AGI, lower-bracket benefits are recaptured, phased in over recapture_width
+# of AGI above each bracket threshold (IT-201-I Tax Computation worksheets;
+# 16 worksheets from 2021). Calc-layer implementation derives the tiers from
+# the rates/brackets above; these are the worksheet constants
+recapture_agi_start:
+  value: 107650
+  reference: 'IT-201-I Tax Computation worksheets (2017-2025); NY Tax Law 601(d)'
+recapture_width:
+  value: 50000
+  reference: 'IT-201-I Tax Computation worksheets ($50,000 phase-in over each AGI threshold)'

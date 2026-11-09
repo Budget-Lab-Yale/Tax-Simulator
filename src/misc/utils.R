@@ -158,7 +158,9 @@ purge_detail = function(passes = NULL, scenarios = NULL) {
                   scenario_id,
                   pass,
                   "detail/*"
-        )
+        ),
+        # Recursive so subdirectories (e.g. detail/state/) are purged too
+        recursive = TRUE
       )
     }
   }

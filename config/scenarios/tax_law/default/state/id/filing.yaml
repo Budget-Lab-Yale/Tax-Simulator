@@ -1,0 +1,18 @@
+---
+# Idaho: filing requirement. Every Idaho resident who must file a federal
+# return must file a Form 40 (the federal gross-income thresholds pass
+# through directly; Idaho filing status must match federal). The filing
+# requirement also gates the $10 Permanent Building Fund excise (surtax.yaml).
+
+# 3 = federal filing requirement or any state liability
+req_type:
+  value: 3
+  reference: 'Form 40 instructions "Who Must File", verified 2024/2025 and stable across the window: every resident required to file a federal return'
+
+req_income_thresh:
+  value: 0
+  reference: 'n/a for Idaho (federal-requirement passthrough)'
+
+req_if_fed_filer:
+  value: 1
+  reference: 'Form 40 instructions "Who Must File": resident must file if required to file a federal income tax return'

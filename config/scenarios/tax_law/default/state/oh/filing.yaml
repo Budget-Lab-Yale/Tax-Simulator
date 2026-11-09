@@ -1,0 +1,16 @@
+---
+# Ohio filing requirement (booklet "you do not have to file" test, identical
+# 2017-2025): no filing duty if OAGI <= exemptions (test 3); combined with
+# the rate table, tax is zero whenever OAGI - exemptions is at or below the
+# zero-bracket top. Modeled as the IL-style income test (state base above
+# the exemption allowance) plus liability. The senior-credit-covers-tax
+# prong (test 2) is not separately modeled (documented approximation).
+req_type:
+  value: 1
+  reference: 'IT 1040 booklets 2017-2025 "Do I have to file?": no return required when line 4 exemptions >= line 3 OAGI'
+req_income_thresh:
+  value: 0
+  reference: 'n/a: Ohio has no fixed dollar filing threshold'
+req_if_fed_filer:
+  value: 0
+  reference: 'Federal filing duty does not itself create an Ohio filing duty when OAGI <= exemptions (booklet test 3)'

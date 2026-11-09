@@ -1,0 +1,130 @@
+---
+# Vermont: income base (Form IN-111 Section 3; Schedules IN-112, IN-153).
+#
+# REGIME CHANGE AT TY2018 (Act 11 of the 2018 special session). Vermont ran on
+# federal TAXABLE income through 2017, with the Schedule IN-155 itemized
+# addback bolted on; Act 11 moved the base to federal ADJUSTED GROSS income and
+# gave Vermont its own standard deduction and personal exemption, replacing
+# itemization outright with a charitable-contribution CREDIT. The year-keyed
+# start_point is the MN precedent.
+#
+# 2017 IN-111 line order, verified against the 2017 IN-111 instructions:
+#   line 11 federal taxable income; + 12a non-Vermont obligations
+#   + 12b bonus depreciation + 12c Schedule IN-155 itemized addback
+#   - 14a U.S. obligation interest - 14b capital gains exclusion
+#   - 14c prior-year bonus depreciation - 14d taxable state/local tax refunds
+
+start_point:
+  value:
+    '2017': 2
+    '2018': 1
+  reference: '2017 IN-111 line 11 ("Federal Taxable Income ... from your federal return"); 2018-2025 IN-111 line 1 (federal adjusted gross income) following Act 11 of the 2018 special session. 32 V.S.A. 5811(21) "taxable income"'
+
+conformity_group:
+  value: 0
+  reference: '32 V.S.A. 5824 adopts the IRC as of a FIXED DATE, re-set nearly every session (Dec 31 2023 currently; Dec 31 2024 for TY2025 via H.493 of 2025). Modeled as rolling (group 0): Vermont has not sat out a PUF-material federal change in this window -- it conformed explicitly to CARES and to the ARPA $10,200 unemployment exclusion for TY2020, reissuing refunds, so no Vermont-specific UI treatment is needed'
+
+# Non-Vermont state and local obligations are added back; Vermont's own stay
+# exempt. The own-state share of exempt_int is unobserved, so the model adds
+# back the uniform 25% out-of-state complement
+add_exempt_int:
+  value: 1
+  reference: '2017 IN-111 line 12a / 2018-2025 line 2, "Non-Vermont State and Local Obligations", from Schedule IN-112 Part I line 3; 32 V.S.A. 5811(21)(A)(i)'
+own_state_exempt:
+  value: 1
+  reference: 'Schedule IN-112 Part I: only obligations of states OTHER than Vermont are added back'
+sub_us_int:
+  value: 1
+  reference: '2017 IN-111 line 14a / 2018-2025 line 4a, "Interest Income from U.S. Obligations ... exempt from Vermont tax under the laws of the United States". The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates VT tax for Treasury holders]'
+sub_state_ref:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: '2017 IN-111 line 14d subtracts taxable refunds of state and local income taxes, which are inside the federal taxable-income base that year. From 2018 the base is federal AGI and no such subtraction appears on IN-111'
+
+# Social Security and eligible retirement income (32 V.S.A. 5830e, TY2018+):
+# FULLY exempt below an AGI threshold, then phased out linearly across a
+# $10,000 band -- 1 percentage point of the exempt share per $100 of AGI over
+# the threshold, reaching zero at threshold + $10,000. There is NO age test;
+# it is income-tested only.
+#
+# DOCUMENTED APPROXIMATION: the worksheet computes the share as
+# round((upper - AGI)/10,000, 2) while the calculator ceilings the reduction,
+# so the two differ by at most half a step on returns whose excess is not a
+# multiple of $100 -- bounded by 0.005 x taxable SS (a few dollars of base).
+# Encoding the limit at threshold + $50 would make it exact, at the cost of
+# publishing a non-form figure; the published figure is used instead.
+ss_full_sub_allages:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: '32 V.S.A. 5830e (Act 11 of 2018 sp. sess.); IN-112 Part I Social Security exemption worksheet, 2018-2025'
+ss_allages_po_step:
+  value:
+    '2017': .inf
+    '2018': 100
+  reference: 'IN-112 worksheet: the exempt share falls 1% per $100 of AGI over the threshold'
+ss_allages_po_share:
+  value:
+    '2017': 0
+    '2018': 0.01
+  reference: 'IN-112 worksheet: share = round((threshold + 10,000 - AGI) / 10,000, 2), i.e. 0.01 lost per $100 step, zero at threshold + $10,000'
+
+# Capital gains exclusion (32 V.S.A. 5811(21)(B)(ii); Schedule IN-153).
+# The form computes
+#   min(40% x federal taxable income,
+#       max( flat:       min(adjusted net capital gain excluding qualified
+#                            dividends, $5,000),
+#            percentage: min(40% x ELIGIBLE gain, $350,000) ))
+# The 40% percentage branch reaches ONLY gain from assets held more than three
+# years that is NOT real estate, NOT depreciable personal property and NOT
+# publicly traded securities -- an unobservable residual, so it is correctly
+# ZERO here (PolicyEngine reaches the same conclusion). Setting the share to
+# 0.40 would be a serious OVER-exclusion, not a simplification.
+# The binding branch is therefore the flat $5,000, under the
+# 40%-of-federal-taxable ceiling -- which is exactly what test VT-3 exercises
+# (the ceiling binds at $4,480 there).
+cap_gains_excl_flat:
+  value: 5000
+  reference: 'Schedule IN-153 flat exclusion: the lesser of adjusted net capital gain excluding qualified dividends and $5,000; 32 V.S.A. 5811(21)(B)(ii)(I); Technical Bulletin 60'
+cap_gains_excl_share:
+  value: 0
+  reference: 'The 40% percentage exclusion (5811(21)(B)(ii)(II)) applies only to gain on assets held over three years that is not real estate, not depreciable personal property and not publicly traded securities. That subset is unobservable in the PUF, so the branch is zero rather than applied to all gain [understates the exclusion for holders of qualifying illiquid assets]'
+cap_gains_excl_txbl_share:
+  value: 0.40
+  reference: 'Schedule IN-153: the total exclusion may not exceed 40% of federal taxable income; 32 V.S.A. 5811(21)(B)(ii)'
+
+filing_status_mapper:
+  ss_allages_agi_limit:
+    '1': ss_thresh_other
+    '2': ss_thresh_joint
+    '3': ss_thresh_other
+    '4': ss_thresh_other
+
+ss_thresh_joint:
+  value:
+    '2017': .inf
+    '2018': 60000
+    '2022': 65000
+    '2025': 70000
+  reference: '32 V.S.A. 5830e; IN-112 worksheet, married filing jointly and surviving spouse. Raised $5,000 by S.51 / Act 71 of 2025. NOT indexed'
+ss_thresh_other:
+  value:
+    '2017': .inf
+    '2018': 45000
+    '2022': 50000
+    '2025': 55000
+  reference: '32 V.S.A. 5830e; IN-112 worksheet, single, married filing separately and head of household. Raised $5,000 by S.51 / Act 71 of 2025. NOT indexed'
+
+documented_not_modeled:
+  minimum_tax_3pct_of_agi:
+    reference: '2017 IN-111 line 16 / 32 V.S.A. 5822(a)(6): a filer with federal AGI over $150,000 pays the HIGHER of the scheduled tax and 3% of federal AGI less U.S.-obligation interest. No tax-FLOOR machinery exists [understates VT tax where the floor binds -- high-AGI returns with low Vermont taxable income. PolicyEngine models it as vt_amt, so expect a PE-high tail there. Note PE computes 3% x AGI MINUS interest where the instruction reads 3% of AGI less interest, i.e. 3% x (AGI - interest)]'
+  medical_expense_subtraction:
+    reference: 'TY2019+ (32 V.S.A. 5811(21)(A)(ii)): federal Schedule A medical expenses in excess of the Vermont deduction stack. Both inputs exist (med_item_ded, st_std_ded) but no parameter combines them [overstates VT tax for filers with large medical expenses; PolicyEngine models it]'
+  retirement_exemption_non_ss_branch:
+    value: 10000
+    reference: '32 V.S.A. 5830e(a)(2)-(3), TY2022+: up to $10,000 of non-SS-covered government, military or CSRS pension income, electable IN LIEU of the Social Security exemption. The eligible plans are an unobservable subset of txbl_pens_dist, and the election is not modeled [overstates VT tax for the affected retirees; PolicyEngine imputes it]'
+  bonus_depreciation_adjustments:
+    reference: '2017 IN-111 lines 12b/14c and 2018-2025 equivalents: Vermont does not recognize federal bonus depreciation. The MACRS-versus-bonus difference is not tracked at tax-unit level (a model-wide limitation)'
+  in155_second_addback_term_2017:
+    reference: '2017 Schedule IN-155 also added back non-protected itemized deductions in excess of 2.5x the federal standard deduction. Only the first term (state and local income tax, via salt_addback) is encoded. 2017 only [understates VT tax for high-itemizing 2017 returns]. NOTE the IN-155 form itself is UNAVAILABLE: it is absent from the NBER mirror for every year, and tax.vermont.gov returns HTTP 403 (retrieval re-attempted 2026-08-13). The first term''s definition -- min(itemized less federal standard, state/local income tax) -- is corroborated by the 2017 IN-111 instructions line 12c and the calculator implements exactly that; if the term is instead the FULL SALT deduction including property tax, salt_addback under-adds'

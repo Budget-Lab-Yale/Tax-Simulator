@@ -1,0 +1,7 @@
+---
+# Alaska: no broad individual income tax. Zero-tax stub so states = all
+# includes AK without producing state individual income tax liability.
+
+start_point:
+  value: 1
+  reference: 'No broad individual income tax; Alaska Department of Revenue Tax Division tax programs; https://tax.alaska.gov'

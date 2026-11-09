@@ -1,0 +1,152 @@
+---
+# Oregon: credits (Form OR-40 lines 23, 32-38).
+#
+# Three broad credits are encoded: the personal exemption credit (a hard
+# income CLIFF, not a taper), the earned income credit (refundable, at a
+# higher rate where a dependent is under 3), and the Oregon Kids Credit
+# (refundable, TY2023+). The kicker, the working family household and
+# dependent care credit and the retirement income credit are documented
+# below -- the kicker because prior-year liability is not observable in a
+# cross-sectional model, the other two because their bases are not
+# reconstructible from the microdata.
+
+filing_status_mapper:
+  exempt_credit_po_thresh:
+    '1': exempt_cliff_single
+    '2': exempt_cliff_joint
+    '3': exempt_cliff_single
+    '4': exempt_cliff_joint
+
+#-----------------------------------------------------------------------
+# Personal exemption credit (ORS 316.085), indexed.
+#-----------------------------------------------------------------------
+
+exempt_credit_style:
+  value: 1
+  reference: 'Form OR-40 line 23 (line 26 in 2017) exemption credit worksheet: a per-exemption credit covering the taxpayer, spouse and each dependent'
+exempt_credit_personal:
+  value:
+    '2017': 197
+    '2018': 201
+    '2019': 206
+    '2020': 210
+    '2021': 213
+    '2022': 219
+    '2023': 236
+    '2024': 249
+    '2025': 256
+    '2026': 260
+  reference: 'Form OR-40 instructions exemption credit worksheet line 5, each year (2017 p.16 through 2025 p.18), and OR-17 2025 pp.98 and 143. Indexed for inflation under ORS 316.085. TY2026 is PRELIMINARY, from OR-ESTIMATE 2026'
+exempt_credit_dep:
+  value:
+    '2017': 197
+    '2018': 201
+    '2019': 206
+    '2020': 210
+    '2021': 213
+    '2022': 219
+    '2023': 236
+    '2024': 249
+    '2025': 256
+    '2026': 260
+  reference: 'Same worksheet: the credit is the same amount for each qualifying personal exemption, dependents included'
+
+# A HARD CLIFF: one dollar of federal AGI over the threshold zeroes the whole
+# credit for every exemption. Encoded as a one-dollar step removing more than
+# any credit could be worth, which is what a cliff is in this machinery.
+exempt_cliff_single:
+  value: 100000
+  reference: 'OR-17 2025 p.98: "A personal exemption credit isn''t allowed if your federal AGI on line 7 of Form OR-40 ... exceeds ... $100,000 if your filing status is single or married filing separately." Frozen -- never indexed. Confirmed identically in every OR-40 worksheet 2017-2025'
+exempt_cliff_joint:
+  value: 200000
+  reference: 'OR-17 2025 p.98: "$200,000 for married filing jointly, head of household, or qualifying surviving spouse"'
+exempt_credit_po_width:
+  value: 1
+  reference: 'One dollar, so that any excess over the threshold triggers a full step -- the cliff mechanics'
+exempt_credit_po_per_step:
+  value: 1000000.0
+  reference: 'Larger than any exemption credit, so a single step wipes out the entire credit for every exemption. This encodes the cliff: there is no taper of any kind in the Oregon worksheet'
+exempt_credit_po_base:
+  value: 1
+  reference: 'The limitation tests FEDERAL AGI (Form OR-40 line 7), not Oregon income'
+
+#-----------------------------------------------------------------------
+# Earned income credit (ORS 315.266), refundable.
+#-----------------------------------------------------------------------
+
+eitc_match:
+  value:
+    '2017': 0.08
+    '2020': 0.09
+  reference: 'OR-17 2017 p.62: "your credit is 8 percent of your federal EITC"; the TY2020 booklet announces the increase as new ("you are now able to claim ... 9 percent of the federal credit amount"), and OR-17 2025 confirms 9 percent. So 8% through TY2019 and 9% from TY2020 -- the step is TY2020, not TY2019'
+eitc_match_young:
+  value:
+    '2017': 0.11
+    '2020': 0.12
+  reference: 'OR-17 2017 p.62: "Your Oregon EIC is 11 percent of your federal EITC if you have a qualifying dependent under the age of 3 at the end of the tax year"; 12 percent from TY2020 per that year''s booklet and the TY2025 rate table ("Younger than 3 ... 12 percent (0.12)")'
+eitc_match_young_max_age:
+  value: 2
+  reference: 'The higher rate applies where a qualifying dependent is "younger than 3 years old at the end of the tax year" (TY2025 rate table), i.e. age 2 or under -- the TY2020 booklet says "age two or younger on December 31"'
+eitc_refundable:
+  value: 1
+  reference: 'OR-17 2017 p.62: "Your Oregon EIC is refundable. If the credit is more than your Oregon tax liability, the difference will be refunded to you"'
+
+#-----------------------------------------------------------------------
+# Oregon Kids Credit (TY2023+), refundable.
+#-----------------------------------------------------------------------
+
+ctc_style:
+  value: 3
+  reference: 'A flat per-child amount for dependents inside an age band, reduced proportionally over a fixed income range -- the UT-style style 3'
+ctc_young_amount:
+  value:
+    '2017': 0
+    '2023': 1000
+    '2025': 1050
+  reference: 'OR-40 Instr. 2023 p.18: "The Oregon Kids Credit is up to $1,000 per qualifying dependent"; 2024 p.22 the same; 2025 p.22: "the maximum amount of the Oregon Kids Credit is $1,050 per qualifying dependent, for up to five dependents". The credit did not exist before TY2023'
+ctc_min_child_age:
+  value: 0
+  reference: 'OR-40 Instr. 2023-2025: dependents "age 5 or younger" / "under the age of six at the end of the tax year"'
+ctc_max_child_age:
+  value: 5
+  reference: 'Same: age five or younger at the end of the tax year'
+ctc_po_thresh:
+  value:
+    '2017': 999999999999.0
+    '2023': 25000
+    '2024': 25750
+    '2025': 26550
+  reference: 'Oregon Kids Credit worksheet line 4 "Phaseout amount": $25,000 for TY2023 (OR-40 Instr. 2023 p.19 worksheet), $25,750 for TY2024 and $26,550 for TY2025 (each year''s worksheet Part A). Below the threshold the credit is the full per-child amount; the stated cut-offs of $30,000 / $30,750 / $31,550 are exactly the threshold plus $5,000'
+ctc_po_rate:
+  value:
+    '2017': 0.0
+    '2023': 0.2
+    '2025': 0.21
+  reference: 'The worksheet divides the excess over the threshold by $5,000, rounds that ratio to two decimals, and multiplies the whole credit by it. Applied per child (ctc_po_per_child) the equivalent per-dollar rate is the per-child amount divided by 5,000 -- $1,000/5,000 = 0.20 for TY2023-2024 and $1,050/5,000 = 0.21 for TY2025 -- which reproduces the proportional reduction exactly and reaches zero at the published cut-off'
+ctc_po_per_child:
+  value: 1
+  reference: 'The reduction is proportional to the whole credit, which a per-child linear reduction at amount/5,000 reproduces exactly (each child''s amount reaches zero at the same income)'
+ctc_po_base:
+  value: 2
+  reference: 'Worksheet line 1 is "your income after subtractions from Form OR-40, line 15" -- Oregon income after additions and subtractions, i.e. the state AGI base'
+ctc_refundable:
+  value: 1
+  reference: 'Form OR-40 line 37 (line 38 in 2025) sits in the refundable credits block'
+
+documented_not_modeled:
+  kicker:
+    reference: 'The Oregon surplus "kicker" credit is a percentage of the taxpayer''s PRIOR year total Oregon personal income tax liability before credits -- 9.863 percent of 2024 liability on the TY2025 return (OR-40 Instr. 2025 line 32). Prior-year liability is not observable per record in a cross-sectional microsimulation, and the percentage is certified biennially by the Department of Administrative Services. NOT MODELED [understates Oregon refunds materially in kicker years -- this is Oregon''s largest known difference, and it recurs every other year]. Encoding it would require either a lagged panel or a same-year approximation of prior-year liability, which was deliberately not attempted'
+  working_family_household_and_dependent_care:
+    reference: 'The WFHDC credit (Schedule OR-WFHDC) is refundable and pays a percentage of qualifying care expenses that is keyed jointly to household income as a percentage of the federal poverty guideline and to the age of the child, with its own expense caps. Household size, the poverty-guideline ratio and Oregon-specific expense definitions are not reconstructible from the model''s care_exp variable alone [understates Oregon refunds for low-income working families with care expenses]. The most valuable remaining Oregon item after the kicker'
+  retirement_income_credit:
+    reference: 'ORS 316.157 gives an elderly filer a credit of 9 percent of eligible retirement income, subject to household income and Social Security offset limits. The base and the household-income measure were not transcribed from a primary source in this pass [understates Oregon tax relief for elderly filers]. Flagged as the next Oregon encoding task'
+  political_contribution_credit:
+    reference: 'A small credit for Oregon political contributions, capped per return and denied above an AGI limit that was lowered to $150,000 joint / $75,000 other for TY2020. Contributions are unobserved'
+  eic_for_itin_filers:
+    reference: 'Oregon provides a substitute earned income credit for filers who cannot claim the federal credit because they, a spouse or a child lack a work-valid Social Security number. Taxpayer identification-number type is not a model input [understates Oregon refunds for ITIN filers]'
+  kids_credit_dependent_cap_and_mfs:
+    reference: 'The Kids Credit is capped at five qualifying dependents and is denied outright to married filing separately. The model tracks at most three dependent ages, so the five-dependent cap can never bind, and the separate-filer exclusion is not gated [slightly overstates the credit for separate filers, who rarely qualify on income]'
+  kids_credit_ratio_rounding:
+    reference: 'The worksheet rounds the phase-out ratio to two decimal places, making the reduction a step function in 1-percent-of-credit increments (about $50 of income per step). The continuous equivalent is encoded [differences of at most one percent of the credit]'
+  other_narrow_credits:
+    reference: 'Oregon also carries the manufactured dwelling park closure credit, the pass-through entity elective tax credit, a refundable semiconductor research and development credit, an Oregon higher education savings plan contribution credit (which replaced the 529 subtraction), the income tax paid to another state credit, and a long tail of carryforward credits on Schedule OR-ASC. None is a broad income-conditioned credit reconstructible from the microdata'

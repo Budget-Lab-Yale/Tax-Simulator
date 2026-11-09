@@ -1,0 +1,70 @@
+---
+# Idaho: tax rate schedule (Form 40 line 20; Idaho Code 63-3024). Rates apply
+# to Idaho taxable income. Brackets are CPI-indexed annually (63-3024(2));
+# thresholds transcribed per year from the STC published rate schedules and
+# the Form 40 packets (tax-table endpoints cross-checked).
+#
+# Four regimes:
+#   2017:      seven brackets 1.6/3.6/4.1/5.1/6.1/7.1/7.4%
+#   2018-2020 (HB463): seven brackets 1.125/3.125/3.625/4.625/5.625/6.625/6.925%
+#   2021      (HB380): five brackets 1.0/3.1/4.5/5.5/6.5%
+#   2022      (HB436): four brackets 1.0/3.0/4.5/6.0%
+#   2023+     (2022 1st E.S. HB1): FLAT with an indexed zero bracket -- tax =
+#     rate x max(0, taxable income - subtraction). The statutory $2,500/$5,000
+#     subtraction is CPI-indexed like the old brackets: 4,489/8,978 (2023,
+#     5.8%), 4,673/9,346 (2024 HB521, 5.695%), 4,811/9,622 (2025 HB40, 5.3%).
+#     Do NOT hard-code the statutory base amounts.
+# 2026+: carries the 2025 rate and thresholds (no enacted change as of
+# 2026-07-23; thresholds index annually -- documented carry-forward).
+#
+# Filing-status mapping is unusual: MFS uses the SINGLE schedule and HoH uses
+# the MARRIED schedule (tax-table column "Married Filing Jointly or Head of
+# Household", verified every packet); married thresholds = exactly 2x single.
+# 10-element uniform schedule; padded by repeating the top rate/threshold.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_married
+
+rates:
+  value:
+    '2017': [0.016, 0.036, 0.041, 0.051, 0.061, 0.071, 0.074, 0.074, 0.074, 0.074]
+    '2018': [0.01125, 0.03125, 0.03625, 0.04625, 0.05625, 0.06625, 0.06925, 0.06925, 0.06925, 0.06925]
+    '2021': [0.010, 0.031, 0.045, 0.055, 0.065, 0.065, 0.065, 0.065, 0.065, 0.065]
+    '2022': [0.010, 0.030, 0.045, 0.060, 0.060, 0.060, 0.060, 0.060, 0.060, 0.060]
+    '2023': [0.0, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058]
+    '2024': [0.0, 0.05695, 0.05695, 0.05695, 0.05695, 0.05695, 0.05695, 0.05695, 0.05695, 0.05695]
+    '2025': [0.0, 0.053, 0.053, 0.053, 0.053, 0.053, 0.053, 0.053, 0.053, 0.053]
+  reference: 'Idaho Code 63-3024; STC Individual Income Tax Rate Schedule page (2017-2025); 2018 HB463; 2021 HB380; 2022 HB436; 2022 1st E.S. HB1 ch.1 (flat 5.8% TY2023); 2024 HB521 ch.237 (5.695%); 2025 HB40 ch.13 (5.3%); Form 40 line 20 worksheets 2023-2025'
+
+# Single and MFS
+brackets_single:
+  value:
+    '2017': [0, 1472, 2945, 4417, 5890, 7362, 11043, 11043, 11043, 11043]
+    '2018': [0, 1504, 3008, 4511, 6015, 7519, 11279, 11279, 11279, 11279]
+    '2019': [0, 1541, 3081, 4622, 6162, 7703, 11554, 11554, 11554, 11554]
+    '2020': [0, 1568, 3136, 4704, 6272, 7840, 11760, 11760, 11760, 11760]
+    '2021': [0, 1588, 4763, 6351, 7939, 7939, 7939, 7939, 7939, 7939]
+    '2022': [0, 1662, 4987, 8311, 8311, 8311, 8311, 8311, 8311, 8311]
+    '2023': [0, 4489, 4489, 4489, 4489, 4489, 4489, 4489, 4489, 4489]
+    '2024': [0, 4673, 4673, 4673, 4673, 4673, 4673, 4673, 4673, 4673]
+    '2025': [0, 4811, 4811, 4811, 4811, 4811, 4811, 4811, 4811, 4811]
+  reference: 'STC rate schedules 2017-2025, single/MFS column; Form 40 tax-table endpoints cross-checked (2017 single at 100k = 7,150); 2023-2025 Form 40 line 20 worksheet subtraction amounts'
+
+# Married filing jointly / QSS / head of household (HoH uses the married
+# schedule in Idaho -- tax-table header, verified every packet)
+brackets_married:
+  value:
+    '2017': [0, 2944, 5890, 8834, 11780, 14724, 22086, 22086, 22086, 22086]
+    '2018': [0, 3008, 6016, 9022, 12030, 15038, 22558, 22558, 22558, 22558]
+    '2019': [0, 3082, 6162, 9244, 12324, 15406, 23108, 23108, 23108, 23108]
+    '2020': [0, 3136, 6272, 9408, 12544, 15680, 23520, 23520, 23520, 23520]
+    '2021': [0, 3176, 9526, 12702, 15878, 15878, 15878, 15878, 15878, 15878]
+    '2022': [0, 3324, 9974, 16622, 16622, 16622, 16622, 16622, 16622, 16622]
+    '2023': [0, 8978, 8978, 8978, 8978, 8978, 8978, 8978, 8978, 8978]
+    '2024': [0, 9346, 9346, 9346, 9346, 9346, 9346, 9346, 9346, 9346]
+    '2025': [0, 9622, 9622, 9622, 9622, 9622, 9622, 9622, 9622, 9622]
+  reference: 'STC rate schedules 2017-2025, MFJ/HoH column (2x single); Form 40 tax-table endpoints cross-checked (2017 married at 100k = 6,899); 2023-2025 Form 40 line 20 worksheet subtraction amounts'

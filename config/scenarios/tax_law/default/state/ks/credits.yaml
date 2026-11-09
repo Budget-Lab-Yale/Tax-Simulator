@@ -1,0 +1,50 @@
+---
+# Kansas credits (K-40 lines 13-18; 2025 renumbering).
+
+# EITC: 17% of the federal credit, residents only, effectively fully
+# refundable (the K-40 EITC worksheet splits a nonrefundable portion on
+# line 17 and refunds the remainder on line 23)
+eitc_match:
+  value: 0.17
+  reference: 'K.S.A. 79-32,205; 2017 booklet EITC worksheet ("multiply line 1 by 17%"); identical 17% worksheet in 2021/2024/2025 booklets'
+eitc_refundable:
+  value: 1
+  reference: 'K-40 line 23 refundable portion of EITC; net benefit equals the full 17% match'
+
+# CDCTC: match of the federal credit, nonrefundable, residents only.
+# Repealed 2013-2017 (0%); SB 30 phase-in 12.5/18.75/25%; SB 1 sec. 21
+# raises to 50% for TY2024+
+cdctc_match:
+  value:
+    '2017': 0
+    '2018': 0.125
+    '2019': 0.1875
+    '2020': 0.25
+    '2024': 0.5
+  reference: 'K.S.A. 79-32,111c; 2017 booklet has no care credit line; 2018 booklet "12.5%"; 2019 booklet "18.75%"; 2021/2023 booklets 25%; 2024/2025 booklets "multiply ... by 50%"; Notice 24-09'
+cdctc_refundable:
+  value: 0
+  reference: 'K-40 line 14 reduces tax; no refundable line (unlike the EITC)'
+
+# Documented-not-modeled credits:
+#   - FOOD SALES TAX CREDIT (K.S.A. 79-32,271): $125 per qualified exemption
+#     (taxpayer, spouse, dependents UNDER 18; no HoH extra exemption),
+#     NONREFUNDABLE, full-year residents with federal AGI <= $30,615, gated
+#     on (55+ all year) OR (blind/disabled) OR (dependent child under 18 in
+#     the home). The percap/exempt_credit machinery has no age-55/disabled/
+#     child eligibility gate, and encoding without the gate would wrongly
+#     pay young childless singles (a large low-AGI class) -- omitted.
+#     Materiality: <= $125 x exemptions, capped at remaining liability;
+#     ~O($10M)/yr statewide. Ends TY2025 (2025 booklet drops the line; food
+#     sales tax fully phased out 1/1/2025 per HB 2106). TAXSIM and PE model
+#     it -> pre-registered cross-model wedge 2017-2024.
+#   - Credit for taxes paid to another state (out-of-state income
+#     unobservable); Pregnancy Resource Act credit (2024+); adoption,
+#     historic preservation, community service (K-60), and other Schedule
+#     K-xx business credits.
+documented_not_modeled:
+  food_sales_tax_credit_amount:
+    value:
+      '2017': 125
+      '2025': 0
+    reference: 'K.S.A. 79-32,271; 2017/2021/2024 booklets ($125/exemption, AGI <= $30,615, 55+/disabled/child-under-18 gates, nonrefundable); absent from the 2025 booklet'

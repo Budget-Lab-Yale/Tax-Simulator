@@ -1,0 +1,2 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,tests/states/all_detail_tax_data_2026092720,default,2022:2023,,,

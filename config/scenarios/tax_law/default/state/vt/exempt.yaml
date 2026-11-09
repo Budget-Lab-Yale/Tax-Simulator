@@ -1,0 +1,49 @@
+---
+# Vermont: personal exemptions (Form IN-111 line 5, TY2018+). One amount per
+# exemption -- taxpayer, spouse and each dependent -- with no income test and
+# no aged or blind add-on here (the aged/blind amounts are add-ons to the
+# STANDARD DEDUCTION on IN-111 line 4, encoded in ded.yaml).
+#
+# Zero in 2017: that year's base is federal taxable income, which already nets
+# the federal personal exemption.
+#
+# Indexed annually (32 V.S.A. 5811(21)(C)). The published series is transcribed
+# through TY2025 and indexed forward. NOTE 2020 and 2021 carry the SAME $4,350
+# -- that is a genuine published freeze, not a transcription slip.
+
+personal_amount:
+  value:
+    '2017': 0
+    '2018': 4150
+    '2019': 4250
+    '2020': 4350
+    '2022': 4500
+    '2023': 4850
+    '2024': 5100
+    '2025': 5300
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: '32 V.S.A. 5811(21)(C); IN-111 line 5 instructions 2018-2025. $4,350 published for BOTH 2020 and 2021 (a freeze). Zero in 2017 -- the federal exemption is inside that year''s taxable-income base'
+dep_amount:
+  value:
+    '2017': 0
+    '2018': 4150
+    '2019': 4250
+    '2020': 4350
+    '2022': 4500
+    '2023': 4850
+    '2024': 5100
+    '2025': 5300
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+  reference: 'IN-111 line 5 counts the taxpayer, spouse and each dependent at the same amount'

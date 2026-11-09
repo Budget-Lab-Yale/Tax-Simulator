@@ -1,0 +1,48 @@
+---
+# South Carolina: credits (SC1040; SC1040TC).
+# Encoded: the SC Earned Income Tax Credit (12-6-3632) -- NONREFUNDABLE, a
+# percentage of the federal EITC, phased in over six equal steps from TY2018
+# (20.83%) to 125% at TY2023.
+#
+# KNOWN-DIFFERENCES (not modeled):
+#   - Child & Dependent Care Credit (12-6-3380): 7% of federal Sec.21 EXPENSES
+#     (not 7% of the federal credit), max $210/$420. Different base than the
+#     model's cdctc match; omitted to avoid an incorrect encoding.
+#   - Tuition Tax Credit (12-6-3385, refundable): needs student tuition data.
+#   - Nursing-home/family-care, motor-fuel (2018-2022), excess-premium credits.
+
+# SC EITC: nonrefundable % of the federal EITC (no credit before TY2018)
+eitc_match:
+  value:
+    '2017': 0
+    '2018': 0.2083
+    '2019': 0.4167
+    '2020': 0.625
+    '2021': 0.8333
+    '2022': 1.0417
+    '2023': 1.25
+  reference: 'S.C. Code 12-6-3632; Form TC-60. Six-step phase-in from 20.83% (TY2018) to 125% (TY2023+)'
+eitc_refundable:
+  value: 0
+  reference: 'S.C. Code 12-6-3632 (nonrefundable, full-year residents)'
+
+# Two Wage Earner Credit (12-6-3330; SC1040 line 17 area): 0.7% of the
+# lesser-earning spouse's earned income, with the qualifying-income cap
+# phased from $30,000 to $50,000 in six equal steps by Act 266 of 2018
+# (the same act as the EITC phase-in). Encoded as the capped credit
+# (rate x cap). TAXSIM's 2019 value (256.67 = 0.7% x 36,667) matches.
+# Encoded 2026-08-11 (was a documented known-difference). Earned income
+# proxies SC-source qualified earned income (known-difference)
+twoearner_rate:
+  value: 0.007
+  reference: 'S.C. Code 12-6-3330(A); SC1040 instructions two wage earner credit, 2017-2025'
+twoearner_max:
+  value:
+    '2017': 210.0
+    '2018': 233.33
+    '2019': 256.67
+    '2020': 280.0
+    '2021': 303.33
+    '2022': 326.67
+    '2023': 350.0
+  reference: 'S.C. Code 12-6-3330 as amended by Act 266 of 2018: qualifying-income cap 30,000 phased to 50,000 in six equal annual steps from TY2018; credit max = 0.7% of the cap'

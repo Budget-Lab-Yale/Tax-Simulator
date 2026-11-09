@@ -1,0 +1,18 @@
+---
+# Iowa grants no personal exemption against income. It grants flat-dollar
+# personal exemption CREDITS against tax instead, which live in credits.yaml
+# under the exempt_credit family. This file states the zero explicitly so the
+# absence is a recorded fact rather than an omission.
+
+personal_amount:
+  value: 0
+  reference: 'Iowa Code 422.12(2)(a) grants "personal exemption credits" deducted "from but not to exceed the tax", not exemptions from income. IA 1040 Step 3 collects the exemption counts and Step 6 applies them as credits. There is no exemption line in the income computation in any year 2017-2025'
+dep_amount:
+  value: 0
+  reference: 'Same: the $40 per dependent is a credit, not an exemption'
+aged_addl:
+  value: 0
+  reference: 'Same: the $20 age-65 amount is a credit'
+blind_addl:
+  value: 0
+  reference: 'Same: the $20 blindness amount is a credit'

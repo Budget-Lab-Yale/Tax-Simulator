@@ -1,0 +1,67 @@
+---
+# Oregon rate schedule (ORS 316.037; Form OR-40 line 20, "Tax rate charts").
+#
+# Four brackets, two charts: Chart S for single and married filing separately,
+# Chart J for married filing jointly, head of household and qualifying
+# surviving spouse. HEAD OF HOUSEHOLD USES THE JOINT WIDTHS -- there is no
+# separate head-of-household schedule.
+#
+# Rates fell from 5/7/9/9.9% to 4.75/6.75/8.75/9.9% in TY2020, not TY2019.
+#
+# The first two bracket bounds are indexed annually; the TOP bound is FROZEN
+# at $125,000 (Chart S) and $250,000 (Chart J) and has never moved in the
+# window. Every value below is transcribed from that year's own chart rather
+# than indexed by the model.
+#
+# The published charts give cumulative dollar constants at each bound, chained
+# from rounded values; those reconcile exactly against the bounds encoded here
+# (2025 Chart S: 0.0475 x 4,400 = $209, +0.0675 x 6,700 = $661, +0.0875 x
+# 38,900 = $4,065, matching the printed $4,065 at $50,000 and $10,627 at
+# $125,000). This is how TY2025 was settled: OR-ESTIMATE 2025 prints
+# 11,050/22,100 for the second bound, which fails that reconciliation, while
+# OR-17's appendix values of 11,100/22,200 pass. The estimate form is wrong.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_joint
+
+rates:
+  value:
+    '2017': [0.05, 0.07, 0.09, 0.099]
+    '2020': [0.0475, 0.0675, 0.0875, 0.099]
+  reference: 'ORS 316.037; tax rate charts S and J in each Form OR-40 booklet 2017-2025 and in the OR-ESTIMATE rate charts. The 2019 legislature''s cut first applies to TY2020 -- the TY2019 charts still read 5/7/9%'
+brackets_single:
+  value:
+    '2017': [0.0, 3400.0, 8500.0, 125000.0]
+    '2018': [0.0, 3450.0, 8700.0, 125000.0]
+    '2019': [0.0, 3550.0, 8900.0, 125000.0]
+    '2020': [0.0, 3600.0, 9050.0, 125000.0]
+    '2021': [0.0, 3650.0, 9200.0, 125000.0]
+    '2022': [0.0, 3750.0, 9450.0, 125000.0]
+    '2023': [0.0, 4050.0, 10200.0, 125000.0]
+    '2024': [0.0, 4300.0, 10750.0, 125000.0]
+    '2025': [0.0, 4400.0, 11100.0, 125000.0]
+    '2026': [0.0, 4550.0, 11400.0, 125000.0]
+  reference: 'Tax rate chart S, single and married filing separately. Sources per year: OR-17 2017 p.132 and OR-17 2018 p.134 appendix tables ("Marginal tax rates" rows) for 2017-2018; OR-ESTIMATE 2019/2020/2021 rate charts; OR-17 2025 p.143 appendix for 2022-2025. Each was cross-checked against the OR-40 booklet''s own cumulative chart constants and against the implied marginal rate across the booklet tax table rows straddling each bound. TY2026 is PRELIMINARY, from OR-ESTIMATE 2026'
+brackets_joint:
+  value:
+    '2017': [0.0, 6800.0, 17000.0, 250000.0]
+    '2018': [0.0, 6900.0, 17400.0, 250000.0]
+    '2019': [0.0, 7100.0, 17800.0, 250000.0]
+    '2020': [0.0, 7200.0, 18100.0, 250000.0]
+    '2021': [0.0, 7300.0, 18400.0, 250000.0]
+    '2022': [0.0, 7500.0, 18900.0, 250000.0]
+    '2023': [0.0, 8100.0, 20400.0, 250000.0]
+    '2024': [0.0, 8600.0, 21500.0, 250000.0]
+    '2025': [0.0, 8800.0, 22200.0, 250000.0]
+    '2026': [0.0, 9100.0, 22800.0, 250000.0]
+  reference: 'Tax rate chart J, married filing jointly / head of household / qualifying surviving spouse; same sources and same verification as chart S. Head of household takes these joint widths'
+
+documented_not_modeled:
+  chart_rounding:
+    reference: 'Oregon publishes cumulative dollar constants at each bracket bound, each rounded to the nearest dollar and CHAINED from the previous rounded value, so the printed schedule can sit up to about a dollar off the continuous computation. The continuous schedule is encoded [sub-dollar differences per return]'
+  ty2026_preliminary:
+    reference: 'TY2026 brackets come from OR-ESTIMATE 2026''s preliminary indexed figures. Note that OR-ESTIMATE 2025 was WRONG about the TY2025 second bound (it printed 11,050/22,100 against the correct 11,100/22,200), so the 2026 figures should be replaced by the OR-40 booklet values when published'

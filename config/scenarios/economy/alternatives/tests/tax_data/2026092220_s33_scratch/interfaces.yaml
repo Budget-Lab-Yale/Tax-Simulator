@@ -1,0 +1,7 @@
+# Reads Tax-Data vintage 2026092220_s33_scratch.
+
+tax_data_vintage:
+  value: '2026092220_s33_scratch'
+
+tax_data_id:
+  value: baseline

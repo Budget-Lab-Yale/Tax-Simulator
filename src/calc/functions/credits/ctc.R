@@ -49,6 +49,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'caregiver_cred_nonref', # (dbl) value of nonrefundable caregiver credit
     'ei',                    # (dbl) earned income
     'ei_prior_yr',           # (dbl) earned income last year       
+    'liab_pr_ee',            # (dbl) employee-side payroll tax, including half of SECA tax
+    'liab_add_med',          # (dbl) Additional Medicare Tax liability
+    'eitc',                  # (dbl) value of EITC
     'filer',                 # (int) whether tax unit files a tax return
     
     # Tax law attributes
@@ -68,6 +71,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.po_type',             # (int) whether phaseout type is a rate (0 means range)
     'ctc.po_rate1',            # (dbl) phaseout rate for value 1
     'ctc.po_rate2',            # (dbl) phaseout rate for value 2 
+    'ctc.po_rate_other',       # (dbl) phaseout rate for nonqualifying dependent credit
     'ctc.po_range1',           # (dbl) phaseout range for value 2
     'ctc.po_range2',           # (dbl) phaseout range for value 1
     'ctc.po_range_other',      # (dbl) non-child dependent credit phaseout range for married returns
@@ -86,6 +90,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.pi_type',             # (int) whether phase-in type is a rate (0 means range)
     'ctc.pi_rate',             # (dbl) phase-in rate
     'ctc.pi_range',            # (dbl) phase-in range for total CTC (excluding nonqualifying dependent credit) 
+    'ctc.ss_alt_min_children', # (int) number of qualifying children at which the refund may instead be social security taxes less the EITC
     'ctc.baby_bonus_in_credit', # (int) whether baby bonus is folded into slot 2 (1) or separate (0)
     'ctc.baby_bonus',          # (dbl) refundable credit for newborn child
     'ctc.baby_bonus_pi_rate',  # (dbl) phase-in rate for baby bonus (used when baby_bonus_in_credit = 0)
@@ -156,13 +161,28 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # When po_sequential == 1: combine value1+value2 into one pot, apply
       # thresh1 phaseout first, then thresh2 to the remainder. value_other
       # phases out with excess2 (its own independent threshold).
-      # When po_sequential == 0: existing additive logic unchanged.
+      # When po_sequential == 0: value1 and value2 phase out separately. Under a
+      # rate phaseout, value_other shares value1's reduction, because IRC 24(b)(1)
+      # reduces the total credit once. The reduction is taken from value_other
+      # first, which keeps as much of the total as possible refundable, as
+      # Schedule 8812 does. A reform that gives the two credits different rates
+      # phases each out separately.
+      value_other = if_else(
+        ctc.po_sequential == 1,
+        pmax(0, max_value_other - excess2 * po_rate_other),
+        pmax(0, max_value_other - excess1 * po_rate_other)
+      ),
       max_value_combined = max_value1 + max_value2,
       po1_reduction      = excess1 * po_rate1,
+      po1_on_value1      = if_else(
+        ctc.po_type == 1 & ctc.po_rate_other == ctc.po_rate1,
+        pmax(0, po1_reduction - (max_value_other - value_other)),
+        po1_reduction
+      ),
       value1      = if_else(
         ctc.po_sequential == 1,
         pmax(0, max_value_combined - po1_reduction),
-        pmax(0, max_value1 - po1_reduction)
+        pmax(0, max_value1 - po1_on_value1)
       ),
       value2      = if_else(
         ctc.po_sequential == 1,
@@ -170,11 +190,6 @@ calc_ctc = function(tax_unit, fill_missings = F) {
         pmax(0, max_value2 - excess2 * po_rate2)
       ),
       value1      = if_else(ctc.po_sequential == 1, value1 - value2, value1),
-      value_other = if_else(
-        ctc.po_sequential == 1,
-        pmax(0, max_value_other - excess2 * po_rate_other),
-        pmax(0, max_value_other - excess1 * po_rate_other)
-      ),
       
       # Apply filing status limitations
       across(.cols = c(value1, value2, value_other), 
@@ -218,7 +233,15 @@ calc_ctc = function(tax_unit, fill_missings = F) {
                         (max_value1 + max_value2) / ctc.pi_range), 
       
       # Phase in with earned income above minimum refund value
-      ctc_ref = pmin(min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate), 
+      pi_value = min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate),
+      
+      # Larger families may instead use social security taxes less the EITC
+      # (IRC 24(d)(1)(B)(ii) and 24(d)(2))
+      ss_alt  = if_else(n_young + n_old >= ctc.ss_alt_min_children,
+                        pmax(0, liab_pr_ee + liab_add_med - eitc),
+                        0),
+      
+      ctc_ref = pmin(pmax(pi_value, ss_alt), 
                      pmin(remaining_ctc, max_refund_young + max_refund_old)),
       
       # Calculate refundable baby bonus and add to refundable CTC

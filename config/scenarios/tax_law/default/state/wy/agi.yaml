@@ -1,0 +1,7 @@
+---
+# Wyoming: no broad individual income tax. Zero-tax stub so states = all
+# includes WY without producing state individual income tax liability.
+
+start_point:
+  value: 1
+  reference: 'No broad individual income tax; Wyoming Department of Revenue tax programs; https://revenue.wyo.gov'

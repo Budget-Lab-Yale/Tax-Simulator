@@ -1,0 +1,19 @@
+---
+personal_amount:
+  value: 0
+  reference: 'California personal allowances are credits, encoded in credits.yaml'
+dep_amount:
+  value: 0
+  reference: 'California dependent allowances are credits, encoded in credits.yaml'
+aged_addl:
+  value: 0
+  reference: 'California senior allowances are credits, encoded in credits.yaml'
+blind_addl:
+  value: 0
+  reference: 'California blind allowances are credits, encoded in credits.yaml'
+po_thresh:
+  value: .inf
+  reference: 'n/a for California (allowances are modeled as credits)'
+po_type:
+  value: 0
+  reference: 'n/a for California (allowances are modeled as credits)'

@@ -1,0 +1,33 @@
+---
+# New Jersey: deductions (NJ-1040 lines 30-41).
+#
+# There is NO standard deduction and no itemized deduction. New Jersey allows
+# a short enumerated list, and only one item on it is reconstructible from the
+# microdata: the capped property tax deduction. The medical expense deduction
+# is the largest of the rest, and it is blocked because New Jersey applies a
+# 2% floor to its OWN gross income while the model carries only the federal
+# post-7.5%-floor amount.
+
+prop_tax_ded_cap:
+  value:
+    '2017': 10000
+    '2018': 15000
+  reference: 'NJ-1040 line 41 property tax deduction, capped at $10,000 for TY2017 and $15,000 from TY2018 onward (the increase is the only change to this deduction in the window). Property taxes paid on a New Jersey principal residence; homeowners take the amount actually paid, and renters may treat 18% of rent as property taxes -- see documented_not_modeled.renters'
+
+documented_not_modeled:
+  property_tax_credit_election:
+    reference: 'A filer takes EITHER the property tax deduction or a flat $50 property tax CREDIT ($25 for a separate filer maintaining the same residence), whichever is better -- NJ-1040 line 56. The deduction is worth more than $50 of tax for anyone with meaningful property tax and positive liability, so the deduction is encoded and the credit is not [understates relief for low-liability filers whose deduction saves less than $50, mainly senior and disabled homeowners with small liabilities]'
+  renters:
+    reference: 'A tenant may treat 18% of rent paid on a New Jersey principal residence as property taxes for both the deduction and the credit. Rent paid is a Tier 1 imputation target [understates deductions for New Jersey renters, roughly a third of households, worth up to the same $15,000 cap]'
+  medical_expense_deduction:
+    reference: 'NJ-1040 line 31 deducts unreimbursed medical expenses above 2% of New Jersey gross income -- a far lower floor than the federal 7.5%, applied to a different income measure. The model carries only the federal post-floor amount, so the extra 5.5 points of expenses New Jersey would allow cannot be recovered [understates deductions, so overstates tax, for anyone with medical expenses. The largest unencoded New Jersey deduction]'
+  alimony_paid:
+    reference: 'NJ-1040 line 30 deducts alimony and separate maintenance payments made. Not separable in the model, which carries alimony received but not paid'
+  organ_donation_deduction:
+    reference: 'From TY2020 New Jersey deducts up to $10,000 of unreimbursed expenses for organ or bone marrow donation. Not a model input'
+  college_affordability_deductions:
+    reference: 'From TY2022 New Jersey deducts contributions to NJBEST 529 accounts, in-state tuition payments and student loan interest, each capped and each subject to a gross income ceiling. None is a model input'
+  health_enterprise_zone_and_conservation:
+    reference: 'NJ-1040 also carries a health enterprise zone deduction for qualifying practitioners and a qualified conservation contribution deduction. Both are narrow and unobserved'
+  self_employed_health_insurance:
+    reference: 'New Jersey allows self-employed health insurance costs as a deduction with its own rules. Not separable from the federal above-the-line amount, which the own-base build never applied'

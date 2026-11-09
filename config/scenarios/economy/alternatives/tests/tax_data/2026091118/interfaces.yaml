@@ -1,0 +1,7 @@
+# Reads Tax-Data vintage 2026091118.
+
+tax_data_vintage:
+  value: '2026091118'
+
+tax_data_id:
+  value: baseline

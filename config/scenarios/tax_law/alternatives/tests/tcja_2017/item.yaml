@@ -24,6 +24,11 @@ filing_status_mapper:
     '2': mort_bal_limit_married
     '3': mort_bal_limit_mfs
     '4': mort_bal_limit_single
+  salt_po_rate:
+    '1': salt_po_rate
+    '2': salt_po_rate
+    '3': salt_po_rate / 2
+    '4': salt_po_rate
   
 # AGI floor above which medical expenses are deductible
 med_floor_agi:

@@ -1,0 +1,23 @@
+---
+# Colorado: filing requirement (C.R.S. 39-22-601 et seq.; DR 0104 booklet
+# "Who Must File This Tax Return", verified 2017 and 2025)
+# Residents must file if required to file federally (even with no CO
+# liability) OR if they have any Colorado income tax liability.
+
+# Filing requirement type:
+#   1 = state base income > exemption allowance (IL)
+#   2 = state AGI-plus-additions > fixed threshold (NY-style)
+#   3 = federal filing requirement or any state liability (CO)
+req_type:
+  value: 3
+  reference: '2017/2025 DR 0104 booklets, "Who Must File This Tax Return"'
+
+# Fixed dollar filing threshold (unused for CO)
+req_income_thresh:
+  value: 0
+  reference: 'n/a for CO'
+
+# Whether a federal filing requirement forces a state return
+req_if_fed_filer:
+  value: 1
+  reference: '2017/2025 DR 0104 booklets ("even if you do not have a Colorado tax liability")'

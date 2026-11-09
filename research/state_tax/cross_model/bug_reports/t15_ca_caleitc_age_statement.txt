@@ -1,0 +1,11 @@
+TAXSIM-35, California, TY2017, single, age 68, wages 3,000, no
+dependents.
+
+Expected: state EITC = 0. Through TY2017 the CalEITC followed the
+federal childless age band -- a filer without qualifying children
+had to be 25-64 at year end (FTB 3514 instructions). AB 1809
+expanded eligibility to ages 18-24 and 65+ only beginning TY2018.
+TAXSIM pays a 2017 credit to this 68-year-old (v39 > 0; on our
+validation sample, childless filers aged 67-73 are paid $60-$157).
+Amounts are small (the 2017 childless maximum was $223) but the
+age gate is categorical.

@@ -6,6 +6,34 @@
 
 
 
+mc_cores = function(cap = 32) {
+
+  #----------------------------------------------------------------------------
+  # Worker count for mclapply(), scheduler-aware.
+  #
+  # Honors an explicit MC_CORES override, then the SLURM allocation
+  # (SLURM_CPUS_PER_TASK), before falling back to the machine's physical core
+  # count. detectCores() reports the whole machine, not the cores the scheduler
+  # granted, so on a shared SLURM node the two diverge and the job oversubscribes
+  # the node. Guards against unset / non-numeric / non-positive env values.
+  #
+  # Origin: AI-Fiscal Tax-Simulator patch Issue 3, filed upstream as
+  # Budget-Lab-Yale/Tax-Simulator#130 (see AI-Fiscal docs/tax_simulator_patches.md).
+  #
+  # Parameters:
+  #   - cap (int) : maximum worker count for the physical-core fallback
+  #
+  # Returns: positive integer worker count (int).
+  #----------------------------------------------------------------------------
+
+  env = Sys.getenv('MC_CORES', Sys.getenv('SLURM_CPUS_PER_TASK', ''))
+  n   = suppressWarnings(as.integer(env))
+  if (!is.na(n) && n >= 1) return(n)
+  min(cap, detectCores(logical = FALSE))
+}
+
+
+
 do_scenario = function(ID, baseline_mtrs) {
   
   #----------------------------------------------------------------------------
@@ -206,17 +234,29 @@ do_scenario = function(ID, baseline_mtrs) {
     build_distribution_etrs(ID)
 
     # Time burden tables
+    # (Formerly disabled — segfaulted under --multicore scenario via a fork x
+    # multithreaded-BLAS interaction. Root-caused and fixed in calc_time_burden();
+    # AI-Fiscal Issue 1 / upstream Budget-Lab-Yale/Tax-Simulator#128.)
     build_timeburden_table(ID)
 
     # Horizontal equity
+    # (Formerly disabled — cut() "breaks are not unique" on counterfactual
+    # point-mass income. Root-caused and fixed in build_horizontal_table();
+    # AI-Fiscal Issue 2 / upstream Budget-Lab-Yale/Tax-Simulator#129.)
     build_horizontal_table(ID)
 
     # Capital gains bathtub diagnostics
     kg_dyn_build_summary(scenario_info)
+    # State revenue estimates (no-op when state mode is off)
+    build_state_rev_est(ID)
   }
   
   # Return MTRs if running baseline
   if (ID == 'baseline') {
+
+    # CBO baseline benchmark (baseline-only post-processing)
+    build_cbo_comparison(ID)
+
     return(static_mtrs)
   }
 }
@@ -298,6 +338,14 @@ write_pass_outputs = function(output, root, totals_slot,
     map(.f = ~ .x[[totals_slot]]$wealth) %>%
     bind_rows() %>%
     write_csv(file.path(root, 'totals', 'wealth.csv'))
+
+  # State totals, where the scenario computes state taxes
+  if (!is.null(scenario_info$states)) {
+    output %>%
+      map(.f = ~ .x[[totals_slot]]$state) %>%
+      bind_rows() %>%
+      write_csv(file.path(root, 'totals', 'state.csv'))
+  }
 
   totals_pr %>%
     left_join(totals_1040,   by = 'year') %>%
@@ -809,24 +857,48 @@ add_kg_bathtub_mtrs = function(taxed, pre_injection, scenario_info, tax_law,
 
 
 
-collect_totals = function(taxed, year) {
+collect_totals = function(taxed, year, state_ctx = NULL, rung = NULL) {
 
   #----------------------------------------------------------------------------
   # Builds the level aggregations written to a pass's totals directory and fed to
-  # calc_receipts().
+  # calc_receipts(), with state totals where the scenario computes state taxes.
   #
   # Parameters:
-  #   - taxed (df) : post-do_taxes frame for this pass
-  #   - year (int) : simulation year
+  #   - taxed (df)       : post-do_taxes frame for this pass
+  #   - year (int)       : simulation year
+  #   - state_ctx (list) : state law, weights and conformity contexts built in
+  #                        run_one_year(); NULL for a federal-only run
+  #   - rung (str)       : output subfolder of this pass, where the state detail
+  #                        matrix is written when the scenario asks for it
   #
   # Returns: named list of totals tibbles.
   #----------------------------------------------------------------------------
 
-  list(pr            = get_pr_totals(taxed, year),
-       `1040`        = get_1040_totals(taxed, year),
-       `1040_by_agi` = get_1040_totals(taxed, year, T),
-       estate        = get_estate_totals(taxed, year),
-       wealth        = get_wealth_totals(taxed, year))
+  totals = list(pr            = get_pr_totals(taxed, year),
+                `1040`        = get_1040_totals(taxed, year),
+                `1040_by_agi` = get_1040_totals(taxed, year, T),
+                estate        = get_estate_totals(taxed, year),
+                wealth        = get_wealth_totals(taxed, year))
+
+  if (!is.null(state_ctx)) {
+    si = state_ctx$scenario_info
+    detail_path = NULL
+    if (si$state_detail == 1) {
+      detail_path = file.path(si$output_path, rung, 'detail', 'state',
+                              paste0(year, '.csv'))
+    }
+    contexts = build_state_reference_contexts(
+      tax_units_calc     = taxed,
+      normal_tax_law     = state_ctx$federal_tax_law,
+      reference_tax_laws = state_ctx$reference_tax_laws,
+      vars_1040          = state_ctx$vars_1040
+    )
+    totals$state = get_state_totals(taxed, state_ctx$tax_law, state_ctx$weights,
+                                    year, detail_path, contexts,
+                                    state_ctx$conformity_groups)
+  }
+
+  totals
 }
 
 
@@ -950,7 +1022,7 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
   # Run simulation for all years (parallel or sequential depending on settings)
   if (globals$multicore == 'year') {
     output = mclapply(X = scenario_info$years, FUN = per_year,
-                      mc.cores = min(32, detectCores(logical = F)))
+                      mc.cores = mc_cores())
   } else {
     output = list()
     for (t in seq_along(scenario_info$years)) {
@@ -967,6 +1039,17 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       vat_price_offset     = vat_price_offset,
       scenario_info        = scenario_info
     )
+
+    # Write the parsed state tax law, where the scenario computes state taxes
+    if (!is.null(scenario_info$states)) {
+      build_state_tax_law(
+        states      = scenario_info$states,
+        years       = scenario_info$years,
+        indexes     = indexes,
+        tax_law_id  = scenario_info$tax_law_id,
+        output_path = scenario_info$output_path
+      )
+    }
   }
 
   # Where no transmission channel is live the mechanical rung equals the static
@@ -1196,6 +1279,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # positional bind would misalign the draws
     left_join(globals$random_numbers, by = 'id') %>%
 
+    # Preserve the filed status so a state reference-law context can apply its
+    # own filing-status rules instead of inheriting a scenario-only recode
+    mutate(filing_status_input = filing_status) %>%
+
     # Recode filing status if tax law departs from traditional options
     left_join(tax_law %>%
                 distinct(year, filing.repeal_hoh),
@@ -1258,11 +1345,45 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       select(id, baseline1 = liab_fica_er1, baseline2 = liab_fica_er2)
   }
 
-  # List calculated tax variables
-  vars_1040 = return_vars %>%
-    remove_by_name('calc_pr') %>%
-    unlist() %>%
-    set_names(NULL)
+  # List calculated tax variables (federal only; state vars are computed in a
+  # separate downstream pass, plan §2.4)
+  vars_1040 = fed_calc_vars(incl_payroll = F)
+
+
+  # Set up state taxes, where the scenario computes them. Built per year inside
+  # run_one_year, so the SLURM workers need no change. Each rung that collects
+  # totals then runs the state calculator on its own frame
+  state_ctx = NULL
+  if (!is.null(scenario_info$states)) {
+    state_tax_law = build_state_tax_law(
+      states     = scenario_info$states,
+      years      = year,
+      indexes    = indexes,
+      tax_law_id = scenario_info$tax_law_id
+    )
+    state_conformity_groups = load_state_conformity_groups()
+    validate_state_federal_conformity(
+      state_tax_law, scenario_info$tax_law_id, state_conformity_groups
+    )
+    state_ctx = list(
+      scenario_info      = scenario_info,
+      tax_law            = state_tax_law,
+      conformity_groups  = state_conformity_groups,
+      reference_tax_laws = build_state_reference_tax_laws(
+        state_tax_law, indexes, state_conformity_groups
+      ),
+      weights            = build_state_weights(
+        tax_units  = tax_units,
+        year       = year,
+        method     = scenario_info$state_weights_method,
+        states     = scenario_info$states,
+        root       = scenario_info$interface_paths$`State-Weights`,
+        pct_sample = globals$pct_sample
+      ),
+      federal_tax_law    = tax_law,
+      vars_1040          = vars_1040
+    )
+  }
 
 
   #-------------
@@ -1360,7 +1481,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                            paste0(year, '.csv')),
                  optional = DETAIL_COLS_OPTIONAL_STATIC)
 
-    static_totals = collect_totals(tax_units_static, year)
+    static_totals = collect_totals(tax_units_static, year, state_ctx, 'static')
   }
 
 
@@ -1623,7 +1744,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
       # Collect totals. An intermediate pass has none
       if (!is.na(spec$totals_slot)) {
-        pass_totals[[spec$totals_slot]] = collect_totals(tax_units_conv, year)
+        pass_totals[[spec$totals_slot]] = collect_totals(tax_units_conv, year,
+                                                         state_ctx, spec$root)
       }
 
     } else if (scenario_info$ID != 'baseline') {
@@ -1646,6 +1768,18 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                paste(spec$alias_from, collapse = ', '), ' has detail to copy.')
         }
         file.copy(below[1], conv_path, overwrite = TRUE)
+      }
+
+      # Mirror the rung below's state detail matrix, if one was written
+      state_below = spec$alias_from %>%
+        map_chr(.f = ~ file.path(scenario_info$output_path, .x, 'detail', 'state',
+                                 paste0(year, '.csv'))) %>%
+        keep(.p = file.exists)
+      if (length(state_below) > 0) {
+        state_dir = file.path(dirname(conv_path), 'state')
+        dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
+        file.copy(state_below[1], file.path(state_dir, paste0(year, '.csv')),
+                  overwrite = TRUE)
       }
 
       # On a 'both' pass the static totals are in scope. On a single-pass run they

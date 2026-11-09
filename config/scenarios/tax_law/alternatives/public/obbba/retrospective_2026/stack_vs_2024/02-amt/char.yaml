@@ -5,6 +5,11 @@ filing_status_mapper:
     '2': above_limit_single * 2
     '3': above_limit_single
     '4': above_limit_single
+  nonitem_limit:
+    '1': nonitem_limit_single
+    '2': nonitem_limit_single * 2
+    '3': nonitem_limit_single
+    '4': nonitem_limit_single
 
 # AGI floor for itemized charitable deduction
 item_floor_agi:
@@ -33,3 +38,8 @@ above_limit_single:
     '2014': 0
     '2020': 300
     '2022': 0
+
+# Maximum deductible cash contributions for a filer who does not itemize, below
+# the line. None before OBBBA.
+nonitem_limit_single:
+  value: 0

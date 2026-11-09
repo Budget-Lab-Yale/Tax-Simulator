@@ -1,0 +1,42 @@
+---
+# Rhode Island: credits. R.I.G.L. 44-30-2.6(c)(3)(E) closes the list -- only the
+# credits enumerated there may be taken against the personal income tax. Two are
+# PUF-representable: the refundable EITC match (RI Schedule EIC) and the
+# nonrefundable 25% child-and-dependent-care match (RI Schedule I).
+
+# Refundable EITC: a straight percentage of the federal earned income credit,
+# reported in the payments-and-credits block (RI-1040 line 14d), so it is fully
+# refundable. 15% for TY2017-2023; 16% from TY2024
+eitc_match:
+  value:
+    '2017': 0.15
+    '2024': 0.16
+  reference: 'RI Schedule EIC line 39/40 ("The Rhode Island percentage is 15%" TY2017-2023; "16%" TY2024-2025); R.I.G.L. 44-30-2.6(c)(2)(N). (The rate was 12.5% in TY2016 and 10% in TY2015, before this window.)'
+eitc_refundable:
+  value: 1
+  reference: 'RI-1040 line 14d sits in Total Payments and Credits, i.e. fully refundable (RI made its EITC fully refundable effective TY2015)'
+
+# Child and dependent care: 25% of the federal credit, capped at RI income tax
+# (RI Schedule I line 22 = lesser of line 19 RI tax or line 21), i.e.
+# nonrefundable. The rate is 25% in every year 2017-2025
+cdctc_match:
+  value: 0.25
+  reference: 'RI Schedule I lines 20-22 ("Multiply the amount on line 20 by 25%"; "Maximum Credit: enter the amount from line 19 or 21, whichever is less"), TY2017-2025'
+cdctc_refundable:
+  value: 0
+  reference: 'RI Schedule I line 22 caps the credit at RI income tax and it enters at RI-1040 line 9a (before-credit block) -- nonrefundable'
+
+documented_not_modeled:
+  prop_tax_relief_credit:
+    reference: 'RI-1040H Property Tax Relief Claim (R.I.G.L. 44-33): REFUNDABLE credit for 65+ or disabled claimants with household income at or below the statutory limit ($30,000 in TY2021), computed from property tax paid or 20% of rent. Property tax and rent are not in the PUF -- Tier-1-blocked class; the omission UNDERSTATES RI refunds to low-income seniors. PolicyEngine models it (ri_property_tax_credit), so expect a PE wedge concentrated on low-income aged units'
+  lead_paint_credit:
+    reference: 'Form RI-6238 Residential Lead Paint Credit: refundable, expense-based, unobservable'
+  child_tax_rebate_2022:
+    value: 250
+    reference: 'FY2023 budget (H 7123): one-time $250 per child, maximum 3 children age 18 or under, federal AGI at or below $100,000 (single) / $200,000 (joint). Paid as a MAILED REBATE CHECK from October 2022 on the basis of the TY2021 return, NOT claimed as a line on RI-1040 -- outside our liability concept (the P5 rebate-netting class). PolicyEngine books it as a TY2021 refundable credit (ri_child_tax_rebate), so pre-register a $250-$750 PE difference on TY2021 units with qualifying children under the AGI caps [known-difference]'
+  credit_other_state:
+    reference: 'R.I.G.L. 44-30-18; RI Schedule II. Out-of-state income and tax not modeled (no multistate allocation)'
+  schedule_cr_credits:
+    reference: 'RI Schedule CR: historic residence (carryforward only from TY2017), scholarship-organization contributions, historic structures, New Qualified Jobs Incentive, Rebuild RI, motion picture / musical and theatrical production, Wavemaker Fellowship. All certificate-based business credits, nonrefundable, not PUF-representable'
+  future_ctc_and_surtax:
+    reference: 'Outside the 2017-2025 window: a refundable RI child tax credit ($330/child, age 18 and under, 20%-per-increment phase-out) from TY2027, and a taxable-income surtax of 1%/2%/3% over $1,000,000 phasing in TY2027-2029. Not encoded; simulations of 2026+ project 2025 law'

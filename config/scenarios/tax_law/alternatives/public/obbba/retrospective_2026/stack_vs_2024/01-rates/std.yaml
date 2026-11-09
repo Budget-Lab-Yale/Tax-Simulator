@@ -19,7 +19,7 @@ filing_status_mapper:
   bonus:
     '1': bonus_single
     '2': bonus_married
-    '3': bonus_single
+    '3': bonus_married
     '4': bonus_single
   bonus_other:
     '1': bonus_other

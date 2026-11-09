@@ -117,6 +117,18 @@ tryCatch({
       scenario_info        = scenario_info
     )
 
+    # Write the parsed state tax law, where the scenario computes state taxes
+    # (mirrors run_sim())
+    if (!is.null(scenario_info$states)) {
+      build_state_tax_law(
+        states      = scenario_info$states,
+        years       = scenario_info$years,
+        indexes     = config$indexes,
+        tax_law_id  = scenario_info$tax_law_id,
+        output_path = scenario_info$output_path
+      )
+    }
+
     # --- Write mechanical outputs (skip for baseline) ---
     if (scenario_id != 'baseline') {
       write_pass_outputs(
@@ -127,6 +139,12 @@ tryCatch({
         scenario_info        = scenario_info
       )
     }
+
+    # CBO baseline benchmark (baseline-only post-processing). Phase 3b is
+    # counterfactual-only, so this baseline-only step lives here in Phase 3a,
+    # after the baseline static 1040.csv has been written. Mirrors the
+    # build_cbo_comparison() call in do_scenario() (src/sim/run.R).
+    if (scenario_id == 'baseline') build_cbo_comparison(scenario_id)
 
     # --- Write conventional outputs (skip for baseline) ---
     if (scenario_id != 'baseline') {
@@ -189,6 +207,10 @@ tryCatch({
     scenario_info = get_scenario_info(scenario_id)
     kg_dyn_build_summary(scenario_info)
 
+    # State revenue estimates (no-op when state mode is off; mirrors
+    # do_scenario())
+    build_state_rev_est(scenario_id)
+
     cat(paste0('Phase 3b: completed scenario=', scenario_id, '\n'))
   }
 
@@ -204,6 +226,8 @@ tryCatch({
     if (runtime_args$stacked == 1) {
       build_stacked_1040_reports(counterfactual_ids)
       calc_stacked_rev_est(counterfactual_ids)
+      # Stacked state deltas (no-op when state mode is off; mirrors main.R)
+      build_stacked_state_rev_est(counterfactual_ids)
     }
 
     if (resolve_detail_purge(runtime_args$delete_detail)$final) {

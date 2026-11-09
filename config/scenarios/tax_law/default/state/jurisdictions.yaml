@@ -1,0 +1,273 @@
+---
+# Runtime registry for the state-tax module. `states = all` resolves only to
+# enabled entries here, not to every directory under baseline/.
+AK:
+  profile: zero
+  enabled: true
+AL:
+  profile: broad_iit
+  enabled: true
+# AR is a full own-base state: it rebuilds income line by line rather than
+# starting from federal AGI, so IRC conformity is moot (group 0 trivially).
+# Note it did NOT conform to the TCJA itemized changes -- see baseline/ar/ded.yaml
+AR:
+  profile: broad_iit
+  enabled: true
+AZ:
+  profile: broad_iit
+  enabled: true
+# CA is calculated correctly under the federal baseline, but its fixed/selective
+# conformity groups (1, 2) have no reference-law bridge yet
+# (conformity_groups.yaml: ready=false), so validate_state_federal_conformity()
+# hard-stops any federal-reform run that requests CA. Excluded from `states=all`
+# until the reference overlays land, per research/state_tax/notes/ca_p1_readiness_analysis.md. Direct
+# `states=CA` selection still works for baseline-law runs.
+CA:
+  profile: broad_iit
+  enabled: false
+CO:
+  profile: broad_iit
+  enabled: true
+# CT is rolling conformity (group 0): the CT base starts from current-law
+# federal AGI, so no reference-law bridge is needed
+CT:
+  profile: broad_iit
+  enabled: true
+# DC defines the IRC without a fixed date (47-1801.04(28)) and deconforms by
+# NAMED provision rather than by vintage, so rolling conformity (group 0).
+# None of the named carve-outs (TY2018 QBI, TY2025 OBBBA items) affects a
+# federal-AGI start
+DC:
+  profile: broad_iit
+  enabled: true
+# DE is rolling conformity (30 Del. C. 1101/1105 reference federal AGI under
+# the IRC with no fixed date), so group 0 with no reference-law bridge needed
+DE:
+  profile: broad_iit
+  enabled: true
+FL:
+  profile: zero
+  enabled: true
+GA:
+  profile: broad_iit
+  enabled: true
+# HI conforms to the IRC as of a date updated by an annual conformity act
+# (HRS 235-2.3; Dec 31 2024 by Act 123 SLH 2025), with standing decouplings
+# that sit below the federal-AGI start or are carried by Hawaii-side
+# parameters (own standard deduction/exemptions/itemized rules, no QBI).
+# Modeled as rolling (group 0), the ID/WV treatment; the retained federal
+# moving-expense deduction is documented in baseline/hi/agi.yaml
+HI:
+  profile: broad_iit
+  enabled: true
+# ID re-enacts IRC conformity every session, retroactively to Jan 1 of (or
+# following) the tax year -- verified in every packet 2017-2025, incl. TY2025
+# conforming to the Jan 1, 2026 IRC (capturing OBBBA). Unlike SC's frozen
+# past date, Idaho never lags current law at filing time, so it is modeled
+# as rolling (group 0); the one-session enactment lag is documented in
+# baseline/id/agi.yaml documented_not_modeled
+ID:
+  profile: broad_iit
+  enabled: true
+# IA adopts the IRC as amended (Iowa Code 422.3(5)), so rolling conformity
+# (group 0). SF 2417 moved the base from Iowa's own net income to FEDERAL
+# TAXABLE INCOME from TY2023, which tightens the coupling considerably: from
+# that year the federal standard or itemized deduction, the QBI deduction and
+# the federal NOL all flow straight into Iowa taxable income
+IA:
+  profile: broad_iit
+  enabled: true
+IL:
+  profile: broad_iit
+  enabled: true
+IN:
+  profile: broad_iit
+  enabled: true
+# KS conforms to the IRC as in effect for the tax year (K.S.A. 79-32,109),
+# i.e. rolling (group 0)
+KS:
+  profile: broad_iit
+  enabled: true
+KY:
+  profile: broad_iit
+  enabled: true
+# LA adopts the IRC as amended for the definition of federal adjusted gross
+# income (R.S. 47:293(10)), so rolling conformity (group 0). Note the
+# excess-federal-itemized deduction points at the FEDERAL standard deduction
+# rather than printing its own amounts, so federal standard-deduction reforms
+# reach Louisiana through that line -- see baseline/la/ded.yaml
+LA:
+  profile: broad_iit
+  enabled: true
+# MA defines its own schedular income classes below the federal AGI line and
+# takes no federal AGI figure at all, so IRC conformity is moot in the same way
+# it is for PA (group 0 trivially)
+MA:
+  profile: broad_iit
+  enabled: true
+# MD state-level tax only; the county piggyback (2.25-3.3%) is deferred to
+# the locality phase. Cross-model: TAXSIM's MD siitax EXCLUDES the county
+# tax (probe-verified); PolicyEngine's state_income_tax INCLUDES it, so the
+# harness requests PE's state-only md_income_tax (src/tests/state/cross_model/pe_state_tax.py)
+MD:
+  profile: broad_iit
+  enabled: true
+# ME is fixed-date conformity advanced by act (36 M.R.S. 111(1-A); Dec 31
+# 2024 for TY2025 -- OBBBA not conformed, pending the Jan 2026 session).
+# Modeled as rolling (group 0), the MN/VT treatment: the unconformed items
+# are below the federal-AGI start or business-side, Maine let the ARPA
+# TY2020 UI exclusion flow through, and the federally-pegged standard
+# deduction is carried as transcribed values (baseline/me/ded.yaml)
+ME:
+  profile: broad_iit
+  enabled: true
+MI:
+  profile: broad_iit
+  enabled: true
+# MN conformity is fixed-date but updated regularly (Dec 31 2018 by the
+# 2019 act, May 1 2023 by the 2023 act); the current gap's AGI-level
+# footprint on PUF individuals is minimal (OBBBA marquee items are
+# below-AGI and MN carries its own deduction stack), so MN is modeled as
+# rolling (group 0) with the M1NC caveat documented in baseline/mn/agi.yaml
+MN:
+  profile: broad_iit
+  enabled: true
+# MS rebuilds income line by line and never takes a federal AGI figure, so
+# IRC conformity is moot (group 0 trivially). Federal AGI appears on the
+# return in only two places: the medical floor and the child care credit cliff
+MS:
+  profile: broad_iit
+  enabled: true
+# MO gives every undefined term "the same meaning as when used in a
+# comparable context in the laws of the United States relating to federal
+# income taxes" (RSMo 143.091), with no fixed date, so rolling conformity
+# (group 0). Missouri's own modifications sit in RSMo 143.121 and are
+# carried by Missouri-side parameters
+MO:
+  profile: broad_iit
+  enabled: true
+# MT adopts the IRC as amended (MCA 15-30-2101(20)), so rolling conformity
+# (group 0). SB 399 (2021) moved the base from federal AGI plus Montana's
+# own deductions to federal AGI less the FEDERAL deduction from TY2024,
+# which tightens the coupling considerably: from that year a federal
+# standard-deduction reform flows straight into Montana taxable income
+MT:
+  profile: broad_iit
+  enabled: true
+# NE adopts the IRC as amended with no fixed date (Neb. Rev. Stat. 77-2714),
+# so rolling conformity (group 0)
+NE:
+  profile: broad_iit
+  enabled: true
+NH:
+  profile: narrow_investment_iit
+  enabled: true
+# NJ defines its own gross-income categories with no IRC linkage at all, so
+# conformity is moot in the same way it is for PA and MA (group 0 trivially)
+NJ:
+  profile: broad_iit
+  enabled: true
+# NM defines base income by reference to the IRC with no fixed date
+# (NMSA 7-2-2), so rolling conformity (group 0). Note its base subtracts the
+# federal deduction ON THE RETURN from 2018, so federal standard-deduction
+# reforms do not reach NM -- see baseline/nm/ded.yaml
+NM:
+  profile: broad_iit
+  enabled: true
+NV:
+  profile: zero
+  enabled: true
+NY:
+  profile: broad_iit
+  enabled: true
+NC:
+  profile: broad_iit
+  enabled: true
+ND:
+  profile: broad_iit
+  enabled: true
+# OH conformity is fixed-date via ORC 5701.11 but updated at least annually
+# with a taxpayer election for the prior version; treated as rolling
+# (group 0) like KY/IN/MI
+OH:
+  profile: broad_iit
+  enabled: true
+# OK conforms to the IRC with no fixed date (68 O.S. 2353), so rolling
+# conformity (group 0)
+OK:
+  profile: broad_iit
+  enabled: true
+# OR ties to the IRC as amended, updated by a connection bill each session
+# (ORS 316.012), and its own subtractions sit below the federal-AGI start, so
+# rolling conformity (group 0)
+OR:
+  profile: broad_iit
+  enabled: true
+# PA is an own-base state (start_point 0): its eight income classes have no
+# IRC linkage at all, so conformity is moot (group 0 trivially). Federal
+# credits feeding the PA CDCTC/WPTC matches are scenario outputs by design
+PA:
+  profile: broad_iit
+  enabled: true
+# RI starts from federal AGI as defined in the IRC with no fixed date
+# (R.I.G.L. 44-30-12(a)), so rolling conformity (group 0)
+RI:
+  profile: broad_iit
+  enabled: true
+# SC uses fixed-date IRC conformity (updated annually; conformity_group 3,
+# ready=false). Like CA, its reference-law bridge is not built, so it is
+# excluded from states=all and blocked for federal-reform runs until the
+# overlay lands. states=SC still works for baseline-law runs.
+SC:
+  profile: broad_iit
+  enabled: false
+SD:
+  profile: zero
+  enabled: true
+TN:
+  profile: narrow_investment_iit
+  enabled: true
+TX:
+  profile: zero
+  enabled: true
+# UT starts from current federal AGI and its taxpayer tax credit references
+# the deductions claimed on the current federal return (UC 59-10-1018), so
+# rolling conformity (group 0) with no reference-law bridge needed
+UT:
+  profile: broad_iit
+  enabled: true
+# WI fixed-date conformity is updated by act with lags, but WI adopted TCJA
+# whole from 2018 and the current gaps' AGI-level footprint is minimal;
+# modeled rolling (group 0) with targeted items documented in
+# baseline/wi/agi.yaml
+WI:
+  profile: broad_iit
+  enabled: true
+# VA was fixed-date annual conformity through TY2022 (group 3), rolling for
+# TY2023-2025 (group 0), and re-fixed at Dec 31, 2025 by the 2026 GA (group
+# 4). Groups 3/4 have no reference-law bridge, so VA is excluded from
+# states=all and guarded for federal-reform runs (like SC/CA). Direct
+# states=VA selection works for baseline-law runs.
+VA:
+  profile: broad_iit
+  enabled: false
+# VT conformity is FIXED-DATE (32 V.S.A. 5824, re-set nearly every session),
+# modeled as rolling (group 0): Vermont conformed explicitly to CARES and to
+# the ARPA unemployment exclusion, so it has not sat out a PUF-material
+# federal change in this window -- the ID/WI/MN treatment
+VT:
+  profile: broad_iit
+  enabled: true
+WA:
+  profile: capital_gains_and_transfer
+  enabled: true
+# WV re-enacts its conformity date every session (W. Va. Code 11-21-9(a)),
+# never lagging current law at filing time, so it is modeled as rolling
+# (group 0) with the one-session enactment lag documented in
+# baseline/wv/agi.yaml -- the ID treatment
+WV:
+  profile: broad_iit
+  enabled: true
+WY:
+  profile: zero
+  enabled: true

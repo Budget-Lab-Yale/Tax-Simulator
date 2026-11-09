@@ -1,0 +1,34 @@
+# State income taxes: which jurisdictions a run computes, where their weights come
+# from, and whether the per-year state liability matrix is written. State law
+# itself lives in the tax law leg, under the state/ folder of each layer.
+#
+# A scenario computing state taxes names an economy alternative whose states.yaml
+# sets `jurisdictions`. Every counterfactual's jurisdictions must be among the
+# baseline's, and every scenario computing state taxes must read the same
+# State-Weights vintage (interfaces.yaml) as the baseline.
+
+_channel:
+  role: state
+
+jurisdictions:
+  value: none
+  kind: structural
+  note: >
+    Space-delimited two-letter postal codes (e.g. "IL CO NY"), "all" for the
+    enabled entries of config/scenarios/tax_law/default/state/jurisdictions.yaml,
+    or "none" for a federal-only run.
+
+weights_method:
+  value: interface
+  kind: structural
+  note: >
+    Source of each record's split across states. "interface" reads the pinned
+    State-Weights vintage; "placeholder" is the uniform 1/53 split, kept to
+    reproduce runs made before the interface existed.
+
+detail:
+  value: 0
+  kind: structural
+  note: >
+    1 writes one compact matrix per year and rung at detail/state/{year}.csv,
+    the record id and one liability column per state; 0 writes none.
