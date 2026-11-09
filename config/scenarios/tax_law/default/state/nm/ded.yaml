@@ -44,12 +44,12 @@ filing_status_mapper:
   std_aged_addl:
     '1': std_bonus_single
     '2': std_bonus_married
-    '3': std_bonus_single
+    '3': std_bonus_married
     '4': std_bonus_single
   std_blind_addl:
     '1': std_bonus_single
     '2': std_bonus_married
-    '3': std_bonus_single
+    '3': std_bonus_married
     '4': std_bonus_single
   item_prop_tax_cap:
     '1': salt_cap_single
