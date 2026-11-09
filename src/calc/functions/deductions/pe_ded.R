@@ -27,6 +27,7 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'filing_status',  # (int) filing status (1 = single, 2 = married filing jointly, 3 = married filing separately, 4 = head of household)
     'n_dep',          # (int) number of dependents
+    'dep_status',     # (bool) whether tax filer is a dependent
     'agi',            # (dbl) Adjusted Gross Income
     
     # Tax law attributes
@@ -45,8 +46,10 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
       
-      # Calculate value of personal exemptions
-      n_pe_nondep = (pe.nondep_qualify == 1) * (1 + (filing_status == 2)), 
+      # Calculate value of personal exemptions. A filer who can be claimed as
+      # a dependent on another return gets no exemption for the filer or a
+      # spouse (IRC 151(d)(2))
+      n_pe_nondep = (pe.nondep_qualify == 1) * (1 + (filing_status == 2)) * (dep_status == 0), 
       n_pe_dep    = (pe.dep_qualify == 1)    * n_dep,
       pe_ded      = (n_pe_nondep + n_pe_dep) * pe.value,
       
