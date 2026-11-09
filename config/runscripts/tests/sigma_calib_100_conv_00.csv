@@ -1,0 +1,3 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,no_saving_channel,,2025:2035,2026:2026,kg_lt wages1 wages2 part_active sole_prop1 scorp_active rent char_cash estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+topord_plus5,tests/topord_plus5,no_saving_channel,sigma_calib_100_conv_00,2025:2035,2026:2026,kg_lt wages1 wages2 part_active sole_prop1 scorp_active rent char_cash estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar

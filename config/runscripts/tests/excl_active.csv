@@ -1,0 +1,4 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,default,2027:2033,,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+s_deemed_deemed_e1,top_tax/dials/s_deemed_deemed_e1,default,top_tax_full,2027:2033,2027,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+s_deemed_carryover_e1,top_tax/dials/s_deemed_carryover_e1,default,top_tax_full,2027:2033,2027,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar

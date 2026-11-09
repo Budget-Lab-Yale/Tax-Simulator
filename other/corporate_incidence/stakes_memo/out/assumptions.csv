@@ -1,0 +1,15 @@
+param,value,note
+mu (markdown ceiling),0.0886075949367089,"naive P1 ceiling, permanent 21->28"
+phi (flow factor),-0.0886075949367089,proportional payout (D8)
+w_eq,1,first-class column
+w_dc,0.55,"PLACEHOLDER (SCF/ICI, Phase 0c)"
+w_trusts,0.5,PLACEHOLDER (Phase 0c)
+w_re_fund,0.3,PLACEHOLDER (Phase 0c)
+omega_div,0.85,PLACEHOLDER excl. REIT/bond funds (Phase 0c)
+omega_kg,0.5,"PLACEHOLDER (SOI SOCA, Phase 0c)"
+tau_div_eff,0.18,ASSUMED qualified-div effective
+tau_kg_eff,0.2,ASSUMED LTCG+NIIT effective
+estate marginal rate,0.4,flat above-exemption approximation
+sim vintage,NA,warren_nd_30yr (pre-2026-07 calc fixes)
+tax-data,NA,2026060918
+macro,NA,2026022522

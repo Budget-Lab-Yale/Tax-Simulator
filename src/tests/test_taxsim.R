@@ -200,8 +200,8 @@ taxsim_crosswalk = function(tax_units, state = 'No state',
       ssemp = 0,
       
       # Other property income, mirroring our AGI's Schedule E concept
-      # (calc_agi(): sch_e = part_scorp + net_rent + net_estate, pass-through
-      # losses clamped), less the SE portion of partnership income already
+      # (calc_agi(): sch_e = part + scorp + net_rent + net_estate, gain or
+      # loss), less the SE portion of partnership income already
       # counted in the SECA-subject inputs, less non-SE QBI income moved to
       # the scorp input, plus Form 4797 gains (no TAXSIM input of their own;
       # other_gains is in our AGI)

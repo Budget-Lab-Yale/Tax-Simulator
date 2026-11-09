@@ -4,7 +4,8 @@
 
 # Set return variables for function
 return_vars$calc_pr = c('gross_wages1', 'gross_wages2', 'gross_wages', 'se1', 
-                        'se2', 'se', 'ei1', 'ei2', 'ei', 'liab_fica_er1', 
+                        'se2', 'se', 'seca_ded1', 'seca_ded2', 'ei1', 'ei2', 'ei', 
+                        'liab_fica_er1', 
                         'liab_fica_er2', 'liab_fica', 'liab_seca', 'liab_seca_er', 
                         'liab_oasdi', 'liab_hi', 'liab_add_med', 'liab_pr_ee', 
                         'liab_pr_er', 'liab_pr')
@@ -25,6 +26,8 @@ calc_pr = function(tax_unit, fill_missings = F) {
   #   - se1          (dbl) : self-employment income for primary earner
   #   - se2          (dbl) : self-employment income for secondary earner
   #   - se           (dbl) : self-employment income for tax unit
+  #   - seca_ded1    (dbl) : deduction for half of SECA tax, primary earner
+  #   - seca_ded2    (dbl) : deduction for half of SECA tax, secondary earner
   #   - ei1          (dbl) : earned income for primary earner     
   #   - ei2          (dbl) : earned income for secondary earner 
   #   - ei           (dbl) : earned income     
@@ -62,7 +65,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     'pr.tips_exempt',         # (int)   whether tips are exempt from payroll tax
     'pr.ot_exempt',           # (int)   whether FLSA-eligible overtime pay is exempt from payroll tax
     'pr.seca_taxable_rate',   # (dbl)   Share of self-employment earnings subject to SECA tax
-    'pr.se_thresh',           # (int)   Threshold above which total self-employment income must be reported
+    'pr.se_thresh',           # (int)   Net earnings from self-employment, per earner, below which no SECA tax is due
     'pr.oasdi_ee_rates[]',    # (dbl[]) OASDI rates, employee side 
     'pr.oasdi_ee_brackets[]', # (int[]) OASDI brackets, employee side
     'pr.oasdi_er_rates[]',    # (dbl[]) OASDI rates, employer side 
@@ -133,18 +136,15 @@ calc_pr = function(tax_unit, fill_missings = F) {
       # https://www.sfmagazine.com/articles/2017/august/how-the-self-employment-tax-is-miscalculated/
       # For this reason, we parameterize the taxable share as its own parameter, 
       # useful for unrelated reforms and reforms meant to fix this mistake. 
-      # In addition, set taxable SE earnings to 0 if if tax's unit total is below
-      # the reporting threshold
-      txbl_se1 = pmax(0, se1) * pr.seca_taxable_rate * (se > pr.se_thresh),
-      txbl_se2 = pmax(0, se2) * pr.seca_taxable_rate * (se > pr.se_thresh),
+      # In addition, set taxable SE earnings to 0 if an earner's amount is below
+      # the threshold (IRC 1402(b)(2); Schedule SE line 4c)
+      txbl_se1 = pmax(0, se1) * pr.seca_taxable_rate,
+      txbl_se2 = pmax(0, se2) * pr.seca_taxable_rate,
+      txbl_se1 = txbl_se1 * (txbl_se1 >= pr.se_thresh),
+      txbl_se2 = txbl_se2 * (txbl_se2 >= pr.se_thresh),
       
       # Calculate taxable earnings for Additional Medicare Tax
-      txbl_inc_add_med = gross_wages + txbl_se1 + txbl_se2, 
-      
-      # Calculate total earned income, used elsewhere in tax code
-      ei1 = wages1 + se1, 
-      ei2 = wages2 + se2,
-      ei  = ei1 + ei2
+      txbl_inc_add_med = gross_wages + txbl_se1 + txbl_se2
       
     ) %>% 
   
@@ -190,6 +190,16 @@ calc_pr = function(tax_unit, fill_missings = F) {
     
     mutate(
       
+      # Calculate deduction for half of SECA tax, by earner
+      seca_ded1 = liab_seca_oasdi_er1 + liab_seca_hi_er1,
+      seca_ded2 = liab_seca_oasdi_er2 + liab_seca_hi_er2,
+      
+      # Calculate total earned income, used elsewhere in tax code. Net earnings
+      # from self-employment are net of that deduction (IRC 32(c)(2)(A)(ii))
+      ei1 = wages1 + se1 - seca_ded1, 
+      ei2 = wages2 + se2 - seca_ded2,
+      ei  = ei1 + ei2,
+      
       # Aggregate payroll tax variables
       liab_fica_er1 = liab_fica_oasdi_er1 + liab_fica_hi_er1,
       liab_fica_er2 = liab_fica_oasdi_er2 + liab_fica_hi_er2,
@@ -211,10 +221,11 @@ calc_pr = function(tax_unit, fill_missings = F) {
                       liab_seca_hi_ee1 + liab_seca_hi_ee2 + 
                       liab_fica_hi_er1 + liab_fica_hi_er2 + 
                       liab_seca_hi_er1 + liab_seca_hi_er2 + liab_add_med,
-      liab_pr_ee    = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
-                      liab_fica_hi_ee1    + liab_fica_hi_ee2 + 
-                      liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 + 
-                      liab_seca_hi_ee1    + liab_seca_hi_ee2,
+      # (Additional Medicare Tax is employee-side only -- no employer match)
+      liab_pr_ee    = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 +
+                      liab_fica_hi_ee1    + liab_fica_hi_ee2 +
+                      liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 +
+                      liab_seca_hi_ee1    + liab_seca_hi_ee2 + liab_add_med,
       liab_pr_er    = liab_fica_oasdi_er1 + liab_fica_oasdi_er2 + 
                       liab_fica_hi_er1    + liab_fica_hi_er2 + 
                       liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 

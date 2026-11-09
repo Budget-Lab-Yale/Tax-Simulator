@@ -120,7 +120,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         pmin(dpad, agi.dpad_limit),
 
       # Calculate MAGI for taxable Social Security benefits calculation
-      magi_ss = inc_ex_ss - above_ded_ex_sl
+      # (IRC section 86 adds back tax-exempt interest even though it's excluded from AGI)
+      magi_ss = inc_ex_ss + exempt_int - above_ded_ex_sl
       
     ) %>% 
     

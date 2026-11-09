@@ -1,0 +1,14 @@
+---
+# top_tax dial TAXMAX: eliminate the OASDI taxable maximum from 2027.
+# Earnings above the (unchanged, still-indexed) cap are taxed at the full
+# 6.2% on both employee and employer sides; FICA and SECA read these same
+# rate parameters, so self-employment earnings above the cap are covered too.
+# Rates are unindexed scalars -- no i_ fields.
+oasdi_ee_rates:
+  value:
+    '2014': [0.062, 0.0]
+    '2027': [0.062, 0.062]
+oasdi_er_rates:
+  value:
+    '2014': [0.062, 0.0]
+    '2027': [0.062, 0.062]

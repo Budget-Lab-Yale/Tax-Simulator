@@ -29,6 +29,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
+    'filing_status',      # (int)  filing status (1 = single, 2 = joint, 3 = married filing separately, 4 = head of household)
     'agi',                # (dbl)  Adjusted Gross Income
     'pe_ded',             # (dbl)  deduction for personal exemptions
     'ded',                # (dbl)  itemized deductions if itemizing, else standard deduction
@@ -79,14 +80,19 @@ calc_amt = function(tax_unit, fill_missings = F) {
     
     mutate(
       
-      # Calculate AMT gross income (what the form calls "taxable income") 
+      # Calculate AMT gross income (what the form calls "taxable income").
+      # The senior deduction is a section 151 deduction (IRC 151(d)(5)(C)), so
+      # it is treated like the personal exemption: added back when exemptions
+      # are a preference item (IRC 56(b)(1)(D); 2025 Form 6251 line 1a). For a
+      # non-itemizer calc_txbl_inc() folds it into `ded`, so it is taken out of
+      # `ded` here. The tip, overtime and car loan interest deductions stay
+      # deducted.
       amt_gross_inc = agi -
-                      ded -
-                      (pe_ded * (amt.pe_pref == 0)) - 
+                      (ded - if_else(itemizing, 0, senior_ded)) -
+                      ((pe_ded + senior_ded) * (amt.pe_pref == 0)) - 
                       qbi_ded - 
                       tip_ded - 
                       ot_ded - 
-                      senior_ded - 
                       auto_int_ded + 
                       if_else(itemizing, 
                               salt_item_ded + 
@@ -95,6 +101,16 @@ calc_amt = function(tax_unit, fill_missings = F) {
                               std_ded) - 
                       state_ref + 
                       amt_nols,
+      
+      # Married filing separately: increase income once the exemption is gone,
+      # by the phaseout rate times the excess over the income at which it reaches
+      # zero, up to the exemption amount (IRC 55(d)(2); Form 6251 line 4). Under
+      # IRC 55(d)(4)(A)(ii)(IV) the rate is 50 percent from 2026.
+      no_exempt_inc = if_else(amt.exempt_po_rate > 0, 
+                              amt.exempt_po_thresh + amt.exempt / amt.exempt_po_rate, 
+                              Inf),
+      amt_gross_inc = amt_gross_inc + (filing_status == 3) * 
+                      pmin(amt.exempt, amt.exempt_po_rate * pmax(0, amt_gross_inc - no_exempt_inc)),
       
       # Calculate AMT exemption after phaseout
       excess = pmax(0, amt_gross_inc - amt.exempt_po_thresh),

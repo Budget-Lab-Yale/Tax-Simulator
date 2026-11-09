@@ -170,7 +170,7 @@ need SLURM syncing.
 ## 5. Tax law parameterization
 
 Tax law lives in YAML files, one per thematic parameter group
-(`config/scenarios/tax_law/baseline/*.yaml`: `ord`, `pref`, `agi`, `std`,
+(`config/scenarios/tax_law/default/*.yaml`: `ord`, `pref`, `agi`, `std`,
 `item`, `pe`, `qbi`, `amt`, `niit`, `ctc`, `eitc`, `cdctc`, `char`, `below`,
 `pr`, `rebate`, …). Each **parameter** contains **subparameters** holding a
 time series of values plus optional indexation rules (`i_measure`,
@@ -310,7 +310,7 @@ the federally-calculated units. Three structural commitments:
    mode *by construction* — acceptance-tested: with-state federal outputs are
    byte-identical to without-state.
 2. **Parameter reuse.** State law lives in per-state YAML under
-   `config/scenarios/tax_law_state/{baseline|reform}/{st}/`, parsed by the
+   `config/scenarios/tax_law/default/state/{baseline|reform}/{st}/`, parsed by the
    same machinery as federal law with `st_` prefixing, primary-source
    citations on every subparameter, and credit tables carried as attributes.
    Reform overlays work exactly like federal ones (`state_tax_law` runscript

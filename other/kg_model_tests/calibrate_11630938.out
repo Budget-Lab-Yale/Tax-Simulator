@@ -1,0 +1,22 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 30 years (full sample)...
+  loaded
+Building extended grid, tau matrices, and real-rate beta series...
+  beta range: [0.9794, 0.9885] (real-rate discount, from /nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline)
+
+Targets:
+  long-run  d log(R)/dtau              = -2.5210  (sim-year 30)
+  short-run d log(R(t))/dtau(t+1) = +5.0420  (sim-year  1)
+
+Outer bracket check on planned_share in [0.00, 0.50]:
+  planned_share = 0.0000  psi = 23.6031  short_run = -0.3508
+  planned_share = 0.5000  psi = 23.7267  short_run = +1.8505
+
+Error: short-run target 5.0420 not bracketed by planned_share range [0.00, 0.50] (short_lo = -0.3508, short_hi = 1.8505). Adjust PS_LO_INIT / PS_HI_INIT or revisit SHORT_RUN_RATIO / KG_DYN_TIMING_REF_WEDGE.
+Execution halted

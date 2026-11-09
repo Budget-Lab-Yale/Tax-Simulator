@@ -1,0 +1,1126 @@
+<title>Revenue from higher taxes at the top</title>
+<style>
+  :root {
+    --paper:#ffffff; --surface:#ffffff; --surface-2:#f1f3f5; --ink:#14130f; --ink-2:#53555c;
+    --muted:#83858c; --grid:#e7e9ed; --rule:#d8dbe0; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(17,18,22,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --kept:#ced1d7; --curlaw:#6f8bad;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1;
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04); color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --kept:#4a4842; --curlaw:#5e79a0;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark; } }
+  :root[data-theme="light"]{
+    --paper:#ffffff; --surface:#ffffff; --surface-2:#f1f3f5; --ink:#14130f; --ink-2:#53555c;
+    --muted:#83858c; --grid:#e7e9ed; --rule:#d8dbe0; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(17,18,22,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --kept:#ced1d7; --curlaw:#6f8bad;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1; color-scheme:light; }
+  :root[data-theme="dark"]{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --kept:#4a4842; --curlaw:#5e79a0;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8; color-scheme:dark; }
+
+  * { box-sizing:border-box; }
+  /* Yale typography: YaleNew where installed (Yale-managed machines; the
+     licensed face), Georgia as the standard Yale web fallback. Prose and
+     headings are serif; numerals/labels stay mono (tabular figures are
+     load-bearing) and chart text stays sans — the standard Yale pairing. */
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:"YaleNew","Yale New",Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif; line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
+  h1,h2,h3 { text-wrap:balance; margin:0; font-weight:700; letter-spacing:0; }
+  a { color:var(--accent); }
+  .eyebrow { font:600 12px/1.2 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .mono { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+
+  .synthetic { display:inline-block; font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); border:1px solid var(--rule); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  .unit { display:inline-flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); }
+  .unit button { font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.03em; padding:7px 11px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .unit button + button { border-left:1px solid var(--rule); }
+  .unit button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .unit button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* UI chrome (switches, dials, legends, buttons) stays sans — serif prose
+     over sans interface is the Yale web pairing */
+  .sw, .swseg .slab, .drow, .btnrow button, .legend, .tile .s { font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .hero { padding:56px 0 44px; border-bottom:1px solid var(--rule); }
+  .hero h1 { font-size:clamp(30px,4.6vw,52px); line-height:1.1; max-width:18ch; }
+  .dekcols { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+  @media (max-width:760px){ .dekcols{ grid-template-columns:1fr; gap:0; } }
+  .hero .dek { margin:0 0 14px; font-size:17px; color:var(--ink-2); }
+
+  section { padding:48px 0; border-bottom:1px solid var(--rule); }
+  .sec-head { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
+  .sec-head h2 { font-size:24px; }
+  .sec-sub { color:var(--ink-2); max-width:70ch; margin:6px 0 26px; }
+
+  .exp { display:grid; grid-template-columns:320px 1fr; gap:28px; align-items:start; }
+  @media (max-width:900px){ .exp{ grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow); }
+  .controls { padding:18px; position:sticky; top:14px; }
+  .sw { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; background:var(--surface-2); border:1px solid transparent; color:var(--ink); border-radius:9px; padding:9px 11px; cursor:pointer; text-align:left; font-size:13.5px; transition:.12s; }
+  .sw:hover { border-color:var(--hair); }
+  .sw .dot { width:30px; height:18px; border-radius:999px; background:var(--rule); position:relative; flex:none; transition:.14s; }
+  .sw .dot::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:.14s; }
+  .sw[aria-pressed="true"] { background:var(--accent-2); border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
+  .sw[aria-pressed="true"] .dot { background:var(--accent); }
+  .sw[aria-pressed="true"] .dot::after { transform:translateX(12px); }
+  .sw:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .lever { margin-bottom:9px; }
+  .dials { padding:7px 4px 2px 11px; display:none; }
+  .lever.on .dials { display:block; }
+  .drow { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px; color:var(--ink-2); }
+  .drow .dlab { flex:1; }
+  .drow input { width:86px; font:600 12.5px/1.2 ui-monospace,monospace; color:var(--ink); background:var(--surface); border:1px solid var(--rule); border-radius:7px; padding:5px 7px; text-align:right; }
+  .drow input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .drow .dunit { width:18px; color:var(--muted); font:600 11px/1 ui-monospace,monospace; }
+  /* ladder lever wrapper: same bubble as .sw, with the segmented control inside */
+  .swseg { background:var(--surface-2); border:1px solid transparent; border-radius:9px; padding:9px 11px; transition:.12s; }
+  .swseg:hover { border-color:var(--hair); }
+  .swseg .slab { display:block; font-size:13.5px; color:var(--ink); margin-bottom:8px; }
+  .lever.on .swseg { background:var(--accent-2); border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
+  .seg { display:flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface); margin:0; }
+  .seg button { flex:1; font:600 11px/1.2 ui-monospace,monospace; padding:7px 4px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .seg button + button { border-left:1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  /* draggable stacking chart ("how policies stack") */
+  #stackfig { display:flex; flex-direction:column; gap:1px; margin-top:2px; touch-action:pan-y; }
+  .mrow { display:flex; align-items:center; gap:10px; padding:5px 4px; border-radius:8px; }
+  .mrow.total { margin-top:6px; padding-top:11px; border-top:1px solid var(--rule); }
+  .mrow.axis { padding:0 4px; }
+  .mrow.dragging { background:var(--surface-2); box-shadow:var(--shadow); }
+  .mgrip { flex:none; width:18px; text-align:center; color:var(--muted); cursor:grab; font-size:14px; line-height:1; user-select:none; touch-action:none; }
+  .mgrip:hover { color:var(--accent); }
+  .mgrip.ghost { cursor:default; visibility:hidden; }
+  .mrow.dragging .mgrip { cursor:grabbing; color:var(--accent); }
+  .mlab { flex:0 0 168px; min-width:0; }
+  .mname { font:600 12.5px/1.25 system-ui,sans-serif; color:var(--ink); }
+  .mrow.total .mname { font-weight:800; }
+  .msub { font:10px/1.3 ui-monospace,monospace; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mbar { flex:1 1 auto; min-width:0; }
+  .mbar svg.mbarsvg { display:block; width:100%; height:40px; overflow:visible; }
+  .mbar svg.maxis { display:block; width:100%; height:16px; overflow:visible; }
+  .mnum { flex:0 0 92px; text-align:right; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; line-height:1.25; }
+  .mnum .ms { font-size:9.5px; color:var(--muted); }
+  .mnum .mm { font-size:9.5px; color:var(--muted); }
+  .mnum .mc { font-size:12.5px; font-weight:600; color:var(--ink); }
+  .mrow.total .mnum .mc { font-weight:800; }
+  .mnum .md { font-size:9.5px; }
+  .legend .sw2.slim { opacity:.42; }
+  .legend .sw2.mid { opacity:.72; }
+  .btnrow { display:flex; gap:8px; margin-top:14px; }
+  .btnrow button { flex:1; font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 8px; border:1px solid var(--rule); border-radius:8px; background:var(--surface-2); color:var(--ink-2); cursor:pointer; transition:.12s; }
+  .btnrow button:hover { border-color:var(--accent); color:var(--accent); }
+
+  .out { display:flex; flex-direction:column; gap:20px; min-width:0; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:640px){ .tiles{ grid-template-columns:repeat(2,1fr);} }
+  .tile { background:var(--surface); border:1px solid var(--hair); border-radius:11px; padding:14px 15px; box-shadow:var(--shadow); }
+  .tile .k { font:600 10.5px/1.2 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .tile .v { font:660 26px/1.05 ui-monospace,monospace; font-variant-numeric:tabular-nums; margin-top:8px; letter-spacing:-.01em; }
+  .tile .alt { font:600 12px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--muted); margin-top:5px; }
+  .tile .s { font-size:11.5px; color:var(--ink-2); margin-top:3px; }
+  .tile.accent .v { color:var(--accent); }
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); min-width:0; }
+  .card h3 { font-size:15px; }
+  .card .cap { font-size:12.5px; color:var(--ink-2); margin:4px 0 14px; }
+  .card .step { font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+  figure { margin:0; }
+  svg { display:block; width:100%; height:auto; overflow:visible; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:12px; color:var(--ink-2); }
+  .legend .it { display:flex; align-items:center; gap:6px; }
+  .legend .sw2 { width:11px; height:11px; border-radius:3px; flex:none; }
+
+  footer { padding:34px 0 60px; color:var(--muted); font-size:12.5px; }
+  footer .wrap > * + * { margin-top:8px; }
+  footer .margins { display:grid; grid-template-columns:1fr 1fr; gap:8px 36px; margin-bottom:16px; }
+  @media (max-width:720px){ footer .margins{ grid-template-columns:1fr; } }
+  footer .mhead { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+  footer .margins ul { margin:0; padding-left:16px; color:var(--ink-2); }
+  footer .margins li { margin:3px 0; }
+
+  /* ---- shared chart tooltip (all charts) ------------------------------- */
+  .tt { position:fixed; z-index:60; pointer-events:none; opacity:0; transform:translateY(3px);
+    transition:opacity .12s ease, transform .12s ease; max-width:320px; }
+  .tt.show { opacity:1; transform:translateY(0); }
+  .ttcard { background:var(--surface); border:1px solid var(--hair); border-left-width:4px;
+    border-radius:9px; box-shadow:0 2px 6px rgba(20,19,15,.10),0 10px 34px rgba(20,19,15,.16);
+    padding:12px 14px 13px; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  @media (prefers-color-scheme: dark){ .ttcard{ box-shadow:0 2px 8px rgba(0,0,0,.5),0 14px 40px rgba(0,0,0,.55); } }
+  :root[data-theme="dark"] .ttcard{ box-shadow:0 2px 8px rgba(0,0,0,.5),0 14px 40px rgba(0,0,0,.55); }
+  :root[data-theme="light"] .ttcard{ box-shadow:0 2px 6px rgba(20,19,15,.10),0 10px 34px rgba(20,19,15,.16); }
+  .tt-eyebrow { display:flex; align-items:center; gap:7px; font:600 9.5px/1 ui-monospace,monospace;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .tt-eyebrow .glyph { font-size:11px; line-height:1; }
+  .tt-num { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+  .tt-num .amt { font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-weight:700;
+    font-size:23px; line-height:1; letter-spacing:-.01em; }
+  .tt-num .base { font-weight:600; font-size:13px; color:var(--ink-2); }
+  .tt-meter { height:4px; border-radius:2px; background:var(--surface-2); margin:11px 0 0; position:relative; overflow:hidden; }
+  .tt-meter .fill { position:absolute; top:0; bottom:0; border-radius:2px; }
+  .tt-meterlab { font:500 10px/1.3 ui-monospace,monospace; color:var(--muted); margin-top:5px; }
+  .tt-rows { margin-top:11px; display:flex; flex-direction:column; gap:5px; }
+  .tt-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .tt-row .k { width:14px; height:2.5px; border-radius:2px; flex:none; }
+  .tt-row .rl { color:var(--ink-2); }
+  .tt-row .rv { margin-left:auto; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums;
+    font-weight:600; color:var(--ink); }
+  .tt-ctx { display:flex; align-items:center; gap:7px; margin-top:11px; font-size:11.5px; color:var(--ink-2); }
+  .tt-ctx .lchip { width:9px; height:9px; border-radius:2px; flex:none; }
+  .tt-ctx .dial { color:var(--muted); }
+  .tt-div { height:1px; background:var(--rule); margin:11px 0 10px; }
+  .tt-body { font-family:"YaleNew","Yale New",Georgia,serif; font-size:13.5px; line-height:1.5; color:var(--ink); }
+  .tt-body b { color:var(--ink); }
+  .tt-chiplab { font:600 9px/1 ui-monospace,monospace; letter-spacing:.11em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .tt-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .tt-chip { font:600 10.5px/1.35 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--ink-2);
+    background:var(--surface-2); border:1px solid var(--hair); border-radius:5px; padding:2px 7px; white-space:nowrap; }
+</style>
+
+<div class="hero"><div class="wrap">
+  <h1>Revenue from higher taxes at the top</h1>
+  <div class="dekcols">
+    <p class="dek">There are many ways to raise taxes on high-income households, and each has its own revenue estimate when scored on its own. But these policies tax overlapping bases and change how people respond to each other's rates, so combining them does not raise the sum of their separate estimates.</p>
+    <p class="dek">This page lets you combine eight top-tax policies at rates and thresholds you set, using the Budget Lab's tax microsimulation model. Revenue is cumulative over the decade selected below, shown in dollars and as a share of that decade's GDP.</p>
+  </div>
+  <div style="margin-top:22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span class="eyebrow">Budget window</span>
+    <span class="unit" id="decTog" role="group" aria-label="Budget window (decade)"></span>
+  </div>
+</div></div>
+
+<section id="explorer"><div class="wrap">
+  <h2>Build a package</h2>
+  <p class="sec-sub">Switch on the policies you want to include and enter your own rates and thresholds. The charts below update as you change them.</p>
+
+  <div class="exp">
+    <div class="panel controls">
+      <div id="rateSw"></div>
+      <div id="structSw"></div>
+      <div class="btnrow"><button id="resetLaw" type="button">Reset to default (current law)</button></div>
+    </div>
+
+    <div class="out">
+      <div class="tiles" id="tiles"></div>
+
+      <div class="card">
+        <div class="step">Distribution</div>
+        <h3>Income and taxes by income group</h3>
+        <div class="cap" id="distCap"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:2px 0 12px">
+          <span class="unit" id="distViewTog" role="group" aria-label="View">
+            <button type="button" data-v="context" aria-pressed="true">In context</button>
+            <button type="button" data-v="new" aria-pressed="false">New taxes</button>
+            <button type="button" data-v="etr" aria-pressed="false">Effective rate</button>
+          </span>
+          <span class="unit" id="etrDefTog" role="group" aria-label="Income definition">
+            <button type="button" data-def="expanded" aria-pressed="true">Cash income</button>
+            <button type="button" data-def="hs" aria-pressed="false">Accrual income</button>
+          </span>
+        </div>
+        <figure><div id="etr"></div></figure>
+        <div class="legend" id="etrLegend"></div>
+      </div>
+
+
+      <div class="card">
+        <div class="step">How policies stack</div>
+        <h3>Static estimate and collected revenue, one policy at a time</h3>
+        <div class="cap">Each row adds one policy on top of the rows above it, and appears three times. The slim bar is the static estimate. The middle bar adds the cross-base spillovers that follow mechanically from the policy, with behavior still held fixed. The full bar is what the package collects once behavior responds. All three are split by the tax base where the revenue is collected. The final row is the whole package. Its total does not change when you reorder the rows: reordering changes only how the shared interaction is attributed across policies, not the total. Drag a row by its handle to change the order.</div>
+        <figure><div id="stackfig"></div></figure>
+        <div class="legend" id="stackfigLegend"></div>
+      </div>
+
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="margins">
+    <div>
+      <p class="mhead">Behavioral responses included</p>
+      <ul>
+        <li>Capital-gains realization: timing and permanent responses, including how taxing gains at death changes the incentive to defer</li>
+        <li>Conversion of ordinary income into capital gains</li>
+        <li>Entity shifting between pass-through and C-corporation form, including its payroll-tax base effect</li>
+        <li>Underreporting and evasion</li>
+        <li>Charitable giving</li>
+        <li>Wealth-tax avoidance, applied consistently to the wealth, income, and estate bases</li>
+      </ul>
+    </div>
+    <div>
+      <p class="mhead">Mechanical channels included</p>
+      <ul>
+        <li>Part of new taxes is financed out of saving, which compounds over time into smaller estates and less capital income</li>
+        <li>Corporate incidence on households: lower dividends, interest, rent, and pass-through income, and marked-down equity values that reduce future realized gains</li>
+        <li>Interactions inside the tax calculation itself: rate stacking, base broadening, and revenue moving across bases (income, payroll, corporate, estate, wealth)</li>
+      </ul>
+    </div>
+  </div>
+  <p>Not included: labor-supply responses, macroeconomic feedback, and changes to tax enforcement.</p>
+  <p style="margin-bottom:8px"><span class="synthetic" id="dataBadge">Model output</span></p>
+  <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is interpolated between anchor runs at 24.5%, 28%, 31.5% and 35%, like the other rate dials; the rate is scored inside the model against the CBO corporate receipts baseline. Interpolation is most stretched where an annual wealth tax and the estate tax are both pushed to their extreme settings at once: that combination carries a non-linear interaction the decomposition captures only approximately, so those far-corner packages can run up to roughly 2.6% off the corresponding full model run (vs. under 1% across the rest of the space); every setting shown remains a first-decade estimate within the badge's stated bound.</p>
+  <p>Revenue figures are 10-year cumulative dollars over the decade selected at the top of the page (first, second, or third decade after enactment), with the share of GDP (10-yr revenue ÷ that decade's cumulative fiscal-year nominal GDP) shown alongside. The distribution card always shows 2027, the impact year, regardless of the selected decade. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
+</div></footer>
+
+<div class="tt" id="tt" role="tooltip" aria-live="polite"></div>
+
+<script>
+var DATA=/*__ATLAS_DATA__*/null;
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s);};
+  if(!DATA){document.body.insertAdjacentHTML('afterbegin','<div style="background:#b9601b;color:#fff;padding:10px 24px;font:600 13px system-ui">No data injected — run other/top_tax/build_atlas.py atlas2_data.json atlas2_built.html other/top_tax/atlas2.html.</div>');return;}
+  var DECADES=DATA.meta.decades;               // [[2027,2036],[2037,2046],[2047,2056]]
+  var GDPD=DATA.meta.gdp_fy_decades;           // cumulative FY GDP per decade
+  var DEC=0;                                   // selected decade index
+  var ETRYEAR=String(DATA.meta.dist_years[0]);
+  var INCDEF='expanded';
+  var DIST_VIEW='context';    // distribution card view: 'context' | 'new' | 'etr'
+  var pg=function(b){ return (b/GDPD[DEC]*100).toFixed(2)+"%"; };
+  function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";
+    return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; }
+  function fmt(b){ return usd(b)+" · "+pg(b); }
+
+  // ---- lever metadata ----------------------------------------------------- //
+  var LEVERS=DATA.meta.levers;                 // canonical order
+  var BYKEY={}; LEVERS.forEach(function(l){BYKEY[l.key]=l;});
+  var LCOLOR={ord:'var(--l-ord)',cg:'var(--l-cg)',corp:'var(--l-corp)',wealth:'var(--l-wealth)',
+    deemed:'var(--l-deemed)',estate:'var(--l-estate)',qbi:'var(--l-qbi)',taxmax:'var(--l-taxmax)'};
+  var SUR=DATA.surrogate, MQ=DATA.meta.surrogate.m;
+  var HEADS_ORDER=DATA.meta.surrogate.heads_order;
+
+  // ---- evaluator (mirrors fit_surrogate.py — keep in lockstep) ------------- //
+  // Knot-verbatim rule: input exactly on a knot returns the stored row with
+  // no interpolation arithmetic (rows[i].slice()).
+  function locate(knots,x,scale){
+    var k=knots,i;
+    if(scale==='log'){ k=knots.map(function(v){return Math.log(v);}); x=Math.log(Math.max(x,1e-12)); }
+    if(x<=k[0])return [0,0];
+    if(x>=k[k.length-1])return [k.length-1,0];
+    for(i=0;i<k.length-1;i++){
+      if(x===k[i])return [i,0];
+      if(x<k[i+1])return [i,(x-k[i])/(k[i+1]-k[i])];
+    }
+    return [k.length-1,0];
+  }
+  function evalGrid(lv,rows,vals){
+    // A param the state omits sits at its off value (exclusion 0 on states
+    // that predate the sub-axis)
+    var axes=lv.params;
+    function vOf(p){ return vals[p.key]!==undefined?vals[p.key]:p.off; }
+    if(axes.length===1){
+      var p=axes[0],x=vOf(p);
+      if(p.scale==='pos'){ return rows[p.knots.indexOf(x)].slice(); }
+      var it=locate(p.knots,x,p.scale),i=it[0],t=it[1];
+      if(t===0)return rows[i].slice();
+      return rows[i].map(function(a,z){return (1-t)*a+t*rows[i+1][z];});
+    }
+    var p1=axes[0],p2=axes[1],n2=p2.knots.length;
+    function loc(p){ return p.scale==='pos'?[p.knots.indexOf(vOf(p)),0]:locate(p.knots,vOf(p),p.scale); }
+    var l1=loc(p1),i1=l1[0],t1=l1[1];
+    var l2=loc(p2),i2=l2[0],t2=l2[1];
+    function row(a,b){return rows[a*n2+b];}
+    if(t1===0&&t2===0)return row(i1,i2).slice();
+    var j1=Math.min(i1+1,p1.knots.length-1),j2=Math.min(i2+1,n2-1);
+    var r00=row(i1,i2),r01=row(i1,j2),r10=row(j1,i2),r11=row(j1,j2);
+    return r00.map(function(_,z){
+      return (1-t1)*((1-t2)*r00[z]+t2*r01[z])+t1*((1-t2)*r10[z]+t2*r11[z]);});
+  }
+  function gOf(key,vals){
+    return evalGrid(BYKEY[key],SUR.g[key],vals);   // per-decade dial-strength vector
+  }
+  // Element index -> decade index per quantity (decade-major money vectors;
+  // etr is a decade-1 impact-year quantity). Mirrors fit_surrogate.dec_of.
+  var NDEC=DECADES.length;
+  var DECI={};
+  Object.keys(MQ).forEach(function(qid){
+    var m=MQ[qid],out=[],x;
+    if(qid==='etr'||qid==='etrc'||NDEC<2){ for(x=0;x<m;x++)out.push(0); }
+    else { var per=m/NDEC; for(var dd=0;dd<NDEC;dd++)for(x=0;x<per;x++)out.push(dd); }
+    DECI[qid]=out;
+  });
+  // Within-position exclusion ratio g_deemed(pos,exem)/g_deemed(pos,0), per
+  // decade: scales the byPos vectors, which were measured at exem 0. Positions
+  // themselves are never g-scaled; 1 everywhere at exem 0. Mirrors
+  // fit_surrogate._ladder_ratio.
+  function ladderRatio(s){
+    var vals=s.deemed,v0={},k;
+    for(k in vals)v0[k]=vals[k];
+    v0.exem=0;
+    var gx=gOf('deemed',vals),g0=gOf('deemed',v0);
+    return gx.map(function(a,z){return Math.abs(g0[z])>1e-9?a/g0[z]:0;});
+  }
+  // Interpolate a pair vector linearly in the exclusion between measured
+  // anchors: exem 0 (the byPos vector) and the byExem anchors. Clamps above
+  // the top anchor; anchors missing qid count as zero vectors. Mirrors
+  // fit_surrogate._exem_interp.
+  function exemInterp(byExem,vec0,qid,exem){
+    var knots=[[0,vec0||null]],e;
+    for(e in byExem)knots.push([parseFloat(e),byExem[e][qid]||null]);
+    knots.sort(function(a,b){return a[0]-b[0];});
+    var m=null;
+    knots.forEach(function(k){ if(k[1]&&m===null)m=k[1].length; });
+    if(m===null)return null;
+    var vecs=knots.map(function(k){ if(k[1])return k[1];
+      var z=[]; for(var i=0;i<m;i++)z.push(0); return z; });
+    var xs=knots.map(function(k){return k[0];});
+    if(exem>=xs[xs.length-1])return vecs[vecs.length-1];
+    var i=0; for(var j=0;j<xs.length;j++)if(xs[j]<=exem)i=j;
+    var t=(exem-xs[i])/(xs[i+1]-xs[i]);
+    return vecs[i].map(function(a,z){return (1-t)*a+t*vecs[i+1][z];});
+  }
+  // Pair term honoring per-position vectors (the discrete-lever escape hatch):
+  // when the pair carries byPos and one lever is the ladder (deemed), use the
+  // position-specific vector scaled by the OTHER lever's g. At a nonzero
+  // exclusion, a measured byExem vector interpolated in the exclusion
+  // replaces the within-position solo-ratio scaling; the ratio remains the
+  // fallback for positions with no measured anchors. Weights are per-decade
+  // vectors — element x uses the weight of its own decade.
+  function pairTerm(a,b,qid,s,g){
+    var pe=SUR.pairs[a+'|'+b];
+    if(!pe)return null;
+    var ladder=(a==='deemed'||b==='deemed')?'deemed':null;
+    if(pe.byPos&&ladder){
+      var pos=s[ladder].pos;
+      if(pe.byPos[pos]){
+        var other=(a===ladder)?b:a;
+        var exem=+(s[ladder].exem||0);
+        var bx=(pe.byExem||{})[pos];
+        if(bx&&exem>0){
+          var vx=exemInterp(bx,pe.byPos[pos][qid],qid,exem);
+          return vx?{vec:vx,w:g[other].slice()}:null;
+        }
+        var v=pe.byPos[pos][qid];
+        var r=ladderRatio(s);
+        return v?{vec:v,w:g[other].map(function(x,z){return x*r[z];})}:null;
+      }
+    }
+    return pe[qid]?{vec:pe[qid],w:g[a].map(function(x,z){return x*g[b][z];})}:null;
+  }
+  // Triple term with the same per-position rule: byPos + deemed member ->
+  // position vector scaled by the product of the other two levers' g times
+  // the within-position exclusion ratio.
+  function tripleTerm(entry,ks,qid,s,g){
+    var w=[],z; for(z=0;z<NDEC;z++)w.push(1);
+    if(entry.byPos&&ks.indexOf('deemed')>=0){
+      var pos=s.deemed.pos;
+      if(entry.byPos[pos]){
+        w=ladderRatio(s);
+        ks.forEach(function(k){ if(k!=='deemed')for(z=0;z<NDEC;z++)w[z]*=g[k][z]; });
+        var v=entry.byPos[pos][qid];
+        return v?{vec:v,w:w}:null;
+      }
+    }
+    if(!entry[qid])return null;
+    ks.forEach(function(k){ for(z=0;z<NDEC;z++)w[z]*=g[k][z]; });
+    return {vec:entry[qid],w:w};
+  }
+  function evalQ(qid,s){
+    var m=MQ[qid],deci=DECI[qid],tot=[],i,j,x;
+    for(x=0;x<m;x++)tot.push(0);
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={};
+    on.forEach(function(k){
+      var f=SUR.solo[k][qid];
+      if(f){ var v=evalGrid(BYKEY[k],f,s[k]); for(x=0;x<m;x++)tot[x]+=v[x]; }
+      g[k]=gOf(k,s[k]);
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],qid,s,g);
+      if(pt){ for(x=0;x<m;x++)tot[x]+=pt.vec[x]*pt.w[deci[x]]; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,qid,s,g);
+        if(tt){ for(x=0;x<m;x++)tot[x]+=tt.vec[x]*tt.w[deci[x]]; }
+      }
+    });
+    return tot;
+  }
+  // Closed-form Shapley of predicted conv decade-d total (d defaults to the
+  // selected decade): phi_i = f_i + 1/2 sum_j I_ij g_i g_j + 1/3 sum T g g g
+  function shapley(s,dArg){
+    var d=(dArg===undefined)?DEC:dArg;
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={},phi={},i,j;
+    on.forEach(function(k){
+      g[k]=gOf(k,s[k]);
+      var f=SUR.solo[k].ct;
+      phi[k]=f?evalGrid(BYKEY[k],f,s[k])[d]:0;
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],'ct',s,g);
+      if(pt){ var half=0.5*pt.vec[d]*pt.w[d];
+        phi[on[i]]+=half; phi[on[j]]+=half; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,'ct',s,g);
+        if(tt){ var third=tt.vec[d]*tt.w[d]/3;
+          ks.forEach(function(k){phi[k]+=third;}); }
+      }
+    });
+    return phi;
+  }
+
+  // ---- dial state ----------------------------------------------------------- //
+  // state[key] = {on:bool, vals:{param:value}} (vals in native units: %, $)
+  var state={};
+  function lawVal(p){ return Math.min(Math.max(p.off,p.min),p.max); }
+  function initState(){
+    LEVERS.forEach(function(l){
+      var vals={};
+      l.params.forEach(function(p){
+        // continuous dials start at current law (zero effect), clamped into
+        // the modeled range. binary/ladder params keep their on-position
+        // value: their off state is the switch itself.
+        vals[p.key]=(p.fmt==='pct'||p.fmt==='usd')? lawVal(p) : p.ref;
+      });
+      state[l.key]={on:false,vals:vals};
+    });
+  }
+  function surState(){
+    var s={};
+    LEVERS.forEach(function(l){
+      if(!state[l.key].on)return;
+      var vals={},ok=true;
+      l.params.forEach(function(p){ vals[p.key]=state[l.key].vals[p.key]; });
+      if(ok)s[l.key]=vals;
+    });
+    return s;
+  }
+  function clampParam(p,x){
+    if(p.scale==='pos'||p.fmt==='bool'||p.fmt==='pos')return x;
+    if(isNaN(x)||x===null)return lawVal(p);
+    return Math.min(Math.max(x,p.min),p.max);
+  }
+
+  // ---- UI ------------------------------------------------------------------- //
+  var DOLLAR=1e6; // $ inputs shown in $M
+  function fmtIn(p,v){ return p.unit==='$'? +(v/DOLLAR).toFixed(2) : +(+v).toFixed(2); }
+  function parseIn(p,raw){
+    var x=parseFloat(raw);
+    if(isNaN(x))return lawVal(p);
+    return clampParam(p,p.unit==='$'? x*DOLLAR : x);
+  }
+  function dialRow(l,p){
+    var row=document.createElement('div'); row.className='drow';
+    var sp=document.createElement('span'); sp.className='dlab';
+    sp.textContent=p.label+(p.unit==='$'?' ($M)':'');
+    row.appendChild(sp);
+    var inp=document.createElement('input');
+    inp.type='number'; inp.dataset.lever=l.key; inp.dataset.param=p.key;
+    inp.min=fmtIn(p,p.min); inp.max=fmtIn(p,p.max);
+    inp.step=p.unit==='$'?1:0.1;
+    inp.value=fmtIn(p,state[l.key].vals[p.key]);
+    inp.onchange=function(){
+      var v=parseIn(p,inp.value);
+      state[l.key].vals[p.key]=v;
+      inp.value=fmtIn(p,v);          // clamp reflected in the box
+      renderAll();
+    };
+    row.appendChild(inp);
+    var un=document.createElement('span'); un.className='dunit';
+    un.textContent=p.unit==='$'?'M':p.unit;
+    row.appendChild(un);
+    return row;
+  }
+  function renderControls(){
+    ['rate','struct'].forEach(function(gname){
+      var host=$(gname==='rate'?'#rateSw':'#structSw'); host.innerHTML='';
+      LEVERS.filter(function(l){return l.grp===gname;}).forEach(function(l){
+        var wrapEl=document.createElement('div'); wrapEl.className='lever'; wrapEl.dataset.key=l.key;
+        if(l.interp==='ladder'||l.interp==='ladder_x'){
+          var box=document.createElement('div'); box.className='swseg';
+          var slab=document.createElement('span'); slab.className='slab';
+          slab.textContent=l.label; box.appendChild(slab);
+          var seg=document.createElement('div'); seg.className='seg';
+          var names={off:'Step-up',carryover:'Carryover',deemed:'Taxed at death'};
+          l.params[0].positions.forEach(function(pos){
+            var b=document.createElement('button'); b.type='button';
+            b.dataset.key=l.key; b.dataset.pos=pos;
+            b.textContent=names[pos]||pos;
+            b.setAttribute('aria-pressed','false');
+            b.onclick=function(){
+              state[l.key].on=(pos!=='off');
+              state[l.key].vals[l.params[0].key]=pos;
+              renderAll();
+            };
+            seg.appendChild(b);
+          });
+          box.appendChild(seg);
+          wrapEl.appendChild(box);
+          if(l.interp==='ladder_x'){
+            // the exclusion dial, shown only while a non-off position is
+            // selected (renderAll toggles it)
+            var xdials=document.createElement('div'); xdials.className='dials';
+            xdials.dataset.xdials=l.key;
+            l.params.slice(1).forEach(function(p){ xdials.appendChild(dialRow(l,p)); });
+            wrapEl.appendChild(xdials);
+          }
+        } else {
+          var b=document.createElement('button'); b.className='sw'; b.type='button';
+          b.setAttribute('aria-pressed','false'); b.dataset.key=l.key;
+          b.innerHTML='<span>'+l.label+'</span><span class="dot"></span>';
+          b.onclick=function(){ state[l.key].on=!state[l.key].on; renderAll(); };
+          wrapEl.appendChild(b);
+          if(l.kind==='continuous'){
+            var dials=document.createElement('div'); dials.className='dials';
+            l.params.forEach(function(p){ dials.appendChild(dialRow(l,p)); });
+            wrapEl.appendChild(dials);
+          }
+        }
+        host.appendChild(wrapEl);
+      });
+    });
+    $('#resetLaw').onclick=function(){
+      initState();                       // back to boot state: off, current-law values
+      syncInputs(); renderAll();
+    };
+  }
+  function syncInputs(){
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-lever]'),function(inp){
+      if(!inp.dataset||!inp.dataset.lever)return;
+      var l=BYKEY[inp.dataset.lever],p=null;
+      l.params.forEach(function(pp){ if(pp.key===inp.dataset.param)p=pp; });
+      if(p)inp.value=fmtIn(p,state[l.key].vals[p.key]);
+    });
+  }
+
+  // ---- ETR machinery --------------------------------------------------------- //
+  var GROUPS_ALL=DATA.meta.etr_groups;
+  var PCTS=GROUPS_ALL.filter(function(g){return g!=='Negative income';});
+  var CI={}; DATA.meta.etr_comps.forEach(function(c,i){CI[c]=i;});
+  var NC=DATA.meta.etr_comps.length;
+  var ETRCOMPS=[{k:'iit',c:'var(--h-iit)',l:'Individual income'},{k:'pay',c:'var(--h-pay)',l:'Payroll'},
+    {k:'est',c:'var(--h-est)',l:'Estate / deemed at death'},{k:'wealth',c:'var(--h-wealth)',l:'Wealth'},{k:'corp',c:'var(--h-corp)',l:'Corporate'}];
+  function etrStack(row){
+    return {iit:row[CI.income_tax],pay:row[CI.payroll],est:row[CI.estate]+row[CI.deemed],
+            wealth:row[CI.wealth],corp:row[CI.corp]};
+  }
+  function etrRowAt(deltaVec,idf,grp){
+    // reform row = baseline + delta, floored at 0 per component
+    var di=DATA.meta.etr_income_defs.indexOf(idf),gi=GROUPS_ALL.indexOf(grp);
+    var base=(DATA.etr_base[idf]||{})[ETRYEAR];
+    var brow=base&&base[grp]?base[grp]:null;
+    if(!brow)return null;
+    var out=[];
+    for(var c=0;c<NC;c++){
+      var d=deltaVec?deltaVec[(di*GROUPS_ALL.length+gi)*NC+c]:0;
+      out.push(Math.max(0,brow[c]+d));
+    }
+    return out;
+  }
+  function etrSeries(deltaVec,idf){
+    var out={iit:[],pay:[],est:[],wealth:[],corp:[]};
+    PCTS.forEach(function(g){
+      var row=etrRowAt(deltaVec,idf,g);
+      var st=row?etrStack(row):{iit:0,pay:0,est:0,wealth:0,corp:0};
+      Object.keys(out).forEach(function(k){out[k].push(st[k]);});
+    });
+    return out;
+  }
+  function etrBaseSeries(idf){ return etrSeries(null,idf); }
+
+  // ---- compute -------------------------------------------------------------- //
+  function compute(){
+    var s=surState();
+    var keys=Object.keys(s);
+    var ordKeys=LEVERS.map(function(l){return l.key;}).filter(function(k){return s[k];});
+    var actual=keys.length?evalQ('ct',s)[DEC]:0;
+    var comboStatic=keys.length?evalQ('st',s)[DEC]:0;
+    var parts=[],staticParts=0,convParts=0;
+    ordKeys.forEach(function(k){
+      var solo={}; solo[k]=s[k];
+      var c1=evalQ('ct',solo)[DEC],s1=evalQ('st',solo)[DEC];
+      parts.push({key:k,s:s1,c:c1}); staticParts+=s1; convParts+=c1;
+    });
+    var phi=keys.length?shapley(s):{};
+    var etrDelta=keys.length?evalQ('etr',s):null;
+    var etrcDelta=keys.length?evalQ('etrc',s):null;
+    var etr={baseline:etrBaseSeries(INCDEF),static:etrSeries(etrDelta,INCDEF),
+             conv:etrSeries(etrcDelta,INCDEF)};
+    var etrMax=0;
+    DATA.meta.etr_income_defs.forEach(function(idf){
+      [etrBaseSeries(idf),etrSeries(etrDelta,idf),etrSeries(etrcDelta,idf)].forEach(function(ser){
+        for(var i=0;i<PCTS.length;i++){
+          var t=0; Object.keys(ser).forEach(function(k){t+=Math.max(0,ser[k][i]);});
+          if(t>etrMax)etrMax=t;
+        }
+      });
+    });
+    var iTop=PCTS.indexOf('Top 0.1%'); if(iTop<0)iTop=PCTS.length-1;
+    var totTop={baseline:0,static:0,conv:0};
+    Object.keys(etr.baseline).forEach(function(k){
+      totTop.baseline+=etr.baseline[k][iTop]; totTop.static+=etr.static[k][iTop];
+      totTop.conv+=etr.conv[k][iTop];});
+    return {s:s,keys:ordKeys,actual:actual,comboStatic:comboStatic,parts:parts,
+      staticParts:staticParts,convParts:convParts,phi:phi,etr:etr,etrMax:etrMax,
+      totTop:totTop};
+  }
+
+  // ---- charts (segBars/spill/etr reused from atlas v1) ------------------------ //
+  function svg(w,h){return '<svg viewBox="0 0 '+w+' '+h+'" role="img" preserveAspectRatio="xMidYMid meet">';}
+
+  // ---- shared rich tooltip (all charts) ----------------------------------- //
+  // Interactive marks carry a data-tip attribute holding a JSON cfg; one
+  // delegated listener reads it, so the card survives every innerHTML re-render.
+  // Card chrome (rail, eyebrow, number, divider, body) is constant across charts;
+  // only the middle sections vary (hero number / meter / readout rows).
+  function tipEnc(cfg){ return JSON.stringify(cfg)
+    .replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function tipAttr(cfg){ return "data-tip='"+tipEnc(cfg)+"'"; }
+  function tipCard(c){
+    var h='<div class="ttcard" style="border-left-color:'+(c.accent||'var(--rule)')+'">';
+    if(c.eyebrow) h+='<div class="tt-eyebrow">'+(c.glyph?'<span class="glyph" style="color:'+(c.glyphColor||'var(--muted)')+'">'+c.glyph+'</span>':'')+c.eyebrow+'</div>';
+    if(c.amount!=null) h+='<div class="tt-num"><span class="amt" style="color:'+(c.amountColor||'var(--ink)')+'">'+c.amount+'</span>'+(c.sub?'<span class="base">'+c.sub+'</span>':'')+'</div>';
+    if(c.meter) h+='<div class="tt-meter"><span class="fill" style="width:'+(Math.max(0,Math.min(1,c.meter.share))*100).toFixed(1)+'%;left:0;background:'+c.meter.color+'"></span></div>'+(c.meter.label?'<div class="tt-meterlab">'+c.meter.label+'</div>':'');
+    if(c.rows&&c.rows.length){ h+='<div class="tt-rows">'; c.rows.forEach(function(r){
+      h+='<div class="tt-row"><span class="k" style="background:'+(r.color||'var(--muted)')+'"></span><span class="rl">'+r.label+'</span><span class="rv">'+r.value+'</span></div>'; }); h+='</div>'; }
+    if(c.ctx) h+='<div class="tt-ctx">'+(c.ctx.chip?'<span class="lchip" style="background:'+c.ctx.chip+'"></span>':'')+c.ctx.text+(c.ctx.dial?' <span class="dial">· '+c.ctx.dial+'</span>':'')+'</div>';
+    if(c.chips&&c.chips.length) h+='<div class="tt-div"></div><div class="tt-chiplab">'+(c.chipLab||'Package')+'</div><div class="tt-chips">'+c.chips.map(function(x){return '<span class="tt-chip">'+x+'</span>';}).join('')+'</div>';
+    if(c.body) h+='<div class="tt-div"></div><div class="tt-body">'+c.body+'</div>';
+    return h+'</div>';
+  }
+  var TTEL=null, TTCUR=null;
+  function tipShow(cfg,x,y){ if(!TTEL)TTEL=$('#tt'); if(!TTEL)return; TTEL.innerHTML=tipCard(cfg); TTEL.classList.add('show'); tipMove(x,y); }
+  function tipMove(x,y){ if(!TTEL)return; var pad=15,tw=TTEL.offsetWidth,th=TTEL.offsetHeight,px=x+pad,py=y+pad;
+    if(px+tw>window.innerWidth-8)px=x-tw-pad; if(px<8)px=8; if(py+th>window.innerHeight-8)py=y-th-pad; if(py<8)py=8;
+    TTEL.style.left=px+'px'; TTEL.style.top=py+'px'; }
+  function tipHide(){ TTCUR=null; if(TTEL)TTEL.classList.remove('show'); }
+  document.addEventListener('mousemove',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('[data-tip]'):null;
+    if(!el){ if(TTCUR)tipHide(); return; }
+    if(el!==TTCUR){ TTCUR=el; try{ tipShow(JSON.parse(el.getAttribute('data-tip')),e.clientX,e.clientY); }catch(_){ } }
+    else tipMove(e.clientX,e.clientY);
+  });
+
+  // ---- spillover mechanism copy (what causes each cross-base effect) ------- //
+  var HSHORT={iit:'Ordinary income',cg:'Capital gains',corp:'Corporate',est:'Estate',wealth:'Wealth',pay:'Payroll',other:'Other'};
+  var SPILL_OWN={ord:['iit'],cg:['cg'],corp:['corp'],wealth:['wealth'],deemed:['cg','iit'],estate:['est'],qbi:['iit'],taxmax:['pay']};
+  var SPILL_DESC={
+   'ord|corp':{tag:'Entity shifting',t:'With the top individual rate pushed above the 21% corporate rate, pass-through and wage income migrates into C-corporate form, where it is taxed at the corporate rate — so the corporate base grows even though the reform never touches the corporate rate.'},
+   'ord|cg':{tag:'Recharacterization',t:'A slice of the shifted income resurfaces later as dividends and realized gains, nudging the preferential-rate base upward.'},
+   'ord|pay':{tag:'Wage base',t:'Compensation that shifts out of salary into non-wage forms slightly thins the payroll base.'},
+   'cg|iit':{tag:'Lock-in',t:'Taxing gains and dividends harder triggers lock-in: high earners hold appreciated assets instead of selling, and firms retain earnings instead of distributing them. Less income is realized near-term, so the ordinary base gives revenue back even as the capital-gains base rises.'},
+   'cg|corp':{tag:'Form advantage',t:'As the preferential rate climbs toward the ordinary rate, the payoff to parking income inside C-corporate form to convert it into lightly-taxed dividends and gains shrinks, so income shifts out of the corporate base.'},
+   'corp|iit':{tag:'Incidence on flows',t:'A higher corporate rate leaves firms less after-tax cash to pay out. The dividends, interest, and rent reaching households shrink, and with them the individual income tax on that capital income.'},
+   'corp|cg':{tag:'Equity markdown',t:'Heavier corporate taxation lowers the value of corporate equity. With share prices marked down, the gains later realized on those shares are smaller — so capital-gains receipts fall.'},
+   'corp|est':{tag:'Markdown to estates',t:'The same equity markdown shrinks the value of corporate stock sitting in taxable estates.'},
+   'wealth|iit':{tag:'Base erosion',t:'An annual wealth tax is paid partly out of the wealth stock itself. A smaller capital base throws off less dividends, interest, and business income year after year. Concealment compounds it: assets hidden from the wealth tax also hide the income they earn.'},
+   'wealth|cg':{tag:'Base erosion',t:'A shrinking — and partly concealed — capital stock generates smaller realized gains over time.'},
+   'wealth|est':{tag:'Drains to estate',t:'Wealth drawn down (or hidden) to meet the annual levy leaves a smaller taxable estate at death. Concealment is modeled consistently across the wealth and estate bases, so it lands in both.'},
+   'wealth|corp':{tag:'Base erosion',t:'Less capital held in corporate equity feeds through to a smaller corporate base.'},
+   'deemed|est':{tag:'Deductible at death',t:'The income tax triggered by the deemed realization is deductible against the taxable estate, so a larger income-tax bill at death leaves a smaller estate to tax.'},
+   'deemed|corp':{tag:'Shifting incentives',t:'As the reward for deferring until death disappears, retention incentives shift and the corporate base gives back a little.'},
+   'estate|cg':{tag:'Less holding-till-death',t:'A heavier estate tax weakens the incentive to hold appreciated assets until death for the basis step-up. Some holders realize during life instead, lifting the capital-gains base.'},
+   'estate|iit':{tag:'Less holding-till-death',t:'The same unwinding of hold-till-death behavior surfaces a little more ordinary income.'},
+   'qbi|corp':{tag:'Entity shifting',t:'Repealing the 20% pass-through deduction raises the effective rate on pass-through business income, widening the gap against the 21% corporate rate. Business income shifts into C-corporate form and the corporate base grows.'},
+   'qbi|cg':{tag:'Recharacterization',t:'Some of the income shifting into corporate form later surfaces as dividends and gains.'},
+   'taxmax|iit':{tag:'Recharacterization',t:'Uncapping the 12.4% Social Security tax on high earnings makes it attractive to recharacterize wages as S-corporation distributions and other non-wage income that escapes payroll tax. The shrinking wage base — plus deductibility of the employer-side tax — pulls the income tax down.'},
+   'taxmax|corp':{tag:'Recharacterization',t:'Some recharacterized compensation lands in corporate form; a small give-back here.'},
+   'taxmax|cg':{tag:'Recharacterization',t:'A little of the recharacterized comp shows up as gains and dividends.'}
+  };
+  var SPILL_OWNDESC={
+   ord:'Higher statutory rate on top ordinary income — the intended base.',
+   cg:'Higher statutory rate on realized gains and qualified dividends — the intended base, already net of the realization response.',
+   corp:'Higher statutory corporate rate — the intended base.',
+   wealth:'The new annual levy on net worth above the threshold — the intended base.',
+   deemed:'Unrealized gains taxed at death lift both the ordinary and capital-gains bases above the mechanical estimate: with no reward for holding until a stepped-up basis, more is realized during life, and death itself books the gain.',
+   estate:'Higher estate-tax rate and lower exemption — the intended base.',
+   qbi:'Removing the 20% deduction raises tax on pass-through income — the intended base.',
+   taxmax:'Applying the 12.4% Social Security tax above the old wage cap — the intended base.'
+  };
+  var HEADS=[{k:'iit',label:'Individual income (ordinary)',c:'var(--h-iit)'},{k:'cg',label:'Capital gains & dividends',c:'var(--h-cg)'},
+    {k:'corp',label:'Corporate',c:'var(--h-corp)'},{k:'est',label:'Estate',c:'var(--h-est)'},
+    {k:'wealth',label:'Wealth',c:'var(--h-wealth)'},{k:'pay',label:'Payroll',c:'var(--h-pay)'},
+    {k:'other',label:'Other',c:'var(--muted)'}];
+  function headColor(k){var m={iit:'--h-iit',cg:'--h-cg',corp:'--h-corp',est:'--h-est',wealth:'--h-wealth',pay:'--h-pay',other:'--muted'};return 'var('+m[k]+')';}
+  function combinedEtr(d,w){
+    // Dumbbell per percentile: a stem connecting three total-ETR dots —
+    // baseline (filled, ink), conventional/collected (filled, accent), and
+    // static/ask (hollow, accent ring, drawn last so a zero avoidance gap
+    // reads as a ring around the collected dot). No component stacking.
+    var nQ=PCTS.filter(function(g){return g.indexOf('Quintile')===0;}).length;
+    var n=PCTS.length,SPLIT=28,h=338,pad={l:34,r:12,t:34,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var maxv=Math.max(d.etrMax*1.08,10);
+    var Y=function(v){return pad.t+ih-(Math.max(0,v)/maxv)*ih;};
+    var tot=function(ser,i){var t=0;Object.keys(ser).forEach(function(k){t+=ser[k][i];});return t;};
+    var gw=(iw-SPLIT)/n;
+    var s=svg(w,h);
+    for(var g=0;g<=maxv;g+=10){var y=Y(g);s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
+      s+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+g+'%</text>';}
+    var xd=pad.l+nQ*gw+SPLIT/2;
+    s+='<line x1="'+xd.toFixed(1)+'" x2="'+xd.toFixed(1)+'" y1="'+pad.t+'" y2="'+(pad.t+ih)+'" stroke="var(--rule)" stroke-width="1" stroke-dasharray="3 4"/>';
+    s+='<text x="'+(pad.l+nQ*gw/2).toFixed(1)+'" y="14" text-anchor="middle" font-size="9.5" font-weight="600" letter-spacing="0.08em" fill="var(--muted)" font-family="ui-monospace,monospace">BY QUINTILE</text>';
+    s+='<text x="'+(pad.l+nQ*gw+SPLIT+(n-nQ)*gw/2).toFixed(1)+'" y="14" text-anchor="middle" font-size="9.5" font-weight="600" letter-spacing="0.08em" fill="var(--muted)" font-family="ui-monospace,monospace">TOP DECILE BREAKOUT · INSIDE QUINTILE 5</text>';
+    for(var i=0;i<n;i++){
+      var gx=pad.l+i*gw+(i>=nQ?SPLIT:0),cx=(gx+gw/2).toFixed(1);
+      var vb=tot(d.etr.baseline,i),vs=tot(d.etr.static,i),vc=tot(d.etr.conv,i);
+      var yb=Y(vb),ys=Y(vs),yc=Y(vc);
+      var yTop=Math.min(yb,ys,yc),yBot=Math.max(yb,ys,yc);
+      if(yBot-yTop>0.5)s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+yTop.toFixed(1)+'" y2="'+yBot.toFixed(1)+'" stroke="var(--rule)" stroke-width="2"/>';
+      s+='<circle cx="'+cx+'" cy="'+yb.toFixed(1)+'" r="4" fill="var(--ink)"/>';
+      s+='<circle cx="'+cx+'" cy="'+yc.toFixed(1)+'" r="4.5" fill="var(--accent)"/>';
+      s+='<circle cx="'+cx+'" cy="'+ys.toFixed(1)+'" r="4.5" fill="var(--surface)" fill-opacity="0.001" stroke="var(--accent)" stroke-width="2"/>';
+      s+='<text x="'+cx+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+PCTS[i]+'</text>';
+      var etrChg=vc-vb;
+      s+='<rect x="'+gx.toFixed(1)+'" y="'+pad.t+'" width="'+gw.toFixed(1)+'" height="'+ih+'" fill="transparent" '+tipAttr({
+        accent:'var(--accent)', eyebrow:PCTS[i],
+        amount:(etrChg>=0?'+':'−')+Math.abs(etrChg).toFixed(1)+' pp', amountColor:'var(--accent)', sub:'collected vs. current law',
+        rows:[{color:'var(--ink)',label:'Current law',value:vb.toFixed(1)+'%'},
+              {color:'var(--accent)',label:'Static estimate',value:vs.toFixed(1)+'%'},
+              {color:'var(--accent)',label:'Collected',value:vc.toFixed(1)+'%'}],
+        body:(Math.abs(vs-vc)>0.05?('<b>Static minus collected: '+(vs-vc).toFixed(1)+' pp.</b> The gap between the static estimate and what is collected once behavior responds.'):null)
+      })+'/>';
+    }
+    return s+'</svg>';
+  }
+
+  // ---- dollar distribution: income by group, split kept / current-law / new / leakage
+  // Same story as the dumbbell, in dollars. Per-PCTS total rates x fixed baseline
+  // income levels -> dollar tax; nested groups differenced into disjoint bins.
+  function usdShort(b){ var v=Math.abs(b),sg=b<0?'−':'';
+    return v>=1000 ? sg+'$'+(v/1000).toFixed(1)+'T' : v>=10 ? sg+'$'+Math.round(v)+'B' : sg+'$'+v.toFixed(1)+'B'; }
+  function distBins(d){
+    // same nested groups as the dumbbell (PCTS): quintiles + top-decile breakout.
+    // The top groups nest inside Quintile 5 — bars overlap by design (author call).
+    var inc=(DATA.income_levels&&DATA.income_levels[INCDEF])||{};
+    var tot=function(ser,i){var t=0;Object.keys(ser).forEach(function(k){t+=ser[k][i];});return t;};
+    return PCTS.map(function(g,i){
+      var I=inc[g]||0, br=tot(d.etr.baseline,i), sr=tot(d.etr.static,i), cr=tot(d.etr.conv,i);
+      var taxbase=br/100*I, sd=(sr-br)/100*I, cd=(cr-br)/100*I;
+      return {bin:g, income:I, taxbase:taxbase, conv:cd, avoid:sd-cd, ask:sd, aftertax:I-taxbase-sd};
+    });
+  }
+  function combinedDist(d,w){
+    var R=distBins(d), n=R.length, isNew=(DIST_VIEW==='new');
+    var nQ=PCTS.filter(function(g){return g.indexOf('Quintile')===0;}).length, SPLIT=28;
+    var h=338,pad={l:46,r:12,t:34,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var tops=R.map(function(r){return isNew?r.ask:r.income;});
+    var maxv=Math.max.apply(null,tops)*1.08; if(!(maxv>0))maxv=1;
+    var Y=function(v){return pad.t+ih-(Math.max(0,Math.min(v,maxv))/maxv)*ih;};
+    var gw=(iw-SPLIT)/n, GAP=2, bw=Math.min(gw*0.6,44);
+    var s=svg(w,h);
+    s+='<defs><pattern id="disthatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="var(--accent-2)"></rect><line x1="0" y1="0" x2="0" y2="7" stroke="var(--accent)" stroke-width="3"></line></pattern></defs>';
+    var nt=4;
+    for(var t=0;t<=nt;t++){ var v=maxv*t/nt, y=Y(v);
+      s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--grid)" stroke-width="1"/>';
+      s+='<text x="'+(pad.l-6)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+usdShort(v)+'</text>'; }
+    var xd=pad.l+nQ*gw+SPLIT/2;
+    s+='<line x1="'+xd.toFixed(1)+'" x2="'+xd.toFixed(1)+'" y1="'+pad.t+'" y2="'+(pad.t+ih)+'" stroke="var(--rule)" stroke-width="1" stroke-dasharray="3 4"/>';
+    s+='<text x="'+pad.l+'" y="14" font-size="9.5" font-weight="600" letter-spacing="0.08em" fill="var(--muted)" font-family="ui-monospace,monospace">'+(isNew?'NEW TAXES FROM THE PLAN':(INCDEF==='hs'?'ACCRUAL INCOME':'CASH INCOME'))+' · '+ETRYEAR+' · $B</text>';
+    R.forEach(function(r,i){
+      var gx=pad.l+i*gw+(i>=nQ?SPLIT:0), cx=gx+gw/2, x0=cx-bw/2;
+      var rr=function(a,b,fill){var yb=Y(a),yt=Y(b),hh=Math.max(0,yb-yt-GAP);if(hh<=0.3)return '';
+        return '<rect x="'+x0.toFixed(1)+'" y="'+yt.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="3" fill="'+fill+'"/>';};
+      if(isNew){ s+=rr(0,r.conv,'var(--accent)'); s+=rr(r.conv,r.conv+r.avoid,'url(#disthatch)'); }
+      else { var d0=r.aftertax,d1=d0+r.taxbase,d2=d1+r.conv,d3=d2+r.avoid;
+        s+=rr(0,d0,'var(--kept)'); s+=rr(d0,d1,'var(--curlaw)'); s+=rr(d1,d2,'var(--accent)'); s+=rr(d2,d3,'url(#disthatch)'); }
+      if(i>=6){ var yt=Y(isNew?r.ask:r.income);
+        s+='<text x="'+cx.toFixed(1)+'" y="'+(yt-6).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="600" fill="var(--accent)" font-family="ui-monospace,monospace">'+(isNew?'':'+')+usdShort(r.ask)+'</text>'; }
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+r.bin+'</text>';
+      s+='<rect x="'+gx.toFixed(1)+'" y="'+pad.t+'" width="'+gw.toFixed(1)+'" height="'+ih+'" fill="transparent" '+tipAttr({
+        accent:'var(--accent)', eyebrow:r.bin,
+        amount:'+'+usdShort(r.ask), amountColor:'var(--accent)', sub:'static estimate',
+        rows:[{color:'var(--accent)',label:'New taxes (collected)',value:usdShort(r.conv)},
+              {color:'var(--accent-2)',label:'Lost to behavior',value:usdShort(r.avoid)},
+              {color:'var(--curlaw)',label:'Current law taxes',value:usdShort(r.taxbase)},
+              {color:'var(--kept)',label:'Income held',value:usdShort(r.income)}]
+      })+'/>';
+    });
+    return s+'</svg>';
+  }
+
+  // ---- render ----------------------------------------------------------------- //
+  function widthOf(id){var e=$('#'+id);return Math.max(300,e?e.clientWidth:660);}
+  function tile(k,v,alt,s2,accent){return '<div class="tile'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(alt?'<div class="alt">'+alt+'</div>':'')+'<div class="s">'+s2+'</div></div>';}
+  function dialSummary(l){
+    var st=state[l.key];
+    if(!st.on)return '';
+    return l.params.map(function(p){
+      var v=st.vals[p.key];
+      if(p.fmt==='pct')return p.label.toLowerCase()+' '+(+v).toFixed(1).replace(/\.0$/,'')+'%';
+      if(p.fmt==='usd'){
+        if(!v)return '';    // the exclusion dial at 0 is current law, unshown
+        var ds='$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';
+        return l.key==='deemed'?ds+' excl':ds;
+      }
+      if(p.fmt==='pos')return v;
+      return '';
+    }).filter(Boolean).join(' · ');
+  }
+  // ---- "how policies stack": draggable ordered marginals -------------------- //
+  // Each active policy is added on top of the rows above it, in a user-orderable
+  // sequence. A row's revenue is the running-package total for the rows so far
+  // minus the total for the rows above it, split by the base where it lands, on
+  // each of the three rungs: the static estimate ('sh'), the estimate after the
+  // cross-base spillovers ('mh'), and the collected total ('ch'). The rows
+  // telescope to the whole-package total for any order — reordering only moves
+  // the shared interaction between rows, never the total.
+  var NHEAD=HEADS_ORDER.length;
+  var MARG_ORDER=[];   // row order (lever keys); persists user drags across dial edits
+  function sideKeys(){ // active levers in side-panel order: rate group, then struct group
+    var out=[];
+    ['rate','struct'].forEach(function(g){
+      LEVERS.forEach(function(l){ if(l.grp===g && state[l.key].on) out.push(l.key); });
+    });
+    return out;
+  }
+  function reconcileOrder(){
+    var active=sideKeys();
+    MARG_ORDER=MARG_ORDER.filter(function(k){return active.indexOf(k)>=0;});
+    active.forEach(function(k){
+      if(MARG_ORDER.indexOf(k)>=0)return;
+      var si=active.indexOf(k),at=MARG_ORDER.length;
+      for(var i=0;i<MARG_ORDER.length;i++){ if(active.indexOf(MARG_ORDER[i])>si){at=i;break;} }
+      MARG_ORDER.splice(at,0,k);
+    });
+    return MARG_ORDER;
+  }
+  function renderMarginals(){
+    var order=reconcileOrder(), host=$('#stackfig'), leg=$('#stackfigLegend');
+    if(!host)return;
+    if(!order.length){ host.innerHTML=''; if(leg)leg.innerHTML=''; return; }
+    var s=surState();
+    function hv(qid,keys){ var st={}; keys.forEach(function(k){st[k]=s[k];});
+      var v=evalQ(qid,st),o={}; HEADS_ORDER.forEach(function(hk,z){o[hk]=v[DEC*NHEAD+z];}); return o; }
+    function sub(a,b){ var o={}; HEADS_ORDER.forEach(function(hk){o[hk]=(a[hk]||0)-(b[hk]||0);}); return o; }
+    function pos(v){ var t=0; HEADS_ORDER.forEach(function(hk){ if((v[hk]||0)>0)t+=v[hk]; }); return t; }
+    function neg(v){ var t=0; HEADS_ORDER.forEach(function(hk){ if((v[hk]||0)<0)t-=v[hk]; }); return t; }
+    function net(v){ var t=0; HEADS_ORDER.forEach(function(hk){ t+=(v[hk]||0); }); return t; }
+    var rows=[],prevC={},prevM={},prevS={};
+    order.forEach(function(k,i){
+      var pref=order.slice(0,i+1),curC=hv('ch',pref),curM=hv('mh',pref),curS=hv('sh',pref);
+      rows.push({key:k,conv:sub(curC,prevC),mech:sub(curM,prevM),stat:sub(curS,prevS)});
+      prevC=curC; prevM=curM; prevS=curS;
+    });
+    var pkg={key:null,isPkg:true,conv:prevC,mech:prevM,stat:prevS};
+    var posMax=0,negMax=0;
+    rows.concat([pkg]).forEach(function(r){
+      posMax=Math.max(posMax,pos(r.conv),pos(r.mech),pos(r.stat));
+      negMax=Math.max(negMax,neg(r.conv),neg(r.mech),neg(r.stat));
+    });
+    var W=widthOf('stackfig'), bw=Math.max(140, W-168-92-18-40);
+    var span=(posMax+negMax)||1, sc=bw/span, xz=negMax*sc, HH=54;
+    function niceStep(x){ if(!(x>0))return 1; var p=Math.pow(10,Math.floor(Math.log(x)/Math.LN10));
+      var n=x/p, m=n<1.5?1:(n<3?2:(n<7?5:10)); return m*p; }
+    var step=niceStep(span/4), ticks=[];
+    for(var t=Math.ceil((-negMax)/step)*step; t<=posMax+1e-6; t+=step) ticks.push(t);
+    function grid(h){ return ticks.map(function(t){ var x=xz+t*sc, zero=Math.abs(t)<1e-6;
+      return '<line x1="'+x.toFixed(1)+'" x2="'+x.toFixed(1)+'" y1="0" y2="'+h+'" stroke="'
+        +(zero?'var(--rule)':'var(--grid)')+'" stroke-width="'+(zero?'1.3':'1')+'"'
+        +(zero?'':' stroke-dasharray="2 3"')+'/>'; }).join(''); }
+    function barCfg(hk,v,r,kind){ var drain=v<0;
+      return { accent:headColor(hk),
+        eyebrow:(kind==='stat'?'Static estimate':(kind==='mech'?'After cross-base spillovers':'Collected'))
+                +' · '+HSHORT[hk]+' base',
+        glyph:(drain?'▾':'▴'), glyphColor:(drain?'var(--warn)':'var(--good)'),
+        amount:usd(v), amountColor:'var(--ink)',
+        sub:(r.isPkg?'whole package':BYKEY[r.key].label),
+        body:(drain?('Revenue drained from the '+HSHORT[hk]+' base '
+                     +(kind==='mech'?'as the policy moves other bases mechanically.'
+                                    :'as behavior responds to this policy.'))
+                   :('Revenue collected in the '+HSHORT[hk]+' base.')) }; }
+    function bar(seg,y,hh,op,r,kind){ var xp=xz,xn=xz,out='';
+      HEADS_ORDER.forEach(function(hk){ var v=seg[hk]||0; if(v>0){ var w=v*sc;
+        out+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,w-1).toFixed(1)+'" height="'+hh
+          +'" rx="2" fill="'+headColor(hk)+'"'+(op<1?' opacity="'+op+'"':'')+' '+tipAttr(barCfg(hk,v,r,kind))+'/>'; xp+=w; } });
+      HEADS_ORDER.forEach(function(hk){ var v=seg[hk]||0; if(v<0){ var w=-v*sc; xn-=w;
+        out+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,w-1).toFixed(1)+'" height="'+hh
+          +'" rx="2" fill="'+headColor(hk)+'" opacity="'+(op<1?(op*0.85).toFixed(2):'0.8')+'" '+tipAttr(barCfg(hk,v,r,kind))+'/>'; } });
+      return out; }
+    function rowHtml(r){ var isP=!!r.isPkg, nc=net(r.conv), nm=net(r.mech), ns=net(r.stat),
+        d=nc-ns, below=d<-1e-9;
+      var svg='<svg viewBox="0 0 '+bw.toFixed(1)+' '+HH+'" preserveAspectRatio="none" class="mbarsvg">'
+        +grid(HH)+bar(r.stat,2,7,0.42,r,'stat')+bar(r.mech,12,11,0.72,r,'mech')
+        +bar(r.conv,26,22,1,r,'conv')+'</svg>';
+      var label=isP?'Whole package':BYKEY[r.key].label;
+      var subl=isP?(order.length+' policies together'):dialSummary(BYKEY[r.key]);
+      var grip=isP?'<span class="mgrip ghost"></span>':'<span class="mgrip" title="Drag to reorder" aria-hidden="true">⠿</span>';
+      return '<div class="mrow'+(isP?' total':'')+'"'+(isP?'':' data-key="'+r.key+'"')+'>'
+        +grip+'<div class="mlab"><div class="mname">'+label+'</div><div class="msub">'+subl+'</div></div>'
+        +'<div class="mbar">'+svg+'</div>'
+        +'<div class="mnum"><div class="ms">'+usd(ns)+'</div><div class="mm">'+usd(nm)+'</div>'
+        +'<div class="mc">'+usd(nc)+'</div>'
+        +'<div class="md" style="color:'+(below?'var(--warn)':'var(--good)')+'">'
+        +(below?'▾ ':'▴ ')+usd(Math.abs(d))+'</div></div></div>'; }
+    var axis='<div class="mrow axis"><span class="mgrip ghost"></span><div class="mlab"></div>'
+      +'<div class="mbar"><svg viewBox="0 0 '+bw.toFixed(1)+' 16" preserveAspectRatio="none" class="maxis">'
+      +ticks.map(function(t){ var x=xz+t*sc;
+          return '<text x="'+x.toFixed(1)+'" y="11" text-anchor="middle" font-size="9" fill="var(--muted)" font-family="ui-monospace,monospace">'
+            +(Math.abs(t)<1e-6?'$0':usd(t))+'</text>'; }).join('')
+      +'</svg></div><div class="mnum"></div></div>';
+    host.innerHTML=rows.map(rowHtml).join('')+rowHtml(pkg)+axis;
+    if(leg){ leg.innerHTML=HEADS.filter(function(hh){
+        return rows.concat([pkg]).some(function(r){return Math.abs(r.conv[hh.k]||0)>=0.5||Math.abs(r.stat[hh.k]||0)>=0.5;});
+      }).map(function(hh){return '<span class="it"><span class="sw2" style="background:'+hh.c+'"></span>'+hh.label+'</span>';}).join('')
+      +'<span class="it mono" style="color:var(--muted)">slim bar = static estimate · middle bar = after cross-base spillovers · full bar = collected · ▴/▾ = collected minus static · left of $0 = revenue drained from a base</span>'; }
+  }
+  function wireStackDrag(){
+    var host=$('#stackfig'); if(!host||host.__wired)return; host.__wired=true;
+    var dragKey=null;
+    function keyUnder(y){ var els=host.querySelectorAll('.mrow[data-key]');
+      for(var i=0;i<els.length;i++){ var rc=els[i].getBoundingClientRect();
+        if(y>=rc.top&&y<=rc.bottom)return els[i].getAttribute('data-key'); } return null; }
+    function mark(){ if(dragKey==null)return; var el=host.querySelector('.mrow[data-key="'+dragKey+'"]'); if(el)el.classList.add('dragging'); }
+    function onMove(e){ if(dragKey==null)return; e.preventDefault();
+      var over=keyUnder(e.clientY);
+      if(over&&over!==dragKey){ var from=MARG_ORDER.indexOf(dragKey),to=MARG_ORDER.indexOf(over);
+        if(from>=0&&to>=0){ MARG_ORDER.splice(from,1); MARG_ORDER.splice(to,0,dragKey); renderMarginals(); mark(); } } }
+    function onUp(){ dragKey=null; document.removeEventListener('pointermove',onMove); document.removeEventListener('pointerup',onUp); renderMarginals(); }
+    host.addEventListener('pointerdown',function(e){
+      var g=e.target&&e.target.closest?e.target.closest('.mgrip'):null;
+      if(!g||g.classList.contains('ghost'))return;
+      var row=g.closest('.mrow'), k=row&&row.getAttribute('data-key'); if(!k)return;
+      dragKey=k; mark();
+      document.addEventListener('pointermove',onMove); document.addEventListener('pointerup',onUp);
+      e.preventDefault(); });
+  }
+
+  function renderAll(){
+    LEVERS.forEach(function(l){
+      var host=document.querySelector('.lever[data-key="'+l.key+'"]');
+      if(host)host.className='lever'+(state[l.key].on?' on':'');
+      var b=document.querySelector('.sw[data-key="'+l.key+'"]');
+      if(b)b.setAttribute('aria-pressed',state[l.key].on?'true':'false');
+      if(l.interp==='ladder'||l.interp==='ladder_x'){
+        var pos=state[l.key].on?state[l.key].vals[l.params[0].key]:'off';
+        l.params[0].positions.forEach(function(pp){
+          var sb=document.querySelector('.seg button[data-key="'+l.key+'"][data-pos="'+pp+'"]');
+          if(sb)sb.setAttribute('aria-pressed',pp===pos?'true':'false');
+        });
+        var xd=document.querySelector('.dials[data-xdials="'+l.key+'"]');
+        if(xd)xd.style.display=(pos==='off')?'none':'';
+      }
+    });
+    var d=compute(),any=d.keys.length>0;
+    var gap2=d.actual-d.convParts,g2s=gap2>=0?'+':'−',
+        gapPct=d.convParts>0?Math.round(100*Math.abs(gap2)/d.convParts):0;
+    $('#tiles').innerHTML=[
+      tile('Sum of standalone scores',any?usd(d.convParts):'—',any?pg(d.convParts)+' of GDP':'',d.keys.length+' polic'+(d.keys.length===1?'y':'ies')+', scored separately'),
+      tile('Combined package',any?usd(d.actual):'—',any?pg(d.actual)+' of GDP':'','scored as one reform',true),
+      tile('Interaction',any?(g2s+usd(Math.abs(gap2))):'—',any?(g2s+gapPct+'% vs. the sum'):'',any?'package vs. sum of standalone scores':'nothing selected'),
+      tile('Top 0.1% ETR',d.totTop.static.toFixed(1)+'%',any?('realized '+d.totTop.conv.toFixed(1)+'%'):'',any?('+'+(d.totTop.static-d.totTop.baseline).toFixed(1)+'pp vs. baseline · '+ETRYEAR+', static estimate'):'baseline')
+    ].join('');
+    renderMarginals();
+    paintDist(d);
+  }
+
+  // distribution card: chart + legend + caption switch by DIST_VIEW
+  function paintDist(d){
+    var hatchSw='background:var(--accent-2);background-image:repeating-linear-gradient(45deg,var(--accent) 0 3px,var(--accent-2) 3px 7px)';
+    if(DIST_VIEW==='etr'){
+      $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
+      $('#etrLegend').innerHTML=
+        '<span class="it"><span class="sw2" style="background:var(--ink);border-radius:50%"></span>Current law</span>'
+        +'<span class="it"><span class="sw2" style="background:var(--accent);border-radius:50%"></span>Rate collected after behavior</span>'
+        +'<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>Static rate (before behavior)</span>'
+        +'<span class="it mono" style="color:var(--muted)">hollow-to-filled gap = static minus collected</span>';
+    } else {
+      $('#etr').innerHTML=combinedDist(d,widthOf('etr'));
+      var leg='';
+      if(DIST_VIEW==='context'){
+        leg+='<span class="it"><span class="sw2" style="background:var(--kept)"></span>After-tax income</span>'
+            +'<span class="it"><span class="sw2" style="background:var(--curlaw)"></span>Current law taxes</span>';
+      }
+      leg+='<span class="it"><span class="sw2" style="background:var(--accent)"></span>New taxes</span>'
+          +'<span class="it"><span class="sw2" style="'+hatchSw+'"></span>Lost to behavior (not collected)</span>'
+          +'<span class="it mono" style="color:var(--muted)">new taxes + lost to behavior = static estimate</span>';
+      $('#etrLegend').innerHTML=leg;
+    }
+    var basisTxt=(INCDEF==='hs'?'accrual income (Haig-Simons, which includes unrealized gains)':'cash income (expanded cash income)');
+    var cap;
+    if(DIST_VIEW==='context') cap='Each bar is the income held by a slice of the distribution in '+ETRYEAR+', split into after-tax income, the tax paid under <b>current law</b> (steel), the package’s <b>new taxes</b> (solid blue), and the part <b>lost to behavior</b> (hatched). New taxes plus the part lost to behavior is the static estimate; the solid part is what is collected. Measured against '+basisTxt+'; baseline-fixed ranking, corporate tax under the capital-income convention.';
+    else if(DIST_VIEW==='new') cap='The package’s new taxes in '+ETRYEAR+', by income group: solid blue is what is <b>collected</b>, hatched is the part <b>lost to behavior</b>, and together they are the static estimate. Over '+basisTxt+'; baseline-fixed ranking, corporate tax under the capital-income convention.';
+    else cap='Effective tax rate by income group in '+ETRYEAR+'. Each group shows three dots on a stem: current law (black); the package’s static rate (hollow); and the rate collected after behavior responds, over the same denominator (filled). The gap between the hollow and filled dots is the difference between the static estimate and what is collected. Over '+basisTxt+'; baseline-fixed ranking, corporate tax under the capital-income convention.';
+    $('#distCap').innerHTML=cap;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(b){
+    b.onclick=function(){ INCDEF=b.dataset.def;
+      Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(x){
+        x.setAttribute('aria-pressed', x.dataset.def===INCDEF?'true':'false'); });
+      renderAll(); }; });
+
+  // distribution view toggle (In context / New taxes / Effective rate) — repaint
+  // only the dist card (the rest of the page is view-independent)
+  Array.prototype.forEach.call(document.querySelectorAll('#distViewTog button'),function(b){
+    b.onclick=function(){ DIST_VIEW=b.dataset.v;
+      Array.prototype.forEach.call(document.querySelectorAll('#distViewTog button'),function(x){
+        x.setAttribute('aria-pressed', x.dataset.v===DIST_VIEW?'true':'false'); });
+      paintDist(compute()); }; });
+
+  // ---- badge ------------------------------------------------------------------- //
+  var val=DATA.meta.surrogate.validation||{};
+  var nHold=((val.quiz&&val.quiz.n)||0)+((val.corners&&val.corners.n)||0);
+  function pctList(a){ return a?a.map(function(v){return '±'+v+'%';}).join(' / '):''; }
+  $('#dataBadge').textContent=DATA.meta.placeholder
+    ? 'Preview · '+DATA.meta.placeholder
+    : 'Model output · interpolated; verified on '+nHold+' holdout runs — conv '
+      +pctList(val.bounds_pct)+' by decade (static '+pctList(val.static_bounds_pct)+')';
+
+  // ---- decade toggle -------------------------------------------------------------- //
+  function renderDecTog(){
+    var host=$('#decTog'); host.innerHTML='';
+    var names=['First decade','Second decade','Third decade'];
+    DECADES.forEach(function(w,i){
+      var b=document.createElement('button'); b.type='button'; b.dataset.dec=String(i);
+      b.textContent=(names[i]||('Decade '+(i+1)))+' · '+w[0]+'–'+String(w[1]).slice(2);
+      b.setAttribute('aria-pressed',i===DEC?'true':'false');
+      b.onclick=function(){ setDecade(i); };
+      host.appendChild(b);
+    });
+  }
+  function setDecade(i){
+    if(i===DEC)return;
+    DEC=i;
+    Array.prototype.forEach.call(document.querySelectorAll('#decTog button'),function(x){
+      x.setAttribute('aria-pressed',+x.dataset.dec===DEC?'true':'false');});
+    renderAll();
+  }
+
+  // ---- boot ---------------------------------------------------------------------- //
+  initState();
+  renderControls();
+  renderDecTog();
+  // default view: current law — everything off, dials at their law values
+  syncInputs();
+  renderAll();
+  wireStackDrag();
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
+
+
+  // ---- harness hooks --------------------------------------------------------------- //
+  function setState(s){
+    LEVERS.forEach(function(l){
+      if(s[l.key]){
+        state[l.key].on=true;
+        l.params.forEach(function(p){
+          state[l.key].vals[p.key]=s[l.key][p.key]!==undefined?s[l.key][p.key]:p.ref;});
+      } else {
+        state[l.key].on=false;
+      }
+    });
+    syncInputs(); renderAll();
+  }
+  window.__ATLAS2__={evalQ:evalQ,shapley:shapley,gOf:gOf,evalGrid:evalGrid,
+    setState:setState,renderNow:renderAll,surState:surState,
+    setDecade:setDecade,getDecade:function(){return DEC;},
+    DATA:DATA,state:state,LEVERS:LEVERS};
+})();
+</script>

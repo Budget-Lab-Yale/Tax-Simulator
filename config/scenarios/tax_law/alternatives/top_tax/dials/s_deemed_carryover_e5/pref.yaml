@@ -1,0 +1,34 @@
+---
+# top_tax dial DEEMED: carryover at death, all asset classes, from 2027
+# (code 0=step-up baseline, 1=carryover, 2=deemed_realization)
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2027': 1
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2027': 1
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2027': 1
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2027': 1
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2027': 1
+
+# top_tax dial DEEMED exclusion: first $5,000,000 of gain at death per decedent
+# keeps step-up (on top of Sec. 121); married amount is double
+kg_death_gain_excl_single:
+  value:
+    '2014': 0
+    '2027': 5000000
+kg_death_gain_excl_married:
+  value:
+    '2014': 0
+    '2027': 10000000

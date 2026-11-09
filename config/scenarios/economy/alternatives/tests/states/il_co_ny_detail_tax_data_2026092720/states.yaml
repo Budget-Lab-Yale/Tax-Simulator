@@ -1,0 +1,7 @@
+# Computes state income taxes for IL CO NY, writing the state detail matrix.
+
+jurisdictions:
+  value: IL CO NY
+
+detail:
+  value: 1

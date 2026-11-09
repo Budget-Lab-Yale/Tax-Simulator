@@ -1,0 +1,7 @@
+# Computes state income taxes for IL NY, writing the state detail matrix.
+
+jurisdictions:
+  value: IL NY
+
+detail:
+  value: 1

@@ -1,0 +1,39 @@
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:lubridate’:
+
+    hour, isoweek, mday, minute, month, quarter, second, wday, week,
+    yday, year
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+Error in `group_by()`:
+! Must group by variables found in `.data`.
+✖ Column `regime` is not found.
+Backtrace:
+    ▆
+ 1. ├─... %>% ...
+ 2. ├─dplyr::mutate(...)
+ 3. ├─dplyr::summarise(., .groups = "drop")
+ 4. ├─dplyr::group_by(., year, regime)
+ 5. └─dplyr:::group_by.data.frame(., year, regime)
+ 6.   └─dplyr::group_by_prepare(.data, ..., .add = .add, error_call = current_env())
+ 7.     └─rlang::abort(bullets, call = error_call)
+Execution halted

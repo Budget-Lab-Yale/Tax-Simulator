@@ -1,0 +1,6 @@
+---
+# +5pp ACROSS-THE-BOARD on preferred rates (LTCG + qualified dividends):
+# every bracket up 5pp, [0, 0.15, 0.20] -> [0.05, 0.20, 0.25]. Step-up
+# unchanged. Used for the old-vs-new calibration comparison.
+rates:
+  value: [0.05, 0.20, 0.25]

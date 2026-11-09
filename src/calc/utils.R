@@ -18,7 +18,12 @@ derive_vars = function(tax_unit) {
   tax_unit %>% 
     mutate(
       
-      # Schedule E related variables
+      # Schedule E related variables. The loss pieces are the losses allowed
+      # on the return, so Schedule E income is the net partnership and S
+      # corporation amount, gain or loss, plus net rent and net estate and
+      # trust income. part_scorp and part_scorp_loss split the net
+      # pass-through amount into its positive and negative halves for
+      # reporting.
       part            = part_active + part_passive - part_active_loss - 
                         part_passive_loss - part_179,
       scorp           = scorp_active + scorp_passive - scorp_active_loss - 
@@ -28,7 +33,7 @@ derive_vars = function(tax_unit) {
       pt              = part + scorp + sole_prop,
       net_rent        = rent - rent_loss,
       net_estate      = estate - estate_loss,
-      sch_e           = part_scorp + net_rent + net_estate
+      sch_e           = part + scorp + net_rent + net_estate
       
     ) %>% 
     return()
@@ -102,188 +107,192 @@ parse_calc_fn_input = function(tax_unit, req_vars, fill_missings = F) {
 
 
 
-integrate_rates_brackets = function(df, n_brackets, prefix_brackets, 
-                                    prefix_rates, y, output_name, by_bracket) {
-  
+integrate_schedule = function(df, n_brackets, prefix_brackets, prefix_rates,
+                              output_name, by_bracket, bracket_fn) {
+
   #----------------------------------------------------------------------------
-  # Given a dataframe containing columns for a schedule of tax rates/brackets
-  # and an income ("y") column, calculates tax liability (and liability by 
-  # bracket, if specified). In other words, a vectorized tax liability 
-  # calculator. 
-  # 
-  # The number of rates and brackets must be the same, and if the number of 
-  # brackets is not specified, the function will determine it based on the
-  # supplied bracket column names.
-  # 
+  # Runs the work the two schedule integrators below share: removing defunct
+  # rate and bracket columns, ascertaining the number of brackets when it is not
+  # supplied, appending the infinite top bracket, mapping the per-bracket tax
+  # function over brackets, and assembling the output columns.
+  #
   # Parameters:
-  #   - df (df)               : a tibble with an income column and columns for 
+  #   - df (df)               : a tibble with an income column and columns for
   #                             brackets/rates
-  #   - n_brackets (int)      : number of brackets. If NULL the code ascertains 
+  #   - n_brackets (int)      : number of brackets. If NULL the code ascertains
   #                             by parsing max integer from df's bracket cols
-  #   - prefix_brackets (str) : string uniquely identifying bracket columns. 
-  #                             Integers, corresponding to bracket number, 
+  #   - prefix_brackets (str) : string uniquely identifying bracket columns.
+  #                             Integers, corresponding to bracket number,
   #                             follow the prefix -- unless there is just one
-  #                             bracket, in which case specifying just the 
+  #                             bracket, in which case specifying just the
   #                             prefix is allowed
   #   - prefix_rates (str)    : string uniquely identifying rate column
-  #   - y (str)               : column name for income fed to rates/brackets 
-  #   - output_name (str)     : name for function output variables 
+  #   - output_name (str)     : name for function output variables
   #   - by_bracket (bool)     : whether to include bracket-specific output
   #                             columns
+  #   - bracket_fn (fn)       : function(df, i) returning the vector of tax
+  #                             attributable to bracket i, given the prepped df
   #
-  # Returns: a dataframe containing either a single liability column or one 
+  # Returns: a dataframe containing either a single liability column or one
   #          column for each bracket (df).
   #----------------------------------------------------------------------------
-  
-  # Remove all-NA rate/bracket columns -- indicates that in a prior or future 
-  # year there are more brackets
-  defunct_brackets = df %>% 
-    summarise(across(.cols = c(starts_with(prefix_brackets), starts_with(prefix_rates)), 
-                     .fns = ~ sum(is.na(.)) / n())) %>% 
-    pivot_longer(cols = everything()) %>% 
-    filter(value == 1) %>% 
-    select(name) %>% 
-    deframe()
-  
-  df %<>% 
-    select(-all_of(defunct_brackets))
-  
-  
+
+  # Remove all-NA rate and bracket columns, which mean a prior or future year has
+  # more brackets. This runs repeatedly on the full microdata frame, so inspect
+  # only the schedule columns rather than copying the frame.
+  schedule_cols = names(df)[
+    startsWith(names(df), prefix_brackets) |
+      startsWith(names(df), prefix_rates)
+  ]
+  if (nrow(df) > 0 && length(schedule_cols) > 0) {
+    defunct_brackets = schedule_cols[
+      vapply(df[schedule_cols], function(x) all(is.na(x)), logical(1))
+    ]
+    if (length(defunct_brackets) > 0) {
+      df[defunct_brackets] = NULL
+    }
+  }
+
+
   # If number of brackets isn't supplied by user, ascertain it
   if (is.null(n_brackets)) {
     n_brackets = get_n_cols(df, prefix_brackets)
-    
+
     # Add integer index if not specified under single-bracket case
     if (n_brackets == 1 & prefix_brackets %in% names(df)) {
-      df %<>% 
-        rename_with(.cols = all_of(prefix_brackets), 
-                    .fn   = ~ paste0(prefix_brackets, 1)) %>% 
-        rename_with(.cols = all_of(prefix_rates), 
+      df %<>%
+        rename_with(.cols = all_of(prefix_brackets),
+                    .fn   = ~ paste0(prefix_brackets, 1)) %>%
+        rename_with(.cols = all_of(prefix_rates),
                     .fn   = ~ paste0(prefix_rates, 1))
     }
   }
-  
+
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
   df[[paste0(prefix_brackets, n_brackets + 1)]] = Inf
-  
-  # Generate bracket-specific output names
-  bracket_output_names = paste0(output_name, 1:n_brackets) 
-  
-  # Iterate over brackets, stored with associated output prefix
-  1:n_brackets %>% 
-    set_names(bracket_output_names) %>% 
-    
-    # For each bracket...
-    map_df(function(i) {
-      
-      # Determine lesser of next bracket or income
-      inc = pmin(df[[paste0(prefix_brackets, i + 1)]], df[[y]])
 
-      # Calculate as excess over this bracket
-      excess = pmax(0, inc - df[[paste0(prefix_brackets, i)]])
-      
-      # Apply rate and return
-      return(excess * df[[paste0(prefix_rates, i)]])
-      
-    }) %>%
-    
-    # Generate total output column
-    mutate(!!output_name := rowSums(.)) %>% 
-    
-    # Remove intermediate bracket-level calculations if specified
-    select(all_of(output_name), 
-           if (by_bracket) all_of(bracket_output_names) else c()) %>% 
+  # Calculate each bracket. Most callers need only the total, so accumulate into
+  # one vector rather than building a tibble per bracket and summing across it.
+  bracket_output_names = paste0(output_name, seq_len(n_brackets))
+  if (!by_bracket) {
+    total = numeric(nrow(df))
+    for (i in seq_len(n_brackets)) {
+      total = total + bracket_fn(df, i)
+    }
+    return(tibble(!!output_name := total))
+  }
+
+  bracket_output = lapply(seq_len(n_brackets), function(i) bracket_fn(df, i))
+  names(bracket_output) = bracket_output_names
+  bracket_output = as_tibble(bracket_output)
+  bind_cols(
+    tibble(!!output_name := rowSums(bracket_output)),
+    bracket_output
+  ) %>%
     return()
 }
 
 
 
-integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets, 
-                                                prefix_rates, y, x, inclusive,
-                                                output_name, by_bracket) {
-  
+integrate_rates_brackets = function(df, n_brackets, prefix_brackets,
+                                    prefix_rates, y, output_name, by_bracket) {
+
   #----------------------------------------------------------------------------
-  # Given a dataframe containing columns for a schedule of tax rates/brackets,
-  # an overall income column ("y"), and a specific income column ("x"), 
-  # calculates tax on x depending on which bracket y falls into. In other 
-  # words, integrates tax for x when stacked after y. 
-  # 
-  # Less abstractly, we see this structure under current law most prominently 
-  # with taxes on long-term capital gains. The tax rate faced by capital gains
-  # ("x" here) depends on how much taxable income ("y" here) the taxpayer has. 
-  # In that sense, tax on x is *conditional* on y. 
+  # Given a dataframe containing columns for a schedule of tax rates/brackets
+  # and an income ("y") column, calculates tax liability (and liability by
+  # bracket, if specified). In other words, a vectorized tax liability
+  # calculator.
   #
-  #
-  # The number of rates and brackets must be the same, and if the number of 
+  # The number of rates and brackets must be the same, and if the number of
   # brackets is not specified, the function will determine it based on the
   # supplied bracket column names.
-  # 
+  #
   # Parameters:
-  #   - df (df)               : a tibble with an income column and columns for 
+  #   - df (df)               : a tibble with an income column and columns for
   #                             brackets/rates
-  #   - n_brackets (int)      : number of brackets. If NULL the code ascertains 
+  #   - n_brackets (int)      : number of brackets. If NULL the code ascertains
   #                             by parsing max integer from df's bracket cols
-  #   - prefix_brackets (str) : string uniquely identifying bracket columns. 
-  #                             Integers, corresponding to bracket number, 
+  #   - prefix_brackets (str) : string uniquely identifying bracket columns.
+  #                             Integers, corresponding to bracket number,
   #                             follow the prefix -- unless there is just one
-  #                             bracket, in which case specifying just the 
+  #                             bracket, in which case specifying just the
   #                             prefix is allowed
   #   - prefix_rates (str)    : string uniquely identifying rate column
-  #   - y (str)               : column name for conditioning income variable y 
-  #   - x (str)               : column name for income variable x on which tax 
-  #                             is being assessed 
-  #   - inclusive (bool)      : whether x is included in y. If so, tax is
-  #                             limited to smaller of y and (x - y) in order to
-  #                             properly account for case when x > y i.e. y < 0
-  #   - output_name (str)     : name for function output variables 
+  #   - y (str)               : column name for income fed to rates/brackets
+  #   - output_name (str)     : name for function output variables
   #   - by_bracket (bool)     : whether to include bracket-specific output
   #                             columns
   #
-  # Returns: a dataframe containing either a single liability column or one 
+  # Returns: a dataframe containing either a single liability column or one
   #          column for each bracket (df).
   #----------------------------------------------------------------------------
-  
-  # Remove all-NA rate/bracket columns -- indicates that in a prior or future 
-  # year there are more brackets
-  defunct_brackets = df %>% 
-    summarise(across(.cols = c(starts_with(prefix_brackets), starts_with(prefix_rates)), 
-                     .fns = ~ sum(is.na(.)) / n())) %>% 
-    pivot_longer(cols = everything()) %>% 
-    filter(value == 1) %>% 
-    select(name) %>% 
-    deframe()
-  
-  df %<>% 
-    select(-all_of(defunct_brackets))
-  
-  
-  # If number of brackets isn't supplied by user, ascertain it
-  if (is.null(n_brackets)) {
-    n_brackets = get_n_cols(df, prefix_brackets)
-    
-    # Add integer index if not specified under single-bracket case
-    if (n_brackets == 1 & prefix_brackets %in% names(df)) {
-      df %<>% 
-        rename_with(.cols = all_of(prefix_brackets), 
-                    .fn   = ~ paste0(prefix_brackets, 1)) %>% 
-        rename_with(.cols = all_of(prefix_rates), 
-                    .fn   = ~ paste0(prefix_rates, 1))
+
+  integrate_schedule(
+    df, n_brackets, prefix_brackets, prefix_rates, output_name, by_bracket,
+    bracket_fn = function(df, i) {
+
+      # Determine lesser of next bracket or income
+      inc = pmin(df[[paste0(prefix_brackets, i + 1)]], df[[y]])
+
+      # Calculate as excess over this bracket
+      excess = pmax(0, inc - df[[paste0(prefix_brackets, i)]])
+
+      # Apply rate and return
+      return(excess * df[[paste0(prefix_rates, i)]])
     }
-  }
-  
-  # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
-  df[[paste0(prefix_brackets, n_brackets + 1)]] = Inf
-  
-  # Generate bracket-specific output names
-  bracket_output_names = paste0(output_name, 1:n_brackets) 
-  
-  # Iterate over brackets, stored with associated output prefix
-  1:n_brackets %>% 
-    set_names(bracket_output_names) %>% 
-    
-    # For each bracket...
-    map_df(function(i) {
-      
+  )
+}
+
+
+
+integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
+                                                prefix_rates, y, x, inclusive,
+                                                output_name, by_bracket) {
+
+  #----------------------------------------------------------------------------
+  # Given a dataframe containing columns for a schedule of tax rates/brackets,
+  # an overall income column ("y"), and a specific income column ("x"),
+  # calculates tax on x depending on which bracket y falls into. In other
+  # words, integrates tax for x when stacked after y.
+  #
+  # Less abstractly, we see this structure under current law most prominently
+  # with taxes on long-term capital gains. The tax rate faced by capital gains
+  # ("x" here) depends on how much taxable income ("y" here) the taxpayer has.
+  # In that sense, tax on x is *conditional* on y.
+  #
+  #
+  # The number of rates and brackets must be the same, and if the number of
+  # brackets is not specified, the function will determine it based on the
+  # supplied bracket column names.
+  #
+  # Parameters:
+  #   - df (df)               : a tibble with an income column and columns for
+  #                             brackets/rates
+  #   - n_brackets (int)      : number of brackets. If NULL the code ascertains
+  #                             by parsing max integer from df's bracket cols
+  #   - prefix_brackets (str) : string uniquely identifying bracket columns.
+  #                             Integers, corresponding to bracket number,
+  #                             follow the prefix -- unless there is just one
+  #                             bracket, in which case specifying just the
+  #                             prefix is allowed
+  #   - prefix_rates (str)    : string uniquely identifying rate column
+  #   - y (str)               : column name for conditioning income variable y
+  #   - x (str)               : column name for income variable x on which tax
+  #                             is being assessed
+  #   - inclusive (bool)      : whether x is included in y. If so, x is taxed
+  #                             as the top slice of y
+  #   - output_name (str)     : name for function output variables
+  #   - by_bracket (bool)     : whether to include bracket-specific output
+  #                             columns
+  #
+  # Returns: a dataframe containing either a single liability column or one
+  #          column for each bracket (df).
+  #----------------------------------------------------------------------------
+
+  integrate_schedule(
+    df, n_brackets, prefix_brackets, prefix_rates, output_name, by_bracket,
+    bracket_fn = function(df, i) {
+
       # Extract vectors from dataframe for readability
       bracket      = df[[paste0(prefix_brackets, i)]]
       next_bracket = df[[paste0(prefix_brackets, i + 1)]]
@@ -293,29 +302,24 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
 
       # Adjust brackets by amount already "filled up" by y
       adj_bracket      = pmax(0, bracket - y)
-      adj_next_bracket = pmax(0, next_bracket - y) 
-      
+      adj_next_bracket = pmax(0, next_bracket - y)
+
       # Calculate excess of x over adjusted bracket
       excess_x = pmax(0, pmin(adj_next_bracket, x) - adj_bracket)
-      
-      # Limit excess x to excess y if y includes x
+
+      # When x is part of y it occupies the top x dollars of y, the band from
+      # max(0, y - x) to y. Tax it over the brackets that band spans, rather than
+      # stacking x above y and capping each bracket, which drops the lower brackets
+      # when y - x is small but y sits high in the schedule.
       if (inclusive) {
-        excess_y = pmax(0, pmin(next_bracket, y) - bracket)
-        excess_x = pmin(excess_x, excess_y)
+        lo       = pmax(0, y - x)
+        excess_x = pmax(0, pmin(next_bracket, y) - pmax(bracket, lo))
       }
-      
+
       # Apply rate and return
       return(excess_x * rate)
-      
-    }) %>%
-    
-    # Generate total output column
-    mutate(!!output_name := rowSums(.)) %>% 
-    
-    # Remove intermediate bracket-level calculations if specified
-    select(all_of(output_name), 
-           if (by_bracket) all_of(bracket_output_names) else c()) %>% 
-    return()
+    }
+  )
 }
 
 

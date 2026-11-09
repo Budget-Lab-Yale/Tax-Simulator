@@ -1,0 +1,10 @@
+---
+
+# Minimal non-corporate reform for the corp OME two-stream smoke test: bump the
+# top ordinary rate 0.37 -> 0.40 from 2026. No corporate wedge, so this scenario
+# exercises the inert (zero corporate / zero corporate_static) receipts path.
+rates:
+  value:
+    '2014': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+    '2018': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+    '2026': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.40]

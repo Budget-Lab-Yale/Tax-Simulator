@@ -1,0 +1,690 @@
+<title>Top-Tax Interaction Exercise — Prospectus</title>
+<style>
+  :root {
+    --bg: #FAFAF6;
+    --ink: #1C2521;
+    --muted: #5C6B62;
+    --faint: #8A968D;
+    --accent: #1F6E54;
+    --accent-ink: #14523E;
+    --rule: #DDE3DC;
+    --panel: #F1F4EE;
+    --panel-edge: #E2E8E0;
+    --code-bg: #EDF1EB;
+    --built: #1F6E54;
+    --built-bg: #E3EFE8;
+    --tobuild: #8A5A16;
+    --tobuild-bg: #F5EBD8;
+    --calib: #3D5A80;
+    --calib-bg: #E4EAF2;
+    --defer: #6B6B6B;
+    --defer-bg: #ECECEA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121814;
+      --ink: #E4EBE5;
+      --muted: #9AAB9F;
+      --faint: #6E7D72;
+      --accent: #5FBF9C;
+      --accent-ink: #7FD4B4;
+      --rule: #26302A;
+      --panel: #191F1B;
+      --panel-edge: #26302A;
+      --code-bg: #1A221D;
+      --built: #5FBF9C;
+      --built-bg: #16241D;
+      --tobuild: #D9A75B;
+      --tobuild-bg: #292013;
+      --calib: #8FB0D9;
+      --calib-bg: #16202C;
+      --defer: #9A9A94;
+      --defer-bg: #20201E;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121814;
+    --ink: #E4EBE5;
+    --muted: #9AAB9F;
+    --faint: #6E7D72;
+    --accent: #5FBF9C;
+    --accent-ink: #7FD4B4;
+    --rule: #26302A;
+    --panel: #191F1B;
+    --panel-edge: #26302A;
+    --code-bg: #1A221D;
+    --built: #5FBF9C;
+    --built-bg: #16241D;
+    --tobuild: #D9A75B;
+    --tobuild-bg: #292013;
+    --calib: #8FB0D9;
+    --calib-bg: #16202C;
+    --defer: #9A9A94;
+    --defer-bg: #20201E;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAFAF6;
+    --ink: #1C2521;
+    --muted: #5C6B62;
+    --faint: #8A968D;
+    --accent: #1F6E54;
+    --accent-ink: #14523E;
+    --rule: #DDE3DC;
+    --panel: #F1F4EE;
+    --panel-edge: #E2E8E0;
+    --code-bg: #EDF1EB;
+    --built: #1F6E54;
+    --built-bg: #E3EFE8;
+    --tobuild: #8A5A16;
+    --tobuild-bg: #F5EBD8;
+    --calib: #3D5A80;
+    --calib-bg: #E4EAF2;
+    --defer: #6B6B6B;
+    --defer-bg: #ECECEA;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, serif;
+    font-size: 17px;
+    line-height: 1.62;
+    margin: 0;
+    padding: 0 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .sheet { max-width: 740px; margin: 0 auto; padding: 56px 0 96px; }
+  .wide { max-width: 100%; }
+
+  .eyebrow {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  header.masthead { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 40px; }
+  h1 {
+    font-size: 40px;
+    line-height: 1.12;
+    font-weight: 700;
+    margin: 14px 0 12px;
+    letter-spacing: -0.012em;
+    text-wrap: balance;
+  }
+  .dek { font-size: 19px; line-height: 1.5; color: var(--muted); margin: 0 0 18px; max-width: 620px; }
+  .meta {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 12.5px;
+    color: var(--faint);
+    display: flex; flex-wrap: wrap; gap: 6px 18px;
+  }
+  .meta code { font-size: 11.5px; }
+
+  h2 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  h3 { font-size: 19.5px; font-weight: 700; margin: 36px 0 10px; text-wrap: balance; }
+  h4 { font-size: 16.5px; font-weight: 700; margin: 26px 0 8px; }
+  p { margin: 0 0 16px; }
+  section.part { margin-top: 64px; }
+  .part-head { border-top: 2px solid var(--ink); padding-top: 18px; margin-bottom: 24px; }
+  .part-head .eyebrow { color: var(--muted); }
+  .part-head p.summary { color: var(--muted); font-size: 16px; margin: 8px 0 0; max-width: 640px; }
+
+  a { color: var(--accent-ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  ul, ol { margin: 0 0 16px; padding-left: 26px; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--faint); }
+
+  code, .mono {
+    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .eq {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  .eq pre {
+    margin: 0;
+    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    background: none;
+    padding: 0;
+  }
+  .eq .note {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    border-top: 1px solid var(--panel-edge);
+    padding-top: 8px;
+  }
+
+  .tablewrap { overflow-x: auto; margin: 18px 0 24px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 14.5px;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 8px 14px 8px 0;
+    border-bottom: 2px solid var(--ink);
+    vertical-align: bottom;
+  }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  td.num { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+
+  .chip {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .chip.built { color: var(--built); background: var(--built-bg); }
+  .chip.tobuild { color: var(--tobuild); background: var(--tobuild-bg); }
+  .chip.calib { color: var(--calib); background: var(--calib-bg); }
+  .chip.defer { color: var(--defer); background: var(--defer-bg); }
+
+  .callout {
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin: 22px 0;
+  }
+  .callout .eyebrow { display: block; margin-bottom: 8px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout ul:last-child { margin-bottom: 0; }
+
+  .rev-note {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--tobuild);
+    background: var(--tobuild-bg);
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 10px 14px;
+    margin: 14px 0 18px;
+  }
+  .rev-note code { background: transparent; padding: 0; color: inherit; }
+  s { color: var(--faint); text-decoration-thickness: 1px; }
+
+  .ledger { counter-reset: none; }
+  .journey {
+    border-left: 2px solid var(--accent);
+    padding-left: 20px;
+    margin: 20px 0 24px;
+    display: grid;
+    gap: 12px;
+  }
+  .journey .leg { font-size: 15.5px; }
+  .journey .leg b {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  footer {
+    margin-top: 72px;
+    border-top: 2px solid var(--ink);
+    padding-top: 18px;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  footer code { font-size: 11px; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    h1 { font-size: 31px; }
+    h2 { font-size: 23px; }
+  }
+</style>
+
+<div class="sheet">
+
+<header class="masthead">
+  <span class="eyebrow">The Budget Lab at Yale &middot; Tax-Simulator &middot; Project Prospectus</span>
+  <h1>Taxing the Top: The Cross-Base Interaction Exercise</h1>
+  <p class="dek">What the model computes that an elasticity calculation cannot, how we will publish it, and what has to be built first.</p>
+  <div class="meta">
+    <span>Drafted 2026-07-07</span>
+    <span>Revised 2026-07-08 (design lock)</span>
+    <span>Updated 2026-07-08 (&sigma; built, validated, calibrated)</span>
+    <span>branch <code>wealth</code></span>
+    <span>companion to <code>other/top_tax/frontier_exercise_notes_2026-07-07.md</code></span>
+  </div>
+</header>
+
+<!-- ============================ DECISIONS ============================ -->
+
+<div class="callout">
+  <span class="eyebrow">Status &mdash; &sigma; built, validated, and calibrated, 2026-07-08</span>
+  <p>The centerpiece build (Part III items 1&ndash;3b) is <strong>complete and verified</strong>: the &tau;<sub>eq</sub> extraction (finite-difference-verified on synthetic grids and on the real grid in-run), the &sigma; conversion machinery (gain-state injection, cell-tracker persistence, exact record&harr;cell conservation), the behavior module with pinned-order/MTR/state guards, and the hardened entity-shifting module. The never-before-exercised multi-module composition path works; a no-op byte-diff regression confirms pre-existing kg outputs are unchanged except documented additive columns.</p>
+  <p><strong>The validation run did its job and forced one change</strong> (DESIGN_LOCK amendment A1): at the asserted central &sigma; = 0.6, the full-stack top-subset ETI came out 0.431 against the Saez&ndash;Slemrod&ndash;Giertz 0.12&ndash;0.40 bracket &mdash; the calibration double-count that ruling 2 accepted-and-monitored, surfacing on schedule. The stack <em>without</em> &sigma; (entity shifting + evasion + charity) already delivers 0.223, so &sigma; was recalibrated as the <strong>residual conversion margin: central &sigma; = 0.08</strong>, confirmed by rerun at a total ETI of 0.2505 against the 0.25 target (the SSG central; income concept verified apples-to-apples &mdash; taxable income excluding gains, after deductions). The 0.2/0.9 bands are stale. Provenance and staleness conditions: <code>SIGMA_CALIB_PROVENANCE</code> in <code>src/sim/sigma_conversion.R</code>; plain-terms account: <code>other/top_tax/sigma_explainer.md</code>; exhibit: <code>other/top_tax/sigma_validation_out/</code>. Sections below are annotated where this supersedes them; the substantive architecture of &sect;&sect;1.4&ndash;1.6 is unchanged.</p>
+</div>
+
+<div class="callout">
+  <span class="eyebrow">Revision &mdash; design lock, 2026-07-08</span>
+  <p>Following an external code review (<code>other/top_tax/codex_review.md</code>) and an independent verification of its findings, the author re-ruled several &sigma; design points. <strong>The live design authority is now <code>other/top_tax/DESIGN_LOCK.md</code></strong> &mdash; where this prospectus conflicts with it, the lock wins. Superseded passages below are annotated inline. The substantive changes:</p>
+  <ul>
+    <li><strong>&tau;<sub>eq</sub> is extracted from the kg machinery itself</strong>, defined by finite difference against the exact bathtub recurrence and implemented as a linear recursion tested cell-by-cell against that ground truth (&sect;1.5a, new &mdash; plain-terms explainer). The crude closed form in &sect;1.5 is exposition only, dead as code.</li>
+    <li><s><strong>&sigma; is asserted (0.2 / 0.6 / 0.9), not residually calibrated.</strong></s> <span class="chip tobuild">Superseded same day (A1)</span> The informal check ran, the stack over-responded (ETI 0.431), and &sigma; was recalibrated to <strong>0.08</strong> as the residual margin &mdash; see the status callout above. The rest of the ruling stands: the perturbation run is an <em>informal build-time check</em>, not a formal gate, and the corporate-base-vs-gain-state split parameter is dropped; composition is a reported output, not a dial.</li>
+    <li><strong>No phase-in &phi;(t)</strong> &mdash; memoryless annual response, the same convention as entity shifting and evasion. The forcing is a <em>per-record</em> wedge (own calculator-measured MTRs on the ordinary leg; cell-level &tau;<sub>eq</sub> on the equity leg). Converted dollars enter the gain state at end-of-year (the inheritance-inflow convention), and &tau;<sub>eq</sub> prices exactly that timing by construction.</li>
+    <li><strong>Elasticity bundles are dropped for now.</strong> The campaign runs the central bundle only (&asymp; 5,200 runs); the Tier-2 low/high band runs are cut and can be reinstated later as pure additional orchestration.</li>
+    <li><strong>Entity shifting is hardened before the &sigma; validation runs</strong>: SECA companion co-scaling, order/required-MTR guards, a conservation diagnostic.</li>
+    <li><strong>No per-record &sigma; files in normal runs</strong>: the pre-pass persists cell-level aggregates only; the behavior module recomputes record conversions via a shared pure function under a hard conservation assert (per-record dump behind a debug env knob).</li>
+  </ul>
+</div>
+
+<div class="callout">
+  <span class="eyebrow">Decisions locked 2026-07-07</span>
+  <div class="tablewrap">
+  <table>
+    <tr><th style="width:32%">Question</th><th>Ruling</th></tr>
+    <tr><td>Headline output</td><td><strong>The interaction matrix, not a revenue-maximizing package.</strong> The revenue-max search (and its surrogate-surface machinery) is deferred entirely; the pairwise/factorial interaction structure is the publishable core and where the model has no competition.</td></tr>
+    <tr><td>Presentation</td><td><strong>An interactive explorer</strong> — dropdowns over a full-factorial policy grid, every displayed number an exact pipeline run (Yale HPC scale confirmed) — plus a simplified static exhibit for the report body.</td></tr>
+    <tr><td>Horizons</td><td><strong>10-year and 30-year, as two separate outputs.</strong> The divergence between them (bathtub erosion compounds) is itself a reported finding.</td></tr>
+    <tr><td>Corporate lever</td><td><strong>Discrete Off-Model-Estimates-scored rate points</strong> (e.g. 21 / 25 / 28 / 35), each a scored OME vintage with <code>corporate_meta.yaml</code>. No continuous &tau;<sub>c</sub> curve in v1.</td></tr>
+    <tr><td>Conversion wedge</td><td><span class="chip tobuild">Superseded 2026-07-08</span> <s><strong>Crude closed-form accrual-equivalent rate</strong>, with its two parameters pinned from the model&rsquo;s own kg outputs. Full Bellman extraction is a swappable upgrade &mdash; the &sigma; module takes W(t) as an input series.</s> Now: full extraction from the kg machinery, finite-difference-verified (&sect;1.5a).</td></tr>
+    <tr><td>&sigma; pool</td><td><strong>Labor-content slice</strong>: wages <em>plus</em> ~75% of active pass-through income (Smith&ndash;Yagan&ndash;Zidar&ndash;Zwick) for gated owner-managers, under <span class="chip tobuild">revised 2026-07-08</span> <em>one</em> discipline &mdash; sequential module application. <s>and residual calibration (&sect;1.7)</s> &sigma; is asserted; see the revision note.</td></tr>
+    <tr><td>Mark-to-market &amp; trusts</td><td><strong>Deferred entirely.</strong> The report covers on-model instruments only. (The data for a crude MTM lever exists &mdash; per-asset accrued gains and net worth are on every record &mdash; so this is sequencing, not impossibility.)</td></tr>
+    <tr><td>Migration / expatriation</td><td>Off-model haircut band on wealth-tax results, not a module (unchanged from the notes).</td></tr>
+  </table>
+  </div>
+</div>
+
+<!-- ============================ PART I ============================ -->
+
+<section class="part">
+<div class="part-head">
+  <span class="eyebrow">Part I</span>
+  <h2>The substantive vision</h2>
+  <p class="summary">A microsimulation in which the top-end tax bases are physically connected on record-level balance sheets, and the behavioral elasticities are equilibrium objects that move with the policy package.</p>
+</div>
+
+<h3>1.1 &nbsp;Why not an ETI calculation</h3>
+
+<p>The standard approach prices each instrument with a fixed, policy-invariant elasticity and adds the results. That fails at the top of the distribution for two reasons this model fixes. First, <strong>the bases overlap</strong>: the same dollar of wealth is capital income during life, an estate at death, and wealth-tax base in between &mdash; so hitting it anywhere shrinks the other bases. We track that on actual record-level balance sheets rather than through an assumed cross-elasticity. Second, <strong>the elasticities are policy-dependent</strong>: the realization elasticity is an equilibrium object that collapses when step-up ends; the entity-shifting elasticity depends on the corporate&ndash;individual differential; the income-conversion response depends on the whole tax vector; the financing response depends on the total bill. The Lucas critique bites hardest exactly where this report lives &mdash; large reforms far outside the variation that identified the reduced-form estimates.</p>
+
+<p>The empirical backing for treating single-base elasticities as misspecified is direct: with valid (Weber) instruments, Mortenson (2016) finds the own-tax ordinary-income ETI around the Bush cuts is <em>indistinguishable from zero until the capital-gains cross-rate enters the regression</em> &mdash; and once it does, his cleanest specification delivers own and cross responses that are almost exactly equal and opposite (+0.79 / &minus;0.77), the signature of a response driven by the <em>differential</em> between bases rather than by any single rate.</p>
+
+<h3>1.2 &nbsp;What the model already closes</h3>
+
+<p>Four cross-base loops are live &mdash; three mechanical, one behavioral:</p>
+
+<ol>
+  <li><strong>Wealth &harr; capital income &harr; estate (the bathtub).</strong> A share s of any during-life tax increase (income + payroll + wealth) is financed out of wealth rather than consumption (s calibrated 2026-07-07: 0.1 &rarr; 0.8 across the wealth distribution). The erosion compounds, shrinks future dividends/interest/gains/pass-through flows, and drains into the estate and wealth-tax bases. One channel, three interactions.</li>
+  <li><strong>Corporate &rarr; individual.</strong> A corporate hike cuts payout flows, marks down exposed equity (price margin on gains, basis fixed), scales payouts (quantity margin), and the individual-side offset materializes endogenously in conventional receipts. Feeds the bathtub as external income (<code>corp_dY_exog</code>).</li>
+  <li><strong>Death regime &rarr; realization elasticity.</strong> In <code>kg_dynamics</code>, realization solves a Bellman problem whose continuation value depends on the death regime (step-up / carryover / deemed, per asset class). Ending step-up mechanically <em>lowers the realization elasticity</em> &mdash; a naive calculation must assume this; we derive it.</li>
+  <li><strong>Entity shifting (behavioral).</strong> Pearce&ndash;Prisinzano semi-elasticity (&approx;0.63) moves business income across the corporate / pass-through boundary as the differential moves.</li>
+</ol>
+
+<p>Also on hand: evasion module (built 2026-07-07, &sect;1.3), charity elasticities, deemed-death avoidance haircut, NIIT and QBI levers, estate and wealth-tax law fully parameterized.</p>
+
+<h3>1.3 &nbsp;The top-end ETI, decomposed</h3>
+
+<p>Rather than bolting a literature ETI onto top-bracket income &mdash; which would double-count margins the model already produces &mdash; the classic elasticity is decomposed and each piece gets its own treatment:</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Component</th><th>Treatment</th><th>Status</th></tr>
+  <tr><td><strong>Real responses</strong> (labor supply)</td><td>Excluded by conventional-scoring convention (macro aggregates fixed &mdash; the same reason JCT excludes them). An assumed ~0.05 enters only the residualization arithmetic, never the model.</td><td><span class="chip defer">Excluded</span></td></tr>
+  <tr><td><strong>Evasion</strong> &mdash; a <em>leak</em></td><td><code>behavior/evasion/debacker.R</code>: DeBacker&ndash;Heim&ndash;Yuskavage net-of-tax elasticities on reported income, gated by information-reporting visibility (Schedule C/F 0.046, pass-through 0.052, rent 0.04, <strong>wages/interest/dividends 0</strong>). Top-end multiplier sweepable (NRP detection is a floor).</td><td><span class="chip built">Built</span></td></tr>
+  <tr><td><strong>Modeled legal avoidance</strong></td><td>Realization timing (kg Bellman), entity shifting (P&ndash;P), charity &mdash; already live. Their combined contribution is <em>measured</em> via a top-rate perturbation run, with income-concept discipline (gains excluded from the tally, per the ETI literature&rsquo;s income concept).</td><td><span class="chip built">Built</span></td></tr>
+  <tr><td><strong>&sigma; &mdash; cross-base conversion</strong>, a <em>conservation</em> parameter</td><td>The remainder: income repackaged from the ordinary base into the capital-gains base. Dollars do not leave the system &mdash; they land where the package&rsquo;s CG rate and death regime decide their fate. &sect;&sect;1.4&ndash;1.8. Now literally the residual: calibrated so the full stack hits a 0.25 total top ETI after the other rows contribute their measured 0.223.</td><td><span class="chip built">Built</span></td></tr>
+</table>
+</div>
+
+<h3>1.4 &nbsp;What &sigma; actually measures</h3>
+
+<p>&sigma; is the income-classification margin available to <strong>people who control the form of their own pay</strong>. Concretely, ranked by pool size:</p>
+
+<ol>
+  <li><strong>Owner-manager compensation-setting at closely held firms &mdash; the dominant pool.</strong> The owner chooses annually how much to take as salary/bonus (ordinary) versus leave in the firm and extract as appreciation &mdash; LTCG at sale, or untaxed under step-up. Smith&ndash;Yagan&ndash;Zidar&ndash;Zwick (QJE 2019) estimate ~75% of top pass-through profits are returns to owner <em>human capital</em>: at the top, the labor/capital boundary is already largely an accounting convention. That finding defines &sigma;&rsquo;s pool.
+  <div class="rev-note"><strong>Legal-channel precision (2026-07-08).</strong> &ldquo;Leave in the firm&rdquo; works as stated only for C corporations &mdash; <em>pass-throughs cannot retain taxable earnings</em> (K-1 income is taxed currently whether or not distributed). For pass-through owners the real channel is <strong>sweat equity</strong>: underpaying your own labor while it builds enterprise value realized as gain on eventual sale &mdash; available only to the extent the business is appreciable. The model&rsquo;s destination (the household unrealized-gain stock) is agnostic about the wrapper, and since &Delta;conv = &sigma;&middot;&Delta;W&middot;pool makes pool breadth and &sigma; one economic knob, the pool&rsquo;s over-breadth on pass-through legs is absorbed by the &sigma; = 0.08 calibration. Fuller account: <code>sigma_explainer.md</code>.</div></li>
+  <li><strong>Founder-equity structuring &mdash; the new-formation flow.</strong> Sub-market founder salary while effort accrues as stock: 83(b) elections on near-zero-basis shares, QSBS (&sect;1202 &mdash; up to $10M <em>tax-free</em>, so this route&rsquo;s effective rate is ~0), ISO-vs-RSU mix at private companies.</li>
+  <li><strong>Service partners: carried interest and profits interests</strong> (Rev. Proc. 93-27) &mdash; PE, hedge funds, real estate, any partnership can pay for labor in capital-gain form. Mostly inframarginal to small wedge changes; the elastic piece is new structuring volume.</li>
+</ol>
+
+<p>What &sigma; deliberately is <em>not</em>: RSU and option wages at public companies (ordinary at vest/exercise &mdash; those escape routes were legislated shut; the modern top W-2 base is the <em>selection residue</em> of past escape), business income crossing the entity boundary (the P&ndash;P module), realization timing (the Bellman), underreporting (the evasion module), and working less (excluded). The historical record shows the margin moves when the wedge is large &mdash; under the 91% top rates executive pay migrated wholesale into qualified stock options and deferred compensation, and Goolsbee (2000) found the apparent response to the 1993 hike was mostly option-exercise behavior at exactly this boundary.</p>
+
+<h3>1.5 &nbsp;Functional form</h3>
+
+<p>The forcing variable is the <strong>conversion wedge</strong> &mdash; the gap between the top ordinary rate and the effective rate actually paid on the equity path:</p>
+
+<div class="eq">
+<pre>&tau;_eq(t)  =  &tau;_cg(t) &times; [ &rho;&middot;&delta;_defer  +  (1&minus;&rho;)&middot;x_regime ]        (crude accrual-equivalent)
+
+W(t)     =  &tau;_ord_top(t)  &minus;  &tau;_eq(t)                          (conversion wedge)</pre>
+<div class="note">&rho; = share of accrued gains realized during life; &delta;_defer = PV discount for deferral; x_regime = 0 under step-up, &asymp;&delta;_death under deemed-at-death, below &delta;_defer under carryover. Illustrative: current law &asymp; 41% &minus; 9% &asymp; 32pp wedge; gains-at-ordinary + deemed-at-death collapses it to single digits. <strong>Exposition only as of 2026-07-08</strong> &mdash; this closed form is dead as code; the production &tau;<sub>eq</sub> is extracted from the kg machinery itself (&sect;1.5a).</div>
+</div>
+
+<h3>1.5a &nbsp;How &tau;<sub>eq</sub> actually works &mdash; in plain terms</h3>
+
+<p><strong>The question &tau;<sub>eq</sub> answers.</strong> Take one dollar of top compensation. Paid as salary, its tax life is trivial: taxed once, this year, at the ordinary marginal rate &mdash; roughly 41 cents, done. Now suppose the owner instead leaves that dollar in the firm, where it becomes a dollar of <em>unrealized capital gain</em>. What tax does that dollar pay? There is no single answer &mdash; it depends on everything that happens to it over the rest of the owner&rsquo;s life. &tau;<sub>eq</sub> is the average over all of those futures, expressed in present-value cents per dollar: <em>&ldquo;a dollar entering the gain state today, held by someone of age a in year t, will eventually pay &tau;<sub>eq</sub>(a,t) cents of tax, in today&rsquo;s money.&rdquo;</em> The conversion wedge is then just the two tax prices side by side: W = 41&cent; &minus; &tau;<sub>eq</sub>.</p>
+
+<p><strong>The life of a converted dollar.</strong> Once in the gain state, the dollar faces exactly the fates the model already tracks for every other unrealized gain:</p>
+
+<div class="journey">
+  <div class="leg"><b>Realized while alive</b> A slice of the stock is sold each year &mdash; at the cell&rsquo;s own realization rate (the fixed, planned, and Bellman-decision buckets combined) &mdash; and taxed at that year&rsquo;s capital-gains rate.</div>
+  <div class="leg"><b>Held to death under step-up</b> Basis resets; the deferred tax vanishes. Contribution to &tau;<sub>eq</sub>: zero. (This is why &tau;<sub>eq</sub> <em>falls</em> with age under current law &mdash; an 85-year-old&rsquo;s dollar is very likely to escape entirely.)</div>
+  <div class="leg"><b>Held to death under carryover</b> Heirs inherit the basis; the tax arrives later, when <em>they</em> sell &mdash; the same discounted death burden the Bellman already prices.</div>
+  <div class="leg"><b>Held to death under deemed realization</b> Taxed at death, nearly in full. Under this regime &tau;<sub>eq</sub> <em>rises</em> with age &mdash; less runway to defer.</div>
+  <div class="leg"><b>Bequeathed to charity</b> Never taxed, under any regime.</div>
+  <div class="leg"><b>Every future payment</b> Discounted back to today at &beta;.</div>
+</div>
+
+<p><strong>The arithmetic is bookkeeping, not optimization.</strong> Nothing new is being solved. The kg machinery has already decided how fast each (age, year) cell realizes gains, how likely each cell is to die, and what death costs under each regime. &tau;<sub>eq</sub> simply follows one dollar through those existing rules and adds up the discounted taxes. Formally it is a backward recursion &mdash; the expected tax on a dollar held at age a equals this year&rsquo;s expected tax plus the discounted expected tax on whatever survives to age a+1:</p>
+
+<div class="eq">
+<pre>&tau;_eq(a,t)  =  [share realized this year] &middot; &tau;(a,t)
+           +  [share dying this year]   &middot; death_burden(a,t) &middot; &tau;(a,t)
+           +  [share surviving, unrealized] &middot; &beta; &middot; &tau;_eq(a+1, t+1)</pre>
+<div class="note">Every input is a number the model already produces for the bathtub: the realization share is the <em>scenario</em> rate r_S (fixed + retimed-planned + Bellman-decision buckets), the death burden is the regime-mix object c_phi_eff (0 under step-up, &theta;-weighted under carryover, &asymp;full under deemed, net of the charity share), mortality and &beta; are the Bellman&rsquo;s own. Computed twice per scenario-year &mdash; under baseline policy (&tau;_eq_B) and under the reform (&tau;_eq_S).</div>
+</div>
+
+<p><strong>Why it is verified by finite difference (ruled 2026-07-08).</strong> Two details make an informal formula easy to get subtly wrong, and review caught both: (a) the stock &sigma;&rsquo;s dollars join realizes at the scenario rate r_S <em>including the re-timed planned bucket</em>, not the Bellman&rsquo;s internal baseline-scaled version; (b) in the recurrence, people who die during year t die holding their <em>full</em> stock &mdash; they do not realize first. So the build order is: first compute &tau;<sub>eq</sub> the unarguable way &mdash; literally inject a test dollar into each (age, year) cell of the actual recurrence code, run it forward, and measure the present value of the extra tax collected. Then implement the fast recursion above and require it to equal that finite-difference answer cell-by-cell in automated tests. The recursion is what runs in production; the finite difference is the proof it is right. The test dollar is injected at end-of-year, exactly as the &sigma; inflow is, so the wedge prices precisely the life a converted dollar will actually live.</p>
+
+<p><strong>What it looks like in numbers.</strong> A mid-50s owner under current law: realization runs a few percent a year, much of the stock rides to death, and death usually means step-up &mdash; so &tau;<sub>eq</sub> lands near 9% against a ~41% top ordinary rate: a ~32pp wedge. The same owner under gains-at-ordinary <em>plus</em> deemed-at-death: every branch of the tree now ends in tax at a high rate and deferral buys almost nothing, so &tau;<sub>eq</sub> climbs toward the ordinary rate and the wedge collapses to single digits. That collapse &mdash; &tau;<sub>eq</sub> as a function of the <em>package</em> &mdash; is the entire mechanism: it is why the model&rsquo;s ordinary-rate ETI endogenously shrinks when a package closes the capital-side exits.</p>
+
+<div class="rev-note"><strong>Measured (2026-07-08, full-sample runs).</strong> On the real grid under current law, &tau;<sub>eq</sub> runs 5.6&ndash;11.8% across ages (pool-weighted &tau;<sub>eq</sub>/&tau;<sub>cg</sub> &asymp; 0.395), peaking in the late 40s and falling toward death exactly as the step-up logic predicts &mdash; the mid-50s illustration above is what the machinery actually produces. The in-run finite-difference check passed cell-by-cell for all years of every run. One measured refinement to the sizing intuition: a statutory CG cut moves the pool-weighted wedge by roughly <em>half</em> its naive &tau;<sub>eq</sub>/&tau; scaling, because the cell-aggregate CG rate moves less than the top statutory rate and the Bellman partially offsets (realize faster at the cheaper rate). And because &tau;<sub>eq</sub> is a forward-looking PV, announced future rate changes move conversions a year before they take effect &mdash; anticipation is built in by construction.</div>
+
+<p>The response is a semi-elasticity on the gated pool, driven by each record&rsquo;s own wedge change:</p>
+
+<div class="eq">
+<pre>W_i(t)      =  mtr_ordinary_i(t)  &minus;  &tau;_eq(age_i, t)          (per-record wedge)
+
+&Delta;conv_i(t)  =  &sigma; &middot; ( W_i(t) &minus; W_i&#8320;(t) ) &middot; pool_i
+
+pool_i  =  wages_i  +  0.75 &middot; active_passthrough_i        (gated owner-managers)
+
+wages&prime;      =  wages &minus; &Delta;conv          &larr; leaves the ordinary base
+gain state&prime; =  gain state + &Delta;conv      &larr; still in the system</pre>
+<div class="note">&sigma; in units of % of the pool per percentage point of wedge change. The ordinary leg is personal &mdash; the record&rsquo;s own calculator-measured MTRs, per earner and per income leg; the equity leg is the cell-level &tau;_eq keyed by age. No phase-in (revised 2026-07-08): a memoryless annual response, the same convention as entity shifting and evasion. Converted dollars are taxed at realization, at death (deemed), by heirs (carryover), or never (step-up) &mdash; per the package. That is the mechanism, not a leak.</div>
+</div>
+
+<p>The key structural property: <strong>&sigma; is a fixed parameter, but the reduced-form ETI it generates is policy-dependent.</strong> Under current law (a ~32pp wedge, step-up open) it reproduces literature-scale ETIs. Under a package taxing gains at ordinary rates with deemed realization at death, W barely moves when the top rate rises, so the conversion response &asymp; 0 and the ordinary-rate ETI endogenously collapses. This operationalizes Kopczuk (2005): the elasticity is a function of base breadth.</p>
+
+<h3>1.6 &nbsp;The full layered system</h3>
+
+<p>One gated owner-manager record, one year. Baseline legs: w (wages), b (pass-through profit), U (stock of unrealized gains). A package sets (&tau;<sub>o</sub>, &tau;<sub>cg</sub>, death regime, &tau;<sub>corp</sub>, &tau;<sub>estate</sub>, &tau;<sub>wealth</sub>). The layers fire in a pinned order; <strong>each consumes the previous layer&rsquo;s output</strong>, so no dollar can move twice.</p>
+
+<div class="eq">
+<pre>LAYER 1 &mdash; &sigma;, conversion (conservation)         forcing: the wedge W
+  &Delta;conv  =  &sigma; &middot; (W_i(t) &minus; W_i&#8320;) &middot; pool_i
+  w&prime;  =  w &minus; &Delta;conv_w        b&prime;  =  b &minus; &Delta;conv_b        U&prime;  =  U + &Delta;conv
+
+LAYER 2 &mdash; entity shifting (conservation)        forcing: &tau;_pt &minus; &tau;_corp differential
+  &Delta;shift  =  0.63 &middot; &Delta;differential &middot; b&prime;
+  b&Prime;  =  b&prime; &minus; &Delta;shift           corp_base  +=  &Delta;shift      (taxed at &tau;_corp)
+
+LAYER 3 &mdash; evasion (leak)                        forcing: own net-of-tax rate
+  b&#8244;  =  b&Prime; &middot; (1 + e_pt &middot; &Delta;ln(1&minus;&tau;_o))       e_wages = 0 (third-party reported)
+
+LAYER 4 &mdash; realization (timing, not existence)   forcing: CG rate + death regime
+  g(t)  =  realization_policy( U&prime;, &tau;_cg, regime )        (kg Bellman)
+  remainder rides to next year, or to death: deemed / carryover / step-up
+
+LAYER 5 &mdash; taxes computed, then the bathtub (balance sheet, not income)
+  &Delta;T&#8304;  =  &Delta;(liab_iit + pr &minus; deemed + wealth)  vs baseline
+  F    =  &Delta;T&#8304; &minus; &Delta;Y_exog                       (corp shock netted out)
+  P(t+1)  =  G(t)&middot;P(t) + s&middot;F    &rarr;    value.* scaled down
+  &rarr; future dividends / interest / gains, estate base, wealth base all shrink &mdash; once</pre>
+<div class="note">The corporate channel (when the package moves &tau;<sub>corp</sub>) applies at the head of the pass as an external income shock &Delta;Y_exog &mdash; netted out of the bathtub forcing F so income that fell externally is not also &ldquo;financed.&rdquo;</div>
+</div>
+
+<p>One dollar of would-be top salary, all branches:</p>
+
+<div class="journey">
+  <div class="leg"><b>Stays as wages</b> Taxed at &tau;<sub>o</sub> now.</div>
+  <div class="leg"><b>Converted by &sigma;</b> Taxed at PV &tau;<sub>eq</sub>: the CG rate at realization, or the deemed rate at death, or zero under step-up &mdash; the package decides.</div>
+  <div class="leg"><b>Shifted entity form</b> (profit-leg dollars) Taxed at &tau;<sub>corp</sub> now, in the corporate base.</div>
+  <div class="leg"><b>Evaded</b> (Schedule C / pass-through / rent legs only &mdash; never wages) Zero, forever: the one true leak.</div>
+  <div class="leg"><b>Whichever tax is paid</b> A share s is financed from wealth &rarr; future capital-income, estate, and wealth-tax bases shrink &mdash; exactly once.</div>
+</div>
+
+<h3>1.7 &nbsp;Why this is not double-counting</h3>
+
+<p>The test in one line: <strong>each behavioral parameter owns a unique (forcing variable, object) pair.</strong> Double-counting requires two modules responding to the same forcing on the same dollars; no pair below shares both.</p>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Parameter</th><th>Forcing variable</th><th>Object it moves</th></tr>
+  <tr><td>&sigma;</td><td>ordinary &minus; equity-path wedge</td><td>payment <em>form</em> of labor compensation</td></tr>
+  <tr><td>0.63 (Pearce&ndash;Prisinzano)</td><td>corporate vs pass-through differential</td><td>entity <em>form</em> of business profits</td></tr>
+  <tr><td>e (DeBacker&ndash;Heim&ndash;Yuskavage)</td><td>own net-of-tax rate</td><td>reported <em>existence</em> (low-visibility legs only)</td></tr>
+  <tr><td>&psi; (kg Bellman)</td><td>CG rate + death regime</td><td><em>timing</em> of the gain stock</td></tr>
+  <tr><td>s (wealth bathtub)</td><td>the tax bill itself</td><td><em>financing</em>: consumption vs wealth</td></tr>
+</table>
+</div>
+
+<p>Two distinct double-counting risks, resolved differently:</p>
+
+<p><strong>Mechanical double-counting is impossible by construction.</strong> Modules apply sequentially (&sigma; &rarr; entity shifting &rarr; evasion), each on the frame the previous one produced. A dollar &sigma; converts is gone before P&ndash;P computes its flow. The build carries an assert on the ordering plus a per-record diagnostic of all three flows so overlap is auditable, not assumed away.</p>
+
+<p><strong>Calibration double-counting is real &mdash; and residualization is the fix.</strong> &sigma;&rsquo;s pool includes the labor-content slice of pass-through profits, which is also entity shifting&rsquo;s and evasion&rsquo;s territory; and the literature estimates for each margin were made in data where the other margins were operating (P&ndash;P&rsquo;s 0.63 contains labor-content conversion; Mortenson&rsquo;s &minus;0.77 contains everything). Calibrating &sigma; stand-alone from those numbers <em>and</em> letting it share the leg would overstate the summed response. So &sigma; is <s><strong>calibrated residually</strong>: it is whatever remains of the target total ETI after a perturbation run with evasion, entity shifting, and realization already switched on</s> &mdash; see the revision below. The literature numbers are reinterpreted as <strong>brackets on the total cross-base response</strong> &mdash; which is what the validation exhibit tests, and the more meaningful economic object anyway.</p>
+
+<div class="rev-note"><strong>Revised 2026-07-08.</strong> Residual calibration is dropped: &sigma; is asserted at 0.2 / 0.6 / 0.9, and the calibration double-count named above is <em>accepted and monitored</em> rather than eliminated by construction. The monitor is the perturbation run: the full stack&rsquo;s 2&times;2 own/cross elasticity matrix is compared informally against the literature brackets at build time, and &sigma; or the pool is revisited if the stack over-responds &mdash; an iteration loop, not a formal gate. <strong>Outcome (same day):</strong> the monitor fired exactly as designed. The stack over-responded at &sigma; = 0.6 (ETI 0.431), the leave-one-out leg measured the non-&sigma; stack at 0.223, and &sigma; landed at <strong>0.08</strong> &mdash; so the design converged back to residual-style discipline after all, just executed as one measured iteration rather than a pre-registered procedure. The literature anchors survive as brackets on the <em>total</em> response, which is what they always identified.</div>
+
+<p>The honest residual soft spot: with a shared pool, the split of a package&rsquo;s response between &ldquo;goes to the corporate base&rdquo; (P&ndash;P) and &ldquo;goes to the gain state&rdquo; (&sigma;) is set by two parameters the evidence cannot separately identify. The split matters &mdash; it determines revenue composition (current corporate receipts vs deferred capital gains) and the strength of the death-regime interaction. <s>It is therefore an explicit, named, <em>sweepable</em> parameter, not a hidden assumption.</s> <span class="chip tobuild">Revised 2026-07-08</span> The split parameter is dropped: the composition of the response is a <em>reported output</em> of the per-record flow diagnostics, not an assumed dial &mdash; sequential module order alone prevents double-moves.</p>
+
+<p>One consistency check worth recording: &sigma; and the bathtub compose correctly without coordination. When &sigma; fires, wages fall, the current-year tax bill falls, and the bathtub sees <em>less</em> tax to finance &mdash; correct, because the converted dollar was saved (parked in the firm). When it is realized years later, the tax appears and the bathtub responds then.</p>
+
+<h3>1.8 &nbsp;Calibration and validation</h3>
+
+<p>Units: percent of the gated pool converted per percentage point of wedge change, relative to the baseline wedge. The three anchors disagree by ~4&ndash;5&times;. <s>That spread <em>is</em> the published uncertainty band &mdash; the whole exercise runs at all three settings.</s></p>
+
+<div class="rev-note"><strong>Revised 2026-07-08.</strong> The campaign runs the <strong>central setting only</strong> for now (elasticity bundles dropped, &sect;2.3); low/high remain defined as an env knob for sensitivity work and possible later band runs. The values are <em>asserted</em>, not calibrated, and the validation exhibit below is an informal build-time check &mdash; if the stacked model lands outside the brackets, &sigma; or the pool is revisited before the campaign, by judgment rather than by a pre-registered gate. <strong>Superseded same day (A1):</strong> the check ran and the pool/&sigma; <em>was</em> revisited &mdash; the anchors table below is retained as the historical record of the assertion, but the live central is <strong>&sigma; = 0.08</strong>, the residual that lands the full-stack top ETI at 0.25 (measured legs and staleness conditions in <code>SIGMA_CALIB_PROVENANCE</code>, <code>src/sim/sigma_conversion.R</code>).</div>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Setting</th><th class="num">Value</th><th>Provenance</th></tr>
+  <tr><td>Low</td><td class="num">0.2 %/pp</td><td>ETI subtraction: 0.25 total &minus; 0.05 real &minus; 0.05 evasion &minus; 0.05 modeled &rArr; ~0.10 in ETI units &asymp; 0.16%/pp at &tau; = 0.37. The &ldquo;modeled&rdquo; term is <em>measured</em> by the perturbation run, not assumed.</td></tr>
+  <tr><td>Central</td><td class="num">0.6 %/pp</td><td>Pearce&ndash;Prisinzano entity-shifting semi-elasticity (0.631) converted to per-pp-of-differential units; sits between the other anchors.</td></tr>
+  <tr><td>High</td><td class="num">0.9 %/pp</td><td>Mortenson (2016) Table 5 col 6 cross-elasticity &minus;0.77 at &tau;<sub>cg</sub> &asymp; 0.17 &rArr; 0.77/0.83 &asymp; 0.93%/pp. A ceiling three times over: (a) it is a full-population elasticity applied here to a gated pool; (b) it bundles margins modeled separately (realization, entity form, and the JGTRRA qualified-dividend reclassification that mechanically migrated income between his bases mid-sample); (c) his rate is realization-time statutory-effective, ours is accrual-equivalent.</td></tr>
+</table>
+</div>
+
+<p><strong>Validation exhibits.</strong> The perturbation run reports the full 2&times;2 own/cross elasticity matrix &mdash; (ordinary income, gains realizations) &times; (&tau;<sub>ord</sub>, &tau;<sub>cg</sub>) &mdash; against the literature brackets: own-ordinary within the Saez&ndash;Slemrod&ndash;Giertz 0.12&ndash;0.40 band under open exits; the ordinary&larr;CG cross inside Mortenson&rsquo;s &minus;0.24 to &minus;2.4 bracket (and expected <em>below</em> face value, per the ceiling logic above); own-gains persistent near Dowd et al. / Mortenson (&minus;0.8 to &minus;0.9); gains&larr;ordinary positive, persistent, and well below Mortenson&rsquo;s noisy +2.77. Agreement across anchors is the validation story; disagreement is a finding to investigate.</p>
+
+<div class="callout">
+  <span class="eyebrow">Validation results &mdash; run 2026-07-08 (full sample, 2025&ndash;2035, full stack)</span>
+  <p>Legs: +5pp top-ordinary (<code>tests/topord_plus5</code>) and a CG mirror (<code>tests/cg_mirror</code>, top preferred rate 20% &rarr; 8.5%, sized to leg 1&rsquo;s pool-weighted wedge). Averages over 2026&ndash;2035; ordinary rows in net-of-tax form (the ETI convention), gains rows in rate form (the realization-literature convention).</p>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Response &darr; / leg &rarr;</th><th class="num">&tau;<sub>ord</sub> leg</th><th>Bracket</th><th class="num">&tau;<sub>cg</sub> leg</th><th>Bracket</th></tr>
+    <tr><td>Top ordinary income (excl. gains)</td><td class="num"><strong>0.431</strong> @ &sigma;=0.6 &rarr; <strong>0.2505</strong> @ &sigma;=0.08</td><td>SSG 0.12&ndash;0.40 &mdash; hot at 0.6, <em>inside after recalibration</em></td><td class="num">&minus;0.128</td><td>Mortenson face &minus;0.77 &mdash; below face, as predicted &#10003;</td></tr>
+    <tr><td>LT gains realizations</td><td class="num">+0.103</td><td>positive, persistent, &Lt; +2.77 &#10003;</td><td class="num">&minus;0.255</td><td>Dowd/Mortenson &minus;0.8&hellip;&minus;0.9 &mdash; smaller: an 11.2pp cut sits far from kg&rsquo;s &plusmn;1pp calibration point (large-shock concavity, 40% fixed bucket); a kg property, not &sigma;</td></tr>
+  </table>
+  </div>
+  <p>Decomposition of the &tau;<sub>ord</sub>-leg ETI at the original &sigma; = 0.6: entity shifting + evasion + charity supply 0.223 on their own (leave-one-out run), &sigma; the rest &mdash; the double-count made concrete, and the basis for the 0.08 recalibration. Charity contributes &asymp;0.01 (via itemized deductions; the income concept is post-deduction taxable income, so this is concept-consistent). Conservation held exactly (record&harr;cell, every year, both legs); the &tau;<sub>eq</sub> finite-difference check passed in-run for all years. Artifacts: <code>other/top_tax/sigma_validation_out/</code>; measurement tool: <code>other/top_tax/tests/compute_top_eti.R</code>. The cross-elasticities were measured at &sigma; = 0.6 and shrink roughly proportionally at 0.08, remaining direction-consistent with their brackets.</p>
+</div>
+
+<p><strong>The symmetry invariant is stated in wedge units.</strong> The model&rsquo;s response to +&Delta;&tau;<sub>ord</sub> must mirror an equal-and-opposite <em>wedge</em> change &mdash; not an equal statutory CG change, because d&tau;<sub>eq</sub>/d&tau;<sub>cg</sub> &lt; 1 (the deferral discount). Mortenson&rsquo;s equal-and-opposite finding cannot distinguish these; the statutory <em>asymmetry</em> is therefore a prediction the model makes that the reduced form cannot &mdash; a fourth structural finding, free.</p>
+
+</section>
+
+<!-- ============================ PART II ============================ -->
+
+<section class="part">
+<div class="part-head">
+  <span class="eyebrow">Part II</span>
+  <h2>The presentation vision</h2>
+  <p class="summary">The interaction matrix is the centerpiece, delivered as an interactive explorer over an exactly-computed policy grid, with the greenbook standalones and a small set of framing exhibits around it.</p>
+</div>
+
+<h3>2.1 &nbsp;Why the matrix headlines, and not a revenue-max number</h3>
+
+<p>An unconstrained Laffer search returns &ldquo;max out every lever except the CG rate&rdquo; &mdash; fragile, parameter-sensitive, and boring, and it invites fights about the argmax rather than the mechanism. The interaction structure is the part no other model can produce: <em>a corporate hike lowers the yield of a CG hike by X%; ending step-up raises it by Y%; a wealth tax cannibalizes Z% of the estate score.</em> Every such sentence is robust across the elasticity band even when levels shift. The revenue-max search (and the quadratic-surrogate machinery specced for it) is deferred entirely &mdash; the grid below would power it later at near-zero marginal cost if revisited.</p>
+
+<h3>2.2 &nbsp;The interactive explorer</h3>
+
+<p>A self-contained HTML/JS exhibit: one dropdown per lever, and for the selected package a readout of &mdash;</p>
+
+<ul>
+  <li><strong>Revenue</strong>, 10-year window and 30-year window, as two separate figures (never averaged), at the central elasticity bundle <s>each at the low / central / high elasticity bundle</s> (bands dropped 2026-07-08; reinstatable later as additional runs);</li>
+  <li><strong>Interaction decomposition</strong>: package total vs the sum of its standalone pieces, in dollars and percent &mdash; the matrix cell, generalized to the whole grid;</li>
+  <li><strong>Leakage share</strong> = 1 &minus; conventional/static &mdash; the &ldquo;how much escapes&rdquo; number, already a model output;</li>
+  <li><strong>Wealth erosion</strong>: cumulative top-1% private-wealth decumulation from the bathtub state &mdash; how much of each revenue dollar is financed by dissaving rather than consumption. No elasticity calculation can produce this axis;</li>
+  <li><strong>Escape-route panel</strong>: the conversion wedge W under the selected package, next to current law (&sect;2.4).</li>
+</ul>
+
+<p>Every displayed number is an <strong>exact pipeline run</strong> &mdash; no interpolation asterisks. A simplified static version (a small multiple of the central pairwise matrix at central intensities) goes in the report body for readers who never open the explorer.</p>
+
+<h3>2.3 &nbsp;The grid</h3>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Lever</th><th>Candidate values</th><th class="num">n</th></tr>
+  <tr><td>Top ordinary rate</td><td>current &middot; +5pp millionaire bracket &middot; 45% &middot; 50%</td><td class="num">4</td></tr>
+  <tr><td>CG / dividend rate</td><td>current &middot; 28% &middot; ordinary (<code>tax_at_ord</code>)</td><td class="num">3</td></tr>
+  <tr><td>Death regime</td><td>step-up &middot; carryover &middot; deemed</td><td class="num">3</td></tr>
+  <tr><td>Corporate rate</td><td>21 &middot; 25 &middot; 28 &middot; 35 (discrete OME-scored vintages)</td><td class="num">4</td></tr>
+  <tr><td>NIIT</td><td>current &middot; <code>include_active = 1</code></td><td class="num">2</td></tr>
+  <tr><td>QBI</td><td>current &middot; repeal</td><td class="num">2</td></tr>
+  <tr><td>Estate</td><td>current &middot; pre-TCJA exemption &middot; half-exemption &times; higher top rate</td><td class="num">3</td></tr>
+  <tr><td>Wealth tax</td><td>none &middot; 2% &gt; $50M &middot; 3% &gt; $1B</td><td class="num">3</td></tr>
+</table>
+</div>
+
+<p>Full factorial = 4&middot;3&middot;3&middot;4&middot;2&middot;2&middot;3&middot;3 = <strong>5,184 packages</strong>. Proposed campaign, exploiting confirmed SLURM scale:</p>
+
+<ol>
+  <li><strong>Tier 1 &mdash; full grid at the central bundle</strong>: 5,184 runs. Every dropdown combination exact.</li>
+  <li><s><strong>Tier 2 &mdash; hero-lever factorial at all three bundles</strong>: ordinary &times; CG &times; death regime &times; corporate (144 packages) &times; low/high = 288 additional runs, giving the uncertainty band where the story lives.</s> <span class="chip tobuild">Dropped 2026-07-08</span> No elasticity bundles for now; band runs are pure additional orchestration if reinstated later.</li>
+  <li><strong>Tier 3 &mdash; standalones</strong> (~30 runs): each lever alone at each value &mdash; the greenbook layer, reused directly in the interaction decomposition as the &ldquo;sum of parts&rdquo; benchmark.</li>
+</ol>
+
+<p>&asymp; 5,200 pipeline runs (post-revision). At observed tens-of-minutes wall-clock per scenario, this is a multi-week orchestrated campaign &mdash; run with <code>delete_detail = 1</code> (keep totals/supplemental, purge tax-unit detail), a shared pinned baseline vintage, <code>pct_sample = 1</code>, and simulation years one past the reporting window (estate/wealth legs book FY death-year + 1). Final value lists are the one open presentation decision (&sect;3, last item).</p>
+
+<h3>2.4 &nbsp;Framing exhibits</h3>
+
+<ul>
+  <li><strong>The escape-route exhibit.</strong> One bar per package: the conversion wedge W. Current law &asymp; 32pp; gains-at-ordinary + deemed &asymp; single digits. This chart <em>is</em> the mechanism behind the headline finding &mdash; it shows in one number why identical top-rate hikes score differently across packages, and why the ETI is not a constant.</li>
+  <li><strong>Window vs steady state.</strong> The 10-year and 30-year results diverge because bathtub erosion compounds; the divergence is reported as a named finding (&ldquo;wealth taxes look better in the window than in the steady state&rdquo;).</li>
+  <li><strong>The validation matrix</strong> (&sect;1.8): the model&rsquo;s 2&times;2 own/cross elasticities against Mortenson/Dowd brackets &mdash; the micro-scale mirror of the policy-scale interaction matrix.</li>
+  <li><strong>Distribution discipline.</strong> Per-package distribution tables (static, per convention) confirm burden below P99 &asymp; 0 &mdash; the &ldquo;greenbook for the rich&rdquo; check, reported as a diagnostic rather than imposed as a constraint.</li>
+</ul>
+
+<h3>2.5 &nbsp;Conventions, fixed up front</h3>
+
+<ol>
+  <li><strong>The objective is total package revenue against a common baseline</strong>, never stacked attribution &mdash; with the endogenous corporate offset, stacked rows are not order-invariant. Attribution order, where shown, is a labeled presentation convention.</li>
+  <li><strong>Two horizons, two outputs.</strong> 10-year window and 30-year window reported separately; no blending.</li>
+  <li><strong>The matrix is a fan, not a line.</strong> Every cell is conditional on (&psi;, wealth-avoidance elasticities, &sigma;, s, corporate corners). <s>Tier 2 publishes the band over the low/central/high bundle.</s> Band runs are deferred (2026-07-08); the conditionality is stated in the report rather than published as a band, for now.</li>
+  <li><strong>Out of scope, stated in the report:</strong> mark-to-market and trusts (deferred entirely; on-model instruments only), migration/expatriation (off-model haircut band on wealth-tax results), and the revenue-max search (deferred; the grid can power it later).</li>
+</ol>
+
+</section>
+
+<!-- ============================ PART III ============================ -->
+
+<section class="part">
+<div class="part-head">
+  <span class="eyebrow">Part III</span>
+  <h2>The build</h2>
+  <p class="summary">Ordered so that the three parameter gaps that would dominate referee reports close first, and the run campaign is pure orchestration at the end.</p>
+</div>
+
+<div class="tablewrap wide">
+<table>
+  <tr><th style="width:4%">#</th><th style="width:24%">Item</th><th>Content</th><th style="width:12%">Status</th></tr>
+  <tr>
+    <td>1</td><td><strong>&tau;<sub>eq</sub> extraction</strong></td>
+    <td>Ground truth first: inject a test dollar into each (age, year) cell of the actual kg recurrence and measure the PV of extra tax collected (finite difference, respecting the recurrence&rsquo;s own event order and the retimed planned bucket). Then the fast linear recursion of &sect;1.5a, tested cell-by-cell against the finite difference. Emits &tau;_eq_B / &tau;_eq_S as additive cell-table columns; consumed by the &sigma; module and the escape-route exhibit &mdash; one object, two uses. <em>Delivered as specified: 19/19 unit tests (recursion = FD to ~1e&minus;16 in every regime; regime ordering; closed-form check); in-run FD check passes on the real grid; measured &tau;<sub>eq</sub> 5.6&ndash;11.8% under current law.</em></td>
+    <td><span class="chip built">Built 2026-07-08</span></td>
+  </tr>
+  <tr>
+    <td>2</td><td><strong>Validation run</strong></td>
+    <td>Informal build-time check: +5pp top-ordinary leg plus a CG mirror leg (top pref 20% &rarr; 8.5%, sized from leg 1&rsquo;s pool-weighted wedge), full sample, 2025&ndash;2035, full stack. <em>Ran 2026-07-08: 2&times;2 matrix in &sect;1.8; the own-ordinary cell came in hot at &sigma; = 0.6 (ETI 0.431) and drove the A1 recalibration to &sigma; = 0.08 (confirmed ETI 0.2505). Crosses direction-consistent with brackets; own-gains below literature magnitude on the large cut (kg concavity).</em></td>
+    <td><span class="chip built">Run 2026-07-08</span></td>
+  </tr>
+  <tr>
+    <td>3</td><td><strong>&sigma; module</strong></td>
+    <td>The centerpiece build. Rulings baked in (2026-07-08 lock): pool = wages + 0.75&middot;active pass-through, record-level gate (active pass-through presence AND top-bracket taxable income, threshold-based); per-record wedge, no phase-in; application order pinned kg_dynamics &rarr; &sigma; &rarr; entity shifting &rarr; evasion with asserts + flow diagnostics; destination = single-state recurrence injection at end-of-year (&sigma; requires kg_dynamics, hard error otherwise); cell-level persistence only, shared-function recompute in the module under a hard conservation assert. <em>Delivered: <code>src/sim/sigma_conversion.R</code> + <code>behavior/conversion/sigma.R</code>; 27/27 guard/pure-function tests; conservation exact in every run; no-op byte-diff regression clean; &sigma; central recalibrated 0.08 (A1).</em></td>
+    <td><span class="chip built">Built 2026-07-08</span></td>
+  </tr>
+  <tr>
+    <td>3b</td><td><strong>Entity-shifting hardening</strong></td>
+    <td>Bring <code>pearce_prisinzano.R</code> up to the evasion module&rsquo;s standard: co-scale SECA companion legs, add order/required-MTR guards, add a conservation diagnostic (pass-through dollars out = corporate-base + kg-offset dollars in). <em>Delivered; the diagnostic runs every conventional year-pass and fed the validation decomposition (P&ndash;P moves &asymp; $30B/yr of PT income under the +5pp leg &mdash; the largest single contributor to the non-&sigma; ETI of 0.223).</em></td>
+    <td><span class="chip built">Built 2026-07-08</span></td>
+  </tr>
+  <tr>
+    <td>4</td><td><strong>Estate behavioral elasticity</strong></td>
+    <td>Kopczuk&ndash;Slemrod-style reported-estate elasticity, mirroring the wealth-avoidance design: reported base only, <code>value.*</code> untouched. Fold the charitable-bequest response to the estate rate into the same elasticity (currently frozen in <code>f_ded</code>). Contained; independent of &sigma;.</td>
+    <td><span class="chip tobuild">To build</span></td>
+  </tr>
+  <tr>
+    <td>5</td><td><strong>Wealth-avoidance calibration</strong></td>
+    <td>Current &minus;7/&minus;17 semi-elasticities are deliberately extreme placeholders (&asymp;19%/40% base erosion at a 3% rate). Re-anchor to the Scandinavian / Swiss / Colombian estimates; the design (reported-base avoidance, cleanly separate from the bathtub&rsquo;s real response) stands. The wide bracket becomes part of the published band.</td>
+    <td><span class="chip calib">Calibrate</span></td>
+  </tr>
+  <tr>
+    <td>6</td><td><strong>Corporate inputs</strong></td>
+    <td>Commission the discrete OME vintages (21/25/28/35, each with <code>corporate_meta.yaml</code>); replace the six Phase-0c <code>CORP_*</code> placeholder constants with measured values. Upstream dependency &mdash; start early, proceeds in parallel.</td>
+    <td><span class="chip calib">Upstream</span></td>
+  </tr>
+  <tr>
+    <td>7</td><td><strong>Run campaign</strong></td>
+    <td>Orchestration of &sect;2.3&rsquo;s ~5,500 runs. Known gotchas already logged: <code>multicore = none</code> at full sample; kg deemed scenarios need years &ge; 2026; wages residual (wages1 + wages2 &ne; wages) subtracted before interpreting deltas; simulate one year past each reporting window. Plus the explorer itself: results compiled to a single JSON; self-contained HTML/JS.</td>
+    <td><span class="chip defer">Orchestration</span></td>
+  </tr>
+</table>
+</div>
+
+<h3>Remaining open decisions</h3>
+
+<ul>
+  <li><strong>Final grid values</strong> (&sect;2.3 table is a proposal &mdash; the value lists deserve one deliberate pass before ~5,200 runs are committed).</li>
+  <li><s><strong>&sigma;&rsquo;s split-parameter default</strong> (corporate-base vs gain-state share of the owner-manager response) and its sweep range.</s> Resolved 2026-07-08: the split parameter is dropped; composition is a reported output (&sect;1.7).</li>
+  <li><strong>Form of the simplified static exhibit</strong> (pairwise matrix small-multiple vs a curated set of two-lever panels).</li>
+</ul>
+
+</section>
+
+<footer>
+  <p><strong>Design authority.</strong> Live rulings: <code>other/top_tax/DESIGN_LOCK.md</code> (2026-07-08; supersedes this prospectus where they conflict) &middot; external review: <code>other/top_tax/codex_review.md</code>.</p>
+  <p><strong>Repo pointers.</strong> Working notes: <code>other/top_tax/frontier_exercise_notes_2026-07-07.md</code> &middot; &sigma; machinery: <code>src/sim/sigma_conversion.R</code> (incl. <code>SIGMA_CALIB_PROVENANCE</code>) + <code>config/scenarios/behavior/conversion/sigma.R</code> &middot; plain-terms &sigma; explainer: <code>other/top_tax/sigma_explainer.md</code> &middot; validation exhibit: <code>other/top_tax/sigma_validation_out/</code> &middot; tests: <code>other/top_tax/tests/</code> &middot; evasion module: <code>config/scenarios/behavior/evasion/debacker.R</code> &middot; entity shifting: <code>config/scenarios/behavior/entity_shifting/pearce_prisinzano.R</code> &middot; kg machinery (&tau;<sub>eq</sub> lives here): <code>src/sim/kg_dynamics.R</code> &middot; wealth bathtub: <code>src/sim/wealth_dynamics.R</code> &middot; corporate channel: <code>src/sim/corp_incidence.R</code>.</p>
+  <p><strong>Key references.</strong> Mortenson (2016 WP), cross-tax elasticities off the Bush cuts &middot; Weber (2014a, b), instruments &middot; Dowd, McClelland &amp; Muthitacharoen (2015), CG elasticities &middot; Smith, Yagan, Zidar &amp; Zwick (2019), owner human capital &middot; Kopczuk (2005), base breadth &middot; DeBacker, Heim &amp; Yuskavage (2025), evasion &middot; Pearce &amp; Prisinzano, entity shifting &middot; Goolsbee (2000), executive compensation timing &middot; Saez, Slemrod &amp; Giertz (2012), ETI review.</p>
+</footer>
+
+</div>

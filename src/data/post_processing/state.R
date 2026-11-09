@@ -17,13 +17,13 @@ build_state_rev_est = function(id) {
   # Parameters:
   #   - id (str) : scenario ID
   #
-  # Returns: void (writes supplemental/state_rev_est.csv per run type).
+  # Returns: void (writes supplemental/state_rev_est.csv per rung).
   #----------------------------------------------------------------------------
 
   baseline_path = file.path(globals$baseline_root,
                             'baseline/static/totals/state.csv')
 
-  for (type in c('static', 'conventional')) {
+  for (type in REPORTING_LEGS) {
 
     scenario_path = file.path(globals$output_root, id, type,
                               'totals', 'state.csv')
@@ -34,8 +34,9 @@ build_state_rev_est = function(id) {
     if (!file.exists(baseline_path)) {
       stop("Scenario '", id, "' has state totals but the baseline run does ",
            'not. State deltas need baseline state liability: re-run the ',
-           "baseline with the runscript 'states' column set (a pre-existing ",
-           'baseline_vintage produced without state mode cannot be used)')
+           'baseline with an economy alternative setting states.jurisdictions ',
+           '(a pre-existing baseline_vintage produced without state taxes ',
+           'cannot be used)')
     }
 
     baseline = baseline_path %>%
@@ -73,8 +74,8 @@ build_stacked_state_rev_est = function(counterfactual_ids) {
   #   - counterfactual_ids (str[]) : counterfactual scenario names, in
   #                                  runscript (stack) order
   #
-  # Returns: void (writes stacked_state_rev_est_{static,conventional}.csv at
-  #          the vintage root).
+  # Returns: void (writes stacked_state_rev_est_{rung}.csv at the vintage root,
+  #          one per rung).
   #----------------------------------------------------------------------------
 
   if (length(counterfactual_ids) == 0) {
@@ -86,9 +87,7 @@ build_stacked_state_rev_est = function(counterfactual_ids) {
     return(invisible(NULL))
   }
 
-  for (static in c(T, F)) {
-
-    type = if_else(static, 'static', 'conventional')
+  for (type in REPORTING_LEGS) {
 
     # Read state totals for baseline plus every counterfactual that has them,
     # preserving stack order

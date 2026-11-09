@@ -1,0 +1,6 @@
+# The corporate leg of the gate fixture reads the two-stream corporate
+# Off-Model-Estimates scenario, which is what activates the on-model corporate
+# incidence channel.
+
+off_model_estimates_id:
+  value: corp_28_2027_2stream

@@ -3,7 +3,8 @@
 #--------------------------------------
 
 # Set return variables for function
-return_vars$calc_txbl_inc = c('item_ded_limited', 'itemizing', 'ded', 'txbl_inc')
+return_vars$calc_txbl_inc = c('item_ded_limited', 'itemizing', 'char_nonitem_ded', 
+                               'ded', 'txbl_inc')
 
 
 calc_txbl_inc = function(tax_unit, fill_missings = F) {
@@ -20,6 +21,8 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
   #
   # Returns: dataframe of following variables:
   #          - itemizing (bool) : whether filer itemizes deductions
+  #          - char_nonitem_ded (dbl) : charitable deduction of a filer who
+  #                                     does not itemize
   #          - ded       (dbl)  : standard deduction or itemized deduction if 
   #                               itemizing
   #          - txbl_inc (dbl)   : taxable income 
@@ -38,11 +41,14 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     'ot_ded',        # (dbl) value of below-the-line overtime deduction
     'senior_ded',    # (dbl) value of below-the-line extra senior deduction
     'auto_int_ded',  # (dbl) value of below-the-line auto loan interest deduction
+    'char_cash',     # (dbl) cash charitable contributions
+    'char_above_ded', # (dbl) above-the-line charitable deduction
     
     # Tax law attributes
     'item.limit_tax_value_thresh',     # (dbl) tax value limitation reduction threshold
     'item.salt_limit_tax_value_rate',  # (dbl) tax value limitation reduction rate
-    'item.limit_tax_value_rate'        # (dbl) tax value limitation reduction rate, non-SALT deductions
+    'item.limit_tax_value_rate',       # (dbl) tax value limitation reduction rate, non-SALT deductions
+    'char.nonitem_limit'               # (dbl) maximum charitable deduction for a filer who does not itemize
   )
   
   tax_unit %>% 
@@ -59,9 +65,15 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
       other_reduction  = other_excess * item.limit_tax_value_rate,
       item_ded_limited = item_ded - salt_reduction - other_reduction,
       
-      # Determine itemizing status
-      itemizing = item_ded_limited > std_ded,
-      ded       = pmax(std_ded, item_ded_limited),
+      # Calculate charitable deduction for a filer who does not itemize (IRC
+      # 170(p)), net of any gift already deducted above the line
+      char_nonitem = pmin(pmax(0, char_cash - char_above_ded), char.nonitem_limit),
+      
+      # Determine itemizing status. The filer gives up the charitable
+      # deduction by itemizing
+      itemizing        = item_ded_limited > std_ded + char_nonitem,
+      ded              = pmax(std_ded + char_nonitem, item_ded_limited),
+      char_nonitem_ded = if_else(itemizing, 0, char_nonitem),
       
       # Allocate senior deduction depending on itemizing status
       std_ded    = std_ded + if_else(!itemizing, senior_ded, 0), 

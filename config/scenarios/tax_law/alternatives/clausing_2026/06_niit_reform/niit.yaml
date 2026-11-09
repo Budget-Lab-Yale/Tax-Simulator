@@ -1,0 +1,12 @@
+---
+# Clausing reform — Policy 06: Extend NIIT to active pass-through earnings
+# Starting in 2026, set niit.include_active = 1. This stops the netting of
+# scorp_active and part_active out of net investment income, so distributions
+# to active S-corp and partnership owners that currently escape both SECA
+# and NIIT face the 3.8% NIIT at existing $200K/$250K thresholds.
+# Matches the narrative description in Clausing & Sarin (2023), Section 7.
+
+include_active:
+  value:
+    '2014': 0
+    '2026': 1

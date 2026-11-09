@@ -29,6 +29,16 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'part',               # (dbl) net partnership income
     'scorp',              # (dbl) net S corporation income
     'farm',               # (dbl) net farm income (Sch. F)
+    'sole_prop1',         # (dbl) Schedule C net income, primary earner
+    'sole_prop2',         # (dbl) Schedule C net income, secondary earner
+    'farm1',              # (dbl) Schedule F net income, primary earner
+    'farm2',              # (dbl) Schedule F net income, secondary earner
+    'part_se1',           # (dbl) partnership income subject to employment tax, primary earner
+    'part_se2',           # (dbl) partnership income subject to employment tax, secondary earner
+    'seca_ded1',          # (dbl) deduction for half of SECA tax, primary earner
+    'seca_ded2',          # (dbl) deduction for half of SECA tax, secondary earner
+    'se_health',          # (dbl) self-employed health insurance premiums paid
+    'keogh_contr',        # (dbl) contributions to SEP plans and KEOGH accounts
     'wagebill_sole_prop', # (dbl) W2 wages paid in sole proprietorship
     'wagebill_part',      # (dbl) owner's share of W2 wages paid in partnership
     'wagebill_scorp',     # (dbl) owner's share of W2 wages paid in S corporation
@@ -43,6 +53,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'std_ded',            # (dbl) value of standard deduction (even if eventually itemizing)
     'item_ded',           # (dbl) value of itemized deductions
     'pe_ded',             # (dbl) value of deduction for personal exemptions 
+    'tip_ded',            # (dbl) value of below-the-line tip deduction
+    'ot_ded',             # (dbl) value of below-the-line overtime deduction
+    'senior_ded',         # (dbl) value of below-the-line extra senior deduction
+    'auto_int_ded',       # (dbl) value of below-the-line auto loan interest deduction
     
     # Tax law attributes
     'qbi.rate',                    # (dbl) deduction rate
@@ -64,83 +78,106 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument 
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     
-    # Derive taxable income without regard to QBI deduction 
-    mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded))
-  
-  # Calculate QBI deduction for each business 
-  qbi_ded = tax_unit %>% 
+    # Derive taxable income without regard to QBI deduction (IRC 199A(e)(1)),
+    # which sets both the taxable income limit and the phase-in of the wage
+    # limit. It is net of the tip, overtime, senior and car loan interest
+    # deductions, which every filer takes (2025 Form 8995 line 11: Form 1040
+    # line 11a less lines 12e and 13b). The itemizing choice is made later, so
+    # the larger of the standard and itemized deductions is used.
+    mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded - tip_ded -
+                              ot_ded - senior_ded - auto_int_ded)) %>% 
     
-    # Replace NAs with 0s 
-    mutate(across(.cols = c(starts_with('wagebill_'), starts_with('sstb_')), 
-                  .fns  = ~ replace_na(., 0))) %>% 
-    
-    # Reshape long in business type (data limitations require that business
-    # aggregation happens at the business type level) such that we have three 
-    # QBI-related variables per business type: income, wage bill, and SSTB status
-    select(all_of(req_vars), txbl_inc) %>% 
-    rename_with(.cols = c(starts_with('wagebill_'), starts_with('sstb_')), 
-                .fn   = ~ str_replace(., '_', '.')) %>% 
-    rename_with(.cols = c(sole_prop, part, scorp, farm), 
-                .fn   = ~ paste0('inc.', .)) %>%
-    pivot_longer(cols      = c(starts_with('inc.'), 
-                               starts_with('wagebill.'), 
-                               starts_with('sstb.')), 
-                 names_to  = c('series', 'business_type'), 
-                 names_sep = '[.]', 
-                 values_to = 'value') %>%
-    pivot_wider(names_from  = series,
-                values_from = value) %>%
-    
-    # Now, tax calculation by business type
+    # Reduce business income by the deductions attributable to it: half of SECA
+    # tax, self-employed health insurance and retirement contributions (Treas.
+    # Reg. 1.199A-3(b)(1)(vi)). Each earner's SECA deduction is split across that
+    # earner's businesses in proportion to positive self-employment earnings.
+    # Health insurance is split across those and positive S corporation income,
+    # which a shareholder owning more than 2% deducts it against (IRC 162(l)(5)).
+    # Retirement contributions are split across self-employment earnings only.
     mutate(
-      
+      se_pos1 = pmax(0, sole_prop1) + pmax(0, farm1) + pmax(0, part_se1),
+      se_pos2 = pmax(0, sole_prop2) + pmax(0, farm2) + pmax(0, part_se2),
+      health_per_dollar = if_else(se_pos1 + se_pos2 + pmax(0, scorp) > 0,
+                                  se_health / (se_pos1 + se_pos2 + pmax(0, scorp)), 0),
+      keogh_per_dollar  = if_else(se_pos1 + se_pos2 > 0, keogh_contr / (se_pos1 + se_pos2), 0),
+      per_dollar1 = if_else(se_pos1 > 0, seca_ded1 / se_pos1, 0) + health_per_dollar + keogh_per_dollar,
+      per_dollar2 = if_else(se_pos2 > 0, seca_ded2 / se_pos2, 0) + health_per_dollar + keogh_per_dollar,
+      sole_prop = sole_prop - pmax(0, sole_prop1) * per_dollar1 - pmax(0, sole_prop2) * per_dollar2,
+      farm      = farm      - pmax(0, farm1)      * per_dollar1 - pmax(0, farm2)      * per_dollar2,
+      part      = part      - pmax(0, part_se1)   * per_dollar1 - pmax(0, part_se2)   * per_dollar2,
+      scorp     = scorp     - pmax(0, scorp) * health_per_dollar
+    )
+  
+  # Business types over which the deduction is calculated separately. Data
+  # limitations require aggregating at the business type level. The final mutate
+  # below sums the per-business columns in this order.
+  business_types = c('sole_prop', 'part', 'scorp', 'farm')
+
+  # Calculate the deduction per business type, three columns each, as vectors on
+  # the wide frame. The per-business math has no cross-business dependency, so
+  # reshaping long and rejoining bought nothing and cost 28% of model runtime; the
+  # calculator runs this a dozen times per scenario year. See
+  # other/performance/PERF_AUDIT_2026_07_25.md.
+  qbi_by_business = business_types %>%
+    map(.f = function(business_type) {
+
+      # Replace NAs with 0s
+      inc      = tax_unit[[business_type]]
+      wagebill = replace_na(tax_unit[[paste0('wagebill_', business_type)]], 0)
+      sstb     = replace_na(tax_unit[[paste0('sstb_', business_type)]], 0)
+
       #-------------------------
       # TCJA-style calculation
       #------------------------
-      
-      # Calculate tentative deduction
-      qbi_ded_tent = inc * qbi.rate,
-      
-      # Determine and apply limitations based on taxable income, SSTB status, 
-      # and wages paid. We calibrate the imputation of wages paid such that 
-      # it also reflects the other 25% + 2.5% asset limitation. First, 
-      # determine the extent to which the taxable income phaseout applies:
-      po_thresh = if_else(sstb == 1, qbi.po_thresh_sstb, qbi.po_thresh_non_sstb),
-      po_range  = if_else(sstb == 1, qbi.po_range_sstb, qbi.po_range_non_sstb),
-      po_share  = pmin(1, pmax(0, txbl_inc - po_thresh) / po_range),
-      
-      # Determine whether taxpayer is excepted from taxable income phaseout 
-      # conditional on paying sufficient wages
-      wage_exception = if_else(sstb == 1, 
-                               qbi.wage_exception_sstb,
-                               qbi.wage_exception_non_sstb),
-      
-      # Calculate reduction in deduction as a function of whether wage exception 
-      # applies and, if so, the degree to which taxpayer has sufficient wages. 
-      # (Note that if taxpayer does not have a wage exception per law, wage credit 
-      # evaluates to 0 and phaseout fully applies) 
-      wage_credit = wagebill * qbi.wage_limit * wage_exception,
-      reduction   = po_share * pmax(0, qbi_ded_tent - wage_credit),
-      qbi_ded     = pmax(0, qbi_ded_tent - reduction),
-      
-      #------------------------
-      # OBBB-style calculation
-      #------------------------
-      
-      # Step 1: Non-SSTB QBI deduction limited to usual wage + asset test  
-      obbb_step1 = pmin(inc * qbi.rate * (sstb == 0), wagebill * qbi.wage_limit), 
-      
-    ) %>% 
-      
-    # Reshape wide again
-    select(id, business_type, inc, qbi_ded, obbb_step1) %>% 
-    pivot_wider(names_from  = business_type, 
-                names_sep   = '.',
-                values_from = c(inc, qbi_ded, obbb_step1))
 
-  # Finally, join QBI deduction data back into main tax unit data
-  tax_unit %>% 
-    left_join(qbi_ded, by = 'id') %>%
+      # Calculate tentative deduction
+      qbi_ded_tent = inc * tax_unit$qbi.rate
+
+      # Determine and apply limitations based on taxable income, SSTB status,
+      # and wages paid. We calibrate the imputation of wages paid such that
+      # it also reflects the other 25% + 2.5% asset limitation. First,
+      # determine the extent to which the taxable income phaseout applies:
+      po_thresh = if_else(sstb == 1,
+                          tax_unit$qbi.po_thresh_sstb,
+                          tax_unit$qbi.po_thresh_non_sstb)
+      po_range  = if_else(sstb == 1,
+                          tax_unit$qbi.po_range_sstb,
+                          tax_unit$qbi.po_range_non_sstb)
+      po_share  = pmin(1, pmax(0, tax_unit$txbl_inc - po_thresh) / po_range)
+
+      # Determine whether taxpayer is excepted from taxable income phaseout
+      # conditional on paying sufficient wages
+      wage_exception = if_else(sstb == 1,
+                               tax_unit$qbi.wage_exception_sstb,
+                               tax_unit$qbi.wage_exception_non_sstb)
+
+      # Calculate reduction in deduction as a function of whether wage exception
+      # applies and, if so, the degree to which taxpayer has sufficient wages.
+      # (Note that if taxpayer does not have a wage exception per law, wage credit
+      # evaluates to 0 and phaseout fully applies)
+      wage_credit = wagebill * tax_unit$qbi.wage_limit * wage_exception
+      reduction   = po_share * pmax(0, qbi_ded_tent - wage_credit)
+
+      tibble(
+
+        !!paste0('inc.', business_type)     := inc,
+        !!paste0('qbi_ded.', business_type) := pmax(0, qbi_ded_tent - reduction),
+
+        #------------------------
+        # OBBB-style calculation
+        #------------------------
+
+        # Step 1: Non-SSTB QBI deduction limited to usual wage + asset test
+        !!paste0('obbb_step1.', business_type) :=
+          pmin(inc * tax_unit$qbi.rate * (sstb == 0),
+               wagebill * tax_unit$qbi.wage_limit)
+      )
+    }) %>%
+    bind_cols()
+
+  # Finally, add QBI deduction data to main tax unit data
+  tax_unit %>%
+    bind_cols(qbi_by_business) %>%
     mutate(
       
       # Calculate total QBI deduction across businesses

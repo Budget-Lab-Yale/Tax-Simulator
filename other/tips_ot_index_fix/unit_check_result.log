@@ -1,0 +1,55 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/24.12.0-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+
+== (0) parse-check ==
+  src/calc/do_taxes.R                                                PASS
+  src/data/tax_law.R                                                 PASS
+
+== (1) FIX 1: tips/ot aggregates are unread ==
+  no bare tips/ot reference outside do_taxes.R                       PASS
+       (5 maintenance sites inside do_taxes.R calc_mtrs)
+  tip_ded identical with stale vs zeroed `tips` aggregate            PASS  [0.00 vs 0.00]
+  ot_ded identical with stale vs zeroed `tips` aggregate             PASS  [4000.00 vs 4000.00]
+  tip_ded is 0 after tips1 zeroed (reads tips1, not aggregate)       PASS  [0.00]
+  liab_pr identical with stale vs zeroed `tips` aggregate            PASS  [4743.00 vs 4743.00]
+  ot_ded identical with stale vs zeroed `ot` aggregate               PASS
+  liab_pr identical with stale vs zeroed `ot` aggregate              PASS
+  extensive branch for tips1 decrements wages1 + wages + tips        PASS
+  extensive branch for tips2 decrements wages2 + wages + tips        PASS
+  extensive branch for ot1   decrements wages1 + wages + ot          PASS
+  extensive branch for ot2   decrements wages2 + wages + ot          PASS
+
+== (2) FIX 2: NA index guard ==
+  index-series horizon: 2099
+  baseline parses inside horizon (no false positive)                 PASS
+  std deduction indexed upward 2026 -> 2035 (index is live)          PASS  [16100 -> 19400]
+  NA i_measure sentinel still freezes (ed.llc_po_thresh_single flat) PASS  [80000 -> 80000]
+       (sentinel parses as 'NA', class character)
+  sentinel-then-resume parses (indexation)                           PASS
+  sentinel-then-resume parses (refund_amount)                        PASS
+  unknown measure name raises the guard                              PASS
+  window past horizon raises an error                                PASS
+  error is the NA-index guard, naming subparameter + years           PASS  [ℹ In index: 1.
+ℹ With name: agi.
+Caused by error in `pmap()`:
+ℹ In index: 5.
+ℹ With name: bus_loss_limit_married.
+Caused by error in `.f()`:
+! Indexation series for subparameter "bus_loss_limit_married" (measure "cpi/chained_cpi") is NA in simulation year(s) 2100, 2101. Either the simulation window extends past the end of the index series, the series has a gap, or the measure names a series absent from the index data. An NA index silently reverts the parameter to its nominal base-year value.]
+  apply_indexation maps NA index to base_value (the averted bug)     PASS
+
+  sweeping 912 reform config dirs on 16 cores...
+  no reform config trips the new NA-index guard                      PASS
+  NOTE: configs failing for OTHER (pre-existing) reasons:
+    ./config/scenarios/tax_law/tests/ctc
+      ℹ In index: 1.
+Caused by error in `yaml.load()`:
+! (./config/scenarios/tax_law/tests/ctc/ctc.yaml) Parser error: while parsing a block mapping at line 53, column 5 did not find expected key at line 57, column 22
+
+== 0 failure(s) ==
+ALL CHECKS PASSED

@@ -1,0 +1,887 @@
+<title>Corporate Incidence Channel — Test-Run Inspector</title>
+<style>
+  :root {
+    --page:      #f9f9f7;
+    --surface:   #fcfcfb;
+    --ink:       #0b0b0b;
+    --ink-2:     #52514e;
+    --muted:     #898781;
+    --grid:      #e1e0d9;
+    --baseline:  #c3c2b7;
+    --border:    rgba(11,11,11,0.10);
+    --c-perm:    #2a78d6;  /* slot 1 blue  — corp_perm family        */
+    --c-sunset:  #1baf7a;  /* slot 2 aqua  — corp_sunset family      */
+    --c-permw:   #eda100;  /* slot 3 yellow — corp_perm_wealth       */
+    --c-sunsetw: #008300;  /* slot 4 green — corp_sunset_wealth      */
+    --c-div:     #2a78d6;  /* flow chart: dividends                  */
+    --c-int:     #1baf7a;  /* interest                               */
+    --c-rent:    #eda100;  /* rent                                   */
+    --c-pt:      #008300;  /* pass-through                           */
+    --d-pos:     #2a78d6;  /* diverging + pole (corporate receipts)  */
+    --d-neg:     #e34948;  /* diverging − pole (individual offset)   */
+    --ord-1:     #86b6ef;  /* ordinal blue 250                       */
+    --ord-2:     #2a78d6;  /* ordinal blue 450                       */
+    --ord-3:     #104281;  /* ordinal blue 650                       */
+    --demph:     #b9b8b0;  /* de-emphasis series                     */
+    --wash:      rgba(42,120,214,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --c-perm: #3987e5; --c-sunset: #199e70; --c-permw: #c98500; --c-sunsetw: #008300;
+      --c-div: #3987e5; --c-int: #199e70; --c-rent: #c98500; --c-pt: #008300;
+      --d-pos: #3987e5; --d-neg: #e66767;
+      --ord-1: #6da7ec; --ord-2: #3987e5; --ord-3: #184f95;
+      --demph: #52514e; --wash: rgba(57,135,229,0.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --baseline: #383835;
+    --border: rgba(255,255,255,0.10);
+    --c-perm: #3987e5; --c-sunset: #199e70; --c-permw: #c98500; --c-sunsetw: #008300;
+    --c-div: #3987e5; --c-int: #199e70; --c-rent: #c98500; --c-pt: #008300;
+    --d-pos: #3987e5; --d-neg: #e66767;
+    --ord-1: #6da7ec; --ord-2: #3987e5; --ord-3: #184f95;
+    --demph: #52514e; --wash: rgba(57,135,229,0.14);
+  }
+  :root[data-theme="light"] {
+    --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e;
+    --muted: #898781; --grid: #e1e0d9; --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --c-perm: #2a78d6; --c-sunset: #1baf7a; --c-permw: #eda100; --c-sunsetw: #008300;
+    --c-div: #2a78d6; --c-int: #1baf7a; --c-rent: #eda100; --c-pt: #008300;
+    --d-pos: #2a78d6; --d-neg: #e34948;
+    --ord-1: #86b6ef; --ord-2: #2a78d6; --ord-3: #104281;
+    --demph: #b9b8b0; --wash: rgba(42,120,214,0.10);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 28px 90px; }
+  header.masthead { margin-bottom: 34px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 6px;
+  }
+  h1 { font-size: 27px; font-weight: 650; line-height: 1.2; margin: 0 0 10px; text-wrap: balance; }
+  .lede { max-width: 68ch; color: var(--ink-2); margin: 0; }
+  .provenance {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .provenance b { color: var(--ink-2); font-weight: 600; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 26px 0 8px; }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px 12px;
+  }
+  .kpi .k-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .kpi .k-value { font-size: 26px; font-weight: 650; letter-spacing: -0.01em; }
+  .kpi .k-note  { font-size: 12px; color: var(--ink-2); margin-top: 3px; }
+
+  section { margin-top: 46px; }
+  section > h2 { font-size: 20px; font-weight: 650; margin: 4px 0 8px; text-wrap: balance; }
+  section > p  { max-width: 68ch; color: var(--ink-2); margin: 8px 0; }
+  section > p code, .callout code, td code {
+    font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--wash); padding: 1px 5px; border-radius: 4px; color: var(--ink);
+  }
+
+  .pipeline { overflow-x: auto; padding-bottom: 6px; }
+  .pipe-row { display: flex; align-items: stretch; gap: 0; min-width: 900px; margin-top: 14px; }
+  .pipe-step {
+    flex: 1 1 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; position: relative;
+  }
+  .pipe-step + .pipe-step { margin-left: 26px; }
+  .pipe-step + .pipe-step::before {
+    content: "→"; position: absolute; left: -21px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 15px;
+  }
+  .pipe-num { font-size: 11px; font-weight: 700; color: var(--c-perm); letter-spacing: 0.06em; }
+  .pipe-step h4 { margin: 3px 0 4px; font-size: 13.5px; font-weight: 650; }
+  .pipe-step p { margin: 0; font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+  .pipe-branches { display: flex; gap: 12px; margin-top: 12px; min-width: 900px; }
+  .pipe-branch {
+    flex: 1; border: 1px dashed var(--baseline); border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; color: var(--ink-2); background: transparent;
+  }
+  .pipe-branch b { color: var(--ink); font-weight: 600; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px 20px 14px; margin-top: 16px;
+  }
+  .card h3 { margin: 0 0 2px; font-size: 14.5px; font-weight: 650; }
+  .card .sub { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 860px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 8px; font-size: 12.5px; color: var(--ink-2); }
+  .legend .key { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .linekey { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+
+  .chart { width: 100%; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .axis text, .chart text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+  .callout {
+    border-left: 3px solid var(--c-perm); background: var(--wash);
+    border-radius: 0 8px 8px 0; padding: 12px 16px; margin-top: 14px;
+    max-width: 76ch; font-size: 13.5px; color: var(--ink-2);
+  }
+  .callout b { color: var(--ink); }
+
+  .status-line { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); margin-top: 10px; }
+  .ok-dot { width: 9px; height: 9px; border-radius: 50%; background: #0ca30c; flex: none; }
+
+  .tbl-wrap { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  thead th {
+    text-align: right; font-weight: 600; color: var(--muted); padding: 6px 10px;
+    border-bottom: 1px solid var(--baseline); white-space: nowrap;
+    font-size: 11.5px; letter-spacing: 0.02em;
+  }
+  thead th:first-child, tbody td:first-child { text-align: left; }
+  tbody td {
+    text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--grid);
+    font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap;
+  }
+  tbody td:first-child { color: var(--ink); font-weight: 600; }
+  tbody tr:hover td { background: var(--wash); }
+
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 30; display: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 7px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13); padding: 8px 11px; font-size: 12.5px;
+    color: var(--ink-2); min-width: 130px;
+  }
+  .tooltip .tt-title { font-weight: 650; color: var(--ink); margin-bottom: 3px; }
+  .tooltip .tt-row { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+  .tooltip .tt-row .lhs { display: inline-flex; align-items: center; gap: 6px; }
+  .tooltip .tt-row .val { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; margin-left: 12px; }
+
+  footer { margin-top: 56px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--grid); padding-top: 14px; }
+  footer code { font: 11px ui-monospace, Menlo, monospace; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Tax-Simulator · branch wealth · on-model corporate incidence v1</p>
+    <h1>How a corporate rate hike flows through the individual model</h1>
+    <p class="lede">
+      An inspector for the verification run of the new corporate-incidence channel. The test policy
+      is a canonical permanent corporate rate hike — a receipts wedge starting at <b>$130B in 2027</b>,
+      growing with profits — plus a five-year sunsetted variant. Full sample, years 2026–2033,
+      placeholder exposure parameters. Every chart below is drawn from the run's actual output files.
+    </p>
+    <div class="provenance">
+      <span>vintage <b>corp_test_v1</b></span>
+      <span>OME test vintage <b>corp_test_20260703</b></span>
+      <span>enactment <b>2027</b></span>
+      <span>σ_N <b>0.375</b> · κ <b>0.40</b> · ω_div <b>0.85</b> · ω_kg <b>0.50</b></span>
+      <span>checks <b>15 / 15 pass</b></span>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <p class="eyebrow">The machine</p>
+    <h2>One wedge in, five consequences out</h2>
+    <p>
+      The input is a single series from <b>Off-Model-Estimates</b> (OME) — the interface that carries
+      revenue effects estimated outside the microsimulation as bare CSVs of receipts deltas. The
+      channel reads the corporate column, asserts a fail-closed declaration
+      (<code>corporate_meta.yaml</code>: gross-of-offset, rate-type), and turns it into record-level
+      transformations. Everything downstream is a consequence the calculator prices on its own.
+    </p>
+    <div class="pipeline">
+      <div class="pipe-row">
+        <div class="pipe-step"><span class="pipe-num">1 · INPUT</span><h4>OME corporate wedge w_t</h4><p>Receipts delta, $B by year. Gate: metadata + seesaw guard, else channel off.</p></div>
+        <div class="pipe-step"><span class="pipe-num">2 · PATHS</span><h4>Analytic φ_t and μ_t</h4><p>Flow factor (payout cut) and perfect-foresight equity markdown, from π_t = gdp_corp − rev_corp, vintaging η(t), κ-split.</p></div>
+        <div class="pipe-step"><span class="pipe-num">3 · RECORDS</span><h4>Applier transforms the frame</h4><p>Dividends/interest/rent/pt scaled; exposed value.* marked down; kg gains adjusted; retirement draws follow their balances.</p></div>
+        <div class="pipe-step"><span class="pipe-num">4 · CALCULATOR</span><h4>Taxes reprice</h4><p>IIT, NIIT, estate and wealth tax all recompute on the shocked frame. No hand-coded offset anywhere.</p></div>
+        <div class="pipe-step"><span class="pipe-num">5 · RECEIPTS</span><h4>Endogenous offset materializes</h4><p>Corporate line books the wedge; the individual-side loss shows up in ordinary conventional receipts deltas.</p></div>
+      </div>
+      <div class="pipe-branches">
+        <div class="pipe-branch"><b>Wealth bathtub branch.</b> A share s of the net after-tax cash-flow shock F = ΔT⁰ − ΔY_exog is financed out of wealth, compounds, and drains into the estate base at death.</div>
+        <div class="pipe-branch"><b>kg_dynamics branch.</b> In kg runs the price margin enters as a gain-state debit (μ_t × exposed value ≈ $1.2–1.5T/yr here) and the quantity margin as a post-behavior φ step.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Step 1 · Input</p>
+    <h2>The wedge: what OME hands the model</h2>
+    <p>
+      Two test declarations against the same baseline: a <b>permanent</b> hike (extends past the file
+      horizon, growing with profits) and a <b>sunset</b> that legislates the same path for 2027–2031
+      and then expires. Everything else in this page is what the channel does with these two series.
+    </p>
+    <div class="card">
+      <h3>Corporate receipts wedge w_t</h3>
+      <p class="sub">$B by calendar year, scenario OME minus baseline OME</p>
+      <div class="legend" id="lg-wedge"></div>
+      <div class="chart" id="ch-wedge"></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Step 2 · Paths</p>
+    <h2>Two numbers carry the whole shock</h2>
+    <p>
+      The <b>flow factor φ_t</b> is the proportional cut to after-tax distributions — dividends fall by
+      ω_div·φ_t immediately (“dividends track the current-year statute”). The <b>markdown μ_t</b> is the
+      perfect-foresight equity price discount: the PV of remaining flow hits. Under the permanent hike
+      μ starts at 2.7% and decays slowly toward the rent-share floor as capital migrates (η(t) ramp);
+      under the sunset it is the small annuity share of the window and hits exactly zero at expiry —
+      holders during the window earn low dividends plus recovery appreciation summing to r.
+    </p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Flow factor φ_t</h3>
+        <p class="sub">proportional payout cut, % — statute-tracking, reverts at sunset</p>
+        <div class="legend" id="lg-phi"></div>
+        <div class="chart" id="ch-phi"></div>
+      </div>
+      <div class="card">
+        <h3>Equity markdown μ_t</h3>
+        <p class="sub">proportional price discount, % — PV of remaining hits</p>
+        <div class="legend" id="lg-mu"></div>
+        <div class="chart" id="ch-mu"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Step 3 · Flows</p>
+    <h2>Who loses cash income, line by line</h2>
+    <p>
+      The applier scales each external-income line (the D16 contract) and accumulates the applied
+      dollars into <code>corp_dY_exog</code>. Dividends dominate at these parameters: interest ramps in
+      only as old paper rolls over, rent and the pass-through capital slice arrive with the migration
+      ramp η(t). Realized capital gains and retirement distributions also fall, but they are
+      <i>internal conversions</i> — their resource loss is already booked in the markdown, so only
+      their tax consequence flows through (that distinction drives the bathtub sign below).
+    </p>
+    <div class="card">
+      <h3>Household external-income hit, permanent hike</h3>
+      <p class="sub">−Σ w·Δ per line, $B by year (positive = income lost)</p>
+      <div class="legend" id="lg-flows"></div>
+      <div class="chart" id="ch-flows"></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Step 5 · Receipts</p>
+    <h2>The endogenous offset — what this channel exists to measure</h2>
+    <p>
+      Status quo (no metadata): the corporate line books the wedge and the individual side never moves.
+      With the channel on, the same corporate line books, and the income-tax line gives back
+      <b>≈ $21B a year</b> — about 15¢ per corporate dollar at these placeholder exposures — measured
+      through the calculator, not assumed. The estate line erodes too (next section). Nothing here is
+      a special line item; it is ordinary conventional receipts deltas.
+    </p>
+    <div class="card">
+      <h3>Receipts deltas vs baseline, permanent hike</h3>
+      <p class="sub">fiscal-year $B; on-model channel vs the channel-off status quo</p>
+      <div class="legend" id="lg-receipts"></div>
+      <div class="chart" id="ch-receipts"></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Steps 3–4 · Stocks</p>
+    <h2>The balance-sheet event reaches the estate tax</h2>
+    <p>
+      The markdown reprices exposed <code>value.*</code> holdings — a <b>$1.8–1.9T</b> household
+      markdown position — and <code>net_worth</code> is recomputed, so <code>calc_estate</code> sees
+      smaller gross estates. Expected estate tax falls ≈ $0.7–0.9B per year under the permanent hike.
+      Under the sunset, the markdown leg vanishes at expiry: estates snap back to baseline —
+      <i>unless</i> the wealth bathtub is on, in which case the during-window dissaving persists and
+      compounds (D17). That persistent green line is the plan's “sunsets are not free” result.
+    </p>
+    <div class="card">
+      <h3>Expected estate tax, delta vs baseline</h3>
+      <p class="sub">CY $B, conventional pass; death-year liability (books FY+1)</p>
+      <div class="legend" id="lg-estate"></div>
+      <div class="chart" id="ch-estate"></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Branch · Bathtub</p>
+    <h2>The forcing sign is a composition story</h2>
+    <p>
+      The bathtub finances a share s = 0.5 of the net after-tax cash-flow shock
+      F = ΔT⁰ − ΔY_exog out of wealth. Under the <b>sunset</b>, the flow leg dominates (μ is small, so
+      internal-conversion rebates are small): F is positive, households genuinely dissave, and the
+      accumulated deficit keeps compounding after expiry. Under the <b>permanent</b> hike, the big
+      markdown makes realized-gain and retirement tax rebates large — and those are rebates on losses
+      already booked in the markdown — so F turns mildly <i>negative</i>: households bank
+      ≈ $17B of rebates by 2033, against the $1.9T markdown. Same rule, opposite signs, both correct.
+    </p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Permanent + s = 0.5 — banked rebates</h3>
+        <p class="sub">$B: yearly forcing F (bars) and accumulated position P (line); P &lt; 0 = wealth above baseline</p>
+        <div class="legend" id="lg-bt-perm"></div>
+        <div class="chart" id="ch-bt-perm"></div>
+      </div>
+      <div class="card">
+        <h3>Sunset + s = 0.5 — genuine dissaving</h3>
+        <p class="sub">$B: forcing stops at expiry (2031) but the deficit persists and compounds</p>
+        <div class="legend" id="lg-bt-sunset"></div>
+        <div class="chart" id="ch-bt-sunset"></div>
+      </div>
+    </div>
+    <div class="callout">
+      <b>Why this is not a sign bug.</b> A dollar of lost dividends enters the forcing net of tax
+      (a loss). A dollar of “lost” realized gains does not — the loss already lives in the marked-down
+      balance sheet; only its tax rebate is cash. The formal model records exactly this corollary
+      (P9) so it wouldn't later be “fixed.” The verification suite checks the invariant that is
+      actually theorems: F exceeds the tax-only forcing by exactly |ΔY_exog|, and the state matches an
+      independent recomputation to the cent.
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Sweeps</p>
+    <h2>The knobs move the markdown the way the theory says</h2>
+    <p>
+      σ_N is the normal-return share of the wedge (what can migrate); κ is the C-corp share of the
+      normal-capital stock (what stays on corporate flows after migration). Both are second-order for
+      flows and first-order for the markdown path. The priced-as-permanent corner disbelieves the
+      legislated sunset for pricing only — the markdown stays near the permanent level through the
+      window instead of decaying to zero.
+    </p>
+    <div class="grid3">
+      <div class="card">
+        <h3>μ_t by σ_N</h3>
+        <p class="sub">rent-only (0) → central (0.375) → house-VAT (0.5)</p>
+        <div class="legend" id="lg-sw-sigma"></div>
+        <div class="chart" id="ch-sw-sigma"></div>
+      </div>
+      <div class="card">
+        <h3>μ_t by κ</h3>
+        <p class="sub">0.25 → 0.40 → 0.50; higher κ ⇒ smaller price-relevant hit</p>
+        <div class="legend" id="lg-sw-kappa"></div>
+        <div class="chart" id="ch-sw-kappa"></div>
+      </div>
+      <div class="card">
+        <h3>Sunset μ_t: priced as permanent</h3>
+        <p class="sub">the sunset-disbelief corner vs the central sunset</p>
+        <div class="legend" id="lg-sw-pap"></div>
+        <div class="chart" id="ch-sw-pap"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Numbers</p>
+    <h2>The run, year by year</h2>
+    <p>
+      Everything above, numerically. Receipts deltas are fiscal-year; paths and estate deltas are
+      calendar-year. The conservation columns come from the per-year reconciliation diagnostic
+      (<code>corp_conservation_diag_&#123;t&#125;.csv</code>), where the record-realized flow hit matched the
+      analytic accumulation to the cent in every year.
+    </p>
+    <div class="card">
+      <h3>Permanent hike (corp_perm, + wealth variant)</h3>
+      <p class="sub">$B unless noted; Δ = scenario − baseline</p>
+      <div class="tbl-wrap"><table id="tbl-perm"></table></div>
+    </div>
+    <div class="card">
+      <h3>Sunset (corp_sunset, + wealth variant)</h3>
+      <p class="sub">window 2027–2031; note the post-expiry rows</p>
+      <div class="tbl-wrap"><table id="tbl-sunset"></table></div>
+    </div>
+    <div class="status-line"><span class="ok-dot"></span>
+      All 15 output theorem checks pass: static wall, offset direction, estate erosion, forcing
+      invariants (state = independent recomputation), D17 persistence, kg debit, conservation, fallback identity.
+    </div>
+  </section>
+
+  <footer>
+    Generated 2026-07-03 18:11 from
+    <code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/corp_test_v1</code>
+    (+ <code>corp_sweep_*</code>) · design docs <code>other/corporate_incidence/&#123;CONSIDERATIONS,FORMAL_MODEL&#125;.md</code>
+    · harness <code>other/corporate_incidence/verify/</code> · commits <code>ab7e3725b…acebf6641</code> on branch <code>wealth</code>.
+    Placeholder exposure parameters pending Phase-0c measurement — read levels as demonstrations of mechanics, not scores.
+  </footer>
+</div>
+
+<div class="tooltip" id="tt"></div>
+
+<script>
+const DATA = {"generated":["2026-07-03 18:11"],"paths":{"corp_perm":[{"year":2026,"w":0,"phi":0,"mu":0,"eta":0,"roll":0,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":0,"dY_int_realized":0,"dY_rent_realized":0,"dY_pt_realized":0,"dY_total_realized":0,"dY_total_analytic":0,"B_flow_hh":-0,"markdown_position_hh":0,"B_res_theta":0,"drho_int":0,"residual_unallocated":0},{"year":2027,"w":130,"phi":-0.0344667,"mu":0.02726643,"eta":0,"roll":0,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-14.86681878,"dY_int_realized":0,"dY_rent_realized":0,"dY_pt_realized":0,"dY_total_realized":-14.86681878,"dY_total_analytic":-14.86681878,"B_flow_hh":14.86681878,"markdown_position_hh":1794.80772181,"B_res_theta":52,"drho_int":0,"residual_unallocated":63.13318122},{"year":2028,"w":135.07,"phi":-0.03546439,"mu":0.02711017,"eta":0.057,"roll":0.33609186,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-15.29175942,"dY_int_realized":-0.05244135,"dY_rent_realized":-0.04281836,"dY_pt_realized":-0.15560754,"dY_total_realized":-15.54262667,"dY_total_analytic":-15.54262667,"B_flow_hh":15.54262667,"markdown_position_hh":1863.57920787,"B_res_theta":54.028,"drho_int":0.70237734,"residual_unallocated":64.79699599},{"year":2029,"w":140.3377,"phi":-0.03630169,"mu":0.02691614,"eta":0.110751,"roll":0.45386438,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-15.62033018,"dY_int_realized":-0.14520616,"dY_rent_realized":-0.08319023,"dY_pt_realized":-0.31534314,"dY_total_realized":-16.16406971,"dY_total_analytic":-16.16406971,"B_flow_hh":16.16406971,"markdown_position_hh":1927.87258572,"B_res_theta":56.13508,"drho_int":1.18990679,"residual_unallocated":66.8486435},{"year":2030,"w":145.8109,"phi":-0.0365282,"mu":0.02670844,"eta":0.16143819,"roll":0.53989059,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-16.45277782,"dY_int_realized":-0.25767962,"dY_rent_realized":-0.12215188,"dY_pt_realized":-0.47606551,"dY_total_realized":-17.30867483,"dY_total_analytic":-17.30867483,"B_flow_hh":17.30867483,"markdown_position_hh":1991.20094349,"B_res_theta":58.32436,"drho_int":1.53837737,"residual_unallocated":68.6394878},{"year":2031,"w":151.4975,"phi":-0.03625333,"mu":0.0265059,"eta":0.20923622,"roll":0.60305923,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-17.29687809,"dY_int_realized":-0.38146285,"dY_rent_realized":-0.16020623,"dY_pt_realized":-0.63881486,"dY_total_realized":-18.47736203,"dY_total_analytic":-18.47736203,"B_flow_hh":18.47736203,"markdown_position_hh":2056.58650195,"B_res_theta":60.599,"drho_int":1.80700135,"residual_unallocated":70.61413662},{"year":2032,"w":157.4059,"phi":-0.03575799,"mu":0.02631705,"eta":0.25430975,"roll":0.67688813,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-18.11827622,"dY_int_realized":-0.53445632,"dY_rent_realized":-0.1977738,"dY_pt_realized":-0.80334326,"dY_total_realized":-19.65384959,"dY_total_analytic":-19.65384959,"B_flow_hh":19.65384959,"markdown_position_hh":2123.35972435,"B_res_theta":62.96236,"drho_int":1.87434088,"residual_unallocated":72.91534952},{"year":2033,"w":163.5448,"phi":-0.03523722,"mu":0.02614338,"eta":0.2968141,"roll":0.7144895,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-18.95782979,"dY_int_realized":-0.67289959,"dY_rent_realized":-0.2366237,"dY_pt_realized":-0.9710577,"dY_total_realized":-20.83841079,"dY_total_analytic":-20.83841079,"B_flow_hh":20.83841079,"markdown_position_hh":2192.31900848,"B_res_theta":65.41792,"drho_int":2.01873017,"residual_unallocated":75.26973903}],"corp_sunset":[{"year":2026,"w":0,"phi":0,"mu":0,"eta":0,"roll":0,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":0,"dY_int_realized":0,"dY_rent_realized":0,"dY_pt_realized":0,"dY_total_realized":0,"dY_total_analytic":0,"B_flow_hh":-0,"markdown_position_hh":0,"B_res_theta":0,"drho_int":0,"residual_unallocated":0},{"year":2027,"w":130,"phi":-0.0344667,"mu":0.00577042,"eta":0,"roll":0,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-14.86681878,"dY_int_realized":0,"dY_rent_realized":0,"dY_pt_realized":0,"dY_total_realized":-14.86681878,"dY_total_analytic":-14.86681878,"B_flow_hh":14.86681878,"markdown_position_hh":379.83710764,"B_res_theta":52,"drho_int":0,"residual_unallocated":63.13318122},{"year":2028,"w":135.07,"phi":-0.03546439,"mu":0.00441845,"eta":0.057,"roll":0.33609186,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-15.29175942,"dY_int_realized":-0.05244135,"dY_rent_realized":-0.04281836,"dY_pt_realized":-0.15560754,"dY_total_realized":-15.54262667,"dY_total_analytic":-15.54262667,"B_flow_hh":15.54262667,"markdown_position_hh":303.72829416,"B_res_theta":54.028,"drho_int":0.70237734,"residual_unallocated":64.79699599},{"year":2029,"w":140.3377,"phi":-0.03630169,"mu":0.0030038,"eta":0.110751,"roll":0.45386438,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-15.62033018,"dY_int_realized":-0.14520616,"dY_rent_realized":-0.08319023,"dY_pt_realized":-0.31534314,"dY_total_realized":-16.16406971,"dY_total_analytic":-16.16406971,"B_flow_hh":16.16406971,"markdown_position_hh":215.1476584,"B_res_theta":56.13508,"drho_int":1.18990679,"residual_unallocated":66.8486435},{"year":2030,"w":145.8109,"phi":-0.0365282,"mu":0.00153111,"eta":0.16143819,"roll":0.53989059,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-16.45277782,"dY_int_realized":-0.25767962,"dY_rent_realized":-0.12215188,"dY_pt_realized":-0.47606551,"dY_total_realized":-17.30867483,"dY_total_analytic":-17.30867483,"B_flow_hh":17.30867483,"markdown_position_hh":114.1494597,"B_res_theta":58.32436,"drho_int":1.53837737,"residual_unallocated":68.6394878},{"year":2031,"w":151.4975,"phi":-0.03625333,"mu":0,"eta":0.20923622,"roll":0.60305923,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":-17.29687809,"dY_int_realized":-0.38146285,"dY_rent_realized":-0.16020623,"dY_pt_realized":-0.63881486,"dY_total_realized":-18.47736203,"dY_total_analytic":-18.47736203,"B_flow_hh":18.47736203,"markdown_position_hh":0,"B_res_theta":60.599,"drho_int":1.80700135,"residual_unallocated":70.61413662},{"year":2032,"w":0,"phi":0,"mu":0,"eta":0.25430975,"roll":0.67688813,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":0,"dY_int_realized":0,"dY_rent_realized":0,"dY_pt_realized":0,"dY_total_realized":0,"dY_total_analytic":0,"B_flow_hh":-0,"markdown_position_hh":0,"B_res_theta":0,"drho_int":0,"residual_unallocated":0},{"year":2033,"w":0,"phi":0,"mu":0,"eta":0.2968141,"roll":0.7144895,"sigma_n":0.375,"kappa":0.4,"theta_res":0.4,"dY_div_realized":0,"dY_int_realized":0,"dY_rent_realized":0,"dY_pt_realized":0,"dY_total_realized":0,"dY_total_analytic":0,"B_flow_hh":-0,"markdown_position_hh":0,"B_res_theta":0,"drho_int":0,"residual_unallocated":0}]},"sweeps":{"sigma0":[{"year":2026,"mu":0,"phi":0},{"year":2027,"mu":0.03743793,"phi":-0.0344667},{"year":2028,"mu":0.03752208,"phi":-0.03592513},{"year":2029,"mu":0.03753783,"phi":-0.0372294},{"year":2030,"mu":0.0375184,"phi":-0.03790505},{"year":2031,"mu":0.03749064,"phi":-0.03804439},{"year":2032,"mu":0.03746745,"phi":-0.03792823},{"year":2033,"mu":0.03745191,"phi":-0.03775888}],"sigma05":[{"year":2026,"mu":0,"phi":0},{"year":2027,"mu":0.02387593,"phi":-0.0344667},{"year":2028,"mu":0.02363954,"phi":-0.03531081},{"year":2029,"mu":0.02337558,"phi":-0.03599245},{"year":2030,"mu":0.02310512,"phi":-0.03606925},{"year":2031,"mu":0.02284432,"phi":-0.03565631},{"year":2032,"mu":0.02260025,"phi":-0.03503457},{"year":2033,"mu":0.02237388,"phi":-0.03439667}],"kappa25":[{"year":2026,"mu":0,"phi":0},{"year":2027,"mu":0.02823337,"phi":-0.0344667},{"year":2028,"mu":0.02802489,"phi":-0.03534921},{"year":2029,"mu":0.02777989,"phi":-0.03606976},{"year":2030,"mu":0.0275233,"phi":-0.03618399},{"year":2031,"mu":0.02727446,"phi":-0.03580556},{"year":2032,"mu":0.02704203,"phi":-0.03521543},{"year":2033,"mu":0.02682737,"phi":-0.03460681}],"kappa50":[{"year":2026,"mu":0,"phi":0},{"year":2027,"mu":0.02662181,"phi":-0.0344667},{"year":2028,"mu":0.02650036,"phi":-0.03554118},{"year":2029,"mu":0.02634031,"phi":-0.03645631},{"year":2030,"mu":0.0261652,"phi":-0.03675767},{"year":2031,"mu":0.02599352,"phi":-0.03655184},{"year":2032,"mu":0.02583374,"phi":-0.03611969},{"year":2033,"mu":0.02568739,"phi":-0.0356575}],"pap":[{"year":2026,"mu":0,"phi":0},{"year":2027,"mu":0.02758267,"phi":-0.0344667},{"year":2028,"mu":0.027444,"phi":-0.03546439},{"year":2029,"mu":0.02726792,"phi":-0.03630169},{"year":2030,"mu":0.02707883,"phi":-0.0365282},{"year":2031,"mu":0.02689583,"phi":-0.03625333},{"year":2032,"mu":0.02672278,"phi":0},{"year":2033,"mu":0.02655882,"phi":0}]},"receipts":{"baseline":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2643.71950153,"corp":304.61767187,"estate":35.207},{"year":2028,"iit":2723.65306687,"corp":330.36401374,"estate":35.861},{"year":2029,"iit":2864.69765159,"corp":371.67854093,"estate":35.609},{"year":2030,"iit":3032.04161184,"corp":530.24481822,"estate":36.166},{"year":2031,"iit":3177.77225012,"corp":578.82610008,"estate":37.441},{"year":2032,"iit":3322.98428417,"corp":578.44212446,"estate":39.228},{"year":2033,"iit":3472.41060071,"corp":577.89831212,"estate":41.391}],"corp_perm":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2623.51540108,"corp":434.61767187,"estate":35.207},{"year":2028,"iit":2702.67431931,"corp":465.43401374,"estate":35.12502111},{"year":2029,"iit":2843.69983184,"corp":512.01624093,"estate":35.09351631},{"year":2030,"iit":3010.81638449,"corp":676.05571822,"estate":35.3187039},{"year":2031,"iit":3156.13111032,"corp":730.32360008,"estate":36.58048833},{"year":2032,"iit":3300.81840048,"corp":735.84802446,"estate":38.50794152},{"year":2033,"iit":3449.66945311,"corp":741.44311212,"estate":40.54910275}],"corp_nometa":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2643.71950153,"corp":434.61767187,"estate":35.207},{"year":2028,"iit":2723.65306687,"corp":465.43401374,"estate":35.861},{"year":2029,"iit":2864.69765159,"corp":512.01624093,"estate":35.609},{"year":2030,"iit":3032.04161184,"corp":676.05571822,"estate":36.166},{"year":2031,"iit":3177.77225012,"corp":730.32360008,"estate":37.441},{"year":2032,"iit":3322.98428417,"corp":735.84802446,"estate":39.228},{"year":2033,"iit":3472.41060071,"corp":741.44311212,"estate":41.391}],"corp_perm_wealth":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2623.4940688,"corp":434.61767187,"estate":35.207},{"year":2028,"iit":2702.64535474,"corp":465.43401374,"estate":35.12620953},{"year":2029,"iit":2843.66258693,"corp":512.01624093,"estate":35.09591259},{"year":2030,"iit":3010.75795596,"corp":676.05571822,"estate":35.32241282},{"year":2031,"iit":3156.05200592,"corp":730.32360008,"estate":36.58552551},{"year":2032,"iit":3300.73559376,"corp":735.84802446,"estate":38.51437942},{"year":2033,"iit":3449.57155251,"corp":741.44311212,"estate":40.55699793}],"corp_sunset":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2632.65601579,"corp":434.61767187,"estate":35.207},{"year":2028,"iit":2712.97153086,"corp":465.43401374,"estate":35.7028652},{"year":2029,"iit":2854.5290893,"corp":512.01624093,"estate":35.64212834},{"year":2030,"iit":3022.26374968,"corp":676.05571822,"estate":36.07061683},{"year":2031,"iit":3168.38791342,"corp":730.32360008,"estate":37.3899218},{"year":2032,"iit":3322.82911032,"corp":578.44212446,"estate":39.228},{"year":2033,"iit":3472.41060071,"corp":577.89831212,"estate":41.391}],"corp_sunset_wealth":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2632.60285123,"corp":434.61767187,"estate":35.207},{"year":2028,"iit":2712.87941657,"corp":465.43401374,"estate":35.70279559},{"year":2029,"iit":2854.39702137,"corp":512.01624093,"estate":35.64176145},{"year":2030,"iit":3022.07677796,"corp":676.05571822,"estate":36.06975462},{"year":2031,"iit":3168.143216,"corp":730.32360008,"estate":37.3883617},{"year":2032,"iit":3322.61768537,"corp":578.44212446,"estate":39.22543826},{"year":2033,"iit":3472.19926218,"corp":577.89831212,"estate":41.38821619}],"corp_perm_kg":[{"year":2026,"iit":2036.96189576,"corp":294.93924641,"estate":36.405},{"year":2027,"iit":2627.67870186,"corp":434.61767187,"estate":35.207},{"year":2028,"iit":2706.75899552,"corp":465.43401374,"estate":35.12502111},{"year":2029,"iit":2847.81318564,"corp":512.01624093,"estate":35.09351631},{"year":2030,"iit":3014.91683822,"corp":676.05571822,"estate":35.3187039},{"year":2031,"iit":3160.25892924,"corp":730.32360008,"estate":36.58048833},{"year":2032,"iit":3304.97117998,"corp":735.84802446,"estate":38.50794152},{"year":2033,"iit":3453.83286567,"corp":741.44311212,"estate":40.54910275}]},"estate":{"baseline":[{"year":2026,"est_tax_exp":35.89019724},{"year":2027,"est_tax_exp":37.90181007},{"year":2028,"est_tax_exp":39.64128507},{"year":2029,"est_tax_exp":41.78062401},{"year":2030,"est_tax_exp":44.07999717},{"year":2031,"est_tax_exp":46.35739323},{"year":2032,"est_tax_exp":48.80810206},{"year":2033,"est_tax_exp":51.37792587}],"corp_perm":[{"year":2026,"est_tax_exp":35.89019724},{"year":2027,"est_tax_exp":37.16583118},{"year":2028,"est_tax_exp":39.12580137},{"year":2029,"est_tax_exp":40.93332791},{"year":2030,"est_tax_exp":43.2194855},{"year":2031,"est_tax_exp":45.63733475},{"year":2032,"est_tax_exp":47.96620481},{"year":2033,"est_tax_exp":50.43472889}],"corp_perm_wealth":[{"year":2026,"est_tax_exp":35.89019724},{"year":2027,"est_tax_exp":37.1670196},{"year":2028,"est_tax_exp":39.12819765},{"year":2029,"est_tax_exp":40.93703683},{"year":2030,"est_tax_exp":43.22452268},{"year":2031,"est_tax_exp":45.64377265},{"year":2032,"est_tax_exp":47.97409999},{"year":2033,"est_tax_exp":50.44415383}],"corp_sunset":[{"year":2026,"est_tax_exp":35.89019724},{"year":2027,"est_tax_exp":37.74367527},{"year":2028,"est_tax_exp":39.67441341},{"year":2029,"est_tax_exp":41.68524084},{"year":2030,"est_tax_exp":44.02891897},{"year":2031,"est_tax_exp":46.35739323},{"year":2032,"est_tax_exp":48.80810206},{"year":2033,"est_tax_exp":51.37792587}],"corp_sunset_wealth":[{"year":2026,"est_tax_exp":35.89019724},{"year":2027,"est_tax_exp":37.74360566},{"year":2028,"est_tax_exp":39.67404651},{"year":2029,"est_tax_exp":41.68437863},{"year":2030,"est_tax_exp":44.02735887},{"year":2031,"est_tax_exp":46.35483149},{"year":2032,"est_tax_exp":48.80531825},{"year":2033,"est_tax_exp":51.37491788}],"corp_perm_kg":[{"year":2026,"est_tax_exp":35.89019724},{"year":2027,"est_tax_exp":37.16583118},{"year":2028,"est_tax_exp":39.12580137},{"year":2029,"est_tax_exp":40.93332791},{"year":2030,"est_tax_exp":43.2194855},{"year":2031,"est_tax_exp":45.63733475},{"year":2032,"est_tax_exp":47.96620481},{"year":2033,"est_tax_exp":50.43472889}]},"wealth":{"corp_perm_wealth":[{"year":2026,"P_sum":-2.48615101e-16,"F_sum":-4.97230201e-16},{"year":2027,"P_sum":-3.26908779,"F_sum":-6.53817558},{"year":2028,"P_sum":-6.21930675,"F_sum":-5.67197391},{"year":2029,"P_sum":-8.94845771,"F_sum":-5.04521443},{"year":2030,"P_sum":-11.32172093,"F_sum":-4.15888272},{"year":2031,"P_sum":-13.42364662,"F_sum":-3.4702986},{"year":2032,"P_sum":-15.28043648,"F_sum":-2.84620362},{"year":2033,"P_sum":-16.91179661,"F_sum":-2.26634661}],"corp_sunset_wealth":[{"year":2026,"P_sum":-2.48615101e-16,"F_sum":-4.97230201e-16},{"year":2027,"P_sum":1.63313504,"F_sum":3.26627007},{"year":2028,"P_sum":3.99116185,"F_sum":4.59482811},{"year":2029,"P_sum":7.00028323,"F_sum":5.73744253},{"year":2030,"P_sum":10.86526794,"F_sum":7.2452696},{"year":2031,"P_sum":15.61382585,"F_sum":8.75764885},{"year":2032,"P_sum":16.14313078,"F_sum":-5.10747439e-16},{"year":2033,"P_sum":16.69546141,"F_sum":3.64778255e-17}]},"kg_debit":[{"year":2026,"debit_total":0},{"year":2027,"debit_total":1200.93725384},{"year":2028,"debit_total":1248.60088577},{"year":2029,"debit_total":1292.92751987},{"year":2030,"debit_total":1336.56401651},{"year":2031,"debit_total":1381.67830508},{"year":2032,"debit_total":1427.62473994},{"year":2033,"debit_total":1474.99740554}]}
+;
+
+//---------------------------------------------------------------- helpers
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt$ = (x, d=1) => (x<0?'−':'') + '$' + Math.abs(x).toFixed(d) + 'B';
+const fmtPct = (x, d=2) => (x<0?'−':'') + Math.abs(100*x).toFixed(d) + '%';
+const byYear = rows => Object.fromEntries(rows.map(r => [r.year, r]));
+const YEARS = DATA.paths.corp_perm.map(r => r.year);
+
+const tt = document.getElementById('tt');
+function showTT(evt, title, rows) {
+  tt.innerHTML = '<div class="tt-title">' + title + '</div>' + rows.map(r =>
+    '<div class="tt-row"><span class="lhs">' +
+    (r.color ? '<span class="swatch" style="background:' + r.color + '"></span>' : '') +
+    r.name + '</span><span class="val">' + r.value + '</span></div>').join('');
+  tt.style.display = 'block';
+  const pad = 14, w = tt.offsetWidth, h = tt.offsetHeight;
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + w > innerWidth - 8)  x = evt.clientX - w - pad;
+  if (y + h > innerHeight - 8) y = evt.clientY - h - pad;
+  tt.style.left = x + 'px'; tt.style.top = y + 'px';
+}
+const hideTT = () => tt.style.display = 'none';
+
+function legend(el, keys) {
+  document.getElementById(el).innerHTML = keys.map(k =>
+    '<span class="key"><span class="' + (k.line ? 'linekey' : 'swatch') +
+    '" style="background:var(' + k.v + ')"></span>' + k.name + '</span>').join('');
+}
+
+function niceTicks(lo, hi, n=4) {
+  if (lo === hi) { lo -= 1; hi += 1; }
+  const span = hi - lo, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1,2,2.5,5,10].map(m => m*mag).find(s => span/s <= n+1) || mag*10;
+  const t0 = Math.ceil(lo/step)*step, out = [];
+  for (let t = t0; t <= hi + 1e-9; t += step) out.push(+t.toFixed(10));
+  return out;
+}
+
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) {
+  // var() does not resolve in SVG presentation ATTRIBUTES — route any
+  // var()-valued fill/stroke through the style attribute so theme tokens work.
+  const e = document.createElementNS(NS, tag);
+  let style = attrs.style ? attrs.style + ';' : '';
+  for (const k in attrs) {
+    if (k === 'style') continue;
+    const v = String(attrs[k]);
+    if ((k === 'fill' || k === 'stroke') && v.includes('var(')) { style += k + ':' + v + ';'; continue; }
+    e.setAttribute(k, attrs[k]);
+  }
+  if (style) e.setAttribute('style', style);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+//---------------------------------------------------------------- line chart
+// series: [{name, v (css var), values: {year: y}, emph, dash}]
+function lineChart(id, series, opts = {}) {
+  const W = opts.w || 520, H = opts.h || 240,
+        M = {t: 14, r: opts.rpad || 74, b: 26, l: 44};
+  const root = document.getElementById(id);
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img',
+                         'aria-label': opts.label || id}, root);
+
+  const years = opts.years || YEARS;
+  let vals = [];
+  series.forEach(s => years.forEach(y => { const v = s.values[y]; if (v != null) vals.push(v); }));
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  if (opts.pad !== false) { const p = (hi-lo)*0.08; hi += p; lo = lo < 0 ? lo - p : lo; }
+  const X = y => M.l + (y - years[0]) / (years[years.length-1] - years[0]) * (W - M.l - M.r);
+  const Y = v => M.t + (hi - v) / (hi - lo) * (H - M.t - M.b);
+
+  niceTicks(lo, hi).forEach(t => {
+    el('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t), stroke: 'var(--grid)', 'stroke-width': 1}, svg);
+    el('text', {x: M.l - 7, y: Y(t) + 3.5, 'text-anchor': 'end', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg)
+      .textContent = opts.fmtTick ? opts.fmtTick(t) : t;
+  });
+  if (lo < 0 && hi > 0)
+    el('line', {x1: M.l, x2: W - M.r, y1: Y(0), y2: Y(0), stroke: 'var(--baseline)', 'stroke-width': 1}, svg);
+  years.forEach(y => {
+    if ((y - years[0]) % (opts.xstep || 1)) return;
+    el('text', {x: X(y), y: H - 8, 'text-anchor': 'middle', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg).textContent = y;
+  });
+
+  series.forEach(s => {
+    const pts = years.filter(y => s.values[y] != null).map(y => [X(y), Y(s.values[y])]);
+    el('path', {d: 'M' + pts.map(p => p.join(',')).join('L'), fill: 'none',
+                stroke: `var(${s.v})`, 'stroke-width': 2,
+                'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+                opacity: s.demph ? 0.9 : 1}, svg);
+    const last = pts[pts.length - 1];
+    el('circle', {cx: last[0], cy: last[1], r: 4, fill: `var(${s.v})`,
+                  stroke: 'var(--surface)', 'stroke-width': 2}, svg);
+    if (s.endLabel !== false) {
+      const t = el('text', {x: last[0] + 8, y: last[1] + (s.dy || 0) + 3.5, 'font-size': 11,
+                            fill: 'var(--ink-2)', 'font-weight': 600}, svg);
+      t.textContent = s.short || s.name;
+    }
+  });
+
+  // crosshair + hover
+  const guide = el('line', {y1: M.t, y2: H - M.b, stroke: 'var(--baseline)',
+                            'stroke-width': 1, visibility: 'hidden'}, svg);
+  const hit = el('rect', {x: M.l, y: M.t, width: W - M.l - M.r, height: H - M.t - M.b,
+                          fill: 'transparent'}, svg);
+  hit.addEventListener('mousemove', evt => {
+    const r = svg.getBoundingClientRect(), sx = W / r.width;
+    const mx = (evt.clientX - r.left) * sx;
+    const yr = years.reduce((a, b) => Math.abs(X(b) - mx) < Math.abs(X(a) - mx) ? b : a);
+    guide.setAttribute('x1', X(yr)); guide.setAttribute('x2', X(yr));
+    guide.setAttribute('visibility', 'visible');
+    showTT(evt, yr, series.filter(s => s.values[yr] != null).map(s => ({
+      name: s.name, color: css(s.v),
+      value: opts.fmtVal ? opts.fmtVal(s.values[yr]) : s.values[yr]
+    })));
+  });
+  hit.addEventListener('mouseleave', () => { guide.setAttribute('visibility', 'hidden'); hideTT(); });
+}
+
+//---------------------------------------------------------------- bar charts
+// stacked: segs = [{name, v, values:{year: val>=0}}]
+function stackedBars(id, segs, opts = {}) {
+  const W = 960, H = opts.h || 260, M = {t: 14, r: 16, b: 26, l: 44};
+  const root = document.getElementById(id);
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img',
+                         'aria-label': opts.label || id}, root);
+  const years = opts.years || YEARS;
+  const totals = years.map(y => segs.reduce((a, s) => a + (s.values[y] || 0), 0));
+  const hi = Math.max(...totals) * 1.1;
+  const Y = v => M.t + (hi - v) / hi * (H - M.t - M.b);
+  const slot = (W - M.l - M.r) / years.length, bw = Math.min(24, slot * 0.55);
+
+  niceTicks(0, hi).forEach(t => {
+    el('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t), stroke: 'var(--grid)'}, svg);
+    el('text', {x: M.l - 7, y: Y(t) + 3.5, 'text-anchor': 'end', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg).textContent = t;
+  });
+  el('line', {x1: M.l, x2: W - M.r, y1: Y(0), y2: Y(0), stroke: 'var(--baseline)'}, svg);
+
+  years.forEach((y, i) => {
+    const x = M.l + slot * (i + 0.5) - bw / 2;
+    let acc = 0;
+    const g = el('g', {}, svg);
+    segs.forEach((s, si) => {
+      const v = s.values[y] || 0; if (v <= 0) { return; }
+      const y1 = Y(acc + v), y0 = Y(acc);
+      const isTop = acc + v >= totals[i] - 1e-9;
+      const gap = si > 0 ? 1 : 0;   // 2px total surface gap between fills
+      const hgt = Math.max(0, y0 - y1 - gap);
+      const rTop = isTop ? 4 : 0;
+      el('path', {d: roundedCol(x, y1 + gap, bw, hgt, rTop), fill: `var(${s.v})`}, g);
+      acc += v;
+    });
+    el('text', {x: x + bw / 2, y: Y(totals[i]) - 6, 'text-anchor': 'middle', 'font-size': 10.5,
+                fill: 'var(--ink-2)', 'font-weight': 600,
+                style: 'font-variant-numeric:tabular-nums'}, g)
+      .textContent = totals[i] > 0.01 ? totals[i].toFixed(1) : '';
+    el('text', {x: M.l + slot * (i + 0.5), y: H - 8, 'text-anchor': 'middle', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg).textContent = y;
+    const hit = el('rect', {x: M.l + slot * i, y: M.t, width: slot, height: H - M.t - M.b,
+                            fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', evt => showTT(evt, y,
+      segs.map(s => ({name: s.name, color: css(s.v), value: fmt$(s.values[y] || 0, 2)}))
+          .concat([{name: 'total', value: fmt$(totals[i], 2)}])));
+    hit.addEventListener('mouseleave', hideTT);
+  });
+}
+function roundedCol(x, y, w, h, r) {
+  if (h <= 0) return '';
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y + h} L${x},${y + r} Q${x},${y} ${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h} Z`;
+}
+function roundedColDown(x, y, w, h, r) {  // grows downward from y; rounded bottom end
+  if (h <= 0) return '';
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y} L${x + w},${y} L${x + w},${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} L${x + r},${y + h} Q${x},${y + h} ${x},${y + h - r} Z`;
+}
+
+// paired diverging bars around zero: series = [{name, v, values}] (any sign)
+function divergingBars(id, series, opts = {}) {
+  const W = 960, H = opts.h || 280, M = {t: 16, r: 16, b: 26, l: 48};
+  const root = document.getElementById(id);
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img',
+                         'aria-label': opts.label || id}, root);
+  const years = opts.years || YEARS;
+  let lo = 0, hi = 0;
+  series.forEach(s => years.forEach(y => {
+    const v = s.values[y] || 0; lo = Math.min(lo, v); hi = Math.max(hi, v);
+  }));
+  hi *= 1.12; lo *= 1.3;
+  const Y = v => M.t + (hi - v) / (hi - lo) * (H - M.t - M.b);
+  const slot = (W - M.l - M.r) / years.length;
+  const n = series.length, bw = Math.min(20, slot * 0.7 / n);
+
+  niceTicks(lo, hi, 5).forEach(t => {
+    el('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t), stroke: 'var(--grid)'}, svg);
+    el('text', {x: M.l - 7, y: Y(t) + 3.5, 'text-anchor': 'end', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg).textContent = t;
+  });
+  el('line', {x1: M.l, x2: W - M.r, y1: Y(0), y2: Y(0), stroke: 'var(--baseline)'}, svg);
+
+  years.forEach((y, i) => {
+    const cx = M.l + slot * (i + 0.5);
+    series.forEach((s, si) => {
+      const v = s.values[y] || 0; if (Math.abs(v) < 1e-9) return;
+      const x = cx - (n * bw + (n - 1) * 2) / 2 + si * (bw + 2);
+      if (v > 0) el('path', {d: roundedCol(x, Y(v), bw, Y(0) - Y(v), 4), fill: `var(${s.v})`}, svg);
+      else       el('path', {d: roundedColDown(x, Y(0), bw, Y(v) - Y(0), 4), fill: `var(${s.v})`}, svg);
+    });
+    el('text', {x: cx, y: H - 8, 'text-anchor': 'middle', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg).textContent = y;
+    const hit = el('rect', {x: M.l + slot * i, y: M.t, width: slot, height: H - M.t - M.b,
+                            fill: 'transparent'}, svg);
+    hit.addEventListener('mousemove', evt => showTT(evt, 'FY ' + y,
+      series.map(s => ({name: s.name, color: css(s.v), value: fmt$(s.values[y] || 0, 1)}))));
+    hit.addEventListener('mouseleave', hideTT);
+  });
+}
+
+// bars + line on ONE $B axis (bathtub: F bars, P line)
+function barsPlusLine(id, bars, line, opts = {}) {
+  const W = opts.w || 520, H = opts.h || 240, M = {t: 14, r: 20, b: 26, l: 46};
+  const root = document.getElementById(id);
+  const svg = el('svg', {viewBox: `0 0 ${W} ${H}`, role: 'img',
+                         'aria-label': opts.label || id}, root);
+  const years = opts.years || YEARS;
+  let vals = [0];
+  years.forEach(y => { vals.push(bars.values[y] || 0); vals.push(line.values[y] || 0); });
+  let lo = Math.min(...vals) * 1.15, hi = Math.max(...vals) * 1.15;
+  if (hi === 0) hi = 1; if (lo === 0) lo = -1;
+  const Y = v => M.t + (hi - v) / (hi - lo) * (H - M.t - M.b);
+  const X = y => M.l + (years.indexOf(y) + 0.5) * (W - M.l - M.r) / years.length;
+  const bw = Math.min(18, (W - M.l - M.r) / years.length * 0.45);
+
+  niceTicks(lo, hi, 4).forEach(t => {
+    el('line', {x1: M.l, x2: W - M.r, y1: Y(t), y2: Y(t), stroke: 'var(--grid)'}, svg);
+    el('text', {x: M.l - 7, y: Y(t) + 3.5, 'text-anchor': 'end', 'font-size': 10.5,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg).textContent = t;
+  });
+  el('line', {x1: M.l, x2: W - M.r, y1: Y(0), y2: Y(0), stroke: 'var(--baseline)'}, svg);
+
+  years.forEach(y => {
+    const v = bars.values[y] || 0;
+    if (Math.abs(v) > 1e-9) {
+      const x = X(y) - bw / 2;
+      if (v > 0) el('path', {d: roundedCol(x, Y(v), bw, Y(0) - Y(v), 4),
+                             fill: `var(${bars.v})`, opacity: 0.55}, svg);
+      else el('path', {d: roundedColDown(x, Y(0), bw, Y(v) - Y(0), 4),
+                       fill: `var(${bars.v})`, opacity: 0.55}, svg);
+    }
+    el('text', {x: X(y), y: H - 8, 'text-anchor': 'middle', 'font-size': 10,
+                fill: 'var(--muted)', style: 'font-variant-numeric:tabular-nums'}, svg)
+      .textContent = String(y).slice(2);
+  });
+  const pts = years.map(y => [X(y), Y(line.values[y] || 0)]);
+  el('path', {d: 'M' + pts.map(p => p.join(',')).join('L'), fill: 'none',
+              stroke: `var(${line.v})`, 'stroke-width': 2,
+              'stroke-linejoin': 'round', 'stroke-linecap': 'round'}, svg);
+  const last = pts[pts.length - 1];
+  el('circle', {cx: last[0], cy: last[1], r: 4, fill: `var(${line.v})`,
+                stroke: 'var(--surface)', 'stroke-width': 2}, svg);
+  el('text', {x: last[0] - 6, y: last[1] + (opts.labdy || -8), 'text-anchor': 'end',
+              'font-size': 11, 'font-weight': 600, fill: 'var(--ink-2)',
+              style: 'font-variant-numeric:tabular-nums'}, svg)
+    .textContent = fmt$(line.values[years[years.length - 1]] || 0, 1);
+
+  const hit = el('rect', {x: M.l, y: M.t, width: W - M.l - M.r, height: H - M.t - M.b,
+                          fill: 'transparent'}, svg);
+  hit.addEventListener('mousemove', evt => {
+    const r = svg.getBoundingClientRect(), sx = W / r.width;
+    const mx = (evt.clientX - r.left) * sx;
+    const yr = years.reduce((a, b) => Math.abs(X(b) - mx) < Math.abs(X(a) - mx) ? b : a);
+    showTT(evt, yr, [
+      {name: bars.name, color: css(bars.v), value: fmt$(bars.values[yr] || 0, 2)},
+      {name: line.name, color: css(line.v), value: fmt$(line.values[yr] || 0, 2)}
+    ]);
+  });
+  hit.addEventListener('mouseleave', hideTT);
+}
+
+//---------------------------------------------------------------- data prep
+const P  = byYear(DATA.paths.corp_perm);
+const S  = byYear(DATA.paths.corp_sunset);
+const RB = byYear(DATA.receipts.baseline);
+const dRec = scen => {
+  const R = byYear(DATA.receipts[scen]), out = {iit: {}, corp: {}, estate: {}};
+  YEARS.forEach(y => { if (RB[y] && R[y]) {
+    out.iit[y] = R[y].iit - RB[y].iit;
+    out.corp[y] = R[y].corp - RB[y].corp;
+    out.estate[y] = R[y].estate - RB[y].estate;
+  }});
+  return out;
+};
+const EB = byYear(DATA.estate.baseline);
+const dEst = scen => {
+  const E = byYear(DATA.estate[scen]), out = {};
+  YEARS.forEach(y => { if (EB[y] && E[y]) out[y] = E[y].est_tax_exp - EB[y].est_tax_exp; });
+  return out;
+};
+const col = (rows, k) => Object.fromEntries(rows.map(r => [r.year, r[k]]));
+
+const dPerm   = dRec('corp_perm'), dNometa = dRec('corp_nometa');
+const estPerm = dEst('corp_perm'), estPermW = dEst('corp_perm_wealth'),
+      estSun  = dEst('corp_sunset'), estSunW = dEst('corp_sunset_wealth');
+const wPerm   = byYear(DATA.wealth.corp_perm_wealth),
+      wSun    = byYear(DATA.wealth.corp_sunset_wealth);
+
+//---------------------------------------------------------------- KPIs
+const kpis = [
+  {label: 'Corporate wedge, 2027', value: fmt$(P[2027].w, 0), note: 'grows 3.9%/yr with profits'},
+  {label: 'Equity markdown μ (2027)', value: fmtPct(P[2027].mu), note: 'decays toward the rent-share floor'},
+  {label: 'Household markdown position', value: '$' + (P[2028].markdown_position_hh/1000).toFixed(2) + 'T', note: 'exposed value.* repriced, 2028'},
+  {label: 'Endogenous IIT offset', value: fmt$(dPerm.iit[2030], 1) + '/yr', note: '≈15¢ per corporate $1 · was $0 off-model'},
+  {label: 'Estate erosion', value: fmt$(estPerm[2030], 2) + '/yr', note: 'markdown reaches death-year estates'}
+];
+document.getElementById('kpis').innerHTML = kpis.map(k =>
+  '<div class="kpi"><div class="k-label">' + k.label + '</div><div class="k-value">' +
+  k.value + '</div><div class="k-note">' + k.note + '</div></div>').join('');
+
+//---------------------------------------------------------------- charts
+legend('lg-wedge', [{name: 'permanent', v: '--c-perm', line: 1}, {name: 'sunset 2027–31', v: '--c-sunset', line: 1}]);
+lineChart('ch-wedge', [
+  {name: 'permanent', short: 'perm', v: '--c-perm', values: col(DATA.paths.corp_perm, 'w')},
+  {name: 'sunset', short: 'sunset', v: '--c-sunset', values: col(DATA.paths.corp_sunset, 'w'), dy: 4}
+], {w: 960, h: 250, rpad: 70, fmtVal: v => fmt$(v, 1), label: 'Corporate receipts wedge by year'});
+
+legend('lg-phi', [{name: 'permanent', v: '--c-perm', line: 1}, {name: 'sunset', v: '--c-sunset', line: 1}]);
+lineChart('ch-phi', [
+  {name: 'permanent', short: 'perm', v: '--c-perm', values: col(DATA.paths.corp_perm, 'phi'), dy: 8},
+  {name: 'sunset', short: 'sunset', v: '--c-sunset', values: col(DATA.paths.corp_sunset, 'phi'), dy: -4}
+], {fmtVal: v => fmtPct(v), fmtTick: t => (100*t).toFixed(1) + '%', label: 'Flow factor by year'});
+
+legend('lg-mu', [{name: 'permanent', v: '--c-perm', line: 1}, {name: 'sunset', v: '--c-sunset', line: 1}]);
+lineChart('ch-mu', [
+  {name: 'permanent', short: 'perm', v: '--c-perm', values: col(DATA.paths.corp_perm, 'mu')},
+  {name: 'sunset', short: 'sunset', v: '--c-sunset', values: col(DATA.paths.corp_sunset, 'mu'), dy: 6}
+], {fmtVal: v => fmtPct(v), fmtTick: t => (100*t).toFixed(1) + '%', label: 'Equity markdown by year'});
+
+legend('lg-flows', [
+  {name: 'dividends (ω_div·φ)', v: '--c-div'}, {name: 'interest (rollover ramp)', v: '--c-int'},
+  {name: 'rent', v: '--c-rent'}, {name: 'pass-through (0.2 capital slice)', v: '--c-pt'}
+]);
+stackedBars('ch-flows', [
+  {name: 'dividends', v: '--c-div', values: col(DATA.paths.corp_perm.map(r => ({year: r.year, v: -r.dY_div_realized})), 'v')},
+  {name: 'interest', v: '--c-int', values: col(DATA.paths.corp_perm.map(r => ({year: r.year, v: -r.dY_int_realized})), 'v')},
+  {name: 'rent', v: '--c-rent', values: col(DATA.paths.corp_perm.map(r => ({year: r.year, v: -r.dY_rent_realized})), 'v')},
+  {name: 'pass-through', v: '--c-pt', values: col(DATA.paths.corp_perm.map(r => ({year: r.year, v: -r.dY_pt_realized})), 'v')}
+], {h: 250, label: 'Household external income hit by line'});
+
+legend('lg-receipts', [
+  {name: 'Δ corporate receipts (the wedge, FY-booked)', v: '--d-pos'},
+  {name: 'Δ individual income tax — on-model offset', v: '--d-neg'},
+  {name: 'Δ individual income tax — status quo (channel off)', v: '--demph'}
+]);
+divergingBars('ch-receipts', [
+  {name: 'Δ corporate', v: '--d-pos', values: dPerm.corp},
+  {name: 'Δ IIT (on-model)', v: '--d-neg', values: dPerm.iit},
+  {name: 'Δ IIT (status quo)', v: '--demph', values: dNometa.iit}
+], {label: 'Receipts deltas: corporate wedge vs endogenous individual offset'});
+
+legend('lg-estate', [
+  {name: 'permanent', v: '--c-perm', line: 1}, {name: 'permanent + s=0.5', v: '--c-permw', line: 1},
+  {name: 'sunset', v: '--c-sunset', line: 1}, {name: 'sunset + s=0.5', v: '--c-sunsetw', line: 1}
+]);
+lineChart('ch-estate', [
+  {name: 'permanent', short: 'perm', v: '--c-perm', values: estPerm, dy: 10},
+  {name: 'permanent + s=0.5', short: 'perm+s', v: '--c-permw', values: estPermW, dy: -4},
+  {name: 'sunset', short: 'sunset', v: '--c-sunset', values: estSun, dy: -6},
+  {name: 'sunset + s=0.5', short: 'sunset+s', v: '--c-sunsetw', values: estSunW, dy: 8}
+], {w: 960, h: 280, rpad: 84, fmtVal: v => fmt$(v, 3), fmtTick: t => t.toFixed(1),
+    label: 'Estate tax delta vs baseline by scenario'});
+
+legend('lg-bt-perm', [{name: 'forcing F (yearly)', v: '--c-perm'}, {name: 'position P (accumulated)', v: '--c-perm', line: 1}]);
+barsPlusLine('ch-bt-perm',
+  {name: 'forcing F', v: '--c-perm', values: col(DATA.wealth.corp_perm_wealth, 'F_sum')},
+  {name: 'position P', v: '--c-perm', values: col(DATA.wealth.corp_perm_wealth, 'P_sum')},
+  {labdy: 14, label: 'Permanent-hike bathtub: forcing and position'});
+
+legend('lg-bt-sunset', [{name: 'forcing F (yearly)', v: '--c-sunset'}, {name: 'position P (accumulated)', v: '--c-sunset', line: 1}]);
+barsPlusLine('ch-bt-sunset',
+  {name: 'forcing F', v: '--c-sunset', values: col(DATA.wealth.corp_sunset_wealth, 'F_sum')},
+  {name: 'position P', v: '--c-sunset', values: col(DATA.wealth.corp_sunset_wealth, 'P_sum')},
+  {labdy: -8, label: 'Sunset bathtub: forcing stops, position persists'});
+
+legend('lg-sw-sigma', [
+  {name: 'σ_N = 0', v: '--ord-1', line: 1}, {name: '0.375 (central)', v: '--ord-2', line: 1},
+  {name: '0.5', v: '--ord-3', line: 1}
+]);
+lineChart('ch-sw-sigma', [
+  {name: 'σ_N = 0', short: '0', v: '--ord-1', values: col(DATA.sweeps.sigma0, 'mu')},
+  {name: 'σ_N = 0.375', short: '.375', v: '--ord-2', values: col(DATA.paths.corp_perm, 'mu')},
+  {name: 'σ_N = 0.5', short: '.5', v: '--ord-3', values: col(DATA.sweeps.sigma05, 'mu')}
+], {w: 340, h: 210, rpad: 42, fmtVal: v => fmtPct(v), fmtTick: t => (100*t).toFixed(1) + '%',
+    xstep: 3, label: 'Markdown path by sigma_N corner'});
+
+legend('lg-sw-kappa', [
+  {name: 'κ = 0.25', v: '--ord-1', line: 1}, {name: '0.40 (central)', v: '--ord-2', line: 1},
+  {name: '0.50', v: '--ord-3', line: 1}
+]);
+lineChart('ch-sw-kappa', [
+  {name: 'κ = 0.25', short: '.25', v: '--ord-1', values: col(DATA.sweeps.kappa25, 'mu'), dy: -5},
+  {name: 'κ = 0.40', short: '.40', v: '--ord-2', values: col(DATA.paths.corp_perm, 'mu'), dy: 3},
+  {name: 'κ = 0.50', short: '.50', v: '--ord-3', values: col(DATA.sweeps.kappa50, 'mu'), dy: 11}
+], {w: 340, h: 210, rpad: 42, fmtVal: v => fmtPct(v), fmtTick: t => (100*t).toFixed(1) + '%',
+    xstep: 3, label: 'Markdown path by kappa corner'});
+
+legend('lg-sw-pap', [
+  {name: 'priced as permanent', v: '--ord-2', line: 1}, {name: 'central sunset', v: '--demph', line: 1}
+]);
+lineChart('ch-sw-pap', [
+  {name: 'priced as permanent', short: 'p.a.p.', v: '--ord-2', values: col(DATA.sweeps.pap, 'mu')},
+  {name: 'central sunset', short: 'central', v: '--demph', values: col(DATA.paths.corp_sunset, 'mu'), demph: 1, dy: 8}
+], {w: 340, h: 210, rpad: 52, fmtVal: v => fmtPct(v), fmtTick: t => (100*t).toFixed(1) + '%',
+    xstep: 3, label: 'Sunset markdown, disbelief corner vs central'});
+
+//---------------------------------------------------------------- tables
+function buildTable(elId, rows) {
+  const cols = Object.keys(rows[0]);
+  document.getElementById(elId).innerHTML =
+    '<thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>' +
+    rows.map(r => '<tr>' + cols.map(c => '<td>' + r[c] + '</td>').join('') + '</tr>').join('') +
+    '</tbody>';
+}
+const f2 = x => x == null ? '—' : (x < 0 ? '−' : '') + Math.abs(x).toFixed(2);
+const f3 = x => x == null ? '—' : (x < 0 ? '−' : '') + Math.abs(x).toFixed(3);
+
+buildTable('tbl-perm', YEARS.map(y => ({
+  'year': y,
+  'wedge w': f2(P[y].w),
+  'φ %': (100 * P[y].phi).toFixed(2),
+  'μ %': (100 * P[y].mu).toFixed(2),
+  'flow hit B_flow': f2(P[y].B_flow_hh),
+  'markdown pos.': P[y].markdown_position_hh.toFixed(0),
+  'Δ IIT (FY)': f2(dPerm.iit[y]),
+  'Δ corp (FY)': f2(dPerm.corp[y]),
+  'Δ estate (CY)': f3(estPerm[y]),
+  'Δ estate +s': f3(estPermW[y]),
+  'F (s=0.5)': f2(wPerm[y] && wPerm[y].F_sum),
+  'P (s=0.5)': f2(wPerm[y] && wPerm[y].P_sum)
+})));
+
+const dSun = dRec('corp_sunset');
+buildTable('tbl-sunset', YEARS.map(y => ({
+  'year': y,
+  'wedge w': f2(S[y].w),
+  'φ %': (100 * S[y].phi).toFixed(2),
+  'μ %': (100 * S[y].mu).toFixed(2),
+  'flow hit B_flow': f2(S[y].B_flow_hh),
+  'Δ IIT (FY)': f2(dSun.iit[y]),
+  'Δ corp (FY)': f2(dSun.corp[y]),
+  'Δ estate (CY)': f3(estSun[y]),
+  'Δ estate +s': f3(estSunW[y]),
+  'F (s=0.5)': f2(wSun[y] && wSun[y].F_sum),
+  'P (s=0.5)': f2(wSun[y] && wSun[y].P_sum)
+})));
+</script>

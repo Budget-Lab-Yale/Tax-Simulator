@@ -126,8 +126,9 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       # Limit credit-eligible expenses to per-qualifying-dependent maximum
       old_qual_exp = pmin(care_exp - young_qual_exp, n_old * cdctc.exp_limit),
       
-      # Limit credit-eligible expenses to earned income
-      old_qual_exp = pmin(old_qual_exp, ei_limit),
+      # Limit credit-eligible expenses to earned income left after young dependents.
+      # The earned income limit applies to total expenses (IRC 21(d)(1))
+      old_qual_exp = pmin(old_qual_exp, ei_limit - young_qual_exp),
       
       # Calculate AGI in excess of phaseout rates and adjust for discrete rounding steps 
       old_excess1 = pmax(0, agi - cdctc.old_po_thresh1),
@@ -139,9 +140,9 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       old_excess3 = ceiling(old_excess3 / cdctc.discrete_step) * cdctc.discrete_step,
       
       # Calculate credit rate after phaseouts 
-      old_rate1 = pmax(0, pmax(0, cdctc.old_rate1 - old_excess1 * cdctc.old_po_rate1)),
-      old_rate2 = pmax(0, pmax(0, cdctc.old_rate2 - old_excess2 * cdctc.old_po_rate2)),
-      old_rate3 = pmax(0, pmax(0, cdctc.old_rate3 - old_excess3 * cdctc.old_po_rate3)),
+      old_rate1 = pmax(0, cdctc.old_rate1 - old_excess1 * cdctc.old_po_rate1),
+      old_rate2 = pmax(0, cdctc.old_rate2 - old_excess2 * cdctc.old_po_rate2),
+      old_rate3 = pmax(0, cdctc.old_rate3 - old_excess3 * cdctc.old_po_rate3),
       old_rate  = old_rate1 + old_rate2 + old_rate3,
       
       # Calculate credit value

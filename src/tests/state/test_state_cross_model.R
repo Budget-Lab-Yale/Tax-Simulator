@@ -30,7 +30,7 @@ cross_model_known_diffs_path = function() {
 }
 
 
-# States by structural class (baseline configs under tax_law_state/baseline/)
+# States by structural class (baseline configs under tax_law/default/state/)
 cross_model_states = function() {
   list(
     broad  = c('AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'HI', 'ID', 'IL', 'IN',
@@ -78,25 +78,19 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
     vat_root   = scenario_info$interface_paths$`Value-Added-Tax-Model`,
     years      = scenario_info$years
   )
-  excess_growth_offset = get_excess_growth_offset(
-    excess_growth = scenario_info$excess_growth,
-    start_year    = scenario_info$excess_growth_start_year,
-    years         = scenario_info$years
-  )
   indexes = generate_indexes(
-    macro_root           = scenario_info$interface_paths$`Macro-Projections`,
-    vat_price_offset     = vat_price_offset,
-    excess_growth_offset = excess_growth_offset
+    macro_root       = scenario_info$interface_paths$`Macro-Projections`,
+    vat_price_offset = vat_price_offset
   )
   tax_law = build_tax_law(scenario_info, indexes)
 
   # Load and process microdata (mirrors run_one_year(), src/sim/run.R)
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%
     read_microdata(year) %>%
-    filter(in_subsample(id, globals$pct_sample)) %>%
+    filter(id %in% globals$sample_ids) %>%
     mutate(weight = weight / globals$pct_sample,
            year   = year) %>%
-    (\(d) bind_cols(d, build_random_numbers(d$id))) %>%
+    left_join(globals$random_numbers, by = 'id') %>%
     mutate(filing_status_input = filing_status) %>%
     left_join(tax_law %>%
                 distinct(year, filing.repeal_hoh),
@@ -108,7 +102,6 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
     do_salt_workaround_baseline() %>%
     do_ss_cola(year, vat_price_offset) %>%
     do_capital_adjustment(year, vat_price_offset) %>%
-    do_excess_growth(scenario_info, excess_growth_offset) %>%
     calc_kg_cpi_ratio(indexes, year) %>%
 
     # Federal calculation (baseline: no employer-side payroll adjustment).
@@ -352,13 +345,13 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         unemployment    = ui,
         rental          = rent - rent_loss,
         # Pass-through business income mirroring our AGI's Schedule E
-        # concept (sch_e = part_scorp + net_rent + net_estate; net_rent is
+        # concept (sch_e = part + scorp + net_rent + net_estate; net_rent is
         # passed separately as rental), less the SE portion already in
         # psemp/ssemp. other_gains (Form 4797) rides with other_inc --
         # ordinary income, no dedicated PE input. PE floors negative
         # miscellaneous_income (verified empirically), so net ordinary
         # losses route through pass_through, which accepts negatives
-        pass_through = part_scorp - part_se +
+        pass_through = part + scorp - part_se +
           pmin(0, other_inc + other_gains),
         estate       = estate - estate_loss,
         misc_income  = pmax(0, other_inc + other_gains),

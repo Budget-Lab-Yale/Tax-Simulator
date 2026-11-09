@@ -1,0 +1,12 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 31 years (full sample)...
+Error in kg_dyn_attach_record_attrs(.) : 
+  kg_dyn_attach_record_attrs: tax_units missing estate asset columns: value.cash, value.bonds, value.dc, value.db, value.life_ins, value.annuities, value.trusts, value.other_fin, value.other_nonfin
+Calls: %>% -> kg_dyn_attach_record_attrs
+Execution halted

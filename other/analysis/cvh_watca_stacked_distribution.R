@@ -308,7 +308,7 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
   df = dist_all %>%
     filter(
       year == year_show,
-      taxes_included == 'iit_pr',
+      taxes_included == 'iit_pr_wealth',
       group_dimension %in% group_dim,
       group %in% groups
     ) %>%
@@ -373,7 +373,7 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
   wl = dist_all %>%
     filter(
       year == year_show,
-      taxes_included == 'iit_pr',
+      taxes_included == 'iit_pr_wealth',
       group_dimension %in% group_dim,
       group %in% groups,
       scenario == full_scn

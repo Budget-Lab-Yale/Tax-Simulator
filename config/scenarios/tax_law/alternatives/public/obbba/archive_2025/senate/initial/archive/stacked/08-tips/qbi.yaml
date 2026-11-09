@@ -1,0 +1,31 @@
+---
+
+# Deduction rate
+rate:
+  value: 
+    '2014': 0.0
+    '2018': 0.2
+  
+# Taxable income phaseout range for SSTBs, single filers
+po_range_sstb_single:
+  value: 
+    '2014': 50000
+    '2026': 75000
+
+# Taxable income phaseout range for non-SSTBs, single filers
+po_range_non_sstb_single:
+  value: 
+    '2014': 50000
+    '2026': 75000
+
+# Minimum deduction amount
+min_value:
+  value:
+    '2014': 0
+    '2026': 400
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2025
+  i_direction: 0
+  i_increment: 5

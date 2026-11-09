@@ -1,0 +1,16 @@
+---
+# Deemed realization at death with 25% applier-only avoidance haircut.
+# 25% of deemed gain stock vanishes (noncompliance / valuation games);
+# Bellman c_phi unchanged.
+kg_death_regime_equities:
+  value: 2
+kg_death_regime_pass_throughs:
+  value: 2
+kg_death_regime_primary_home:
+  value: 2
+kg_death_regime_other_home:
+  value: 2
+kg_death_regime_re_fund:
+  value: 2
+kg_deemed_avoidance:
+  value: 0.25

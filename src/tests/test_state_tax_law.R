@@ -11,7 +11,7 @@
 #       lapply(readLines('./requirements.txt'), library, character.only = T))));
 #     return_vars = list();
 #     list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
-#       walk(~ if (. != 'main.R' && !startsWith(., 'slurm/')) source(file.path('./src/', .)));
+#       walk(~ if (. != 'main.R' && !startsWith(., 'slurm/') && !startsWith(., 'behavior/')) source(file.path('./src/', .)));
 #     test_state_tax_law()"
 #---------------------------------------------------------------
 
@@ -54,7 +54,7 @@ test_state_credit_tables = function() {
 
   law = build_state_tax_law(
     states = 'CA', years = 2017:2026,
-    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
               mutate(growth = 0.025)
   )
   table = attr(law, 'credit_tables')
@@ -90,7 +90,7 @@ test_state_federal_conformity_guard = function() {
   # eligible for those calculations.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
   ca_law = build_state_tax_law('CA', 2025, indexes)
   il_law = build_state_tax_law('IL', 2025, indexes)
@@ -106,7 +106,7 @@ test_state_federal_conformity_guard = function() {
 
   stopifnot(
     'baseline federal law should be permitted for fixed states' =
-      isTRUE(validate_state_federal_conformity(ca_law, 'baseline')),
+      isTRUE(validate_state_federal_conformity(ca_law, 'default')),
     'fixed-conformity state did not block a federal reform' = blocked,
     'rolling-conformity state was incorrectly blocked' =
       isTRUE(validate_state_federal_conformity(il_law, 'tests/federal_reform'))
@@ -126,7 +126,7 @@ test_state_conformity_groups = function() {
   # selective-adoption overlays are researched and validated.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
   groups = load_state_conformity_groups()
   ca_law = build_state_tax_law('CA', 2017:2025, indexes)
@@ -174,7 +174,7 @@ test_state_reference_law_builder = function() {
   # of state identity. This is not a California legal bridge.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
   groups = tibble(
     conformity_group = c(0L, 7L),
@@ -250,7 +250,7 @@ test_state_conformity_context_routing = function() {
   # that changed the federal definition. Reusing group 7 is the cache contract.
   #----------------------------------------------------------------------------
 
-  indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
   groups = tibble(
     conformity_group = c(0L, 7L),
@@ -310,8 +310,8 @@ test_state_conformity_context_routing = function() {
 
 test_state_registry = function() {
 
-  registry_path = './config/scenarios/tax_law_state/jurisdictions.yaml'
-  baseline_root = './config/scenarios/tax_law_state/baseline'
+  registry_path = './config/scenarios/tax_law/default/state/jurisdictions.yaml'
+  baseline_root = './config/scenarios/tax_law/default/state'
   registry = read_yaml(registry_path)
   profiles = c('broad_iit', 'zero', 'narrow_investment_iit',
                'capital_gains_and_transfer')
@@ -354,7 +354,7 @@ test_nm_std_mirrors_federal = function() {
   #----------------------------------------------------------------------------
 
   years   = 2017:2030
-  indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
+  indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
             mutate(growth = 0.025)
 
   nm = build_state_tax_law(states = 'NM', years = years, indexes = indexes) %>%
@@ -366,7 +366,7 @@ test_nm_std_mirrors_federal = function() {
            dep_floor  = st_ded.std_dependent_floor,
            dep_earned = st_ded.std_dependent_earned_add)
 
-  fed = build_tax_law_from_id('baseline', years, indexes) %>%
+  fed = build_tax_law_from_id('default', years, indexes) %>%
     filter(year >= 2018) %>%
     select(year, filing_status,
            fed_std_amount = std.value,
@@ -403,14 +403,14 @@ test_pilot_state_values = function() {
 
   #----------------------------------------------------------------------------
   # Spot-checks parsed pilot-state tax law values against primary-source
-  # figures (see reference fields in config/scenarios/tax_law_state/baseline).
+  # figures (see reference fields in config/scenarios/tax_law/default/state).
   # Uses synthetic constant-growth indexes; asserted values are all
   # transcribed (pre-projection) years, so they do not depend on the index.
   #
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
 
   law = build_state_tax_law(states  = c('IL', 'CO', 'NY'),
@@ -504,7 +504,7 @@ test_first_wave_state_values = function() {
   # configuration shapes before later states reuse them.
   #----------------------------------------------------------------------------
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
   law = build_state_tax_law(states = c('AZ', 'GA', 'NC'),
                             years = 2017:2035,
@@ -581,7 +581,7 @@ test_first_wave_state_values = function() {
 
 test_special_state_values = function() {
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
   law = build_state_tax_law(states = c('NH', 'TN', 'WA'),
                             years = 2017:2035,
@@ -670,7 +670,7 @@ unindexed_subparam:
     str_remove_all('\n  reference: .*')
 
   # Constant-growth synthetic index series
-  test_indexes = expand_grid(series = c('cpi'), year = 2015:2035) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2035) %>%
     mutate(growth = 0.02)
 
   parse_test_yaml = function(yaml_text) {
@@ -708,8 +708,8 @@ test_state_yaml_conventions = function() {
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  baseline_root = './config/scenarios/tax_law_state/baseline'
-  registry = read_yaml('./config/scenarios/tax_law_state/jurisdictions.yaml')
+  baseline_root = './config/scenarios/tax_law/default/state'
+  registry = read_yaml('./config/scenarios/tax_law/default/state/jurisdictions.yaml')
   required_files = list(
     broad_iit = c('agi.yaml', 'credits.yaml', 'ded.yaml',
                   'exempt.yaml', 'filing.yaml', 'ord.yaml'),
@@ -819,7 +819,7 @@ test_state_param_validation = function() {
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'), year = 1980:2036) %>%
     mutate(growth = 0.025)
 
   # Schema integrity (params_schema.yaml -> st_param_schema()): defaults
@@ -843,7 +843,7 @@ test_state_param_validation = function() {
   )
 
   # (a) all configured states parse through the validator
-  configured = list.dirs('./config/scenarios/tax_law_state/baseline',
+  configured = list.dirs('./config/scenarios/tax_law/default/state',
                          recursive = FALSE) %>%
     basename() %>%
     toupper()
@@ -862,7 +862,7 @@ test_state_param_validation = function() {
   # (c) an unknown name fails at load time, identifying the state and name
   tmp_root = file.path(tempdir(), 'state_param_validation')
   on.exit(unlink(tmp_root, recursive = TRUE), add = TRUE)
-  zz_dir = file.path(tmp_root, 'baseline', 'zz')
+  zz_dir = file.path(tmp_root, 'zz')
   dir.create(zz_dir, recursive = TRUE, showWarnings = FALSE)
   writeLines(c('rates:',
                '  value: 0.05',
@@ -882,7 +882,7 @@ test_state_param_validation = function() {
 
   caught = tryCatch(
     {
-      parse_one_state('ZZ', tmp_root, 'baseline', 2017:2020, test_indexes)
+      parse_one_state('ZZ', tmp_root, NULL, 2017:2020, test_indexes)
       FALSE
     },
     error = function(e) {
@@ -896,7 +896,7 @@ test_state_param_validation = function() {
   fixed_yaml = readLines(file.path(zz_dir, 'agi.yaml')) %>%
     str_replace('pension_sub_shre', 'pension_sub_share')
   writeLines(fixed_yaml, file.path(zz_dir, 'agi.yaml'))
-  fixed = parse_one_state('ZZ', tmp_root, 'baseline', 2017:2020, test_indexes)
+  fixed = parse_one_state('ZZ', tmp_root, NULL, 2017:2020, test_indexes)
 
   stopifnot(
     'unknown parameter did not fail at load time' = caught,
@@ -944,7 +944,7 @@ test_state_rollout_tracker = function() {
 
   stopifnot(
     'tracker marks missing yaml dir as done' =
-      all(dir.exists(file.path('./config/scenarios/tax_law_state/baseline',
+      all(dir.exists(file.path('./config/scenarios/tax_law/default/state',
                                encoded_states)))
   )
 

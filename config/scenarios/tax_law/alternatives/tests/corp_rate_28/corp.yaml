@@ -1,0 +1,11 @@
+---
+
+# TEST reform: raise the top corporate statutory rate 21% -> 28%, effective 2027.
+# Exercises the on-model corporate statutory-rate module (src/sim/corp_rate.R):
+# revenue delta on the CBO rev_corp line + corp_incidence smear + distribution.
+# Override replaces the whole subparameter, so the full time series is included.
+rate:
+  value:
+    '2014': 0.35
+    '2018': 0.21
+    '2027': 0.28

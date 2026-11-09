@@ -1,0 +1,30 @@
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_5pp/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_5pp/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime  mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>        <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 step_up       58.2            -25.1    0.554         0       0.350 
+2  2027 step_up       55.9            -25.1    1.02          0       0.0728
+3  2028 step_up       52.8            -25.6    1.37          0       0.112 
+4  2053 step_up      120.             -70.7   12.0           0       0.372 
+5  2054 step_up      125.             -73.9   12.6           0       0.274 
+6  2055 step_up      129.             -74.7   13.3           0       0.168 
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.185       0.467        0.401

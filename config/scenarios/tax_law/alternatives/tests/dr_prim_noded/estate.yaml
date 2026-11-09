@@ -1,0 +1,10 @@
+---
+# Niskanen dr_prim with the income-tax-at-death deduction lever OFF.
+# Identical to private/niskanen_housing/dr_prim except the decedent's
+# deemed-realization income tax is NOT deductible against the taxable
+# estate. Paired with dr_prim to isolate the estate.income_tax_ded lever
+# (estate receipts should match baseline exactly when off; income side
+# identical between the two legs).
+
+income_tax_ded:
+  value: 0

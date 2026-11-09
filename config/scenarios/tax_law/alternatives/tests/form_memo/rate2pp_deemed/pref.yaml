@@ -1,0 +1,30 @@
+---
+# Form-memo experiment 3: +2pp across-the-board on preferred rates AND deemed
+# realization at death across all asset classes, both from 2027. Cloned from
+# tests/kg_dyn_rate_up_2pp_deemed but year-keyed 2027 for a coherent effective
+# date. Codes: 0 = step-up, 1 = carryover, 2 = deemed_realization.
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2027': [0.02, 0.17, 0.22]
+
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2027': 2

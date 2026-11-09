@@ -1,3 +1,9 @@
+# Scratch root for generated batch-submission scripts and their SLURM logs.
+# These are run artifacts, not configuration, so they no longer live under
+# config/ (the old config/batch-submissions/ was deleted 2026-07-26).
+batch_root = file.path('/nfs/roberts/scratch/pi_nrs36', 'jar335',
+                       'Tax-Simulator-batch-submissions')
+
 
 stamp = '202404080754'
 
@@ -21,10 +27,10 @@ runtime = as.numeric(end - start)
 scripts = read_csv("config/runscripts/policy_runs/ctc/simulator/interactive_simulator_runs.csv") %>%
   select(ID)
 
-batch_path = file.path("config/batch-submissions", stamp)
+batch_path = file.path(batch_root, stamp)
 
 if(!file.exists(batch_path)){
-  dir.create(batch_path)
+  dir.create(batch_path, recursive = TRUE)
 }
 
 dir.create(file.path(batch_path, "output"))
@@ -39,12 +45,12 @@ for(i in 1:splits){
   cat(paste0('#!/bin/bash',
              '\n#SBATCH --array=',(10000*(i-1))+1,'-', ifelse(i==splits, nrow(scripts)/2, 10000*i),
              '\n#SBATCH --job-name batch-',stamp,
-             '\n#SBATCH --output=/nfs/roberts/project/pi_nrs36/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.out',
-             '\n#SBATCH --error=/nfs/roberts/project/pi_nrs36/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.err',
+             '\n#SBATCH --output=/nfs/roberts/scratch/pi_nrs36/', user_id, '/Tax-Simulator-batch-submissions/',stamp,'/output/slurm-%A_%a.out',
+             '\n#SBATCH --error=/nfs/roberts/scratch/pi_nrs36/', user_id, '/Tax-Simulator-batch-submissions/',stamp,'/output/slurm-%A_%a.err',
              '\n#SBATCH --mem-per-cpu 10g \n#SBATCH --time=',splits,':30:00', 
              '\n#SBATCH --partition scavenge \n#SBATCH --requeue',
              '\nmodule load miniconda \nconda activate ybl-rbash',
-             '\nfile=/nfs/roberts/project/pi_nrs36/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/batch_array.txt',
+             '\nfile=/nfs/roberts/scratch/pi_nrs36/', user_id, '/Tax-Simulator-batch-submissions/',stamp,'/batch_array.txt',
              '\nfor i in 0 1; do\n  index=$((2*SLURM_ARRAY_TASK_ID + i))',
              '\n  scenario_id=$(awk "NR=="${index}"{print}" $file)',
              '\n  Rscript /nfs/roberts/project/pi_nrs36/', user_id, '/Repositories/Tax-Simulator/src/main.R ', runscript_name, ' "${scenario_id}" ', user_id, ' ',
@@ -80,10 +86,10 @@ build_slurm = function(runscript_name, user_id, stamp = NULL, scenario_id = 'bas
   scripts = read_csv("config/runscripts/policy_runs/ctc/simulator/interactive_simulator_runs.csv") %>%
     select(ID)
   
-  batch_path = file.path("config/batch-submissions", stamp)
+  batch_path = file.path(batch_root, stamp)
   
   if(!file.exists(batch_path)){
-    dir.create(batch_path)
+    dir.create(batch_path, recursive = TRUE)
   }
   
   dir.create(file.path(batch_path, "output"))
@@ -98,12 +104,12 @@ build_slurm = function(runscript_name, user_id, stamp = NULL, scenario_id = 'bas
     cat(paste0('#!/bin/bash',
                '\n#SBATCH --array=',(10000*(i-1))+1,'-', ifelse(i==splits, nrow(scripts)/2, 10000*i),
                '\n#SBATCH --job-name batch-',stamp,
-               '\n#SBATCH --output=/nfs/roberts/scratch/pi_nrs36/', user_id, '/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.out',
-               '\n#SBATCH --error=/nfs/roberts/scratch/pi_nrs36/',  user_id, '/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.err',
+               '\n#SBATCH --output=/nfs/roberts/scratch/pi_nrs36/', user_id, '/Tax-Simulator-batch-submissions/',stamp,'/output/slurm-%A_%a.out',
+               '\n#SBATCH --error=/nfs/roberts/scratch/pi_nrs36/',  user_id, '/Tax-Simulator-batch-submissions/',stamp,'/output/slurm-%A_%a.err',
                '\n#SBATCH --mem-per-cpu 10g \n#SBATCH --time=',splits,':30:00', 
                '\n#SBATCH --partition scavenge \n#SBATCH --requeue',
                '\nmodule load miniconda \nconda activate ybl-rbash',
-               '\nfile=/nfs/roberts/project/pi_nrs36/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/batch_array.txt',
+               '\nfile=/nfs/roberts/scratch/pi_nrs36/', user_id, '/Tax-Simulator-batch-submissions/',stamp,'/batch_array.txt',
                '\nfor i in 0 1; do\n  index=$((2*SLURM_ARRAY_TASK_ID + i))',
                '\n  scenario_id=$(awk "NR=="${index}"{print}" $file)',
                '\n  Rscript /nfs/roberts/project/pi_nrs36/', user_id, '/Repositories/Tax-Simulator/src/main.R ', runscript_name, ' "${scenario_id}" ', user_id, ' ',

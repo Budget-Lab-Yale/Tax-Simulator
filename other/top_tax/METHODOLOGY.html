@@ -1,0 +1,564 @@
+<style>
+  :root {
+    --paper:#fbfbfc; --surface:#ffffff; --tint:#eef1f6; --tint-2:#e6ebf2;
+    --ink:#14181f; --ink-soft:#4a5560; --ink-faint:#79838f;
+    --rule:#d7dde4; --rule-soft:#e6eaef;
+    --accent:#10508f; --accent-2:#0c3e6f; --accent-tint:#e7eef7;
+    --open:#a6690a; --open-bg:#f7efdd;
+    --accepted:#2c6a52; --accepted-bg:#e2efe8;
+    --placeholder:#a1502f; --placeholder-bg:#f4e6de;
+    --serif: Charter, "Bitstream Charter", "Sitka Text", "Iowan Old Style", "Palatino Linotype", Palatino, Cambria, Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:#0f1318; --surface:#151b22; --tint:#171e26; --tint-2:#1c242d;
+      --ink:#e7ebf0; --ink-soft:#a3adb8; --ink-faint:#727d89;
+      --rule:#28313b; --rule-soft:#20272f;
+      --accent:#6aa8e8; --accent-2:#8fc0f2; --accent-tint:#182838;
+      --open:#d69a3d; --open-bg:#241d0f;
+      --accepted:#63b389; --accepted-bg:#0f2118;
+      --placeholder:#d0855f; --placeholder-bg:#241610;
+    }
+  }
+  :root[data-theme="light"] {
+    --paper:#fbfbfc; --surface:#ffffff; --tint:#eef1f6; --tint-2:#e6ebf2;
+    --ink:#14181f; --ink-soft:#4a5560; --ink-faint:#79838f;
+    --rule:#d7dde4; --rule-soft:#e6eaef;
+    --accent:#10508f; --accent-2:#0c3e6f; --accent-tint:#e7eef7;
+    --open:#a6690a; --open-bg:#f7efdd;
+    --accepted:#2c6a52; --accepted-bg:#e2efe8;
+    --placeholder:#a1502f; --placeholder-bg:#f4e6de;
+  }
+  :root[data-theme="dark"] {
+    --paper:#0f1318; --surface:#151b22; --tint:#171e26; --tint-2:#1c242d;
+    --ink:#e7ebf0; --ink-soft:#a3adb8; --ink-faint:#727d89;
+    --rule:#28313b; --rule-soft:#20272f;
+    --accent:#6aa8e8; --accent-2:#8fc0f2; --accent-tint:#182838;
+    --open:#d69a3d; --open-bg:#241d0f;
+    --accepted:#63b389; --accepted-bg:#0f2118;
+    --placeholder:#d0855f; --placeholder-bg:#241610;
+  }
+
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--serif); font-size:18px; line-height:1.62;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+
+  /* ---- masthead ---- */
+  .masthead {
+    border-bottom:1px solid var(--rule);
+    padding:56px 32px 40px;
+    background:
+      linear-gradient(180deg, var(--accent-tint) 0%, transparent 70%);
+  }
+  .masthead-inner { max-width:1180px; margin:0 auto; }
+  .eyebrow {
+    font-family:var(--sans); font-size:12.5px; font-weight:600;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+    margin:0 0 18px;
+  }
+  .masthead h1 {
+    font-family:var(--serif); font-weight:600; font-size:clamp(30px,4.4vw,46px);
+    line-height:1.1; letter-spacing:-.015em; margin:0 0 14px; max-width:20ch;
+    text-wrap:balance;
+  }
+  .deck {
+    font-size:clamp(18px,2.2vw,21px); color:var(--ink-soft);
+    max-width:62ch; margin:0 0 26px; line-height:1.5;
+  }
+  .meta-row {
+    display:flex; flex-wrap:wrap; gap:10px 26px; align-items:center;
+    font-family:var(--sans); font-size:13px; color:var(--ink-faint);
+    padding-top:20px; border-top:1px solid var(--rule-soft);
+  }
+  .meta-row b { color:var(--ink-soft); font-weight:600; }
+  .status-chip {
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:var(--sans); font-size:12px; font-weight:600;
+    letter-spacing:.03em; padding:5px 11px; border-radius:100px;
+    background:var(--open-bg); color:var(--open);
+    border:1px solid color-mix(in srgb, var(--open) 30%, transparent);
+  }
+  .status-chip .dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+
+  /* ---- layout ---- */
+  .layout {
+    max-width:1180px; margin:0 auto; padding:0 32px;
+    display:grid; grid-template-columns:248px minmax(0,1fr); gap:56px;
+    align-items:start;
+  }
+  nav.toc {
+    position:sticky; top:24px; align-self:start;
+    font-family:var(--sans); font-size:13.5px; line-height:1.35;
+    padding:28px 0 40px; max-height:calc(100vh - 40px); overflow-y:auto;
+  }
+  nav.toc .toc-head {
+    font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-faint); margin:0 0 14px;
+  }
+  nav.toc ol { list-style:none; margin:0 0 20px; padding:0; }
+  nav.toc li { margin:0; }
+  nav.toc a {
+    display:flex; gap:9px; text-decoration:none; color:var(--ink-soft);
+    padding:5px 10px 5px 0; border-left:2px solid transparent; padding-left:12px;
+    transition:color .15s, border-color .15s;
+  }
+  nav.toc a .num { color:var(--ink-faint); font-variant-numeric:tabular-nums; min-width:2.1em; }
+  nav.toc a:hover { color:var(--accent); }
+  nav.toc a.active { color:var(--accent); border-left-color:var(--accent); font-weight:600; }
+  nav.toc a.sub { font-size:12.5px; padding-left:26px; color:var(--ink-faint); }
+  nav.toc a.sub .num { min-width:2.6em; }
+  nav.toc a.sub.active { color:var(--accent); }
+  nav.toc .toc-part {
+    font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--accent); margin:18px 0 10px; padding-left:12px;
+  }
+
+  main { padding:36px 0 96px; min-width:0; }
+  .prose { max-width:70ch; }
+
+  /* ---- headings ---- */
+  .part-rule {
+    display:flex; align-items:baseline; gap:16px; margin:56px 0 8px;
+    padding-bottom:0;
+  }
+  .part-rule:first-child { margin-top:8px; }
+  .part-label {
+    font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--accent);
+  }
+  .part-title { font-family:var(--serif); font-weight:600; font-size:15px; color:var(--ink-faint); font-style:italic; }
+  .part-rule + hr { margin-top:6px; }
+  hr { border:none; border-top:1px solid var(--rule); margin:12px 0 30px; }
+
+  h2 {
+    font-family:var(--serif); font-weight:600; font-size:27px; line-height:1.2;
+    letter-spacing:-.01em; margin:52px 0 6px; text-wrap:balance; scroll-margin-top:24px;
+  }
+  h2 .sec { color:var(--accent); font-variant-numeric:tabular-nums; margin-right:.5em; font-weight:600; }
+  h3 {
+    font-family:var(--serif); font-weight:600; font-size:20px; line-height:1.25;
+    margin:38px 0 4px; scroll-margin-top:24px; text-wrap:balance;
+  }
+  h3 .sec { color:var(--accent); font-variant-numeric:tabular-nums; margin-right:.45em; }
+  h3 .tag {
+    font-family:var(--sans); font-size:11.5px; font-weight:600; font-style:normal;
+    letter-spacing:.02em; vertical-align:middle; margin-left:10px;
+    padding:3px 9px; border-radius:100px; white-space:nowrap;
+  }
+  .tag-written { background:var(--accepted-bg); color:var(--accepted); border:1px solid color-mix(in srgb,var(--accepted) 28%,transparent); }
+  .tag-drafted { background:var(--accent-tint); color:var(--accent); border:1px solid color-mix(in srgb,var(--accent) 28%,transparent); }
+  .tag-skeleton { background:var(--tint-2); color:var(--ink-faint); border:1px solid var(--rule); }
+  .family-kicker {
+    font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--accent-2); margin:56px 0 -20px;
+    padding-top:26px; border-top:2px solid var(--rule);
+  }
+
+  p { margin:14px 0; }
+  .prose p, .prose li { max-width:70ch; }
+  strong { font-weight:600; }
+  em { font-style:italic; }
+  a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:2px; }
+
+  code, .mono { font-family:var(--mono); font-size:.86em; }
+  p code, li code, td code {
+    background:var(--tint); padding:1.5px 5px; border-radius:4px;
+    color:var(--ink); border:1px solid var(--rule-soft);
+    word-break:break-word;
+  }
+
+  ul, ol.body-list { padding-left:1.3em; margin:14px 0; }
+  li { margin:7px 0; }
+
+  /* ---- inline + display math ---- */
+  .m { font-family:var(--serif); font-style:italic; white-space:nowrap; }
+  .m sub, .m sup { font-style:normal; }
+  .eq {
+    font-family:var(--serif); font-size:18px; text-align:center;
+    background:var(--tint); border:1px solid var(--rule-soft);
+    border-left:3px solid var(--accent);
+    border-radius:6px; padding:18px 20px; margin:22px 0; overflow-x:auto;
+    line-height:2;
+  }
+  .eq .lbl { font-family:var(--sans); font-style:normal; font-size:13px; color:var(--ink-faint); margin-left:.8em; white-space:nowrap; }
+  .eqi { font-style:italic; }
+  .eqi sub, .eqi sup { font-style:normal; font-size:.72em; }
+
+  .flow {
+    display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:13.5px;
+    background:var(--tint); border:1px solid var(--rule-soft); border-radius:6px;
+    padding:16px 18px; margin:22px 0; overflow-x:auto;
+  }
+  .flow .step { color:var(--ink); white-space:nowrap; }
+  .flow .arw { color:var(--accent); font-weight:700; }
+  .flow .grp { padding:5px 10px; border:1px dashed var(--accent); border-radius:5px; color:var(--accent-2); white-space:nowrap; }
+
+  /* ---- callout ---- */
+  .callout {
+    background:var(--surface); border:1px solid var(--rule);
+    border-left:3px solid var(--accent); border-radius:8px;
+    padding:20px 24px; margin:26px 0; font-size:16.5px; color:var(--ink-soft);
+  }
+  .callout p:first-child { margin-top:0; } .callout p:last-child { margin-bottom:0; }
+  .callout .co-title {
+    font-family:var(--sans); font-size:12px; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--accent); margin-bottom:8px;
+  }
+
+  .draft-note {
+    font-family:var(--sans); font-size:13px; color:var(--ink-faint);
+    font-style:normal; background:var(--tint); border-radius:5px;
+    padding:3px 9px; display:inline-block; margin:2px 0;
+  }
+
+  /* ---- tables ---- */
+  .table-wrap { overflow-x:auto; margin:24px 0; border:1px solid var(--rule); border-radius:8px; }
+  table { border-collapse:collapse; width:100%; font-family:var(--sans); font-size:13.5px; }
+  th, td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--rule-soft); vertical-align:top; line-height:1.45; }
+  thead th {
+    background:var(--tint); font-weight:700; font-size:11.5px; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--rule);
+    position:sticky; top:0;
+  }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:nth-child(even) td { background:color-mix(in srgb, var(--tint) 45%, transparent); }
+  td .mono, td code { font-size:12.5px; }
+  td.num, td .tnum { font-variant-numeric:tabular-nums; }
+
+  .pill {
+    display:inline-block; font-size:11px; font-weight:600; letter-spacing:.02em;
+    padding:2px 8px; border-radius:100px; white-space:nowrap;
+  }
+  .pill-open { background:var(--open-bg); color:var(--open); border:1px solid color-mix(in srgb,var(--open) 30%,transparent); }
+  .pill-accepted { background:var(--accepted-bg); color:var(--accepted); border:1px solid color-mix(in srgb,var(--accepted) 30%,transparent); }
+  .pill-placeholder { background:var(--placeholder-bg); color:var(--placeholder); border:1px solid color-mix(in srgb,var(--placeholder) 30%,transparent); }
+  .pill-neutral { background:var(--tint-2); color:var(--ink-soft); border:1px solid var(--rule); }
+
+  .legend {
+    display:flex; flex-wrap:wrap; gap:10px 18px; font-family:var(--sans);
+    font-size:12.5px; color:var(--ink-soft); margin:18px 0 4px;
+  }
+  .legend span { display:inline-flex; align-items:center; gap:7px; }
+
+  footer {
+    border-top:1px solid var(--rule); margin-top:40px;
+    padding:36px 32px 60px; font-family:var(--sans); font-size:13px; color:var(--ink-faint);
+  }
+  footer .footer-inner { max-width:1180px; margin:0 auto; }
+  footer code { font-size:12px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns:1fr; gap:0; }
+    nav.toc { position:static; max-height:none; padding:20px 0 4px; border-bottom:1px solid var(--rule); margin-bottom:8px; }
+    nav.toc ol.collapsible { columns:2; column-gap:24px; }
+    main { padding-top:20px; }
+    body { font-size:17px; }
+  }
+  @media (max-width: 560px) {
+    .masthead { padding:40px 20px 28px; }
+    .layout { padding:0 20px; }
+    nav.toc ol.collapsible { columns:1; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="eyebrow">Budget Lab at Yale · Tax-Simulator</p>
+    <h1>Behavioral responses in the top-tax project</h1>
+    <p class="deck">A methodology for the behavioral and interaction channels behind the question: how much additional revenue is actually available at the top of the income and wealth distribution?</p>
+    <div class="meta-row">
+      <span class="status-chip"><span class="dot"></span>Draft skeleton — one channel written, one drafted</span>
+      <span><b>Version</b> 2026-07-15</span>
+      <span><b>Branch</b> wealth</span>
+      <span><b>Source</b> <code>other/top_tax/METHODOLOGY.md</code></span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Table of contents">
+    <p class="toc-head">Contents</p>
+    <div class="toc-part">Part I — Main body</div>
+    <ol class="collapsible">
+      <li><a href="#s1"><span class="num">1</span><span>The research question</span></a></li>
+      <li><a href="#s2"><span class="num">2</span><span>How the model represents behavior</span></a></li>
+      <li><a href="#s3"><span class="num">3</span><span>The interaction architecture</span></a></li>
+      <li><a href="#s4"><span class="num">4</span><span>The behavioral channels</span></a></li>
+      <li><a href="#s41" class="sub"><span class="num">4.1</span><span>Realization (Bellman)</span></a></li>
+      <li><a href="#s42" class="sub"><span class="num">4.2</span><span>Wealth-carry</span></a></li>
+      <li><a href="#s43" class="sub"><span class="num">4.3</span><span>Estate death-value</span></a></li>
+      <li><a href="#s44" class="sub"><span class="num">4.4</span><span>Income conversion (σ)</span></a></li>
+      <li><a href="#s45" class="sub"><span class="num">4.5</span><span>Entity shifting</span></a></li>
+      <li><a href="#s46" class="sub"><span class="num">4.6</span><span>Evasion</span></a></li>
+      <li><a href="#s47" class="sub"><span class="num">4.7</span><span>Wealth avoidance + hidden ledger</span></a></li>
+      <li><a href="#s48" class="sub"><span class="num">4.8</span><span>Estate own-rate (KS)</span></a></li>
+      <li><a href="#s49" class="sub"><span class="num">4.9</span><span>The wealth bathtub</span></a></li>
+      <li><a href="#s410" class="sub"><span class="num">4.10</span><span>Corporate incidence</span></a></li>
+      <li><a href="#s411" class="sub"><span class="num">4.11</span><span>Charity, employment, migration</span></a></li>
+      <li><a href="#s5"><span class="num">5</span><span>Limitations &amp; known-gaps register</span></a></li>
+      <li><a href="#s6"><span class="num">6</span><span>References</span></a></li>
+    </ol>
+    <div class="toc-part">Part II — Appendix</div>
+    <ol class="collapsible">
+      <li><a href="#sA"><span class="num">A</span><span>Derivations &amp; calibration</span></a></li>
+      <li><a href="#sB"><span class="num">B</span><span>Parameter &amp; provenance table</span></a></li>
+    </ol>
+  </nav>
+
+  <main class="prose">
+    <div class="callout">
+      <div class="co-title">Status of this draft</div>
+      <p>This is the agreed structure with <strong>one channel — capital-gains realization (§4.1) — written end-to-end</strong> as the template exemplar, and <strong>one thin channel — wealth-carry (§4.2) — drafted</strong> to show the template leveling an under-documented mechanism. Sections 1–3 (the interaction story), the standardized channel template (§4.0), and the limitations register (§5) are written. The remaining channels (§4.3–§4.11) are titled skeletons under the shared template, to be drafted to the same depth.</p>
+    </div>
+
+    <div class="part-rule"><span class="part-label">Part I</span><span class="part-title">Main body — the intuition, headline parameters, and light math</span></div>
+    <hr>
+
+    <h2 id="s1"><span class="sec">1</span>The research question: why interactions, not isolated responses</h2>
+    <p>The project asks a single question: <strong>how much additional revenue is actually available at the top of the income and wealth distribution?</strong> Progressive tax agendas propose to reach the same small group through several statutes at once — top ordinary rates, capital-gains rates, the treatment of gains at death, the estate tax, a wealth tax, the corporate tax, QBI repeal, NIIT expansion. Scoring each in isolation and summing <strong>overstates</strong> the combined capacity, for two distinct reasons that this document is organized around:</p>
+    <ol class="body-list">
+      <li><strong>Mechanical base overlap.</strong> The same dollar of wealth is capital income during life, an estate at death, a wealth-tax base in between, and corporate profit upstream. A dollar taxed away by one statute is not available to another; summing standalone scores double-counts it.</li>
+      <li><strong>Behavioral re-routing.</strong> Taxpayers respond — by retiming realizations, converting labor income into deferred capital gains, shifting income across the corporate/pass-through boundary, concealing assets, and financing tax payments out of saving. These responses move dollars <em>between</em> bases and <em>out</em> of the taxable universe, and a response provoked by one lever changes the base every other lever stands on.</li>
+    </ol>
+    <p>The methodological commitment is to close these loops on <strong>actual record-level balance sheets</strong> rather than through a single assumed aggregate elasticity. Each behavioral channel below is a structural response measured against the microdata; the value of the exercise is precisely the <strong>interaction</strong> among them (§3), which is why the deliverable reports conventional-as-a-share-of-static and a destination ledger rather than a headline elasticity.</p>
+    <p>A note on what “behavioral” means here. We document the full set of <em>responses</em>, but two of them — the wealth-financing bathtub (§4.9) and corporate incidence (§4.10) — are <strong>mechanical conventional-side channels</strong>, not elasticity-driven taxpayer choices. They belong in a behavioral-methodology document because they transmit a policy’s effect from one base to another, which is the interaction the project measures; we flag their mechanical nature explicitly.</p>
+
+    <h2 id="s2"><span class="sec">2</span>How the model represents behavior</h2>
+    <h3><span class="sec">2.1</span>Static versus conventional</h3>
+    <p>Every non-baseline scenario is run twice. The <strong>static</strong> pass holds all taxpayer inputs fixed at baseline levels and recomputes tax under the reform — the clean law-only counterfactual. The <strong>conventional</strong> pass turns the behavioral channels on. The project’s central quantities are differences between the two: the <em>static</em> score is the mechanical intent, the <em>conventional</em> score is what survives behavior, and the gap is where the methodology lives.</p>
+    <p>The static pass is deliberately kept a pure law-only object. Interactions surface as <span class="m">static − conventional</span> deltas reported through receipts; distribution tables remain static-sourced by house convention.</p>
+
+    <h3><span class="sec">2.2</span>Two channel types</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th style="width:22%">Type</th><th>Mechanism</th><th style="width:26%">Examples</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Behavior module</strong></td><td>An R file <code>config/scenarios/behavior/{var}/{name}.R</code> with a <code>do_{var}()</code> hook, dispatched on the behavioral pass; modifies tax-unit inputs, then taxes are recomputed.</td><td>kg realization, σ conversion, entity shifting, evasion, wealth avoidance, charity, employment</td></tr>
+        <tr><td><strong>Mechanical applier</strong></td><td>A fixed step invoked directly at the head of the conventional pass in <code>src/sim/run.R</code>; no <code>do_*</code> hook, no elasticity dispatch.</td><td>wealth bathtub, corporate incidence</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3><span class="sec">2.3</span>Run order and the no-double-counting discipline</h3>
+    <p>Because several channels touch overlapping bases, the order in which they run is part of the specification, not an implementation detail. The pinned conventional sequence is:</p>
+    <div class="flow">
+      <span class="step">corp incidence</span><span class="arw">→</span>
+      <span class="step">wealth haircut</span><span class="arw">→</span>
+      <span class="grp">kg → σ conversion → entity shifting → evasion</span><span class="arw">→</span>
+      <span class="step">do_taxes</span>
+    </div>
+    <p>The behavior-module order (the dashed group) is asserted at runtime so that <strong>no dollar is moved twice</strong>: realization decisions are set before conversion prices them, conversion before the entity margin re-routes what remains, and the reporting channels (evasion, avoidance) run last so that no real-side machinery reads a concealment-modified frame (§3.2).</p>
+
+    <h2 id="s3"><span class="sec">3</span>The interaction architecture</h2>
+    <p>Three cross-cutting structures make the channels interact coherently. They are the reason this is a <em>top-tax interaction</em> methodology and not a list of elasticities.</p>
+
+    <h3><span class="sec">3.1</span>Shared cross-base objects</h3>
+    <p>Several channels are priced off the <strong>same</strong> internal objects rather than independent assumptions:</p>
+    <ul>
+      <li><span class="m">τ<sub>eq</sub>(a,t)</span> — the present-value tax per dollar <em>entering</em> the unrealized-gain state, produced by the realization machinery (§4.1). It prices both the σ conversion exit (§4.4) and, in the roadmap, the entity-shifting deferral value (§4.5).</li>
+      <li><span class="m">F</span> — the <strong>death-forgiveness value</strong> of an unrealized gain, which depends on the realization-at-death regime (step-up / carryover / deemed) <em>and</em> on estate exposure (§4.3). It links realization behavior to the estate tax.</li>
+      <li><span class="m">h = τ<sub>w</sub>·τ<sub>cg</sub></span> — the <strong>wealth-tax carry</strong> on deferred gains (§4.2), which couples a wealth tax into the realize-vs-hold decision.</li>
+    </ul>
+    <p>Because these objects are shared, a change to one lever propagates into others <em>through the model’s own state</em>, not through a hand-set cross-elasticity.</p>
+
+    <h3><span class="sec">3.2</span>The reporting-vs-real firewall</h3>
+    <p>The governing principle is: <strong>cash is reported; balance sheets are real.</strong> A <em>reporting</em> response (evasion, wealth avoidance, estate concealment) may affect exactly one real-side object — the cash tax actually paid (and hence the bathtub’s financing flow, §4.9) — and nothing else. It must never touch the economic balance sheet (<code>value.*</code>), the gain stock, cohort cell assignment, heir inheritances, or corporate exposure. Conversely, <em>real</em> responses (corporate markdown, wealth haircut, realization, conversion, entity shifting) <strong>should</strong> flow into every base, including reported ones.</p>
+    <p>The architecture enforces this by construction: every real-side consumer reads raw Tax-Data, static detail, or an explicitly preserved raw column — never the behavior-modified conventional frame — while reporting modules write only to tax-computation inputs and documented isolation points (the materialized <code>net_worth</code> column, the <code>estate_concealed_frac</code> input to <code>calc_estate</code>). This is why the reporting modules are pinned last in the run order (§2.3). Each channel declares itself <strong>REAL</strong> or <strong>REPORTING</strong> in its template.</p>
+
+    <h3><span class="sec">3.3</span>How the ETI is composed (and re-residualized)</h3>
+    <p>The top-bracket <strong>elasticity of taxable income</strong> is not a single assumed parameter. It is <em>composed</em> from three behavior modules — income conversion (σ, §4.4), entity shifting (§4.5), and evasion (§4.6) — plus charity (§4.7). One of them, σ, is <strong>calibrated as a residual</strong>: σ is set so that the modeled top-ordinary ETI matches an external target (≈ 0.25), <em>conditional on the rest of the stack</em>.</p>
+    <p>The consequence, which the methodology must state plainly, is that <strong>any change to an in-bundle margin forces σ to be re-derived.</strong> Margins that live <em>outside</em> the ordinary-rate ETI bundle — the wealth and estate terms in the realization Bellman, the estate own-rate response, capital-gains realization itself — do not disturb σ. This distinction governs both calibration maintenance and the sequencing of any future refinement, and it is tracked by an automated staleness watch (§5, Appendix B).</p>
+
+    <h2 id="s4"><span class="sec">4</span>The behavioral channels</h2>
+    <h3><span class="sec">4.0</span>The standardized template</h3>
+    <p>Every channel is documented under the same seven headers. Medium-depth content lives here in the main body; fuller derivations go to Appendix A.</p>
+    <ol class="body-list">
+      <li><strong>What it captures</strong> — the economic response in one or two sentences.</li>
+      <li><strong>Mechanism</strong> — how the model produces it.</li>
+      <li><strong>Type &amp; location</strong> — behavior module vs mechanical; REAL vs REPORTING; code path.</li>
+      <li><strong>Parameters &amp; values</strong> — the pinned numbers and their override knobs.</li>
+      <li><strong>Calibration &amp; evidence</strong> — how the parameters are set; the literature anchor.</li>
+      <li><strong>Cross-base interactions</strong> — which other channels/bases it touches, and how.</li>
+      <li><strong>Limitations &amp; approximations</strong> — what it does not capture (feeds §5).</li>
+    </ol>
+    <div class="legend">
+      <span><span class="pill pill-accepted">written</span> full main-body + appendix</span>
+      <span><span class="pill pill-accepted">drafted</span> main-body to template</span>
+      <span><span class="pill pill-neutral">skeleton</span> headers pre-loaded, prose pending</span>
+    </div>
+
+    <p class="family-kicker">Family A — Realization &amp; timing at death</p>
+
+    <h3 id="s41"><span class="sec">4.1</span>Capital-gains realization — the entropy Bellman <span class="tag tag-written">written</span></h3>
+    <p><strong>What it captures.</strong> How much of a mechanical capital-gains rate increase survives once realizations respond — investors defer gains when rates rise, and the value of deferring depends on what happens to the gain at death. Both the long-run level of realizations and the short-run retiming around a rate change are modeled.</p>
+    <p><strong>Mechanism.</strong> Investors are grouped into representative cells (age cohort × within-age net-worth percentile). For each cell the model solves a dynamic realize-vs-hold problem — a “bathtub” recurrence over the gain stock — under an <strong>entropy realization cost</strong>. Each dollar of unrealized gain has a non-tax reason to be sold (a liquidity, rebalancing, or consumption motive) drawn from an exponential reservation-benefit distribution; the holder realizes the dollar if that benefit exceeds the tax wedge of realizing now versus deferring. The survival function of that distribution <em>is</em> the realization rate. The first-order condition has a clean closed form:</p>
+    <div class="eq"><span class="eqi">r<sub>D</sub><sup>&nbsp;j</sup> = r<sub>D</sub><sup>&nbsp;B</sup> · exp( −η ( MC<sup>&nbsp;j</sup> − MC<sup>&nbsp;B</sup> ) )</span><span class="lbl">clipped to [0, 1]</span></div>
+    <p>where the marginal cost of holding rather than realizing,</p>
+    <div class="eq"><span class="eqi">MC = τ + β(1−m) W<sub>next</sub> + β m F</span>,&nbsp;&nbsp;<span class="eqi">F = (1 − c<sub>φ</sub>) τ</span></div>
+    <p>carries the current-year rate <span class="m">τ</span>, the discounted continuation value <span class="m">W<sub>next</sub></span> of an unrealized dollar (survival probability <span class="m">1−m</span>), and the discounted <strong>death-forgiveness value</strong> <span class="m">F</span> (mortality <span class="m">m</span>). The regime enters through <span class="m">c<sub>φ</sub></span> — the share of the gain’s tax burden the holder internalizes at death: <span class="m">c<sub>φ</sub> = 0</span> under step-up (death forgives the gain, <span class="m">F = τ</span>), <span class="m">c<sub>φ</sub> = 1</span> under deemed realization (full tax, <span class="m">F = 0</span>), and an intermediate value under carryover.</p>
+    <p>Because <span class="m">d&nbsp;ln&nbsp;r<sub>D</sub> / dMC = −η</span> <strong>everywhere on the pool</strong>, <span class="m">η</span> <em>is</em> the long-run capital-gains realization semi-elasticity directly — there is no inert-floor or responsive-half deflation (the spec-v3 single-pool property; see §A.1). A separate short-run <strong>timing overlay</strong> lets a calibrated fraction of realizations retime by ±1 year toward the lowest-wedge year; it nets to zero under a uniform permanent shock, so it leaves the long-run response untouched.</p>
+    <p><strong>Type &amp; location.</strong> Behavior module — the applier <code>do_kg_dynamics</code> (<code>config/scenarios/behavior/kg_dynamics/turnover.R</code>) is a pure allocator that reads per-year cell state and translates it to per-record <code>kg_lt</code> adjustments. State is produced by a pre-pass (<code>kg_dyn_run_bathtub_pass</code>) in <code>src/sim/kg_dynamics.R</code>; shared cohort primitives in <code>src/sim/cohort_bathtub.R</code>. <strong>REAL</strong> side.</p>
+    <p><strong>Parameters &amp; values.</strong></p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Parameter</th><th>Value</th><th>Meaning</th><th>Override</th></tr></thead>
+      <tbody>
+        <tr><td><span class="m">η</span> <span class="mono">KG_DYN_DEFAULT_ETA</span></td><td class="tnum"><strong>2.4825</strong></td><td>long-run CG realization semi-elasticity</td><td><code>KG_ETA</code></td></tr>
+        <tr><td>timeable share <span class="mono">KG_DYN_TIMEABLE_SHARE</span></td><td class="tnum"><strong>0.2542</strong></td><td>fraction of realizations that retimes ±1 yr</td><td><code>KG_TIMEABLE_SHARE</code></td></tr>
+        <tr><td>deemed-avoidance haircut</td><td class="tnum">0.25</td><td>valuation/noncompliance discount on deemed realizations (data calibration, not law)</td><td><code>KG_DEEMED_AVOIDANCE</code></td></tr>
+        <tr><td><span class="m">c<sub>φ</sub></span></td><td class="tnum">0 / θ / 1</td><td>regime death-burden share (step-up / carryover / deemed)</td><td>—</td></tr>
+        <tr><td>spec version</td><td class="tnum">3</td><td>single pool</td><td>—</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Calibration &amp; evidence.</strong> <span class="m">η</span> is pinned <strong>directly on the full simulator</strong> (2026-07-12). The <code>eta_dial</code> harness measures the realized full-sim elasticity <span class="m">E<sub>full</sub>(η) = d&nbsp;log&nbsp;R / dτ<sub>rw</sub></span> at simulation-year 30 across a small grid of <span class="m">η</span> values; the surface is linear through the origin, so a few points pin it. Inverting the fitted line for the literature target <span class="m">E<sub>full</sub>* = −0.6/0.238 = −2.52</span> (a top-rate realization elasticity over the top-rate divisor; Dowd–McClelland–Muthitacharoen and the JCT/CBO tradition) at slope 1.0155 gives <span class="m">η* = 2.4825</span>. The fitted slope and grid are recorded in <code>eta_repin_fit.csv</code>, so the next re-pin is arithmetic rather than archaeological. The timeable share is calibrated separately against the short-run announcement moment given <span class="m">η</span>. Full procedure in §A.1.</p>
+    <p><strong>Cross-base interactions.</strong> The most connected channel in the model. It produces <span class="m">τ<sub>eq</sub></span> and <span class="m">F</span> (§3.1), which price σ conversion (§4.4) and entity shifting (§4.5). The death regime (<span class="m">c<sub>φ</sub></span>) links realization to the estate tax — closing step-up (deemed) collapses the deferral shelter and raises realizations. The wealth-carry term <span class="m">h</span> (§4.2) and the estate death-value offset (§4.3) both enter <span class="m">MC</span> and <span class="m">F</span>, coupling a wealth tax and the estate rate into the realization decision.</p>
+    <p><strong>Limitations &amp; approximations.</strong> The five tracked wealth classes are collapsed into a <strong>single asset bucket</strong> (per-asset disaggregation on the roadmap). The literal revenue-maximizing grid still argmaxes at the +25pp boundary (peak ≈ 44–45% statutory); the grid should be extended to +30/35pp to capture the turn-down. The deemed-avoidance haircut (0.25) is a JCT-consistent data calibration, not a behavioral response.</p>
+
+    <h3 id="s42"><span class="sec">4.2</span>Wealth-carry (<span class="m">h = τ<sub>w</sub>·τ<sub>cg</sub></span>) <span class="tag tag-drafted">drafted</span></h3>
+    <p><strong>What it captures.</strong> A wealth tax makes deferring a capital gain <em>more</em> expensive, because the unpaid capital-gains tax on an unrealized gain remains in the wealth-tax base and is taxed at <span class="m">τ<sub>w</sub></span> every year it is deferred. This “unlocks” realizations in wealth-tax cells the Bellman would otherwise leave deferred — and, symmetrically, makes the σ founder-equity deferral path (§4.4) worth less.</p>
+    <p><strong>Mechanism.</strong> A per-year carrying cost <span class="m">h = τ<sub>w</sub>·τ<sub>cg</sub></span> is added to the marginal cost of holding in the Bellman (§4.1) and to the <span class="m">τ<sub>eq</sub></span> recursion. It is computed at the <strong>record level and then aggregated</strong> — never as a product of separately-averaged rates — because <span class="m">τ<sub>w</sub></span> and <span class="m">τ<sub>cg</sub></span> are positively correlated at the top, so a product of means would understate it. The term rides the survivor branch only (in-year realizers and decedents pay no carry that year).</p>
+    <p><strong>Type &amp; location.</strong> A structural term inside the kg behavior module (<code>src/sim/kg_dynamics.R</code>, cell-carry aggregation). <strong>REAL</strong> side.</p>
+    <p><strong>Parameters &amp; values.</strong> No free parameter — <span class="m">h</span> is a product of two marginal rates already in the model (<span class="m">τ<sub>w</sub></span> from <code>mtr_net_worth</code>, <span class="m">τ<sub>cg</sub></span> from <code>mtr_kg_lt</code>). Under current law <span class="m">τ<sub>w</sub> = 0</span> for essentially all cells, so <span class="m">h = 0</span> is a verified <strong>bitwise no-op</strong> — which is why adding the term did not bump the spec version or invalidate the <span class="m">η</span> calibration.</p>
+    <p><strong>Calibration &amp; evidence.</strong> No own calibration; a mechanical consequence of the deferral arithmetic (per-year deferral benefit ≈ <span class="m">r<sub>real</sub>·τ</span>; a 1% wealth tax erodes roughly half of it at <span class="m">r<sub>real</sub> ≈ 2%</span>).</p>
+    <p><strong>Cross-base interactions.</strong> Couples the <strong>wealth-tax lever</strong> into <strong>capital-gains realization</strong> and into the <strong>σ conversion price</strong> — exactly the wealth × capital-gains interaction the atlas conditioning panels feature. Built and ruled 2026-07-12 (T1–T5 green; +$127B conventional on a 3% wealth dial over 2027–2036).</p>
+    <p><strong>Limitations &amp; approximations.</strong> The response is smeared at the <strong>age-cell</strong> level rather than record level, which by Jensen’s inequality <em>understates</em> the record-level response (conservative, never overstates) — measured at −8.5% to −33% depending on the corner, largest at aggressive revmax corners. The exposed/unexposed two-state split that closes the gap to ≤1.5% was considered and <strong>declined</strong> as not worth the extra state; the understatement is disclosed and should be flagged when quoting wealth × capital-gains corners.</p>
+
+    <h3 id="s43"><span class="sec">4.3</span>Estate death-value offset <span class="tag tag-skeleton">skeleton</span></h3>
+    <p><strong>What it captures.</strong> For an estate-taxable decedent, capital-gains/deemed tax paid at or before death shrinks the taxable estate, so the effective CG rate near death is ≈ <span class="m">τ<sub>cg</sub>(1−τ<sub>e</sub>)</span> — a discount that makes the model stop overstating lock-in for estate-exposed cells when the deemed/estate switches are on. <span class="draft-note">Draft pending — build report: <code>estate_margins_build_report.html</code></span></p>
+    <p><strong>Mechanism · Parameters · Calibration · Limitations.</strong> <span class="draft-note">pending</span> — gain-weighted cell aggregation of a switch-gated marginal estate rate <code>mtr_estate_ded</code> entering <span class="m">F</span> and <span class="m">MC</span>; baseline death value <span class="m">F<sub>B</sub> = τ<sub>B</sub>(1−e<sub>B</sub>)</span>, leg-paired. Inside the kg behavior module. <strong>REAL</strong>. Links the estate rate into capital-gains realization (the crown-pair CG × death-regime panel).</p>
+
+    <h3 id="s44"><span class="sec">4.4</span>Income conversion (σ) <span class="tag tag-skeleton">skeleton</span></h3>
+    <p class="family-kicker" style="margin-top:8px;padding-top:14px;border-top-width:1px;">Family B — ETI / base-shifting</p>
+    <p><strong>What it captures.</strong> Top earners converting labor/ordinary income into the deferred unrealized-gain state (the founder-equity / carried-interest path), a core component of the top-ordinary ETI. <span class="draft-note">Draft pending</span></p>
+    <p><strong>Type.</strong> Behavior module <code>do_conversion</code> (<code>conversion/sigma.R</code>; shared function <code>src/sim/sigma_conversion.R</code>). <strong>REAL</strong>. <strong>Parameter:</strong> <span class="m">σ = 0.16</span> (<code>SIGMA_CONV</code>, re-derived 2026-07-12; supersedes 0.08). <strong>Calibration:</strong> residual — set so modeled top-ordinary ETI ≈ 0.25 conditional on the stack (§3.3); archived derivation in <code>archive/{sigma_explainer.md, DESIGN_LOCK.md}</code>. Consumes <span class="m">τ<sub>eq</sub></span>; in the ETI bundle → σ re-residualization on any change to §4.5/§4.6/§4.7. <strong>Limitation:</strong> the equity path is priced corporate-tax-free (misses the corporate layer on retained earnings).</p>
+
+    <h3 id="s45"><span class="sec">4.5</span>Entity shifting (C ↔ pass-through) <span class="tag tag-skeleton">skeleton</span></h3>
+    <p><strong>What it captures.</strong> Business income relocating across the corporate/pass-through boundary in response to the corporate-vs-individual rate differential (Pearce–Prisinzano). <span class="draft-note">Draft pending</span></p>
+    <p><strong>Type.</strong> Behavior module <code>do_entity_shifting</code> (<code>entity_shifting/pearce_prisinzano.R</code>). <strong>REAL</strong>. <strong>Parameter:</strong> shifting semi-elasticity — <strong><span class="m">β = 0.25</span> stub</strong>, a known gap: should be derived from the model’s own deferral value <span class="m">τ<sub>eq</sub>/τ</span> (see §5). The stub makes the C-corp shelter death-regime-invariant, contradicting the model’s own thesis.</p>
+
+    <h3 id="s46"><span class="sec">4.6</span>Evasion / noncompliance (DHY) <span class="tag tag-skeleton">skeleton</span></h3>
+    <p><strong>What it captures.</strong> Under-reporting of self-employment, partnership/S-corp, and rental income that rises with the net-of-tax rate; the “leak” component of the ETI. <span class="draft-note">Draft pending</span></p>
+    <p><strong>Type.</strong> Behavior module <code>do_evasion</code> (<code>evasion/debacker.R</code>). <strong>REPORTING</strong>. <strong>Parameters:</strong> net-of-tax elasticities — Sch C/F 0.046; partnership + S-corp 0.052; rent 0.040. Wages/interest/dividends: no response (information reporting). <strong>Evidence:</strong> DeBacker–Heim–Yuskavage. In the ETI bundle; feeds the hidden-ledger link (§4.7). <strong>Limitation:</strong> positive legs only; overstated-loss margin and top-graded multiplier deferred.</p>
+
+    <h3 id="s47"><span class="sec">4.7</span>Wealth avoidance + hidden ledger <span class="tag tag-skeleton">skeleton</span></h3>
+    <p class="family-kicker" style="margin-top:8px;padding-top:14px;border-top-width:1px;">Family C — Wealth &amp; estate own-rate</p>
+    <p><strong>What it captures.</strong> Reduction in <em>reported</em> taxable wealth under a wealth tax (legal valuation gaming + concealment), with concealment made <strong>consistent across bases</strong> — a hidden dollar escapes income, capital-gains, and estate tax too. <span class="draft-note">Draft pending</span></p>
+    <p><strong>Type.</strong> Behavior module <code>do_wealth</code> (<code>wealth/avoidance.R</code>). <strong>REPORTING</strong> (writes only the <code>net_worth</code> isolation point + <code>estate_concealed_frac</code>). <strong>Parameters:</strong> semi-elasticities marketable −7, closely-held −17; hidden-ledger concealment shares <span class="m">χ</span> public 1.0, private 0.5. <strong>Design:</strong> <code>hidden_ledger_design.md</code>; firewall <code>reporting_vs_real_audit.md</code>. Shrinks reported income + estate bases model-wide. Migration/expatriation is subsumed here as a ceiling (§4.11).</p>
+
+    <h3 id="s48"><span class="sec">4.8</span>Estate own-rate (Kopczuk–Slemrod) <span class="tag tag-skeleton">skeleton</span></h3>
+    <p><strong>What it captures.</strong> Reduction in <em>reported</em> gross estate in response to a change in the net-of-estate-tax rate. <span class="draft-note">Draft pending</span></p>
+    <p><strong>Type.</strong> Part of the <code>do_wealth</code> module (<code>ESTATE_AVOID_PROVENANCE</code>). <strong>REPORTING</strong> (via <code>estate_concealed_frac</code>). <strong>Parameter:</strong> <span class="m">ε = 0.16</span> (<code>ESTATE_REPORT_EPS</code>; KS band 0.10–0.22), net-of-tax power form <span class="m">retained = ((1−τ<sub>S</sub>)/(1−τ<sub>B</sub>))<sup>ε</sup></span>, keyed on the <em>change</em> in <code>mtr_estate</code>. <strong>Evidence:</strong> Kopczuk–Slemrod (2001); inline only, no standalone memo (a doc gap, §5). No CHI on the own-base response; charitable-bequest rate response not yet built.</p>
+
+    <h3 id="s49"><span class="sec">4.9</span>The wealth bathtub <span class="tag tag-skeleton">skeleton</span></h3>
+    <p class="family-kicker" style="margin-top:8px;padding-top:14px;border-top-width:1px;">Family D — Saving-financing</p>
+    <p><strong>What it captures.</strong> A share <span class="m">s = 1−MPC</span> of the net above-baseline during-life tax is financed out of <strong>wealth</strong> rather than consumption, compounds over time, and drains into the estate and capital-income bases at death — the channel through which a during-life tax quietly erodes future wealth-based revenue. <span class="draft-note">Draft pending</span></p>
+    <div class="eq"><span class="eqi">G(a,p,t) = (1 + r<sub>total</sub>(t)) − s(τy + τ<sub>w</sub>)</span>,&nbsp;&nbsp;<span class="eqi">F = ΔT<sup>0</sup> − ΔY<sub>exog</sub></span></div>
+    <p><strong>Type.</strong> <strong>MECHANICAL</strong> conventional-side applier (<code>src/sim/wealth_dynamics.R</code>, <code>cohort_bathtub.R</code>) — <em>not</em> a behavior module; runs at the head of the conventional pass. <strong>REAL</strong>. <strong>Parameters:</strong> <span class="m">s(age, nw pctile)</span> profile (calibrated default ≈ 0.1 bottom → 0.80 top), transition matrix <span class="m">M</span>, <code>fmax=0.9</code>, <span class="m">r<sub>total</sub></span> = nominal GDP/capita growth. <strong>Calibration:</strong> <code>default_s_calibration.md</code>; decision log <code>plan_review_decisions.md</code> (D1–D33). The central interaction channel. <strong>Limitation:</strong> it is <em>financing</em>, not a real saving-response elasticity; requires a dedicated conv-no-wealth pass (≈2× compute).</p>
+
+    <h3 id="s410"><span class="sec">4.10</span>Corporate incidence <span class="tag tag-skeleton">skeleton</span></h3>
+    <p class="family-kicker" style="margin-top:8px;padding-top:14px;border-top-width:1px;">Family E — Corporate &amp; first-order-labor margins</p>
+    <p><strong>What it captures.</strong> How a corporate-rate change lands on individual records — flow cuts (dividends/interest/rent/PT), an equity markdown on exposed stocks, capital-gains adjustment, bathtub dissaving, and an endogenous individual-tax offset. <span class="draft-note">Draft pending — the most complete existing methodology set: <code>corporate_incidence/CONSIDERATIONS.md</code> (D1–D18) + <code>FORMAL_MODEL.md</code> (P1–P14)</span></p>
+    <p><strong>Type.</strong> <strong>MECHANICAL</strong>, conventional-side, revenue-side (<code>src/sim/corp_incidence.R</code>); fail-closed activation on <code>corporate_meta.yaml</code>. <strong>REAL</strong>. <strong>Parameters:</strong> hardcoded <code>CORP_*</code> constants (several <strong>Phase-0c placeholders</strong>, disclosed): ω_div 0.85, ω_kg 0.50, σ_N 0.375, κ 0.40, δ_NIPA 0.057, ERP 0.05. Generalizes the bathtub forcing via <code>corp_dY_exog</code>; the endogenous offset makes the corporate row <strong>not stacking-order-invariant</strong>. <strong>Limitation:</strong> CORP_* placeholders gate the corporate card’s honesty label.</p>
+
+    <h3 id="s411"><span class="sec">4.11</span>Charity, employment, migration <span class="tag tag-skeleton">skeleton</span></h3>
+    <ul>
+      <li><strong>Charity (intensive).</strong> <code>do_charity</code>, tax-price elasticity −0.5 on <code>char_cash</code>. <strong>Missing:</strong> the appreciated-asset / CG-rate giving-price margin (<code>char_noncash</code>), a documented gap. In the ETI bundle.</li>
+      <li><strong>Employment (extensive).</strong> <code>do_employment</code> (<code>employment/bastian.R</code>), Bastian (2023) extensive-margin wage elasticities. First-order for the top-tax question but documented for completeness.</li>
+      <li><strong>Migration / expatriation.</strong> <strong>No standalone channel</strong> — subsumed as a <em>ceiling</em> inside the wealth-avoidance semi-elasticity (§4.7) and disclosed as such on the wealth card.</li>
+      <li><strong>Deliberately excluded (state and keep stating):</strong> real labor supply, a real rate-of-return saving elasticity (the bathtub is financing, not saving), and explicit migration — all excluded by scoring convention.</li>
+    </ul>
+
+    <h2 id="s5"><span class="sec">5</span>Limitations and the known-gaps register</h2>
+    <p>This section inherits the candor of the margins-gap assessment and is first-class, not a footnote. Two organizing facts frame it: (i) the realization Bellman prices off a single tax rate plus the shared <span class="m">F</span>/<span class="m">h</span>/estate terms, so mispriced cross-lever content shows up as <em>missing</em> interaction rather than as noise; (ii) σ is a residual, so in-bundle gaps carry a re-calibration cost that out-of-bundle gaps do not (§3.3).</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th style="width:3%">#</th><th style="width:30%">Gap</th><th style="width:9%">Where</th><th>Direction / size</th><th style="width:20%">Status</th></tr></thead>
+      <tbody>
+        <tr><td class="tnum">1</td><td>Entity-shifting <strong>β = 0.25 stub</strong></td><td>§4.5</td><td>shelter is death-regime-invariant; contradicts the model’s own deferral logic</td><td><span class="pill pill-open">open · in-bundle (σ re-derive)</span></td></tr>
+        <tr><td class="tnum">2</td><td><strong>CORP_* placeholders</strong> (Phase-0c)</td><td>§4.10</td><td>corporate card honesty label; ETR band</td><td><span class="pill pill-placeholder">disclosed placeholder</span></td></tr>
+        <tr><td class="tnum">3</td><td>Wealth-carry <strong>age-cell smear</strong> understatement</td><td>§4.2</td><td>−8.5% to −33%, conservative (never overstates)</td><td><span class="pill pill-accepted">ruled accepted · disclose</span></td></tr>
+        <tr><td class="tnum">4</td><td>Appreciated-asset <strong>charitable giving</strong> margin missing</td><td>§4.11</td><td>understates giving response + realization removal at high CG rates</td><td><span class="pill pill-open">not built · in-bundle</span></td></tr>
+        <tr><td class="tnum">5</td><td><strong>Migration</strong> not an explicit channel</td><td>§4.11</td><td>subsumed as a ceiling in wealth avoidance</td><td><span class="pill pill-neutral">by convention · disclosed</span></td></tr>
+        <tr><td class="tnum">6</td><td>Corporate layer absent from <strong>σ conversion price</strong></td><td>§4.4</td><td>founder-equity path priced corporate-tax-free</td><td><span class="pill pill-open">not built · in-bundle</span></td></tr>
+        <tr><td class="tnum">7</td><td>Estate <strong>own-rate</strong>: no charitable-bequest response; single asset bucket in kg</td><td>§4.8, §4.1</td><td>conditioning-base fidelity</td><td><span class="pill pill-neutral">partial / roadmap</span></td></tr>
+        <tr><td class="tnum">8</td><td>Evasion: positive legs only; flat top-end multiplier</td><td>§4.6</td><td>overstated-loss margin, top-grading deferred</td><td><span class="pill pill-neutral">partial</span></td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Calibration maintenance.</strong> The residual parameters (σ, and η under its conditioning assumptions) are kept current by an automated <strong>staleness watch</strong>: a cheap internal-moment drift check on every tick, and a σ leg re-derivation triggered by any commit touching the σ staleness list (entity shifting, evasion, charity elasticity, the σ pool/gate, Tax-Data vintage). Reference values live in <code>other/kg_model_tests/calibration_reference.csv</code>. This is part of the methodology, not an implementation detail: it is what keeps the “conditional on the stack” caveat honest.</p>
+
+    <h2 id="s6"><span class="sec">6</span>References</h2>
+    <p><span class="draft-note">To be completed</span> — Kopczuk &amp; Slemrod (2001); Dowd, McClelland &amp; Muthitacharoen (2015); DeBacker, Heim &amp; Yuskavage; Pearce &amp; Prisinzano (2018); Bastian (2023); Saez–Zucman and the wealth-tax avoidance literature; JCT/CBO realization-elasticity conventions. Full citations pending author confirmation.</p>
+
+    <div class="part-rule" style="margin-top:64px;"><span class="part-label">Part II</span><span class="part-title">Technical appendix — derivations, calibration procedure, provenance</span></div>
+    <hr>
+
+    <h2 id="sA"><span class="sec">A</span>Channel derivations and calibration</h2>
+    <h3><span class="sec">A.1</span>Capital-gains realization — full derivation <span class="tag tag-written">written</span></h3>
+    <p><strong>The dynamic problem.</strong> For a representative cell, let <span class="m">r<sub>D</sub></span> be the discretionary realization rate on the gain pool. Each unrealized dollar carries a non-tax reservation benefit <span class="m">b ≥ 0</span> to selling, drawn from an exponential distribution; the holder realizes iff <span class="m">b</span> exceeds the tax wedge of realizing now versus holding. The <strong>entropy realization cost</strong> <span class="m">C(r<sub>D</sub>)</span> is the analytic cost whose marginal is the inverse survival function of that exponential:</p>
+    <div class="eq"><span class="eqi">C′(r<sub>D</sub>) = (1/η) ln( r<sub>D</sub> / r<sub>D</sub><sup>&nbsp;B</sup> )</span>,&nbsp;&nbsp;<span class="eqi">C′(r<sub>D</sub><sup>&nbsp;B</sup>) = 0</span></div>
+    <p>so the baseline rate is the zero-cost reference. The holder equates the net benefit of realizing, <span class="m">κ − MC</span>, to the marginal cost <span class="m">C′(r<sub>D</sub>)</span>, where <span class="m">MC = τ + β(1−m)W<sub>next</sub> + βmF</span> and <span class="m">κ</span> is the reservation constant.</p>
+    <p><strong>Two-pass solution.</strong></p>
+    <ul>
+      <li><em>Pass 1 (baseline inversion):</em> <span class="m">C′(r<sub>D</sub><sup>&nbsp;B</sup>) = 0 ⇒ κ = MC<sup>B</sup></span> exactly, interior and corner.</li>
+      <li><em>Pass 2 (scenario FOC):</em> <span class="m">κ − MC<sup>&nbsp;j</sup> = C′(r<sub>D</sub>) ⇒ r<sub>D</sub><sup>&nbsp;j</sup> = r<sub>D</sub><sup>&nbsp;B</sup> exp(−η(MC<sup>&nbsp;j</sup>−MC<sup>B</sup>))</span>, clipped to [0,1].</li>
+    </ul>
+    <p>Only the upper clip binds; <span class="m">r<sub>D</sub><sup>&nbsp;B</sup> = 0</span> cells stay 0. Since <span class="m">d&nbsp;ln&nbsp;r<sub>D</sub>/dMC = −η</span> everywhere and the <strong>whole pool</strong> responds, <span class="m">η</span> is the aggregate long-run semi-elasticity and the aggregate revenue-maximizing rate is the naive ≈ <span class="m">1/η</span> (no inert floor pushing it outward).</p>
+    <p><strong>The v2 → v3 single-pool collapse.</strong> Spec v2 split baseline realizations into a responsive Bellman slice and an inert slice, the latter a point mass of infinitely-forced sellers — a vestige of the old quadratic (tail-less) cost that needed an exogenous floor. The exponential reservation-benefit spectrum already encodes the “first dollar easier to sell than the last” heterogeneity (a thin tail of robust sellers), so the discrete floor was redundant and it was exactly what removed the interior aggregate revmax. v3 drops it: one pool, two margins (level via the Bellman, timing via the overlay). The SSZZ ≈ 50% “untimeable” figure moves entirely into the short-run timing channel.</p>
+    <p><strong>The short-run timing overlay.</strong> A fraction <span class="m">f</span> (<code>KG_DYN_TIMEABLE_SHARE</code>) of all baseline realizations retimes across ±1 year toward the lowest-wedge year, with move-share <span class="m">clamp(Δwedge/ref_wedge, 0, 1)</span> (<code>ref_wedge</code> = 0.05: 5pp moves the full bucket, 1pp moves 20%). Composed as a net shift <span class="m">r<sub>S</sub> = r<sub>ord,S</sub> + (r<sub>plan,S</sub> − r<sub>plan,B</sub>)</span>, it nets to zero under a uniform permanent shock — so it is long-run invariant and <span class="m">η</span> is pinned independently of <span class="m">f</span>.</p>
+    <p><strong>Calibration procedure (η).</strong> Retire the miniature-calibrator + dilution-bridge path. On the full simulator, measure <span class="m">E<sub>full</sub>(η) = log(R<sub>shock</sub>/R<sub>base</sub>)/Δτ<sub>rw</sub></span> at sim-year 30 (shock <code>s_cg_r25</code>, conv-no-wealth leg) across a grid; the surface is linear through the origin. Invert for <span class="m">η* = |E<sub>full</sub>*| / slope</span> with <span class="m">E<sub>full</sub>* = −0.6/0.238 = −2.52</span> and measured slope 1.0155, giving <span class="m">η* = 2.4825</span> (grid <span class="m">η ∈ {2, 2.3992, 3}</span> → <span class="m">E<sub>full</sub> ∈ {−2.05, −2.44, −3.03}</span>; Tax-Data vintage 2026070814). Record the line’s coefficients (<code>eta_repin_fit.csv</code>) so the next re-pin is arithmetic. Calibration provenance is guarded: a stale η/timeable_share/vintage warns, and <code>KG_STRICT_CALIB=1</code> hard-stops.</p>
+    <p style="color:var(--ink-faint);font-style:italic;">Appendix blocks for §4.2–§4.11 to follow at this depth.</p>
+
+    <h2 id="sB"><span class="sec">B</span>Parameter and provenance table</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Constant</th><th>Shipped</th><th>Reference moment</th><th>Derived</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td><code>KG_DYN_DEFAULT_ETA</code></td><td class="tnum">2.4825</td><td>full-sim <span class="m">E<sub>full</sub> = −2.52</span> / slope 1.0155</td><td class="tnum">2026-07-12</td><td><code>eta_repin_fit.csv</code></td></tr>
+        <tr><td><code>KG_DYN_TIMEABLE_SHARE</code></td><td class="tnum">0.2542</td><td>full-sim short-run semi</td><td class="tnum">2026-07-09</td><td><code>a4bbac590</code></td></tr>
+        <tr><td><code>SIGMA_CONV</code></td><td class="tnum">0.16</td><td>top-ordinary ETI ≈ 0.25</td><td class="tnum">2026-07-12</td><td><code>SIGMA_CALIB_PROVENANCE</code></td></tr>
+        <tr><td><code>ESTATE_REPORT_EPS</code></td><td class="tnum">0.16</td><td>KS reported-estate elasticity (band 0.10–0.22)</td><td class="tnum">2026-07-12</td><td><code>ESTATE_AVOID_PROVENANCE</code></td></tr>
+        <tr><td>Evasion (SchC / PT / rent)</td><td class="tnum">0.046 / 0.052 / 0.040</td><td>DHY net-of-tax elasticities</td><td>—</td><td><code>EVASION_PROVENANCE</code></td></tr>
+        <tr><td>Wealth avoidance (mkt / closely-held)</td><td class="tnum">−7 / −17</td><td>author-accepted</td><td class="tnum">2026-07-08</td><td>Wealth-Tax-Simulator seed</td></tr>
+        <tr><td>Hidden-ledger <span class="m">χ</span> (pub / priv)</td><td class="tnum">1.0 / 0.5</td><td>concealment consistency</td><td class="tnum">2026-07-08</td><td><code>hidden_ledger_design.md</code></td></tr>
+        <tr><td>Entity-shifting <span class="m">β</span></td><td><span class="pill pill-open">0.25 stub</span></td><td>— (should be <span class="m">τ<sub>eq</sub>/τ</span>)</td><td>—</td><td>gap, margins §1.3</td></tr>
+      </tbody>
+    </table></div>
+    <p style="color:var(--ink-faint);font-size:15px;">The reference-moment column doubles as the staleness-watch source of truth (<code>calibration_reference.csv</code>).</p>
+  </main>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    Behavioral-response methodology · Budget Lab at Yale · Tax-Simulator · branch <code>wealth</code> · draft 2026-07-15.
+    Rendered from <code>other/top_tax/METHODOLOGY.md</code>. Written channels: §4.1, §A.1. Draft skeleton — remaining channels pending.
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+    var map = {};
+    links.forEach(function (a) {
+      var id = a.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if (el) map[id] = a;
+    });
+    var targets = Object.keys(map).map(function (id) { return document.getElementById(id); });
+    if (!('IntersectionObserver' in window) || !targets.length) return;
+    var visible = new Set();
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) visible.add(e.target.id); else visible.delete(e.target.id);
+      });
+      // highlight the topmost visible section
+      var order = targets.map(function (t) { return t.id; });
+      var current = order.find(function (id) { return visible.has(id); });
+      links.forEach(function (a) { a.classList.remove('active'); });
+      if (current && map[current]) map[current].classList.add('active');
+    }, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
+    targets.forEach(function (t) { obs.observe(t); });
+  })();
+</script>

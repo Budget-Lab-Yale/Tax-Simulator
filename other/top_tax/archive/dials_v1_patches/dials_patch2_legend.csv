@@ -1,0 +1,32 @@
+ID,kind,levers_json,label
+s_wealth_r0p5_t50,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 50000000.0}}",wealth 0.5% > $50M
+s_wealth_r0p5_t100,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 100000000.0}}",wealth 0.5% > $100M
+s_wealth_r0p5_t150,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 150000000.0}}",wealth 0.5% > $150M
+s_wealth_r0p5_t250,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 250000000.0}}",wealth 0.5% > $250M
+s_wealth_r0p5_t500,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 500000000.0}}",wealth 0.5% > $500M
+s_wealth_r0p5_t1000,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 1000000000.0}}",wealth 0.5% > $1000M
+s_wealth_r1_t100,solo,"{""wealth"": {""rate"": 1.0, ""thr"": 100000000.0}}",wealth 1% > $100M
+s_wealth_r1_t150,solo,"{""wealth"": {""rate"": 1.0, ""thr"": 150000000.0}}",wealth 1% > $150M
+s_wealth_r1_t250,solo,"{""wealth"": {""rate"": 1.0, ""thr"": 250000000.0}}",wealth 1% > $250M
+s_wealth_r2_t100,solo,"{""wealth"": {""rate"": 2.0, ""thr"": 100000000.0}}",wealth 2% > $100M
+s_wealth_r2_t150,solo,"{""wealth"": {""rate"": 2.0, ""thr"": 150000000.0}}",wealth 2% > $150M
+s_wealth_r2_t250,solo,"{""wealth"": {""rate"": 2.0, ""thr"": 250000000.0}}",wealth 2% > $250M
+s_wealth_r3_t100,solo,"{""wealth"": {""rate"": 3.0, ""thr"": 100000000.0}}",wealth 3% > $100M
+s_wealth_r3_t150,solo,"{""wealth"": {""rate"": 3.0, ""thr"": 150000000.0}}",wealth 3% > $150M
+s_wealth_r3_t250,solo,"{""wealth"": {""rate"": 3.0, ""thr"": 250000000.0}}",wealth 3% > $250M
+s_wealth_r4_t100,solo,"{""wealth"": {""rate"": 4.0, ""thr"": 100000000.0}}",wealth 4% > $100M
+s_wealth_r4_t150,solo,"{""wealth"": {""rate"": 4.0, ""thr"": 150000000.0}}",wealth 4% > $150M
+s_wealth_r4_t250,solo,"{""wealth"": {""rate"": 4.0, ""thr"": 250000000.0}}",wealth 4% > $250M
+s_wealth_r5_t100,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 100000000.0}}",wealth 5% > $100M
+s_wealth_r5_t150,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 150000000.0}}",wealth 5% > $150M
+s_wealth_r5_t250,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 250000000.0}}",wealth 5% > $250M
+prco_ord_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:carryover
+prco_cg_deemed,pairco,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""carryover""}}",cg 40% + deemed:carryover
+prco_wealth_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:carryover
+prco_estate_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",deemed:carryover + estate 50% / $8.46M
+prco_corp_deemed,pairco,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""carryover""}}",corp 28% + deemed:carryover
+prco_qbi_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""qbi"": {""on"": 1}}",deemed:carryover + qbi
+prco_taxmax_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""taxmax"": {""on"": 1}}",deemed:carryover + taxmax
+tco_cg_wealth_deemed,tripco,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""carryover""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M + deemed:carryover
+tco_cg_estate_deemed,tripco,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",cg 40% + deemed:carryover + estate 50% / $8.46M
+tco_wealth_estate_deemed,tripco,"{""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:carryover + estate 50% / $8.46M

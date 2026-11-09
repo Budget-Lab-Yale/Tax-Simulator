@@ -180,7 +180,7 @@ check, not inside a state-triage commit.
 
 **Downstream.** Any state starting from federal taxable income, or conforming
 to the federal standard deduction, inherits the error — see
-`config/scenarios/tax_law_state/conformity_groups.yaml`. State-side impact is
+`config/scenarios/tax_law/default/state/conformity_groups.yaml`. State-side impact is
 second order next to the federal one.
 
 **Scale.** In the cross-model sample MFS is deliberately oversampled at 26.6%

@@ -1,0 +1,46 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 31 years (full sample)...
+  loaded
+Building extended grid, tau matrices, and real-rate beta series...
+  beta range: [0.9794, 0.9885] (real-rate discount, from /nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline)
+
+Targets:
+  long-run  d log(R)/dtau              = -2.5210  (sim-year 30)
+  short-run d log(R(t))/dtau(t+1) = +5.0420  (sim-year  1)
+
+Outer bracket check on planned_share in [0.00, 0.50]:
+  planned_share = 0.0000  psi = 25.1187  short_run = -0.4708
+  planned_share = 0.5000  psi = 27.1498  short_run = +7.9381
+
+  outer  1  planned_share = 0.2500  psi = 26.1332  long = -2.5211  short = +4.1653  (inner iters = 14)
+  outer  2  planned_share = 0.3750  psi = 26.6419  long = -2.5210  short = +6.1360  (inner iters = 14)
+  outer  3  planned_share = 0.3125  psi = 26.3887  long = -2.5209  short = +5.1747  (inner iters = 14)
+  outer  4  planned_share = 0.2812  psi = 26.2614  long = -2.5210  short = +4.6764  (inner iters = 15)
+  outer  5  planned_share = 0.2969  psi = 26.3248  long = -2.5210  short = +4.9271  (inner iters = 12)
+  outer  6  planned_share = 0.3047  psi = 26.3564  long = -2.5210  short = +5.0513  (inner iters = 15)
+  outer  7  planned_share = 0.3008  psi = 26.3407  long = -2.5210  short = +4.9893  (inner iters = 15)
+  outer  8  planned_share = 0.3027  psi = 26.3487  long = -2.5210  short = +5.0203  (inner iters = 15)
+  outer  9  planned_share = 0.3037  psi = 26.3516  long = -2.5211  short = +5.0358  (inner iters = 13)
+  outer 10  planned_share = 0.3042  psi = 26.3545  long = -2.5210  short = +5.0435  (inner iters = 13)
+  outer 11  planned_share = 0.3040  psi = 26.3540  long = -2.5209  short = +5.0397  (inner iters = 14)
+  outer 12  planned_share = 0.3041  psi = 26.3535  long = -2.5210  short = +5.0416  (inner iters = 14)
+
+Calibrated:
+  KG_DYN_DEFAULT_PSI    = 26.3535  (long-run  semi = -2.5210  target -2.5210)
+  KG_DYN_SHARE_PLANNED  = 0.3041  (short-run semi = +5.0416  target +5.0420)
+
+Update KG_DYN_DEFAULT_PSI and KG_DYN_SHARE_PLANNED in src/sim/kg_dynamics.R.
+
+Long-run semi-elasticity profile by sim year (at calibrated point):
+ sim_year year semi_elast
+        1 2025    -1.9877
+        5 2029    -2.4648
+       10 2034    -2.5878
+       20 2044    -2.5232
+       30 2054    -2.5210

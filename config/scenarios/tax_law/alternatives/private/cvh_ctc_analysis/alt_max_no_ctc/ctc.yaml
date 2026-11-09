@@ -1,0 +1,33 @@
+---
+# CTC elimination: zero out all credit values
+
+value_young:
+  value:
+    '2014': [0, 0]
+
+value_old:
+  value:
+    '2014': [0, 0]
+
+value_other:
+  value:
+    '2014': 0
+
+baby_bonus:
+  value: 0
+
+max_refund_young:
+  value:
+    '2014': 0
+
+max_refund_old:
+  value:
+    '2014': 0
+
+min_refund_young:
+  value:
+    '2014': 0
+
+min_refund_old:
+  value:
+    '2014': 0

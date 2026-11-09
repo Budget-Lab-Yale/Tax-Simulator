@@ -17,10 +17,12 @@ suppressPackageStartupMessages(
   ))
 )
 
-# Source all function scripts
+# Source all function scripts. Behavior modules are loaded by path at scenario
+# time (see load_behavior_module), so sourcing them here would leave whichever
+# variant came last defining do_{family}.
 return_vars = list()
 list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
-  walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/')) source(file.path('./src/', .x)))
+  walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/') && !startsWith(.x, 'tests/') && !startsWith(.x, 'behavior/')) source(file.path('./src/', .x)))
 
 
 #------------------------
@@ -28,7 +30,7 @@ list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
 #------------------------
 
 
-runscript_names  = 'baseline/baseline_2024'
+runscript_names  = 'baseline/baseline'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -42,17 +44,21 @@ multicore        = 'none'   # one of 'none', 'scenario', or 'year'
 # Override default runtime args if executed from the command line
 args = commandArgs(trailingOnly = T)
 if (length(args) > 0) {
-  runscript_names                         = args[1]
-  if (args[2] == 'NULL') scenario_id      = NULL else scenario_id = args[2]
-  user_id                                 = args[3]
-  local                                   = as.integer(args[4])
-  if (args[5] == 'NULL') vintage          = NULL else vintage = args[5]
-  pct_sample                              = as.numeric(args[6])
-  stacked                                 = as.integer(args[7])
-  if (args[8] == 'NULL') baseline_vintage = NULL else baseline_vintage = args[8]
-  delete_detail                           = as.integer(args[9])
-  multicore                               = args[10]
-} 
+  cli              = parse_cli_args(args, context = 'main')
+  runscript_names  = cli$runscript_names
+  scenario_id      = cli$scenario_id
+  local            = cli$local
+  vintage          = cli$vintage
+  pct_sample       = cli$pct_sample
+  stacked          = cli$stacked
+  baseline_vintage = cli$baseline_vintage
+  delete_detail    = cli$delete_detail
+  multicore        = cli$multicore
+}
+
+# What detail gets deleted, and when. Resolved once here so the value is checked
+# before the run starts rather than in Phase 4 after it.
+detail_purge = resolve_detail_purge(delete_detail)
 
 
 #----------------------
@@ -127,7 +133,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   # Delete microdata files
-  if (delete_detail == 1) {
+  if (detail_purge$final) {
     purge_detail()
   }
 }

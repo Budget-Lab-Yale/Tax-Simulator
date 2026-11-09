@@ -1,0 +1,4 @@
+# Saving share held at zero, with nothing else overridden.
+
+financing_profile:
+  value: 'flat:0'

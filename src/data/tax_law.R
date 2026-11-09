@@ -1,12 +1,133 @@
 #------------------------------------------------------------------
 # tax_law.R
-# 
+#
 # Contains functions to read and parse tax law configuration files
 #------------------------------------------------------------------
 
 
 
-build_tax_law = function(scenario_info, indexes) {
+# Cache of the baseline tax law within one process: the raw YAML list, and its
+# parsed form for one pairing of years and indexes. Phase 0 of the SLURM pipeline
+# builds every scenario's config in a single process, and a reform overrides two
+# or three of the 28 parameters, so without this the rest are reparsed once per
+# scenario to the same result.
+#
+# The parse chain below is a function of its arguments alone: it reads no globals,
+# assigns nothing outside itself, and draws no random numbers. A cached parse is
+# reusable whenever the arguments match.
+#
+# Set TAX_LAW_CACHE=0 in the environment to disable it.
+.tax_law_cache = new.env(parent = emptyenv())
+
+
+
+tax_law_cache_enabled = function() {
+
+  #----------------------------------------------------------------------------
+  # Whether the baseline tax law cache is active.
+  #
+  # Parameters: (none)
+  #
+  # Returns: TRUE unless TAX_LAW_CACHE=0 is set in the environment (bool).
+  #----------------------------------------------------------------------------
+
+  !identical(Sys.getenv('TAX_LAW_CACHE'), '0')
+}
+
+
+
+TAX_LAW_ROOT = './config/scenarios/tax_law'
+
+
+tax_law_path = function(name) {
+
+  #----------------------------------------------------------------------------
+  # Resolves a runscript's tax law cell to the folder holding that layer. The
+  # reserved word `default` names the baseline law and anything else is a path
+  # under alternatives/. The economy and behavior legs take the same shape; see
+  # src/misc/scenario_config.R.
+  #
+  # Parameters:
+  #   - name (str) : the runscript's tax_law cell
+  #
+  # Returns: filepath (str).
+  #----------------------------------------------------------------------------
+
+  if (identical(as.character(name), 'default')) file.path(TAX_LAW_ROOT, 'default')
+  else file.path(TAX_LAW_ROOT, 'alternatives', as.character(name))
+}
+
+
+
+load_baseline_tax_law_input = function(config_path = tax_law_path('default')) {
+
+  #----------------------------------------------------------------------------
+  # Reads the baseline tax law directory through the cache. The key is the path
+  # plus the modification times of its YAML files, so editing one invalidates the
+  # cache, at the cost of a stat call per file in place of a read.
+  #
+  # Parameters:
+  #   - config_path (str) : filepath to baseline tax law config folder
+  #
+  # Returns: list of raw tax parameter inputs, indexed by tax parameter name
+  #          (list).
+  #----------------------------------------------------------------------------
+
+  if (!tax_law_cache_enabled()) {
+    return(load_tax_law_input(config_path))
+  }
+
+  yaml_files = list.files(config_path, pattern = '.yaml', full.names = T)
+  stamp = list(path   = config_path,
+               files  = yaml_files,
+               mtimes = file.mtime(yaml_files))
+
+  if (!identical(.tax_law_cache$raw_stamp, stamp)) {
+    .tax_law_cache$raw       = load_tax_law_input(config_path)
+    .tax_law_cache$raw_stamp = stamp
+
+    # Discard parses of the previous raw input
+    .tax_law_cache$parsed     = NULL
+    .tax_law_cache$parse_stamp = NULL
+  }
+
+  return(.tax_law_cache$raw)
+}
+
+
+
+get_parsed_baseline = function(baseline_raw, years, indexes) {
+
+  #----------------------------------------------------------------------------
+  # Returns the parsed baseline tax law for the given years and indexes, parsing
+  # it only when either differs from what the cache holds.
+  #
+  # Parameters:
+  #   - baseline_raw (list) : raw baseline input, per load_tax_law_input()
+  #   - years (int[])       : years for which to generate parameters
+  #   - indexes (df)        : long-format dataframe of index growth rates
+  #
+  # Returns: list of parsed parameter dataframes indexed by parameter name
+  #          (list).
+  #----------------------------------------------------------------------------
+
+  stamp = list(years = years, indexes = indexes)
+
+  if (!identical(.tax_law_cache$parse_stamp, stamp)) {
+    .tax_law_cache$parsed = baseline_raw %>%
+      map2(.f      = parse_param,
+           .y      = names(.),
+           years   = years,
+           indexes = indexes)
+    .tax_law_cache$parse_stamp = stamp
+  }
+
+  return(.tax_law_cache$parsed)
+}
+
+
+
+build_tax_law = function(scenario_info, indexes, write = TRUE) {
   
   #----------------------------------------------------------------------------
   # Executes all tax law parsing functions, generating the final tax law
@@ -21,10 +142,15 @@ build_tax_law = function(scenario_info, indexes) {
   #                            in globals.R
   #   - indexes (df)         : long-format dataframe containing growth rates 
   #                            of index measures
+  #   - write (bool)         : write the law to the scenario's output tree. FALSE
+  #                            for the baseline-law table the mechanical pass
+  #                            prices its second set of MTRs under, which is not
+  #                            this scenario's law and does not belong in its
+  #                            supplemental output
   #
   # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
-  
+
   tax_law = build_tax_law_from_id(
     tax_law_id = scenario_info$tax_law_id,
     years      = scenario_info$years,
@@ -32,11 +158,13 @@ build_tax_law = function(scenario_info, indexes) {
   )
 
   # Write tax law then return
-  c('static', 'conventional') %>%
-    map(.f = ~ scenario_info$output_path %>%
-          file.path(.x, 'supplemental', 'tax_law.csv') %>%
-          write_csv(x = tax_law, file = .))
-  
+  if (write) {
+    c('static', 'mechanical', 'conventional') %>%
+      map(.f = ~ scenario_info$output_path %>%
+            file.path(.x, 'supplemental', 'tax_law.csv') %>%
+            write_csv(x = tax_law, file = .))
+  }
+
   return(tax_law)
 }
 
@@ -45,46 +173,59 @@ build_tax_law = function(scenario_info, indexes) {
 build_tax_law_from_id = function(tax_law_id, years, indexes) {
 
   #----------------------------------------------------------------------------
-  # Parses the federal baseline plus a named overlay without writing scenario
-  # output. State fixed/selective-conformity contexts use this builder to run
-  # one shared reference calculation per conformity group.
+  # Parses the default tax law plus a named layer without writing scenario
+  # output. State conformity contexts also use it, to build one federal
+  # reference law per conformity group.
   #
   # Parameters:
-  #   - tax_law_id (str) : directory under config/scenarios/tax_law, or
-  #                        'baseline' for no overlay
+  #   - tax_law_id (str) : a runscript tax_law cell, `default` or a path under
+  #                        alternatives/
   #   - years (int[])    : simulation years to return
-  #   - indexes (df)     : long-format index series
+  #   - indexes (df)     : long-format dataframe containing growth rates of
+  #                        index measures
   #
-  # Returns: federal tax-law tibble, long in year and filing status (df).
+  # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
 
-  root = './config/scenarios/tax_law'
-  if (!identical(tax_law_id, 'baseline') &&
-      !dir.exists(file.path(root, tax_law_id))) {
-    stop('Cannot find the user-supplied tax law configuration directory')
-  }
+  # Read counterfactual tax law parameter changes
+  changes_from_baseline = tax_law_id %>%
+    tax_law_path() %>%
+    load_tax_law_input()
+  
+  # Read baseline YAML files
+  baseline_raw = load_baseline_tax_law_input()
+  tax_law      = baseline_raw
 
-  # The baseline is already the base layer, so treating it as an overlay is
-  # unnecessary and would make the identity case less explicit.
-  changes_from_baseline = list()
-  if (!identical(tax_law_id, 'baseline')) {
-    changes_from_baseline = load_tax_law_input(file.path(root, tax_law_id))
-  }
-  tax_law = load_tax_law_input(file.path(root, 'baseline'))
-
-  # Reforms overwrite complete subparameter objects, matching the existing
-  # policy-configuration semantics.
+  # Overwrite baseline subparams with specified changes. A reform subparameter
+  # replaces the baseline one entire, value and indexation fields together, rather
+  # than field by field: a reform that omits an indexation field resets it to NULL
+  # instead of inheriting the baseline's. modifyList merges nested lists
+  # recursively and so cannot be used here.
   for (param in names(changes_from_baseline)) {
-    for (subparam in names(changes_from_baseline[[param]])) {
-      tax_law[[param]][[subparam]] = changes_from_baseline[[param]][[subparam]]
-    }
+    tax_law[[param]][names(changes_from_baseline[[param]])] = changes_from_baseline[[param]]
+  }
+
+  # Parse all parameters and concatenate, reusing the cached baseline parse for
+  # every parameter the reform leaves untouched. The test is on content rather than
+  # on whether the parameter was listed as an override, so that a reform restating
+  # a parameter unchanged still hits the cache.
+  years_to_parse  = 2014:max(years)
+  parsed_baseline = if (tax_law_cache_enabled()) {
+    get_parsed_baseline(baseline_raw, years_to_parse, indexes)
+  } else {
+    NULL
   }
 
   tax_law %>%
-    map2(.f      = parse_param,
-         .y      = names(.),
-         years   = 2014:max(years),
-         indexes = indexes) %>%
+    imap(.f = ~ if (!is.null(parsed_baseline) &&
+                    identical(.x, baseline_raw[[.y]])) {
+                  parsed_baseline[[.y]]
+                } else {
+                  parse_param(raw_input = .x,
+                              name      = .y,
+                              years     = years_to_parse,
+                              indexes   = indexes)
+                }) %>%
     bind_rows() %>%
 
     # Split subparameters into scalars and vectors
@@ -103,6 +244,98 @@ build_tax_law_from_id = function(tax_law_id, years, indexes) {
                 values_from = value) %>%
     filter(year %in% years) %>%
     return()
+}
+
+
+
+baseline_tax_law_id = function(g = globals) {
+
+  #----------------------------------------------------------------------------
+  # Returns the tax law layer named by the runscript's baseline row (str).
+  #
+  # The baseline row's law is not always the default layer: a retrospective run
+  # scores against prior law by naming an alternative there. Anything comparing a
+  # reform against baseline law reads it here rather than assuming the default.
+  #
+  # Parameters:
+  #   - g (list) : the globals object (defaulted; passed explicitly where a
+  #                worker holds it under another name)
+  #----------------------------------------------------------------------------
+
+  row = g$runscript %>%
+    filter(ID == 'baseline')
+
+  if (nrow(row) != 1) {
+    stop('Expected one baseline row in the runscript, found ', nrow(row),
+         '. read_runscript always keeps it')
+  }
+
+  as.character(row$tax_law)
+}
+
+
+
+build_baseline_tax_law = function(scenario_info, indexes) {
+
+  #----------------------------------------------------------------------------
+  # Builds the baseline law table over a scenario's years and filing statuses, for
+  # pricing a second set of marginal rates on the mechanical frame. This is the
+  # scenario's own call with the tax law cell replaced by the runscript's baseline
+  # row, and nothing is written to the scenario's output.
+  #
+  # Parameters:
+  #   - scenario_info (list) : scenario info object; see get_scenario_info()
+  #   - indexes (df)         : long-format dataframe of index growth rates
+  #
+  # Returns: tibble wide in subparam, long in year and filing status (df).
+  #----------------------------------------------------------------------------
+
+  si = scenario_info
+  si$tax_law_id = baseline_tax_law_id()
+  build_tax_law(si, indexes, write = FALSE)
+}
+
+
+
+TAX_LAW_KEYS = c('year', 'filing_status')
+
+
+
+swap_tax_law = function(tax_units, tax_law, outgoing_law) {
+
+  #----------------------------------------------------------------------------
+  # Replaces a frame's tax law columns with another law's, holding every
+  # economic variable fixed. Used to price the mechanical frame under baseline law,
+  # so that the marginal rate change the behavior modules read is the price change
+  # from the law at the circumstances the taxpayer has after everything outside his
+  # control has happened to him.
+  #
+  # Filing status is not re-derived. A reform repealing head of household recodes
+  # it when the data are loaded, and that recoding is part of the frame, not of the
+  # law being priced.
+  #
+  # Both laws' columns are dropped before the join, not just the incoming law's.
+  # A subparameter whose value is a vector becomes one column per element, named
+  # with the element's index, and the two laws need not supply the same number of
+  # elements: a wealth tax of two brackets against a baseline of one gives
+  # wealth.rates1 and wealth.rates2 on one side and wealth.rates on the other.
+  # Dropping only the incoming names would leave the outgoing law's extra columns
+  # in place and price a schedule belonging to neither law.
+  #
+  # Parameters:
+  #   - tax_units (df)    : pre-tax frame carrying joined tax law columns
+  #   - tax_law (df)      : law to join, long in year and filing status
+  #   - outgoing_law (df) : the law whose columns the frame currently carries
+  #
+  # Returns: the frame with the other law's parameter columns (df).
+  #----------------------------------------------------------------------------
+
+  law_cols = union(setdiff(names(tax_law),      TAX_LAW_KEYS),
+                   setdiff(names(outgoing_law), TAX_LAW_KEYS))
+
+  tax_units %>%
+    select(-any_of(law_cols)) %>%
+    left_join(tax_law, by = TAX_LAW_KEYS)
 }
 
 
@@ -387,10 +620,45 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
                           years = i_years, 
                           name  = names(i_info)))
   
-  # Create unified index series 
+  # Create unified index series
   i_info$i_measure %<>%
     left_join(indexes, by = c('value' = 'series', 'year')) %>%
-    mutate(index = cumprod(1 + growth)) %>%
+    mutate(index = cumprod(1 + growth))
+
+  # Stop on an index chain broken by missing data: a live measure with no growth
+  # rate for a simulation year, which happens when the window runs past the end of
+  # the index series, when the series has a gap, or when the measure names a series
+  # absent from the index data. cumprod carries the NA forward from the first
+  # missing rate, and apply_indexation reads an NA index as the base value, so the
+  # parameter reverts to its nominal base-year level rather than holding at its
+  # last projected one.
+  #
+  # An NA measure is not a broken chain. It is how a config stops indexation as of
+  # a year, as TCJA froze the lifetime learning credit phaseout from 2020, and the
+  # NA index it produces is the freeze. So neither the year carrying the sentinel
+  # nor any later year is flagged, even one whose measure names a live series
+  # again: cumprod cannot recover from the NA, so a config that means to resume
+  # indexation does not in fact resume. That is worth knowing before writing one,
+  # though the subparameters doing it today carry infinite values.
+  measure_is_live = !is.na(i_info$i_measure$value) &
+    i_info$i_measure$value != 'NA'
+  sentinel_reached = cumsum(!measure_is_live) > 0
+  na_index_years = i_info$i_measure %>%
+    filter(measure_is_live, !sentinel_reached, year %in% years, is.na(index)) %>%
+    pull(year) %>%
+    unique() %>%
+    sort()
+  if (length(na_index_years) > 0) {
+    stop('Indexation series for subparameter "', name, '" (measure "',
+         paste(unique(i_info$i_measure$value[measure_is_live]), collapse = '/'),
+         '") is NA in simulation year(s) ', paste(na_index_years, collapse = ', '),
+         '. Either the simulation window extends past the end of the index ',
+         'series, the series has a gap, or the measure names a series absent ',
+         'from the index data. An NA index silently reverts the parameter to ',
+         'its nominal base-year value.')
+  }
+
+  i_info$i_measure %<>%
     select(year, index)
   
   # Create series of indexation scaling factors. First, unnest list-cols
@@ -647,42 +915,44 @@ replace_defaults = function(supplied, default) {
 
 
 
+walk_atomic = function(value, fn) {
+
+  #----------------------------------------------------------------------------
+  # Applies fn to the atomic leaves of a raw YAML value: elementwise over a
+  # named list (year-value specification), directly otherwise (scalar, vector,
+  # or unnamed heterogeneous list).
+  #
+  # Parameters:
+  #   - value (list | any atomic) : value of raw input
+  #   - fn (function)             : leaf transformation
+  #
+  # Returns: value with fn applied to each atomic leaf (list | any atomic).
+  #----------------------------------------------------------------------------
+
+  if (is.list(value) && !is.null(names(value))) {
+    return(map(value, fn))
+  }
+  return(fn(value))
+}
+
+
+
 parse_inf = function(value) {
-  
+
   #----------------------------------------------------------------------------
   # Helper function to replace string "Inf" / "-Inf" with R infinity objects
   # in a potentially multi-level nested list
   #
   # Parameters:
-  #   - value (list | any atomic) : value of raw input 
+  #   - value (list | any atomic) : value of raw input
   #
-  # Returns: updated input object with instances of "Inf" replaced with Inf 
+  # Returns: updated input object with instances of "Inf" replaced with Inf
   #          (list | any atomic).
   #----------------------------------------------------------------------------
-  
-  if (is.list(value)) {
-    
-    # Named lists indicate year-value specification 
-    if (!is.null(names(value))) {
-      value %>% 
-        map(~ if (any(. %in% c('Inf', '-Inf'))) { as.numeric(.) } else { . }) %>%
-        return()
-    
-    # Unnamed lists indicate heterogeneous list YAML parsing  
-    } else { 
-      if (any(value %in% c('Inf', '-Inf'))) {
-        return(as.numeric(value))
-      }
-      return(value)
-    }
-  
-  # Scalars
-  } else {
-    if (any(value %in% c('Inf', '-Inf'))) {
-      return(as.numeric(value))
-    }
-    return(value)
-  }
+
+  walk_atomic(value, function(x) {
+    if (any(x %in% c('Inf', '-Inf'))) as.numeric(x) else x
+  })
 }
 
 
@@ -713,16 +983,7 @@ parse_na = function(value) {
   #          (list | any atomic).
   #----------------------------------------------------------------------------
   
-  if (is.list(value)) {
-    
-    # Named lists indicate year-value specification 
-    if (!is.null(names(value))) {
-      value %<>% 
-        map(.f = ~ suppressWarnings(as.numeric(.))) 
-      return(value)
-    }
-  }
-  return(suppressWarnings(as.numeric(value)))
+  walk_atomic(value, function(x) suppressWarnings(as.numeric(x)))
 }
 
   

@@ -1,0 +1,111 @@
+#!/bin/bash
+#-----------------------------------------------------------------------
+# .githooks/pre-push  --  calibration staleness DETECTOR (detect-only)
+#
+# Pure-git, login-node-safe, instant. Fires when the commits being pushed have
+# touched anything on a calibration constant's invalidation list (or the
+# interface vintage lines) SINCE that constant's last-recorded derivation SHA in
+# other/kg_model_tests/calibration_reference.csv -- i.e. the calibration may be
+# stale. It DOES NOT run any compute or re-pin: it fails loud, names the
+# implicated constant(s), and prints the exact command to run the measurement.
+#
+# It goes green again once you (a) re-derive and (b) update the constant's row
+# code_sha in calibration_reference.csv to a commit at/after the change.
+#
+# Install once (version-controlled):  git config core.hooksPath .githooks
+# Bypass an intentional push:          SKIP_CALIB_WATCH=1 git push
+#-----------------------------------------------------------------------
+set -u
+
+REF_CSV="other/kg_model_tests/calibration_reference.csv"
+VINTAGE_FILE="config/interfaces/interface_versions.yaml"
+
+[ "${SKIP_CALIB_WATCH:-0}" = "1" ] && exit 0
+[ -f "$REF_CSV" ] || exit 0   # nothing to check against
+
+# Determine the tip being pushed (last non-zero local oid on stdin; else HEAD).
+TIP=""
+while read -r _localref localoid _remoteref _remoteoid; do
+  case "$localoid" in
+    ''|*[!0-9a-f]*) : ;;                       # skip blanks/garbage
+    0000000000000000000000000000000000000000) : ;;   # branch delete
+    *) TIP="$localoid" ;;
+  esac
+done
+[ -n "$TIP" ] || TIP="$(git rev-parse HEAD 2>/dev/null)"
+[ -n "$TIP" ] || exit 0
+
+hits=""    # accumulates "constant|tier|files" lines
+
+# Skip the CSV header; parse comma-separated columns (invalidation_files uses ';').
+while IFS=, read -r constant shipped tier ref_moment derived_date code_sha inval_files td_vint macro_vint; do
+  [ "$constant" = "constant" ] && continue
+  [ -z "${constant:-}" ] && continue
+
+  # Resolve the recorded derivation SHA; if unknown, warn and treat as implicated.
+  if ! git rev-parse --verify --quiet "${code_sha}^{commit}" >/dev/null 2>&1; then
+    hits="${hits}${constant}|${tier}|(unknown code_sha ${code_sha} -- cannot verify; re-derive)\n"
+    continue
+  fi
+
+  range="${code_sha}..${TIP}"
+  changed="$(git diff --name-only "$range" 2>/dev/null)"
+  [ -z "$changed" ] && continue
+
+  implicated=""
+  IFS=';' read -ra files <<< "$inval_files"
+  for f in "${files[@]}"; do
+    if printf '%s\n' "$changed" | grep -qxF "$f"; then
+      implicated="${implicated} ${f}"
+    fi
+  done
+
+  # Interface vintage bump: any change to a *default_vintage* line in the range.
+  if printf '%s\n' "$changed" | grep -qxF "$VINTAGE_FILE"; then
+    if git diff "$range" -- "$VINTAGE_FILE" 2>/dev/null | grep -qE '^[+-].*default_vintage'; then
+      implicated="${implicated} ${VINTAGE_FILE}(vintage)"
+    fi
+  fi
+
+  [ -n "$implicated" ] && hits="${hits}${constant}|${tier}|${implicated}\n"
+done < "$REF_CSV"
+
+[ -z "$hits" ] && exit 0
+
+# --- Report loud and block ---------------------------------------------
+echo "" >&2
+echo "=====================================================================" >&2
+echo " CALIBRATION STALENESS WATCH -- push blocked" >&2
+echo "=====================================================================" >&2
+echo " Commits being pushed touch calibration inputs since the last recorded" >&2
+echo " derivation SHA. Re-derive (or acknowledge by bumping the row's code_sha" >&2
+echo " in $REF_CSV), then push again." >&2
+echo "" >&2
+
+need_A=0; need_B=0
+printf "%b" "$hits" | while IFS='|' read -r constant tier files; do
+  [ -z "$constant" ] && continue
+  echo "  * ${constant} (tier ${tier}) <- changed:${files}" >&2
+done
+# (subshell can't export need_*, so re-scan for tier flags)
+printf "%b" "$hits" | grep -q '|A|' && need_A=1
+printf "%b" "$hits" | grep -q '|B|' && need_B=1
+
+echo "" >&2
+if [ "$need_A" = "1" ]; then
+  echo " Tier A (eta / timeable_share) -- cheap internal-moment drift check:" >&2
+  echo "     sbatch other/kg_model_tests/calibration_watch.sbatch" >&2
+  echo "   On DRIFT, re-pin eta on the full sim (other/top_tax/eta_dial/), then:" >&2
+  echo "     sbatch other/kg_model_tests/calibration_watch.sbatch <baseline_root> --seed" >&2
+  echo "" >&2
+fi
+if [ "$need_B" = "1" ]; then
+  echo " Tier B (SIGMA_CONV) -- two-leg ETI re-derivation (expensive):" >&2
+  echo "     export SIGMA_CONV=0.60" >&2
+  echo "     bash slurm_run.sh tests/sigma_recal_eta NULL jar335 1 sigma_watch 1 0 NULL 0" >&2
+  echo "     sbatch other/kg_model_tests/calibration_watch_sigma.sbatch <root>/sigma_watch" >&2
+  echo "" >&2
+fi
+echo " Bypass (intentional push, no calibration impact):  SKIP_CALIB_WATCH=1 git push" >&2
+echo "=====================================================================" >&2
+exit 1

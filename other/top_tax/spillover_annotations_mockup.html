@@ -1,0 +1,335 @@
+<title>Spillovers card — tooltip redesign</title>
+<style>
+  :root{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1;
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04);
+    --tt-shadow:0 2px 6px rgba(20,19,15,.10),0 10px 34px rgba(20,19,15,.16); color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);
+    --tt-shadow:0 2px 8px rgba(0,0,0,.5),0 14px 40px rgba(0,0,0,.55); color-scheme:dark; } }
+  :root[data-theme="light"]{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1;
+    --tt-shadow:0 2px 6px rgba(20,19,15,.10),0 10px 34px rgba(20,19,15,.16); color-scheme:light; }
+  :root[data-theme="dark"]{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8;
+    --tt-shadow:0 2px 8px rgba(0,0,0,.5),0 14px 40px rgba(0,0,0,.55); color-scheme:dark; }
+
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--paper); color:var(--ink); line-height:1.6;
+    font-family:"YaleNew","Yale New",Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif;
+    -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:40px 24px 90px; }
+  h1{ font-size:clamp(24px,3.2vw,34px); line-height:1.15; margin:0 0 6px; font-weight:700; text-wrap:balance; }
+  h3{ margin:0; font-weight:700; font-size:19px; }
+  .mono{ font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+  .eyebrow{ font:600 12px/1.2 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .lede{ color:var(--ink-2); max-width:74ch; margin:10px 0 0; font-size:16px; }
+  .studynote{ margin:16px 0 0; max-width:74ch; font-size:13.5px; color:var(--ink-2);
+    border-left:3px solid var(--accent); background:var(--surface); padding:11px 14px; border-radius:0 8px 8px 0; }
+  .studynote b{ color:var(--ink); }
+
+  .toolbar{ display:flex; flex-wrap:wrap; gap:16px 22px; align-items:center; margin:26px 0 4px; }
+  .toolbar .lab{ font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .seg{ display:inline-flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); }
+  .seg button{ font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 12px; background:transparent;
+    color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .seg button + button{ border-left:1px solid var(--rule); }
+  .seg button[aria-pressed="true"]{ background:var(--accent); color:#fff; }
+  .seg button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .card{ background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow);
+    padding:22px 22px 18px; margin-top:20px; }
+  .step{ font:600 11px/1 ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; }
+  .cap{ color:var(--ink-2); font-size:14px; margin:8px 0 4px; max-width:82ch; }
+  .hint{ font-size:12.5px; color:var(--muted); font-style:italic; margin:2px 0 16px; }
+
+  .stage{ position:relative; width:100%; }
+  .stage svg{ display:block; width:100%; }
+  rect.seghit{ cursor:default; transition:opacity .12s; outline:none; }
+  rect.seghit:focus-visible{ stroke:var(--ink); stroke-width:2; }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:16px; font-family:system-ui,sans-serif; font-size:12px; color:var(--ink-2); }
+  .legend .it{ display:inline-flex; align-items:center; gap:6px; }
+  .legend .sw2{ width:12px; height:12px; border-radius:3px; }
+
+  /* ---------- the redesigned tooltip ---------- */
+  .tt{ position:fixed; z-index:60; pointer-events:none; opacity:0; transform:translateY(3px);
+    transition:opacity .12s ease, transform .12s ease; max-width:312px; }
+  .tt.show{ opacity:1; transform:translateY(0); }
+
+  .ttcard{ background:var(--surface); border:1px solid var(--hair); border-left-width:4px;
+    border-radius:9px; box-shadow:var(--tt-shadow); padding:12px 14px 13px; overflow:hidden; }
+  .tt-eyebrow{ display:flex; align-items:center; gap:7px; font:600 9.5px/1 ui-monospace,monospace;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .tt-eyebrow .glyph{ font-size:11px; line-height:1; }
+  .tt-num{ display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+  .tt-num .amt{ font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-weight:700;
+    font-size:23px; line-height:1; letter-spacing:-.01em; }
+  .tt-num .base{ font-family:system-ui,sans-serif; font-weight:600; font-size:13px; color:var(--ink-2); }
+  .tt-meter{ height:4px; border-radius:2px; background:var(--surface-2); margin:11px 0 2px; position:relative; overflow:hidden; }
+  .tt-meter .fill{ position:absolute; top:0; bottom:0; border-radius:2px; }
+  .tt-meterlab{ font:500 10px/1.3 ui-monospace,monospace; color:var(--muted); margin-top:5px; }
+  .tt-ctx{ display:flex; align-items:center; gap:7px; margin-top:11px; font-family:system-ui,sans-serif;
+    font-size:11.5px; color:var(--ink-2); }
+  .tt-ctx .lchip{ width:9px; height:9px; border-radius:2px; flex:none; }
+  .tt-ctx .dial{ color:var(--muted); }
+  .tt-div{ height:1px; background:var(--rule); margin:11px 0 10px; }
+  .tt-body{ font-family:"YaleNew","Yale New",Georgia,serif; font-size:13.5px; line-height:1.5; color:var(--ink); }
+  .tt-body b{ color:var(--ink); }
+
+  /* the "plain / current" comparison state — text only, like a native title */
+  .tt.plain .ttcard{ border-left-width:1px; padding:8px 11px; }
+  .tt.plain .tt-eyebrow,.tt.plain .tt-meter,.tt.plain .tt-meterlab,.tt.plain .tt-ctx,.tt.plain .tt-div{ display:none; }
+  .tt.plain .tt-num{ display:block; }
+  .tt.plain .tt-num .amt{ font-size:12.5px; font-weight:600; color:var(--ink)!important; }
+  .tt.plain .tt-num .base{ font-size:12.5px; }
+  .tt.plain .tt-body{ font-family:system-ui,sans-serif; font-size:12px; color:var(--ink-2); margin-top:3px; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Top-tax atlas · tooltip study</div>
+  <h1>The spillovers, on hover</h1>
+  <p class="lede">We're dropping the on-chart annotations — too crowded — and leaning on the tooltip instead. So the tooltip has to carry the whole story: the number, the base it hits, which policy caused it, and <em>why</em>. This rebuilds it from a plain-text browser title into a small card. Hover or tab through any segment.</p>
+  <p class="studynote"><b>Toggle the two states below.</b> "Redesigned" is the new card; "Plain text" approximates the native <code>&lt;title&gt;</code> tooltip we have now. Same data underneath. Everything is keyboard-reachable — tab into the chart and arrow through.</p>
+
+  <div class="toolbar">
+    <span class="lab">Tooltip</span>
+    <div class="seg" id="ttSeg" role="group" aria-label="Tooltip style">
+      <button type="button" data-t="rich" aria-pressed="true">Redesigned</button>
+      <button type="button" data-t="plain" aria-pressed="false">Plain text (current)</button>
+    </div>
+    <span class="lab" style="margin-left:auto">Theme</span>
+    <div class="seg" id="themeSeg" role="group" aria-label="Theme">
+      <button type="button" data-th="light" aria-pressed="false">Light</button>
+      <button type="button" data-th="dark" aria-pressed="false">Dark</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="step">Spillovers</div>
+    <h3>What each policy does to the other bases</h3>
+    <div class="cap">Each selected policy on its own, at your dial settings, with behavioral responses. Segments right of the zero line are revenue raised; segments left of it are revenue drained from another base as behavior responds.</div>
+    <div class="hint" id="hint"></div>
+    <div class="stage"><div id="stagesvg"></div></div>
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+
+<div class="tt" id="tt" role="tooltip" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* real model output: solo conventional revenue delta by base, decade 2027-36 ($B) */
+var DATA=[
+ {key:'ord',   label:'Top ordinary rate',  lc:'--l-ord',    dial:'to 50%',     heads:{iit:1715.2, cg:68.4,  pay:-9.0,  corp:206.9, est:-2.6,  wealth:0, other:0}},
+ {key:'cg',    label:'Capital gains rate', lc:'--l-cg',     dial:'to 45%',     heads:{iit:-559.9, cg:1226.7,pay:1.1,   corp:-103.8,est:-1.3,  wealth:0, other:0}},
+ {key:'corp',  label:'Corporate rate',     lc:'--l-corp',   dial:'to 28%',     heads:{iit:-48.7,  cg:-57.0, pay:-0.2,  corp:899.7, est:-4.4,  wealth:0, other:0}},
+ {key:'wealth',label:'Annual wealth tax',  lc:'--l-wealth', dial:'3% / $100M', heads:{iit:-199.9, cg:-84.5, pay:1.9,   corp:-56.9, est:-89.3, wealth:3145.0, other:0}},
+ {key:'deemed',label:'Gains at death',     lc:'--l-deemed', dial:'deemed',     heads:{iit:449.0,  cg:337.9, pay:2.6,   corp:-48.5, est:-34.9, wealth:0, other:0}},
+ {key:'estate',label:'Estate tax',         lc:'--l-estate', dial:'60% / $5M',  heads:{iit:22.2,   cg:112.8, pay:0.2,   corp:-4.4,  est:721.8, wealth:0, other:0}},
+ {key:'qbi',   label:'Repeal QBI (§199A)',lc:'--l-qbi', dial:'repeal',    heads:{iit:775.9,  cg:31.7,  pay:-3.6,  corp:83.0,  est:-0.6,  wealth:0, other:0}},
+ {key:'taxmax',label:'Eliminate SS max',   lc:'--l-taxmax', dial:'repeal cap', heads:{iit:-405.2, cg:-19.9, pay:2955.9,corp:-26.2, est:-1.7,  wealth:0, other:0}}
+];
+var HEADS={
+  iit:{short:'Ordinary income', c:'--h-iit'}, cg:{short:'Capital gains',c:'--h-cg'},
+  corp:{short:'Corporate',c:'--h-corp'}, est:{short:'Estate',c:'--h-est'},
+  wealth:{short:'Wealth',c:'--h-wealth'}, pay:{short:'Payroll',c:'--h-pay'}, other:{short:'Other',c:'--muted'}
+};
+var ORDER=['iit','cg','pay','corp','est','wealth','other'];
+var OWN={ord:['iit'],cg:['cg'],corp:['corp'],wealth:['wealth'],deemed:['cg','iit'],estate:['est'],qbi:['iit'],taxmax:['pay']};
+var DESC={
+ 'ord|corp':{tag:'Entity shifting',t:'With the top individual rate pushed above the 21% corporate rate, pass-through and wage income migrates into C-corporate form, where it is taxed at the corporate rate — so the corporate base grows even though the reform never touches the corporate rate.'},
+ 'ord|cg':{tag:'Recharacterization',t:'A slice of the shifted income resurfaces later as dividends and realized gains, nudging the preferential-rate base upward.'},
+ 'ord|pay':{tag:'Wage base',t:'Compensation that shifts out of salary into non-wage forms slightly thins the payroll base.'},
+ 'cg|iit':{tag:'Lock-in',t:'Taxing gains and dividends harder triggers lock-in: high earners hold appreciated assets instead of selling, and firms retain earnings instead of distributing them. Less income is realized near-term, so the ordinary base gives revenue back even as the capital-gains base rises.'},
+ 'cg|corp':{tag:'Form advantage',t:'As the preferential rate climbs toward the ordinary rate, the payoff to parking income inside C-corporate form to convert it into lightly-taxed dividends and gains shrinks, so income shifts out of the corporate base.'},
+ 'corp|iit':{tag:'Incidence on flows',t:'A higher corporate rate leaves firms less after-tax cash to pay out. The dividends, interest, and rent reaching households shrink, and with them the individual income tax on that capital income.'},
+ 'corp|cg':{tag:'Equity markdown',t:'Heavier corporate taxation lowers the value of corporate equity. With share prices marked down, the gains later realized on those shares are smaller — so capital-gains receipts fall.'},
+ 'corp|est':{tag:'Markdown → estates',t:'The same equity markdown shrinks the value of corporate stock sitting in taxable estates.'},
+ 'wealth|iit':{tag:'Base erosion',t:'An annual wealth tax is paid partly out of the wealth stock itself. A smaller capital base throws off less dividends, interest, and business income year after year. Concealment compounds it: assets hidden from the wealth tax also hide the income they earn.'},
+ 'wealth|cg':{tag:'Base erosion',t:'A shrinking — and partly concealed — capital stock generates smaller realized gains over time.'},
+ 'wealth|est':{tag:'Drains to estate',t:'Wealth drawn down (or hidden) to meet the annual levy leaves a smaller taxable estate at death. Concealment is modeled consistently across the wealth and estate bases, so it lands in both.'},
+ 'wealth|corp':{tag:'Base erosion',t:'Less capital held in corporate equity feeds through to a smaller corporate base.'},
+ 'deemed|est':{tag:'Deductible at death',t:'The income tax triggered by the deemed realization is deductible against the taxable estate, so a larger income-tax bill at death leaves a smaller estate to tax.'},
+ 'deemed|corp':{tag:'Shifting incentives',t:'As the reward for deferring until death disappears, retention incentives shift and the corporate base gives back a little.'},
+ 'estate|cg':{tag:'Less holding-till-death',t:'A heavier estate tax weakens the incentive to hold appreciated assets until death for the basis step-up. Some holders realize during life instead, lifting the capital-gains base.'},
+ 'estate|iit':{tag:'Less holding-till-death',t:'The same unwinding of hold-till-death behavior surfaces a little more ordinary income.'},
+ 'qbi|corp':{tag:'Entity shifting',t:'Repealing the 20% pass-through deduction raises the effective rate on pass-through business income, widening the gap against the 21% corporate rate. Business income shifts into C-corporate form and the corporate base grows.'},
+ 'qbi|cg':{tag:'Recharacterization',t:'Some of the income shifting into corporate form later surfaces as dividends and gains.'},
+ 'taxmax|iit':{tag:'Recharacterization',t:'Uncapping the 12.4% Social Security tax on high earnings makes it attractive to recharacterize wages as S-corporation distributions and other non-wage income that escapes payroll tax. The shrinking wage base — plus deductibility of the employer-side tax — pulls the income tax down.'},
+ 'taxmax|corp':{tag:'Recharacterization',t:'Some recharacterized compensation lands in corporate form; a small give-back here.'},
+ 'taxmax|cg':{tag:'Recharacterization',t:'A little of the recharacterized comp shows up as gains and dividends.'}
+};
+var OWNDESC={
+ ord:'Higher statutory rate on top ordinary income — the intended base.',
+ cg:'Higher statutory rate on realized gains and qualified dividends — the intended base, already net of the realization response.',
+ corp:'Higher statutory corporate rate — the intended base.',
+ wealth:'The new annual levy on net worth above the threshold — the intended base.',
+ deemed:'Unrealized gains taxed at death lift both the ordinary and capital-gains bases above the mechanical estimate: with no reward for holding until a stepped-up basis, more is realized during life, and death itself books the gain.',
+ estate:'Higher estate-tax rate and lower exemption — the intended base.',
+ qbi:'Removing the 20% deduction raises tax on pass-through income — the intended base.',
+ taxmax:'Applying the 12.4% Social Security tax above the old wage cap — the intended base.'
+};
+
+var css=function(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();};
+var $=function(id){return document.getElementById(id);};
+var TTMODE='rich', W=0, SEG=[], ROWY=[];
+var LABELW=186, TOPPAD=30, RH=52, RGAP=70;
+
+function usd(v){var a=Math.abs(v),s=v<0?'−':'';return a>=1000?s+'$'+(a/1000).toFixed(2)+'T':s+'$'+Math.round(a)+'B';}
+function signed(v){return (v>0?'+':(v<0?'−':''))+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(2)+'T':Math.round(Math.abs(v))+'B');}
+function headColor(k){return css(HEADS[k].c);}
+function isOwn(row,k){return OWN[row.key].indexOf(k)>=0;}
+function getDesc(key,base){return DESC[key+'|'+base]||{tag:'Minor',t:'A small cross-base effect from behavioral reallocation.'};}
+/* spillovers (non-own bases) of a policy, ranked by magnitude — the ranking the
+   dropped on-chart annotations used to give; now it lives in the meter. */
+function spillRank(row){
+  return ORDER.filter(function(k){return !isOwn(row,k)&&Math.abs(row.heads[k]||0)>=1;})
+              .map(function(k){return {k:k,v:row.heads[k]||0};})
+              .sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);});
+}
+function ordName(k){return k===1?'Largest':k===2?'2nd largest':k===3?'3rd largest':k+'th largest';}
+
+function layout(){
+  W=$('stagesvg').clientWidth||900;
+  var barW=Math.max(140, W-LABELW-RGAP);
+  var negX=0,posX=0;
+  DATA.forEach(function(r){var n=0,p=0;ORDER.forEach(function(k){var v=r.heads[k]||0;if(v<0)n-=v;else p+=v;});negX=Math.max(negX,n);posX=Math.max(posX,p);});
+  var sc=barW/((negX+posX)||1), xz=LABELW+negX*sc;
+  SEG=[];ROWY=[];var y=TOPPAD+6;
+  DATA.forEach(function(r,i){
+    ROWY.push({top:y});var xp=xz,xn=xz;
+    ORDER.forEach(function(k){var v=r.heads[k]||0,w=Math.abs(v)*sc;if(w<0.6)return;var x0,x1;
+      if(v>0){x0=xp;x1=xp+w;xp+=w;}else{x1=xn;x0=xn-w;xn-=w;}
+      SEG.push({row:i,key:r.key,base:k,v:v,x0:x0,x1:x1,top:y,h:32,own:isOwn(r,k)});});
+    y+=RH;
+  });
+  return {sc:sc,xz:xz,posX:posX,negX:negX,xright:xz+posX*sc,totalH:y+8};
+}
+
+function render(){
+  var g=layout(),H=g.totalH;
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" aria-label="Spillovers by base">';
+  s+='<line x1="'+g.xz.toFixed(1)+'" x2="'+g.xz.toFixed(1)+'" y1="'+(TOPPAD-6)+'" y2="'+(H-8)+'" stroke="'+css('--rule')+'" stroke-width="1.5"/>';
+  s+='<text x="'+g.xz.toFixed(1)+'" y="'+(TOPPAD-11)+'" text-anchor="middle" font-size="10" fill="'+css('--muted')+'" font-family="ui-monospace,monospace">$0</text>';
+  s+='<text x="'+(g.xz-6).toFixed(1)+'" y="'+(TOPPAD-11)+'" text-anchor="end" font-size="9" fill="'+css('--muted')+'" font-family="ui-monospace,monospace">← drained</text>';
+  s+='<text x="'+(g.xz+6).toFixed(1)+'" y="'+(TOPPAD-11)+'" text-anchor="start" font-size="9" fill="'+css('--muted')+'" font-family="ui-monospace,monospace">raised →</text>';
+  DATA.forEach(function(r,i){var ry=ROWY[i];
+    s+='<rect x="'+(LABELW-172)+'" y="'+(ry.top+11)+'" width="9" height="9" rx="2" fill="'+css(r.lc)+'"/>';
+    s+='<text x="'+(LABELW-158)+'" y="'+(ry.top+19)+'" font-size="12.5" font-weight="600" fill="'+css('--ink-2')+'" font-family="system-ui">'+r.label+'</text>';
+    s+='<text x="'+(LABELW-158)+'" y="'+(ry.top+33)+'" font-size="10" fill="'+css('--muted')+'" font-family="ui-monospace,monospace">'+r.dial+'</text>';
+  });
+  SEG.forEach(function(sg,idx){var c=headColor(sg.base),w=Math.max(0.6,(sg.x1-sg.x0)-2);
+    var lab=DATA[sg.row].label+' — '+HEADS[sg.base].short+' '+signed(sg.v);
+    s+='<rect class="seghit" tabindex="0" role="img" aria-label="'+lab+'" data-seg="'+idx+'" x="'+sg.x0.toFixed(1)+'" y="'+sg.top+'" width="'+w.toFixed(1)+'" height="'+sg.h+'" rx="3" fill="'+c+'" opacity="'+(sg.v<0?0.9:1)+'"/>';
+  });
+  DATA.forEach(function(r,i){var ry=ROWY[i],tot=0;ORDER.forEach(function(k){tot+=r.heads[k]||0;});
+    s+='<text x="'+(g.xright+12).toFixed(1)+'" y="'+(ry.top+21)+'" font-size="12.5" font-weight="700" fill="'+css('--ink-2')+'" font-family="ui-monospace,monospace">'+usd(tot)+'</text>';
+  });
+  s+='</svg>';
+  $('stagesvg').innerHTML=s;
+  attach();
+  $('hint').textContent = TTMODE==='rich'
+    ? 'Redesigned: a compact card — the number leads, a mechanism tag and the causing policy sit above the plain-English reason, keyed to the base color.'
+    : 'Plain text: what a native browser tooltip gives you today — a line of text, no color, no hierarchy, no explanation of the cause.';
+  renderLegend();
+}
+
+/* ---- tooltip builder ---- */
+function fillTip(sg){
+  var tt=$('tt'), r=DATA[sg.row], own=sg.own, drain=sg.v<0, col=headColor(sg.base);
+  var d=getDesc(r.key,sg.base);
+  var dirCol = own?css('--ink'):(drain?css('--warn'):css('--good'));
+  var glyph  = own?'●':(drain?'▾':'▴');
+  var eyebrow= own?'Intended base':((drain?'Drained from ':'Added to ')+HEADS[sg.base].short);
+  var body = own?('<b>The policy’s direct target.</b> '+OWNDESC[r.key]):('<b>'+d.tag+'.</b> '+d.t);
+  // meter (spillovers only): rank this side-effect within the policy, bar scaled
+  // to the policy's largest side-effect so the bars carry real length.
+  var meter='';
+  if(!own){
+    var sp=spillRank(r), maxV=sp.length?Math.abs(sp[0].v):1;
+    var rank=1; for(var z=0;z<sp.length;z++){ if(sp[z].k===sg.base){ rank=z+1; break; } }
+    var share=Math.min(1, Math.abs(sg.v)/(maxV||1));
+    meter='<div class="tt-meter"><span class="fill" style="width:'+(share*100).toFixed(1)+'%;left:0;background:'+col+'"></span></div>'
+      +'<div class="tt-meterlab">'+ordName(rank)+' of '+sp.length+' side-effect'+(sp.length===1?'':'s')+' · '+(drain?'drains':'adds to')+' this base</div>';
+  }
+  var html=
+    '<div class="ttcard" style="border-left-color:'+col+'">'
+    +'<div class="tt-eyebrow"><span class="glyph" style="color:'+dirCol+'">'+glyph+'</span>'+eyebrow+'</div>'
+    +'<div class="tt-num"><span class="amt" style="color:'+dirCol+'">'+signed(sg.v)+'</span>'
+      +'<span class="base">'+HEADS[sg.base].short+'</span></div>'
+    +meter
+    +'<div class="tt-ctx"><span class="lchip" style="background:'+css(r.lc)+'"></span>'+r.label+' <span class="dial">· '+r.dial+'</span></div>'
+    +'<div class="tt-div"></div>'
+    +'<div class="tt-body">'+body+'</div>'
+    +'</div>';
+  tt.innerHTML=html;
+  tt.className='tt show'+(TTMODE==='plain'?' plain':'');
+}
+function placeTip(cx,cy){
+  var tt=$('tt'),pad=15,tw=tt.offsetWidth,th=tt.offsetHeight;
+  var x=cx+pad,y=cy+pad;
+  if(x+tw>window.innerWidth-8)x=cx-tw-pad;
+  if(x<8)x=8;
+  if(y+th>window.innerHeight-8)y=cy-th-pad;
+  if(y<8)y=8;
+  tt.style.left=x+'px';tt.style.top=y+'px';
+}
+function hideTip(){$('tt').classList.remove('show');}
+
+function attach(){
+  Array.prototype.forEach.call($('stagesvg').querySelectorAll('[data-seg]'),function(rect){
+    var sg=SEG[+rect.dataset.seg];
+    rect.addEventListener('mousemove',function(e){ fillTip(sg); placeTip(e.clientX,e.clientY); dim(sg.row); });
+    rect.addEventListener('mouseleave',function(){ hideTip(); dim(-1); });
+    rect.addEventListener('focus',function(){ fillTip(sg); var b=rect.getBoundingClientRect(); placeTip(b.left+b.width/2,b.bottom); dim(sg.row); });
+    rect.addEventListener('blur',function(){ hideTip(); dim(-1); });
+  });
+}
+function dim(row){
+  Array.prototype.forEach.call($('stagesvg').querySelectorAll('[data-seg]'),function(rect){
+    var sg=SEG[+rect.dataset.seg];
+    rect.style.opacity = row<0 ? (sg.v<0?0.9:1) : (sg.row===row?(sg.v<0?0.95:1):0.24);
+  });
+}
+function renderLegend(){
+  var used={};SEG.forEach(function(sg){if(Math.abs(sg.v)>=1)used[sg.base]=1;});
+  var l=ORDER.filter(function(k){return used[k];}).map(function(k){
+    return '<span class="it"><span class="sw2" style="background:'+headColor(k)+'"></span>'+HEADS[k].short+'</span>';}).join('');
+  l+='<span class="it mono" style="color:var(--muted)">left of $0 = drained · right column = net score</span>';
+  $('legend').innerHTML=l;
+}
+
+Array.prototype.forEach.call($('ttSeg').querySelectorAll('button'),function(b){
+  b.onclick=function(){ TTMODE=b.dataset.t;
+    Array.prototype.forEach.call($('ttSeg').querySelectorAll('button'),function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+    hideTip(); render(); };
+});
+Array.prototype.forEach.call($('themeSeg').querySelectorAll('button'),function(b){
+  b.onclick=function(){ document.documentElement.setAttribute('data-theme',b.dataset.th);
+    Array.prototype.forEach.call($('themeSeg').querySelectorAll('button'),function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});
+    render(); };
+});
+var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,120);});
+render();
+</script>

@@ -1,0 +1,107 @@
+---
+
+# Maximum credit-eligible expenses per qualifying dependent 
+exp_limit:
+  value: 
+    '2014': 3000
+    '2021': 8000
+    '2022': 3000
+    '2025': 4000
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 
+    '2014': NA
+    '2025': 2024
+  i_direction:
+    '2014': NA
+    '2025': -1
+  i_increment:
+    '2014': NA
+    '2025': 2024
+
+# Young dependents: credit rates 
+young_rate:
+  value:
+    '2014': [0.2, 0.15]
+    '2021': [0.2, 0.3]
+    '2022': [0.2, 0.15]
+    '2025': [0.5, 0.5]
+  
+# Young dependents: AGI threshold above which credit rate begins phasing out from max to min
+young_po_thresh:
+  value:
+    '2014': [Inf, 15000]
+    '2021': [400000, 125000]
+    '2022': [Inf, 15000]
+    '2025': [200000, 25000]
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 
+    '2014': NA
+    '2025': [2024, 2024]
+  i_direction:
+    '2014': NA
+    '2025': [-1, -1]
+  i_increment:
+    '2014': NA
+    '2025': [100, 100]
+
+# Young dependents: rate at which credit rate phases out with AGI
+young_po_rate:
+  value: 
+    '2014': [0.0, 0.000005]
+    '2021': [0.000005, 0.000005]
+    '2022': [0.0, 0.000005]
+    '2025': [1.0, 0.000005]
+    
+# Old dependents: credit rates 
+old_rate:
+  value:
+    '2014': [0.2, 0.15]
+    '2021': [0.2, 0.3]
+    '2022': [0.2, 0.15]
+    '2025': [0.0, 0.7]
+  
+# Old dependents: AGI threshold above which credit rate begins phasing out from max to min
+old_po_thresh:
+  value:
+    '2014': [Inf, 15000]
+    '2021': [400000, 125000]
+    '2022': [Inf, 15000]
+    '2025': [Inf, 25000]
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 
+    '2014': NA
+    '2025': [2024, 2024]
+  i_direction:
+    '2014': NA
+    '2025': [-1, -1]
+  i_increment:
+    '2014': NA
+    '2025': [100, 100]
+
+# Old dependents: rate at which credit rate phases out with AGI
+old_po_rate:
+  value: 
+    '2014': [0.0, 0.000005]
+    '2021': [0.000005, 0.000005]
+    '2022': [0.0, 0.000005]
+    '2025': [0.0, 0.000014]
+
+# Rounding step for descretized phaseout function
+discrete_step:
+  value: 
+    '2014': 2000
+    '2025': 1
+
+# Whether credit is refundable
+refundable:
+  value:
+    '2014': 0
+    '2021': 1
+    '2022': 0
+    '2025': 1

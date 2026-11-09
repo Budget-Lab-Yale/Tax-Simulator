@@ -1,0 +1,668 @@
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{underscore}
+\usepackage{microtype}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=NavyBlue,citecolor=NavyBlue]{hyperref}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{2}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\pending}{\textit{[Draft pending.]}}
+\newcommand{\field}[1]{\paragraph{#1.}}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+
+\title{\textbf{Behavioral responses in the top-tax project}\\[0.3em]
+\large A methodology}
+\author{Budget Lab at Yale \\ \small Tax-Simulator}
+\date{Draft, \today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent This paper documents the behavioral responses and cross-base
+interactions used in the top-tax project, which estimates the additional
+revenue available from the top of the income and wealth distribution. It
+describes each channel under a common template---mechanism, parameters,
+calibration, interactions, and limitations---and the architecture that lets the
+channels interact on shared record-level state. This is a working draft: the
+capital-gains realization channel (Section~\ref{sec:realization} and
+Appendix~\ref{sec:app-realization}) is complete and serves as the template
+exemplar; the remaining channels are drafted or outlined to the same structure.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+%======================================================================
+\section{Introduction}
+\label{sec:intro}
+
+Several current proposals draw revenue from the same taxpayers through distinct
+statutes: top ordinary rates, capital-gains rates, the treatment of gains at
+death, the estate tax, a wealth tax, the corporate tax, and repeal of the
+qualified business income deduction. Scoring each in isolation and summing
+overstates their combined yield, for two reasons.
+
+First, the bases overlap mechanically. A given stock of wealth is capital income
+during life, an estate at death, a wealth-tax base in the interim, and corporate
+profit upstream. A dollar collected under one statute is unavailable to another,
+so summing standalone estimates double-counts it.
+
+Second, taxpayers respond. They retime realizations, convert ordinary income
+into deferred gains, shift income across the corporate and pass-through
+boundary, conceal assets, and finance tax payments out of saving. These
+responses move income between bases and out of the taxable total, and a response
+induced by one instrument alters the base on which the others operate.
+
+The model estimates these effects on record-level balance sheets rather than
+through an assumed aggregate elasticity. Each channel described below is a
+structural response measured against the microdata; the object of interest is
+their interaction (Section~\ref{sec:architecture}), which is why the project
+reports the conventional estimate as a share of the static estimate and a
+by-base destination ledger rather than a single headline elasticity.
+
+Two of the channels documented here, the wealth-financing channel
+(Section~\ref{sec:bathtub}) and corporate incidence
+(Section~\ref{sec:corp}), are mechanical rather than elasticity-driven. They are
+included because they transmit a policy's effect from one base to another, which
+is the interaction the project measures.
+
+%======================================================================
+\section{Model structure}
+\label{sec:structure}
+
+\subsection{Static and conventional passes}
+Each non-baseline scenario is run twice. The \emph{static} pass holds taxpayer
+inputs at baseline levels and recomputes tax under the reform; it is the
+law-only counterfactual. The \emph{conventional} pass activates the behavioral
+channels. The reported quantities are differences between the two: the static
+estimate is the mechanical intent, and the conventional estimate is the amount
+that survives behavior. Interactions are reported through receipts as static
+minus conventional deltas. Distribution tables are static-sourced by convention.
+
+\subsection{Two channel types}
+\label{sec:types}
+The model implements behavior in two forms.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}p{0.22\textwidth}p{0.70\textwidth}@{}}
+\toprule
+\textbf{Type} & \textbf{Implementation} \\
+\midrule
+Behavior module &
+An R file at \code{config/scenarios/behavior/\{var\}/\{name\}.R} exposing a
+\code{do_\{var\}()} hook, dispatched on the behavioral pass. It modifies
+tax-unit inputs; tax is then recomputed. Examples: realization, income
+conversion, entity shifting, evasion, wealth avoidance, charity, employment. \\
+\addlinespace
+Mechanical applier &
+A fixed step invoked at the head of the conventional pass in
+\code{src/sim/run.R}, with no hook and no elasticity dispatch. Examples: the
+wealth-financing channel and corporate incidence. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Run order}
+\label{sec:order}
+Because the channels touch overlapping bases, their order is part of the
+specification. The conventional sequence is
+\[
+\text{corporate incidence} \rightarrow \text{wealth haircut} \rightarrow
+\underbrace{\text{realization} \rightarrow \sigma \rightarrow
+\text{entity shifting} \rightarrow \text{evasion}}_{\text{fixed module order}}
+\rightarrow \texttt{do\_taxes}.
+\]
+The module order is asserted at runtime so that each dollar is adjusted at most
+once: realizations are set before conversion prices them, conversion before the
+entity margin re-routes the remainder, and the reporting channels (evasion,
+avoidance) run last, after which only \code{do_taxes} reads the frame
+(Section~\ref{sec:firewall}).
+
+%======================================================================
+\section{Interaction architecture}
+\label{sec:architecture}
+
+Three structures let the channels interact on common state rather than through
+hand-set cross-elasticities.
+
+\subsection{Shared objects}
+\label{sec:shared}
+Several channels are priced from the same internal quantities:
+\begin{itemize}[leftmargin=1.4em]
+\item $\tau_{eq}(a,t)$, the present value of tax per dollar entering the
+unrealized-gain state, produced by the realization machinery
+(Section~\ref{sec:realization}). It prices the conversion exit
+(Section~\ref{sec:conversion}) and, on the roadmap, the entity-shifting deferral
+value (Section~\ref{sec:entity}).
+\item $F$, the death-forgiveness value of an unrealized gain, which depends on
+the realization-at-death regime and on estate exposure
+(Section~\ref{sec:estate-offset}). It links realization to the estate tax.
+\item $h=\tau_w\,\tau_{cg}$, the wealth-tax carry on a deferred gain
+(Section~\ref{sec:carry}), which couples a wealth tax into the realize-or-hold
+decision.
+\end{itemize}
+Because these objects are shared, a change to one instrument propagates to the
+others through the model's own state.
+
+\subsection{The reporting--real separation}
+\label{sec:firewall}
+The governing rule is that cash is reported and balance sheets are real. A
+reporting response (evasion, wealth avoidance, estate concealment) affects only
+the cash tax paid, and through it the financing flow of the wealth channel
+(Section~\ref{sec:bathtub}). It does not affect the economic balance sheet
+(\code{value.*}), the gain stock, cohort assignment, heir inheritances, or
+corporate exposure. A real response (corporate markdown, wealth haircut,
+realization, conversion, entity shifting) flows into every base, including
+reported ones.
+
+The architecture enforces this. Every real-side consumer reads raw input data,
+static detail, or a preserved raw column, never the behavior-modified
+conventional frame. Reporting modules write only to tax-computation inputs and
+to documented isolation points (the materialized \code{net_worth} column, the
+\code{estate_concealed_frac} input to \code{calc_estate}). This is why the
+reporting modules are ordered last (Section~\ref{sec:order}). Each channel below
+is marked \textsc{real} or \textsc{reporting}.
+
+\subsection{Composition of the taxable-income elasticity}
+\label{sec:eti}
+The top-bracket elasticity of taxable income (ETI) is composed from three
+modules---income conversion (Section~\ref{sec:conversion}), entity shifting
+(Section~\ref{sec:entity}), and evasion (Section~\ref{sec:evasion})---together
+with charity. One parameter, $\sigma$, is calibrated as a residual so that the
+modeled top-ordinary ETI matches an external target of approximately $0.25$,
+conditional on the rest of the stack.
+
+A consequence is that any change to a margin inside the ordinary-rate ETI bundle
+requires $\sigma$ to be re-derived. Margins outside the bundle---the wealth and
+estate terms in the realization problem, the estate own-rate response, and
+capital-gains realization itself---do not affect $\sigma$. This distinction
+governs calibration maintenance and is monitored by an automated staleness check
+(Section~\ref{sec:limitations}).
+
+%======================================================================
+\section{Behavioral channels}
+\label{sec:channels}
+
+Each channel is documented under seven headings:
+\begin{enumerate}[leftmargin=1.6em,itemsep=0.1em]
+\item \emph{What it captures} --- the economic response, stated briefly.
+\item \emph{Mechanism} --- how the model produces it.
+\item \emph{Type and location} --- module or mechanical; \textsc{real} or
+\textsc{reporting}; code path.
+\item \emph{Parameters} --- the pinned values and override switches.
+\item \emph{Calibration and evidence} --- how the parameters are set and the
+literature anchor.
+\item \emph{Interactions} --- the other channels and bases it touches.
+\item \emph{Limitations} --- what it omits.
+\end{enumerate}
+Medium-depth content appears here; full derivations are in
+Appendix~\ref{sec:appendix}.
+
+%----------------------------------------------------------------------
+\subsection{Realization and timing at death}
+
+\subsubsection{Capital-gains realization: the entropy Bellman}
+\label{sec:realization}
+
+\field{What it captures}
+The share of a mechanical capital-gains rate increase that survives once
+realizations respond. Investors defer gains when rates rise, and the value of
+deferral depends on the treatment of the gain at death. The channel models both
+the long-run level of realizations and the short-run retiming around a rate
+change.
+
+\field{Mechanism}
+Investors are grouped into representative cells defined by age cohort and
+within-age net-worth percentile. For each cell the model solves a
+realize-or-hold problem over the gain stock under an entropy realization cost.
+Each dollar of unrealized gain carries a non-tax motive to sell---liquidity,
+rebalancing, or consumption---drawn from an exponential reservation
+distribution; the holder realizes the dollar when that motive exceeds the tax
+wedge between realizing now and deferring. The realization rate is the survival
+function of that distribution. The first-order condition is
+\begin{equation}
+\label{eq:foc}
+r_D^{\,j} = r_D^{\,B}\exp\!\big(-\eta\,(MC^{\,j}-MC^{\,B})\big),
+\qquad \text{clipped to } [0,1],
+\end{equation}
+where the marginal cost of holding rather than realizing is
+\begin{equation}
+\label{eq:mc}
+MC = \tau + \beta(1-m)\,W_{\text{next}} + \beta m F,
+\qquad F = (1-c_\phi)\,\tau.
+\end{equation}
+Here $\tau$ is the current-year rate, $W_{\text{next}}$ the discounted
+continuation value of an unrealized dollar under survival probability $1-m$, and
+$F$ the discounted death-forgiveness value under mortality $m$. The
+realization-at-death regime enters through $c_\phi$, the share of the gain's
+tax burden the holder internalizes at death: $c_\phi=0$ under step-up ($F=\tau$),
+$c_\phi=1$ under deemed realization ($F=0$), and an intermediate value under
+carryover.
+
+Since $\mathrm{d}\ln r_D/\mathrm{d}MC = -\eta$ across the whole pool, $\eta$ is
+the long-run realization semi-elasticity directly, with no inert floor or
+responsive-share deflation; this is the single-pool property of the current
+specification (Appendix~\ref{sec:app-realization}). A separate short-run overlay
+lets a calibrated fraction of realizations retime by one year toward the
+lower-wedge year. The overlay nets to zero under a uniform permanent shock and
+therefore leaves the long-run response unchanged.
+
+\field{Type and location}
+Behavior module. The applier \code{do_kg_dynamics}
+(\code{config/scenarios/behavior/kg_dynamics/turnover.R}) is an allocator that
+reads per-year cell state and translates it to per-record \code{kg_lt}
+adjustments. State is produced by a pre-pass (\code{kg_dyn_run_bathtub_pass}) in
+\code{src/sim/kg_dynamics.R}; shared cohort primitives are in
+\code{src/sim/cohort_bathtub.R}. \textsc{real}.
+
+\field{Parameters}
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llp{0.42\textwidth}l@{}}
+\toprule
+Parameter & Value & Meaning & Override \\
+\midrule
+$\eta$ & $2.4825$ & long-run realization semi-elasticity & \code{KG_ETA} \\
+timeable share & $0.2542$ & fraction of realizations that retimes by one year & \code{KG_TIMEABLE_SHARE} \\
+deemed-avoidance & $0.25$ & valuation discount on deemed realizations (data, not law) & \code{KG_DEEMED_AVOIDANCE} \\
+$c_\phi$ & $0/\theta/1$ & regime death-burden share & --- \\
+spec version & $3$ & single pool & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\field{Calibration and evidence}
+$\eta$ is pinned on the full simulator. The calibration harness measures the
+realized elasticity $E_{\text{full}}(\eta)=\mathrm{d}\log R/\mathrm{d}\tau_{rw}$
+at simulation year 30 across a grid of $\eta$ values; the surface is linear
+through the origin, so a few points determine it. Inverting the fitted line for
+the target $E_{\text{full}}^{\star}=-0.6/0.238=-2.52$ (a top-rate realization
+elasticity over the top-rate divisor, following the JCT and CBO convention and
+the estimates of Dowd, McClelland, and Muthitacharoen) at slope $1.0155$ gives
+$\eta^{\star}=2.4825$. The fitted coefficients are recorded so that the next
+re-pin is arithmetic. The timeable share is calibrated separately against the
+short-run announcement moment given $\eta$. The full procedure is in
+Appendix~\ref{sec:app-realization}.
+
+\field{Interactions}
+The channel produces $\tau_{eq}$ and $F$ (Section~\ref{sec:shared}), which price
+income conversion (Section~\ref{sec:conversion}) and entity shifting
+(Section~\ref{sec:entity}). The death regime links realization to the estate
+tax: closing step-up raises realizations. The wealth-carry term
+(Section~\ref{sec:carry}) and the estate death-value offset
+(Section~\ref{sec:estate-offset}) enter $MC$ and $F$, coupling the wealth and
+estate instruments into the realization decision.
+
+\field{Limitations}
+The five tracked wealth classes are collapsed into one asset bucket;
+per-asset-class disaggregation is on the roadmap. The revenue-maximizing grid
+argmaxes at the current boundary (a statutory peak near 44--45\%) and should be
+extended to identify the turning point. The deemed-avoidance discount is a
+data calibration consistent with JCT scoring, not a behavioral response.
+
+\subsubsection{Wealth-carry}
+\label{sec:carry}
+
+\field{What it captures}
+A wealth tax raises the cost of deferring a gain, because the unpaid
+capital-gains tax on an unrealized gain remains in the wealth-tax base and is
+taxed at $\tau_w$ each year it is deferred. This unlocks realizations in
+wealth-taxed cells that would otherwise defer, and it lowers the value of the
+conversion deferral path (Section~\ref{sec:conversion}).
+
+\field{Mechanism}
+A per-year carrying cost $h=\tau_w\,\tau_{cg}$ is added to the marginal cost of
+holding in~\eqref{eq:mc} and to the $\tau_{eq}$ recursion. It is computed at the
+record level and then aggregated, not as a product of separately averaged rates,
+because $\tau_w$ and $\tau_{cg}$ are positively correlated at the top. The term
+applies on the survival branch only; in-year realizers and decedents pay no
+carry that year.
+
+\field{Type and location}
+A structural term inside the realization module (\code{src/sim/kg_dynamics.R}).
+\textsc{real}.
+
+\field{Parameters}
+None free. $h$ is the product of two marginal rates already in the model,
+$\tau_w$ from \code{mtr_net_worth} and $\tau_{cg}$ from \code{mtr_kg_lt}. Under
+current law $\tau_w=0$ for essentially all cells, so $h=0$ is an exact no-op,
+which is why the term did not change the specification version or the $\eta$
+calibration.
+
+\field{Calibration and evidence}
+No separate calibration. The magnitude follows from the deferral arithmetic: the
+per-year benefit of deferral is approximately $r_{\text{real}}\,\tau$, so a
+one-percent wealth tax offsets roughly half of it at $r_{\text{real}}\approx2\%$.
+
+\field{Interactions}
+Couples the wealth-tax instrument into realization and into the conversion price.
+
+\field{Limitations}
+The response is aggregated at the age-cell level rather than the record level,
+which understates the record-level response by Jensen's inequality (conservative,
+never an overstatement); the measured understatement ranges from about 8\% to
+33\% depending on the parameter corner. An exposed/unexposed split closing the
+gap was considered and not adopted. The understatement should be noted when
+reporting wealth and capital-gains corners jointly.
+
+\subsubsection{Estate death-value offset}
+\label{sec:estate-offset}
+
+\field{What it captures}
+For an estate-taxable decedent, capital-gains or deemed tax paid at or before
+death reduces the taxable estate, so the effective rate near death is
+approximately $\tau_{cg}(1-\tau_e)$. Including this stops the model from
+overstating lock-in for estate-exposed cells when the deemed and estate switches
+are active. \pending
+
+\field{Mechanism, parameters, and limitations}
+Gain-weighted cell aggregation of a switch-gated marginal estate rate entering
+$F$ and $MC$; baseline death value $F_B=\tau_B(1-e_B)$, paired by leg. Inside
+the realization module; \textsc{real}. \pending
+
+%----------------------------------------------------------------------
+\subsection{Taxable-income base-shifting}
+
+\subsubsection{Income conversion ($\sigma$)}
+\label{sec:conversion}
+
+\field{What it captures}
+Conversion of labor and ordinary income into the deferred unrealized-gain state
+(the founder-equity and carried-interest path), a component of the top-ordinary
+ETI. \pending
+
+\field{Summary}
+Module \code{do_conversion} (\code{config/scenarios/behavior/conversion/sigma.R};
+shared function \code{src/sim/sigma_conversion.R}); \textsc{real}. Parameter
+$\sigma=0.16$ (\code{SIGMA_CONV}), re-derived in 2026, superseding an earlier
+$0.08$. Calibrated as a residual to a top-ordinary ETI of $0.25$
+(Section~\ref{sec:eti}). Consumes $\tau_{eq}$; a change to the entity, evasion,
+or charity margins requires re-derivation. The conversion path is currently
+priced free of the corporate layer. \pending
+
+\subsubsection{Entity shifting}
+\label{sec:entity}
+
+\field{What it captures}
+Business income relocating across the corporate and pass-through boundary in
+response to the corporate-to-individual rate differential, following Pearce and
+Prisinzano. \pending
+
+\field{Summary}
+Module \code{do_entity_shifting}
+(\code{config/scenarios/behavior/entity_shifting/pearce_prisinzano.R});
+\textsc{real}. The shifting semi-elasticity is presently a fixed value of
+$0.25$. This is a known limitation: it should be derived from the model's own
+deferral value $\tau_{eq}/\tau$, which would make the corporate retention shelter
+respond to the realization-at-death regime rather than remaining invariant to
+it. \pending
+
+\subsubsection{Evasion}
+\label{sec:evasion}
+
+\field{What it captures}
+Under-reporting of self-employment, partnership, S-corporation, and rental
+income that rises with the net-of-tax rate; the leakage component of the ETI.
+\pending
+
+\field{Summary}
+Module \code{do_evasion} (\code{config/scenarios/behavior/evasion/debacker.R});
+\textsc{reporting}. Net-of-tax elasticities: Schedule C/F $0.046$, partnership
+and S-corporation $0.052$, rent $0.040$. Wages, interest, and dividends do not
+respond, reflecting information reporting. Evidence from DeBacker, Heim, and
+Yuskavage. Feeds the hidden-ledger link (Section~\ref{sec:avoidance}).
+Limitations: positive legs only; the overstated-loss margin and a top-graded
+multiplier are deferred. \pending
+
+%----------------------------------------------------------------------
+\subsection{Wealth and estate own-rate responses}
+
+\subsubsection{Wealth avoidance and the hidden ledger}
+\label{sec:avoidance}
+
+\field{What it captures}
+Reduction in reported taxable wealth under a wealth tax, through legal valuation
+management and concealment, with concealment made consistent across bases so
+that a concealed dollar also escapes income, capital-gains, and estate tax.
+\pending
+
+\field{Summary}
+Module \code{do_wealth} (\code{config/scenarios/behavior/wealth/avoidance.R});
+\textsc{reporting}, writing only the \code{net_worth} isolation point and
+\code{estate_concealed_frac}. Semi-elasticities: marketable wealth $-7$,
+closely-held wealth $-17$. Concealment shares: public $1.0$, private $0.5$.
+Migration is subsumed here as a ceiling (Section~\ref{sec:other}). \pending
+
+\subsubsection{Estate own-rate response}
+\label{sec:estate-ownrate}
+
+\field{What it captures}
+Reduction in reported gross estate in response to a change in the
+net-of-estate-tax rate. \pending
+
+\field{Summary}
+Part of \code{do_wealth}; \textsc{reporting}, via \code{estate_concealed_frac}.
+Elasticity $\varepsilon=0.16$ (\code{ESTATE_REPORT_EPS}; Kopczuk--Slemrod band
+$0.10$--$0.22$), in the net-of-tax form
+$\text{retained}=\big((1-\tau_S)/(1-\tau_B)\big)^{\varepsilon}$, keyed to the
+change in the marginal estate rate rather than its level. Evidence from Kopczuk
+and Slemrod. A rate-responsive charitable-bequest margin is not yet built.
+\pending
+
+%----------------------------------------------------------------------
+\subsection{Saving and financing}
+
+\subsubsection{The wealth-financing channel}
+\label{sec:bathtub}
+
+\field{What it captures}
+A share $s=1-\text{MPC}$ of the net above-baseline during-life tax is financed
+out of wealth rather than consumption. It compounds over time and enters the
+estate and capital-income bases at death. This is the channel through which a
+during-life tax reduces future wealth-based revenue. \pending
+
+\field{Mechanism}
+A cohort recurrence with kernel and forcing
+\[
+G(a,p,t) = \big(1+r_{\text{total}}(t)\big) - s\,(\tau y + \tau_w),
+\qquad
+F = \Delta T^{0} - \Delta Y_{\text{exog}}.
+\]
+\pending
+
+\field{Summary}
+Mechanical applier (\code{src/sim/wealth_dynamics.R},
+\code{src/sim/cohort_bathtub.R}), run at the head of the conventional pass;
+\textsc{real}. Parameters: the saving-share profile $s(\text{age},\text{net-worth
+percentile})$, calibrated from about $0.1$ at the bottom to $0.80$ at the top; a
+transition matrix; a cap $\code{fmax}=0.9$; and $r_{\text{total}}$ equal to
+nominal GDP-per-capita growth. It is a financing response, not a rate-of-return
+saving elasticity. It requires a dedicated pass, roughly doubling compute.
+\pending
+
+%----------------------------------------------------------------------
+\subsection{Corporate incidence and labor-market margins}
+
+\subsubsection{Corporate incidence}
+\label{sec:corp}
+
+\field{What it captures}
+The record-level incidence of a corporate rate change: cuts to dividend,
+interest, rent, and pass-through flows; an equity markdown on exposed asset
+stocks; a capital-gains adjustment; dissaving through the wealth channel; and an
+endogenous individual-tax offset. \pending
+
+\field{Summary}
+Mechanical, revenue-side applier (\code{src/sim/corp_incidence.R}) with
+fail-closed activation on \code{corporate_meta.yaml}; \textsc{real}. Parameters
+are hardcoded \code{CORP_*} constants, several of which are placeholders pending
+measurement and disclosed as such. The endogenous offset makes the corporate row
+sensitive to stacking order. The most complete existing documentation is
+\code{other/corporate_incidence/CONSIDERATIONS.md} and \code{FORMAL_MODEL.md}.
+\pending
+
+\subsubsection{Charity, employment, and migration}
+\label{sec:other}
+
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Charity.} Module \code{do_charity}; tax-price elasticity $-0.5$ on
+cash giving. The appreciated-asset margin, through which a higher capital-gains
+rate raises the subsidy to donating securities, is not built. \pending
+\item \textbf{Employment.} Module \code{do_employment}
+(\code{config/scenarios/behavior/employment/bastian.R}); extensive-margin wage
+elasticities following Bastian. Second-order for the top-tax question; documented
+for completeness. \pending
+\item \textbf{Migration.} No standalone channel. It is subsumed as a ceiling
+within the wealth-avoidance semi-elasticity and disclosed as such.
+\item \textbf{Excluded by convention.} Real labor supply and a rate-of-return
+saving elasticity are excluded; the wealth channel is financing, not saving.
+\end{itemize}
+
+%======================================================================
+\section{Limitations and open items}
+\label{sec:limitations}
+
+Two facts frame this section. First, the realization problem prices from a single
+tax rate plus the shared $F$, $h$, and estate terms, so any mispriced cross-rate
+content appears as a missing interaction rather than as noise. Second, $\sigma$
+is a residual, so a gap inside the ETI bundle carries a re-calibration cost that
+a gap outside it does not (Section~\ref{sec:eti}).
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{0.30\textwidth}cp{0.34\textwidth}l@{}}
+\toprule
+Item & Ref. & Effect & Status \\
+\midrule
+Entity-shifting fixed at $0.25$ & \ref{sec:entity} & shelter invariant to death regime & open, in-bundle \\
+Corporate constants placeholder & \ref{sec:corp} & corporate estimate and ETR band & disclosed \\
+Wealth-carry cell aggregation & \ref{sec:carry} & understates by 8--33\%, conservative & accepted \\
+Appreciated-asset giving margin & \ref{sec:other} & understates giving and lock-in at high rates & open, in-bundle \\
+Migration not explicit & \ref{sec:other} & subsumed as a ceiling & by convention \\
+Corporate layer absent from $\sigma$ & \ref{sec:conversion} & conversion priced corporate-free & open, in-bundle \\
+Estate own-rate coverage & \ref{sec:estate-ownrate} & no charitable-bequest response & partial \\
+Evasion coverage & \ref{sec:evasion} & positive legs only; flat top multiplier & partial \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Calibration maintenance.}
+The residual parameters, $\sigma$ and $\eta$ under its conditioning assumptions,
+are monitored by an automated check: a low-cost internal-moment drift test on
+each run, and a $\sigma$ re-derivation triggered by any commit that touches the
+conditioning set (entity shifting, evasion, the charity elasticity, the
+conversion pool, or the input-data vintage). Reference values are stored in
+\code{other/kg_model_tests/calibration_reference.csv}. The check detects drift;
+it does not re-pin automatically.
+
+%======================================================================
+\section{References}
+\label{sec:references}
+\emph{To be completed.} Kopczuk and Slemrod (2001); Dowd, McClelland, and
+Muthitacharoen (2015); DeBacker, Heim, and Yuskavage; Pearce and Prisinzano
+(2018); Bastian (2023); Saez and Zucman on wealth-tax avoidance; and the JCT and
+CBO realization-elasticity conventions.
+
+%======================================================================
+\appendix
+\section{Derivations and calibration}
+\label{sec:appendix}
+
+\subsection{Capital-gains realization}
+\label{sec:app-realization}
+
+\paragraph{The problem.}
+For a representative cell, let $r_D$ be the discretionary realization rate on the
+gain pool. Each unrealized dollar carries a non-tax reservation benefit $b\ge0$
+to selling, drawn from an exponential distribution, and the holder realizes when
+$b$ exceeds the tax wedge between realizing now and holding. The entropy
+realization cost $C(r_D)$ is the cost whose marginal is the inverse survival
+function of that exponential,
+\begin{equation}
+\label{eq:cprime}
+C'(r_D) = \tfrac{1}{\eta}\ln\!\big(r_D/r_D^{\,B}\big),
+\qquad C'(r_D^{\,B}) = 0,
+\end{equation}
+so the baseline rate is the zero-cost reference. The holder equates the net
+benefit of realizing, $\kappa-MC$, to $C'(r_D)$, with $\kappa$ the reservation
+constant and $MC$ as in~\eqref{eq:mc}.
+
+\paragraph{Two passes.}
+Baseline inversion gives $C'(r_D^{\,B})=0$, hence $\kappa=MC^{B}$ exactly,
+interior and at the corner. The scenario condition $\kappa-MC^{j}=C'(r_D)$ then
+yields~\eqref{eq:foc}. Only the upper clip binds, and cells with $r_D^{\,B}=0$
+stay at zero. Since $\mathrm{d}\ln r_D/\mathrm{d}MC=-\eta$ everywhere and the
+whole pool responds, $\eta$ is the aggregate long-run semi-elasticity and the
+revenue-maximizing rate is approximately $1/\eta$.
+
+\paragraph{Single-pool specification.}
+An earlier specification split baseline realizations into a responsive share and
+an inert share, the latter a point mass of fully constrained sellers. That floor
+was an artifact of an earlier quadratic cost with no tail, and it removed the
+interior revenue maximum. The exponential reservation distribution already
+represents the heterogeneity the floor stood in for, so the current
+specification drops it: one pool, with a level margin from the Bellman and a
+timing margin from the overlay.
+
+\paragraph{Timing overlay.}
+A fraction $f$ of baseline realizations retimes across a one-year window toward
+the lower-wedge year, with move-share
+$\operatorname{clamp}(\Delta\text{wedge}/\text{ref\_wedge},0,1)$ and
+$\text{ref\_wedge}=0.05$. Composed as a net shift
+$r_S=r_{\text{ord},S}+(r_{\text{plan},S}-r_{\text{plan},B})$, it nets to zero
+under a uniform permanent shock, so $\eta$ is identified independently of $f$.
+
+\paragraph{Calibration of $\eta$.}
+On the full simulator, measure
+$E_{\text{full}}(\eta)=\log(R_{\text{shock}}/R_{\text{base}})/\Delta\tau_{rw}$ at
+simulation year 30 across a grid; the surface is linear through the origin.
+Invert for $\eta^{\star}=|E_{\text{full}}^{\star}|/\text{slope}$ with
+$E_{\text{full}}^{\star}=-2.52$ and slope $1.0155$, giving $\eta^{\star}=2.4825$
+(grid $\eta\in\{2,2.3992,3\}$ mapping to
+$E_{\text{full}}\in\{-2.05,-2.44,-3.03\}$). Provenance is guarded: a stale value
+warns, and a strict-calibration flag halts.
+
+\bigskip
+\noindent\emph{Appendix derivations for the remaining channels follow at this
+depth.}
+
+\section{Parameter and provenance table}
+\label{sec:app-params}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}llll@{}}
+\toprule
+Constant & Value & Reference moment & Derived \\
+\midrule
+\code{KG_DYN_DEFAULT_ETA} & $2.4825$ & full-sim $E_{\text{full}}=-2.52$ / slope $1.0155$ & 2026-07-12 \\
+\code{KG_DYN_TIMEABLE_SHARE} & $0.2542$ & full-sim short-run moment & 2026-07-09 \\
+\code{SIGMA_CONV} & $0.16$ & top-ordinary ETI $\approx0.25$ & 2026-07-12 \\
+\code{ESTATE_REPORT_EPS} & $0.16$ & Kopczuk--Slemrod (band $0.10$--$0.22$) & 2026-07-12 \\
+Evasion (C/PT/rent) & $0.046/0.052/0.040$ & DeBacker--Heim--Yuskavage & --- \\
+Wealth avoidance (mkt/closely-held) & $-7/-17$ & author-accepted & 2026-07-08 \\
+Concealment share (public/private) & $1.0/0.5$ & consistency across bases & 2026-07-08 \\
+Entity shifting & $0.25$ (stub) & should be $\tau_{eq}/\tau$ & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent The reference-moment column is also the source for the staleness check
+(\code{calibration_reference.csv}).
+
+\end{document}

@@ -1,0 +1,160 @@
+<title>Figure 1 — effective tax rates on top groups, ranked by income and by wealth</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --c-cash:#2a78d6; --c-hs:#eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#d9e1ea; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+            --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+            --c-cash:#3987e5; --c-hs:#d95926; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#d9e1ea; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+    --c-cash:#3987e5; --c-hs:#d95926; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --c-cash:#2a78d6; --c-hs:#eb6834; }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font-family: Charter, "Bitstream Charter", Cambria, Georgia, serif;
+         font-size:16px; line-height:1.55; }
+  .wrap { max-width: 54rem; margin:0 auto; padding:2.2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:1rem; margin-bottom:1.6rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600;
+             letter-spacing:.13em; text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; line-height:1.2; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; }
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+         padding:1.3rem 1.4rem 1rem; margin:1.6rem 0; }
+  .opt { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700;
+         letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin:0 0 .4rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",Roboto,sans-serif; font-size:1.06rem;
+            font-weight:700; margin:0 0 .15rem; line-height:1.35; text-wrap:balance; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.8rem; color:var(--muted); margin:0 0 .8rem; }
+  .legend { display:flex; flex-wrap:wrap; gap:.3rem 1.2rem; font-family:system-ui,sans-serif;
+            font-size:.75rem; color:var(--muted); margin:0 0 .7rem; }
+  .key { display:inline-flex; align-items:center; gap:.4rem; }
+  .sw { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .panel { margin:0 0 .3rem; }
+  .panel + .panel { border-top:1px solid var(--grid); margin-top:1rem; padding-top:.9rem; }
+  .panel h3 { font-family:system-ui,sans-serif; font-size:.78rem; font-weight:700;
+              letter-spacing:.04em; text-transform:uppercase; color:var(--ink);
+              margin:0 0 .15rem; }
+  .panel p.note { font-family:system-ui,sans-serif; font-size:.74rem; color:var(--muted);
+                  margin:0 0 .3rem; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:system-ui,"Segoe UI",Roboto,sans-serif; }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+         border-top:1px solid var(--grid); margin-top:.7rem; padding-top:.55rem; line-height:1.5; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">The Budget Lab · 2027 current-law baseline</p>
+  <h1>Figure 1</h1>
+  <p class="standfirst">Effective federal tax rates on top groups, cut two ways: by income and by
+  net worth.</p>
+</header>
+
+<div class="fig">
+  <p class="opt">Figure 1</p>
+  <h2>Effective federal tax rates on top groups, cash and accrual income bases, 2027</h2>
+  <p class="sub">Includes income, payroll, estate, and corporate taxes</p>
+  <div class="legend">
+    <span class="key"><span class="sw" style="background:var(--c-cash)"></span>Rate on cash (realized) income</span>
+    <span class="key"><span class="sw" style="background:var(--c-hs)"></span>Rate on accrual income</span>
+  </div>
+
+  <div class="panel">
+    <h3>Groups ranked by income</h3>
+    <p class="note">Each group ranked by the income measure shown</p>
+    <svg id="f1a" role="img" aria-label="Dumbbell chart of effective tax rates on cash versus accrual income for income-ranked top groups"></svg>
+  </div>
+
+  <div class="panel">
+    <h3>Groups ranked by net worth</h3>
+    <p class="note">Both rates measured over the same wealth-ranked group</p>
+    <svg id="f1b" role="img" aria-label="Dumbbell chart of effective tax rates on cash versus accrual income for wealth-ranked top groups, including billionaires"></svg>
+  </div>
+
+  <p class="cap">Cash income is realized income including the employer share of payroll tax;
+  accrual income replaces realized gains with accruals. Tax dollars are the same in both
+  columns of a panel; the accrual rate is lower because its denominator is larger. Wealth groups
+  are cut on net worth, with billionaires a level cut at $1 billion rather than a percentile.
+  Federal taxes only; state and local taxes would raise levels and are generally less
+  progressive. Source: The Budget Lab Tax-Simulator, 2027 current-law baseline.</p>
+</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Income-ranked groups: self-ranked, from the shipped ETR cube.
+  var INC = {
+    groups: ["Top 1%","Top 0.1%","Top 0.01%"],
+    cash:   [26.2, 29.2, 30.0],
+    hs:     [14.9, 16.6, 15.2]
+  };
+  // Wealth-ranked groups: wealth_group_etr_2027.csv, all-in taxes,
+  // capital-income corporate allocation.
+  var NW = {
+    groups: ["Top 1%","Top 0.1%","Top 0.01%","Billionaires"],
+    cash:   [27.6, 29.2, 30.7, 31.3],
+    hs:     [13.3, 12.9, 9.1, 8.2]
+  };
+
+  var XMAX = 35, TICK = 5;
+
+  function cvar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+  function dumbbell(id, groups, series) {
+    var W=760, mL=110, mR=70, mT=14, rowH=42, H=mT+rowH*groups.length+34;
+    function X(v){ return mL+(v/XMAX)*(W-mL-mR); }
+    var o=[];
+    for (var gx=0; gx<=XMAX; gx+=TICK) {
+      o.push('<line x1="'+X(gx)+'" y1="'+mT+'" x2="'+X(gx)+'" y2="'+(mT+rowH*groups.length)+'" stroke="'+cvar('--grid')+'" stroke-width="1"/>');
+      o.push('<text x="'+X(gx)+'" y="'+(mT+rowH*groups.length+18)+'" font-size="11" text-anchor="middle" fill="'+cvar('--muted')+'">'+gx+'%</text>');
+    }
+    groups.forEach(function(g,i){
+      var y=mT+rowH*i+rowH/2;
+      o.push('<text x="'+(mL-10)+'" y="'+(y+4)+'" font-size="12.5" font-weight="600" text-anchor="end" fill="'+cvar('--ink')+'">'+g+'</text>');
+      var lo=Math.min.apply(null,series.map(function(s){return s.vals[i];}));
+      var hi=Math.max.apply(null,series.map(function(s){return s.vals[i];}));
+      o.push('<line x1="'+X(lo)+'" y1="'+y+'" x2="'+X(hi)+'" y2="'+y+'" stroke="'+cvar('--axis')+'" stroke-width="1.6"/>');
+      series.forEach(function(s){
+        o.push('<circle cx="'+X(s.vals[i])+'" cy="'+y+'" r="6" fill="'+cvar(s.colorVar)+'" stroke="'+cvar('--card')+'" stroke-width="1.5"/>');
+      });
+      // leftmost label to the left, rightmost to the right
+      var sorted=series.map(function(s){return s.vals[i];}).sort(function(a,b){return a-b;});
+      sorted.forEach(function(v,k){
+        var anchor = k===0 ? 'end' : 'start', dx = k===0 ? -10 : 10;
+        o.push('<text x="'+(X(v)+dx)+'" y="'+(y+4)+'" font-size="11.5" font-weight="600" text-anchor="'+anchor+'" fill="'+cvar('--ink')+'" font-variant-numeric="tabular-nums">'+v.toFixed(1)+'%</text>');
+      });
+    });
+    var svg=document.getElementById(id);
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=o.join('');
+  }
+
+  function render(){
+    dumbbell('f1a', INC.groups, [
+      { vals: INC.hs,   colorVar:'--c-hs'   },
+      { vals: INC.cash, colorVar:'--c-cash' }
+    ]);
+    dumbbell('f1b', NW.groups, [
+      { vals: NW.hs,   colorVar:'--c-hs'   },
+      { vals: NW.cash, colorVar:'--c-cash' }
+    ]);
+  }
+  render();
+
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', render);
+  new MutationObserver(render).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+})();
+</script>

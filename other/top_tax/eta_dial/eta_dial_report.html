@@ -1,0 +1,233 @@
+<title>Capital-gains elasticity dial — what the test runs show</title>
+<style>
+:root {
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e;
+  --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --accent:#00356b;
+  --band:rgba(42,120,214,.08); --border:rgba(11,11,11,.10);
+  --eta1:#86b6ef; --eta2:#5598e7; --eta3:#2a78d6; --eta4:#184f95;
+  --pos:#2a78d6; --neg:#e34948;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7;
+  --muted:#898781; --grid:#2c2c2a; --axis:#383835; --accent:#9ec5f4;
+  --band:rgba(57,135,229,.14); --border:rgba(255,255,255,.10);
+  --eta1:#9ec5f4; --eta2:#6da7ec; --eta3:#3987e5; --eta4:#1c5cab;
+  --pos:#3987e5; --neg:#e66767;
+} }
+:root[data-theme="dark"] {
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink2:#c3c2b7;
+  --muted:#898781; --grid:#2c2c2a; --axis:#383835; --accent:#9ec5f4;
+  --band:rgba(57,135,229,.14); --border:rgba(255,255,255,.10);
+  --eta1:#9ec5f4; --eta2:#6da7ec; --eta3:#3987e5; --eta4:#1c5cab;
+  --pos:#3987e5; --neg:#e66767;
+}
+:root[data-theme="light"] {
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e;
+  --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --accent:#00356b;
+  --band:rgba(42,120,214,.08); --border:rgba(11,11,11,.10);
+  --eta1:#86b6ef; --eta2:#5598e7; --eta3:#2a78d6; --eta4:#184f95;
+  --pos:#2a78d6; --neg:#e34948;
+}
+body { background:var(--page); color:var(--ink); margin:0;
+  font:16px/1.55 Georgia, 'Times New Roman', serif; }
+main { max-width:900px; margin:0 auto; padding:40px 22px 80px; }
+.eyebrow { font:600 12px/1 system-ui,-apple-system,sans-serif;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+h1 { font-size:34px; line-height:1.15; margin:.35em 0 .2em; text-wrap:balance; }
+h2 { font-size:23px; margin:2.2em 0 .4em; text-wrap:balance; }
+.sub { color:var(--ink2); margin:0 0 1.4em; }
+p { max-width:66ch; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:14px; margin:26px 0 8px; }
+.tile { background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:16px 18px; }
+.tile .v { font:700 30px/1.1 system-ui,-apple-system,sans-serif; }
+.tile .k { font:600 12px/1.3 system-ui,sans-serif; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+.tile .d { color:var(--ink2); font-size:14px; margin-top:6px; }
+figure { margin:1.4em 0 2em; background:var(--surface);
+  border:1px solid var(--border); border-radius:10px; padding:14px 14px 6px; }
+figcaption { font:600 13.5px/1.4 system-ui,sans-serif; color:var(--ink2);
+  margin:2px 4px 10px; }
+.scroller { overflow-x:auto; }
+svg { display:block; max-width:100%; height:auto; }
+svg text { font:12px system-ui,-apple-system,sans-serif; fill:var(--ink2);
+  font-variant-numeric:tabular-nums; }
+.tick { fill:var(--muted); }
+.rowlab { font-size:13px; fill:var(--ink); }
+.dlab { font-weight:600; font-size:12.5px; }
+.axlab { fill:var(--muted); font-size:12px; }
+.grid { stroke:var(--grid); stroke-width:1; }
+.baseline { stroke:var(--axis); stroke-width:1.5; }
+.ln { fill:none; stroke-width:2.5; }
+.range { stroke:var(--axis); stroke-width:3; stroke-linecap:round; }
+.err { stroke-width:2.5; }
+.fit { stroke:var(--muted); stroke-width:1.5; stroke-dasharray:5 4; }
+.band { fill:var(--band); }
+.pt { stroke:var(--surface); stroke-width:2; cursor:default; }
+.bar { stroke:var(--surface); stroke-width:1; }
+#tip { position:fixed; pointer-events:none; background:var(--ink);
+  color:var(--page); font:12.5px/1.4 system-ui,sans-serif; padding:7px 10px;
+  border-radius:7px; max-width:290px; opacity:0; transition:opacity .12s; z-index:9; }
+table { border-collapse:collapse; font:13.5px system-ui,sans-serif;
+  font-variant-numeric:tabular-nums; margin:10px 0; }
+th,td { text-align:right; padding:6px 12px; border-bottom:1px solid var(--grid); }
+th:first-child,td:first-child { text-align:left; }
+th { color:var(--muted); font-weight:600; }
+details { background:var(--surface); border:1px solid var(--border);
+  border-radius:10px; padding:12px 16px; margin:1.4em 0; }
+summary { cursor:pointer; font:600 14px system-ui,sans-serif; color:var(--ink2); }
+.note { font-size:14px; color:var(--ink2); border-left:3px solid var(--accent);
+  padding-left:14px; }
+</style>
+<main>
+<div class="eyebrow">Tax-Simulator · top-tax atlas · July 11, 2026</div>
+<h1>How much does the capital-gains story depend on the elasticity?</h1>
+<p class="sub">We re-ran the model’s capital-gains scenarios at three alternative
+investor-reaction strengths, without touching anything else. Three findings: the
+answer for a stand-alone rate hike swings enormously; the full package barely
+moves; and the results follow a simple curve exactly well enough to power a live
+“elasticity dial” on the atlas page.</p>
+
+<div class="tiles">
+<div class="tile"><div class="k">Stand-alone 40% rate, 2027–36</div>
+<div class="v">+$1.0T → −$550B</div>
+<div class="d">from sluggish to hair-trigger investors — the sign flips</div></div>
+<div class="tile"><div class="k">Full package, same test</div>
+<div class="v">7% swing</div>
+<div class="d">taxing gains at death backstops the rate hike</div></div>
+<div class="tile"><div class="k">Dial formula, blind test</div>
+<div class="v">≈ 2%</div>
+<div class="d">typical miss when predicting a run it never saw</div></div>
+</div>
+
+<h2>What we did</h2>
+<p>The model’s capital-gains behavior has one headline knob: how strongly
+investors change their selling in response to the tax rate (the parameter
+“eta”, our calibrated central value 2.4, in line with the long-run
+semi-elasticity evidence). We re-ran 7 scenarios — three rate hikes, two
+death-tax regimes, one combination, and the full reference package — at eta =
+1.2 (“sluggish”, half our central), 3.6 (“jumpy”, 1.5×)
+and 4.8 (“hair-trigger”, double). 21 runs, 30-year horizon, full sample.
+Everything else — the law, the data, every other behavioral setting — is
+identical, and the “no-behavior” (static) numbers came out identical to
+the fifth decimal, which confirms the knob only touches what it should.</p>
+
+<h2>1 · A stand-alone rate hike lives or dies by this number</h2>
+<p>Raise the top capital-gains rate to 40% and keep step-up at death, and the
+first-decade take ranges from <b>+$1.0T</b> (sluggish) to
+<b>−$550B</b> (hair-trigger). The whole shape of the revenue curve
+changes: with sluggish investors, revenue keeps climbing to a 50% rate; with
+hair-trigger investors the curve tips negative before 25%. The peak sits roughly
+at 1/eta, exactly as the model’s math says it should.</p>
+<figure><figcaption>Revenue from raising the capital-gains rate, first decade (2027–36), with behavior — one line per investor-reaction setting ($B)</figcaption><div class="scroller"><svg viewBox="0 0 820 400" width="820" role="img" aria-label="Revenue from raising the capital-gains rate, first decade (2027–36), with behavior — one line per investor-reaction setting ($B)"><line class="grid" x1="78" y1="356.0" x2="652" y2="356.0"/><text class="tick" x="70" y="360.0" text-anchor="end">-800</text><line class="grid" x1="78" y1="290.0" x2="652" y2="290.0"/><text class="tick" x="70" y="294.0" text-anchor="end">-400</text><line class="baseline" x1="78" y1="224.0" x2="652" y2="224.0"/><text class="tick" x="70" y="228.0" text-anchor="end">0</text><line class="grid" x1="78" y1="158.0" x2="652" y2="158.0"/><text class="tick" x="70" y="162.0" text-anchor="end">400</text><line class="grid" x1="78" y1="92.0" x2="652" y2="92.0"/><text class="tick" x="70" y="96.0" text-anchor="end">800</text><line class="grid" x1="78" y1="26.0" x2="652" y2="26.0"/><text class="tick" x="70" y="30.0" text-anchor="end">1,200</text><text class="tick" x="78.0" y="376" text-anchor="middle">20%</text><text class="tick" x="173.7" y="376" text-anchor="middle">25%</text><text class="tick" x="460.7" y="376" text-anchor="middle">40%</text><text class="tick" x="652.0" y="376" text-anchor="middle">50%</text><polyline class="ln" points="78.0,224.0 173.7,171.9 460.7,53.0 652.0,48.8" stroke="var(--eta1)"/><circle class="pt" cx="173.7" cy="171.9" r="4.5" fill="var(--eta1)" data-tip="Top rate 25% · reaction 1.2: +$316B over 2027–36"/><circle class="pt" cx="460.7" cy="53.0" r="4.5" fill="var(--eta1)" data-tip="Top rate 40% · reaction 1.2: +$1.0T over 2027–36"/><circle class="pt" cx="652.0" cy="48.8" r="4.5" fill="var(--eta1)" data-tip="Top rate 50% · reaction 1.2: +$1.1T over 2027–36"/><text class="dlab" x="662.0" y="52.8" fill="var(--eta1)">sluggish (1.2)</text><polyline class="ln" points="78.0,224.0 173.7,196.8 460.7,153.6 652.0,152.7" stroke="var(--eta2)"/><circle class="pt" cx="173.7" cy="196.8" r="4.5" fill="var(--eta2)" data-tip="Top rate 25% · reaction 2.4 (central): +$165B over 2027–36"/><circle class="pt" cx="460.7" cy="153.6" r="4.5" fill="var(--eta2)" data-tip="Top rate 40% · reaction 2.4 (central): +$427B over 2027–36"/><circle class="pt" cx="652.0" cy="152.7" r="4.5" fill="var(--eta2)" data-tip="Top rate 50% · reaction 2.4 (central): +$432B over 2027–36"/><text class="dlab" x="662.0" y="156.7" fill="var(--eta2)">central (2.4)</text><polyline class="ln" points="78.0,224.0 173.7,220.8 460.7,240.8 652.0,242.5" stroke="var(--eta3)"/><circle class="pt" cx="173.7" cy="220.8" r="4.5" fill="var(--eta3)" data-tip="Top rate 25% · reaction 3.6: +$19B over 2027–36"/><circle class="pt" cx="460.7" cy="240.8" r="4.5" fill="var(--eta3)" data-tip="Top rate 40% · reaction 3.6: −$102B over 2027–36"/><circle class="pt" cx="652.0" cy="242.5" r="4.5" fill="var(--eta3)" data-tip="Top rate 50% · reaction 3.6: −$112B over 2027–36"/><text class="dlab" x="662.0" y="246.5" fill="var(--eta3)">jumpy (3.6)</text><polyline class="ln" points="78.0,224.0 173.7,244.0 460.7,314.8 652.0,318.1" stroke="var(--eta4)"/><circle class="pt" cx="173.7" cy="244.0" r="4.5" fill="var(--eta4)" data-tip="Top rate 25% · reaction 4.8: −$121B over 2027–36"/><circle class="pt" cx="460.7" cy="314.8" r="4.5" fill="var(--eta4)" data-tip="Top rate 40% · reaction 4.8: −$550B over 2027–36"/><circle class="pt" cx="652.0" cy="318.1" r="4.5" fill="var(--eta4)" data-tip="Top rate 50% · reaction 4.8: −$570B over 2027–36"/><text class="dlab" x="662.0" y="322.1" fill="var(--eta4)">hair-trigger (4.8)</text><text class="axlab" x="365.0" y="394" text-anchor="middle">top capital-gains rate</text></svg></div></figure>
+
+<h3>Why does the central curve flatten around 40%?</h3>
+<p>This is a feature of the behavioral functional form, not smoothing in the
+chart. For each age cell, the model makes the realization rate respond as
+<i>r<sub>policy</sub> = r<sub>base</sub> exp[−eta × tax-cost increase]</i>.
+The statutory rate raises tax collected on each sale, while the exponential
+term shrinks the number of taxable sales. In the simple one-rate version,
+revenue is proportional to <i>tau exp[−eta(tau−tau<sub>base</sub>)]</i>, whose
+peak is approximately <i>1/eta</i>. At the central eta of 2.3992,
+that is about 41.7% — almost exactly the 40% point.</p>
+<p>The raw simulations show the trade-off: without behavior, moving from 40%
+to 50% adds $51B in the first
+decade. With central behavior, it adds only
+$5B
+(+$427B to +$432B). The full
+model also includes heterogeneous marginal tax rates, gain stocks, mortality,
+and timing, so the peak is an approximation rather than a universal exact
+rate; but those mechanisms do not create the flatness. The exponential
+realization response does.</p>
+
+<h3>Is that a standard empirical form?</h3>
+<p>Yes: it is the familiar <b>constant semi-elasticity</b> specification. A
+regression written as <i>log(realizations) = a + b × tax rate</i> implies
+<i>realizations = exp(a) exp(b × tax rate)</i>. With a negative coefficient,
+that is the same exponential response used here; revenue is then roughly
+<i>tax rate × exp(b × tax rate)</i>, which peaks at <i>−1/b</i>.</p>
+<p>The model writes the same idea as <i>log(r<sub>S</sub>) −
+log(r<sub>B</sub>) = −eta × (MC<sub>S</sub> − MC<sub>B</sub>)</i>. Its
+regressor is the relevant marginal tax cost rather than simply the statutory
+top rate, which lets it account for tax interactions and different taxpayers.
+This is one standard choice; another common form regresses log realizations on
+the log net-of-tax rate, <i>log(1−tax rate)</i>, which has different curvature
+near a 100% tax rate.</p>
+
+<h2>2 · Death-based taxes lean the other way</h2>
+<p>Here is the same experiment for each policy piece. The rate-hike pieces
+(top rows) collect much less when investors react more. But taxing gains at
+death moves in the <b>opposite direction</b>: the harder investors defer to
+dodge the annual tax, the more gains pile up to be taxed at death. Reaction
+strength shifts revenue from during-life collection to at-death collection
+rather than destroying it — which is why the combination row is so much
+flatter than the rate-hike rows.</p>
+<figure><figcaption>Same policies, three reaction settings — revenue with behavior, 2027–36 ($B)</figcaption><div class="scroller"><svg viewBox="0 0 820 392" width="820" role="img" aria-label="Same policies, three reaction settings — revenue with behavior, 2027–36 ($B)"><line class="grid" x1="246.8" y1="26" x2="246.8" y2="354"/><text class="tick" x="246.8" y="370" text-anchor="middle">−$500B</text><line class="baseline" x1="351.2" y1="26" x2="351.2" y2="354"/><text class="tick" x="351.2" y="370" text-anchor="middle">$0</text><line class="grid" x1="455.7" y1="26" x2="455.7" y2="354"/><text class="tick" x="455.7" y="370" text-anchor="middle">+$500B</text><line class="grid" x1="560.2" y1="26" x2="560.2" y2="354"/><text class="tick" x="560.2" y="370" text-anchor="middle">+$1.0T</text><line class="grid" x1="664.6" y1="26" x2="664.6" y2="354"/><text class="tick" x="664.6" y="370" text-anchor="middle">+$1.5T</text><line class="grid" x1="769.1" y1="26" x2="769.1" y2="354"/><text class="tick" x="769.1" y="370" text-anchor="middle">+$2.0T</text><text class="rowlab" x="193" y="64.0" text-anchor="end">Cap-gains rate 40%</text><line class="range" x1="236.2" y1="60.0" x2="567.8" y2="60.0"/><circle class="pt" cx="567.8" cy="60.0" r="6" fill="var(--eta1)" data-tip="Cap-gains rate 40%, 2027–36: +$1.0T if sluggish (1.2) → −$550B if hair-trigger (4.8); central +$427B"/><circle class="pt" cx="236.2" cy="60.0" r="6" fill="var(--eta4)" data-tip="Cap-gains rate 40%, 2027–36: +$1.0T if sluggish (1.2) → −$550B if hair-trigger (4.8); central +$427B"/><circle class="pt" cx="440.4" cy="60.0" r="5" fill="var(--eta2)" data-tip="Cap-gains rate 40%, 2027–36: +$1.0T if sluggish (1.2) → −$550B if hair-trigger (4.8); central +$427B"/><text class="rowlab" x="193" y="116.0" text-anchor="end">Cap-gains rate 50%</text><line class="range" x1="232.1" y1="112.0" x2="573.1" y2="112.0"/><circle class="pt" cx="573.1" cy="112.0" r="6" fill="var(--eta1)" data-tip="Cap-gains rate 50%, 2027–36: +$1.1T if sluggish (1.2) → −$570B if hair-trigger (4.8); central +$432B"/><circle class="pt" cx="232.1" cy="112.0" r="6" fill="var(--eta4)" data-tip="Cap-gains rate 50%, 2027–36: +$1.1T if sluggish (1.2) → −$570B if hair-trigger (4.8); central +$432B"/><circle class="pt" cx="441.5" cy="112.0" r="5" fill="var(--eta2)" data-tip="Cap-gains rate 50%, 2027–36: +$1.1T if sluggish (1.2) → −$570B if hair-trigger (4.8); central +$432B"/><text class="rowlab" x="193" y="168.0" text-anchor="end">Cap-gains rate 25%</text><line class="range" x1="325.9" y1="164.0" x2="417.2" y2="164.0"/><circle class="pt" cx="417.2" cy="164.0" r="6" fill="var(--eta1)" data-tip="Cap-gains rate 25%, 2027–36: +$316B if sluggish (1.2) → −$121B if hair-trigger (4.8); central +$165B"/><circle class="pt" cx="325.9" cy="164.0" r="6" fill="var(--eta4)" data-tip="Cap-gains rate 25%, 2027–36: +$316B if sluggish (1.2) → −$121B if hair-trigger (4.8); central +$165B"/><circle class="pt" cx="385.7" cy="164.0" r="5" fill="var(--eta2)" data-tip="Cap-gains rate 25%, 2027–36: +$316B if sluggish (1.2) → −$121B if hair-trigger (4.8); central +$165B"/><text class="rowlab" x="193" y="220.0" text-anchor="end">40% + tax gains at death</text><line class="range" x1="640.8" y1="216.0" x2="765.1" y2="216.0"/><circle class="pt" cx="765.1" cy="216.0" r="6" fill="var(--eta1)" data-tip="40% + tax gains at death, 2027–36: +$2.0T if sluggish (1.2) → +$1.4T if hair-trigger (4.8); central +$1.8T"/><circle class="pt" cx="640.8" cy="216.0" r="6" fill="var(--eta4)" data-tip="40% + tax gains at death, 2027–36: +$2.0T if sluggish (1.2) → +$1.4T if hair-trigger (4.8); central +$1.8T"/><circle class="pt" cx="721.5" cy="216.0" r="5" fill="var(--eta2)" data-tip="40% + tax gains at death, 2027–36: +$2.0T if sluggish (1.2) → +$1.4T if hair-trigger (4.8); central +$1.8T"/><text class="rowlab" x="193" y="272.0" text-anchor="end">Tax gains at death only</text><line class="range" x1="459.7" y1="268.0" x2="605.1" y2="268.0"/><circle class="pt" cx="459.7" cy="268.0" r="6" fill="var(--eta1)" data-tip="Tax gains at death only, 2027–36: +$519B if sluggish (1.2) → +$1.2T if hair-trigger (4.8); central +$741B"/><circle class="pt" cx="605.1" cy="268.0" r="6" fill="var(--eta4)" data-tip="Tax gains at death only, 2027–36: +$519B if sluggish (1.2) → +$1.2T if hair-trigger (4.8); central +$741B"/><circle class="pt" cx="506.1" cy="268.0" r="5" fill="var(--eta2)" data-tip="Tax gains at death only, 2027–36: +$519B if sluggish (1.2) → +$1.2T if hair-trigger (4.8); central +$741B"/><text class="rowlab" x="193" y="324.0" text-anchor="end">Carryover basis only</text><line class="range" x1="384.2" y1="320.0" x2="455.6" y2="320.0"/><circle class="pt" cx="384.2" cy="320.0" r="6" fill="var(--eta1)" data-tip="Carryover basis only, 2027–36: +$158B if sluggish (1.2) → +$499B if hair-trigger (4.8); central +$269B"/><circle class="pt" cx="455.6" cy="320.0" r="6" fill="var(--eta4)" data-tip="Carryover basis only, 2027–36: +$158B if sluggish (1.2) → +$499B if hair-trigger (4.8); central +$269B"/><circle class="pt" cx="407.5" cy="320.0" r="5" fill="var(--eta2)" data-tip="Carryover basis only, 2027–36: +$158B if sluggish (1.2) → +$499B if hair-trigger (4.8); central +$269B"/><circle cx="205" cy="384" r="5" fill="var(--eta1)"/><text class="tick" x="215" y="388">sluggish (1.2)</text><circle cx="355" cy="384" r="5" fill="var(--eta2)"/><text class="tick" x="365" y="388">central (2.4)</text><circle cx="505" cy="384" r="5" fill="var(--eta4)"/><text class="tick" x="515" y="388">hair-trigger (4.8)</text></svg></div></figure>
+
+<h2>3 · The full package is robust</h2>
+<p>The reference package (ordinary + capital gains + corporate + wealth + estate
++ gains-at-death) collects about <b>$10.3T</b> in the first decade at our
+central setting. Quadrupling the reaction strength moves that by only
+7% end to end — the death-tax backstop and the package’s
+other bases absorb most of what the rate hike loses. The elasticity is a
+first-order question for a stand-alone rate hike and a second-order question
+for the package.</p>
+<figure><figcaption>The full reference package: revenue collected per decade, by reaction setting ($T)</figcaption><div class="scroller"><svg viewBox="0 0 820 380" width="820" role="img" aria-label="The full reference package: revenue collected per decade, by reaction setting ($T)"><line class="baseline" x1="78" y1="316.0" x2="790" y2="316.0"/><text class="tick" x="70" y="320.0" text-anchor="end">$0T</text><line class="grid" x1="78" y1="244.5" x2="790" y2="244.5"/><text class="tick" x="70" y="248.5" text-anchor="end">$6T</text><line class="grid" x1="78" y1="173.0" x2="790" y2="173.0"/><text class="tick" x="70" y="177.0" text-anchor="end">$12T</text><line class="grid" x1="78" y1="101.5" x2="790" y2="101.5"/><text class="tick" x="70" y="105.5" text-anchor="end">$18T</text><line class="grid" x1="78" y1="30.0" x2="790" y2="30.0"/><text class="tick" x="70" y="34.0" text-anchor="end">$24T</text><rect class="bar" x="113.7" y="190.6" width="34" height="125.4" rx="4" fill="var(--eta1)" data-tip="Full package, 2027–36 · reaction 1.2: $10.5T collected"/><rect class="bar" x="157.7" y="193.7" width="34" height="122.3" rx="4" fill="var(--eta2)" data-tip="Full package, 2027–36 · reaction 2.4 (central): $10.3T collected"/><rect class="bar" x="201.7" y="196.5" width="34" height="119.5" rx="4" fill="var(--eta3)" data-tip="Full package, 2027–36 · reaction 3.6: $10.0T collected"/><rect class="bar" x="245.7" y="199.2" width="34" height="116.8" rx="4" fill="var(--eta4)" data-tip="Full package, 2027–36 · reaction 4.8: $9.8T collected"/><text class="dlab" x="196.7" y="178.6" text-anchor="middle">swing 7%</text><text class="tick" x="196.7" y="336" text-anchor="middle">2027–36</text><rect class="bar" x="351.0" y="129.6" width="34" height="186.4" rx="4" fill="var(--eta1)" data-tip="Full package, 2037–46 · reaction 1.2: $15.6T collected"/><rect class="bar" x="395.0" y="132.8" width="34" height="183.2" rx="4" fill="var(--eta2)" data-tip="Full package, 2037–46 · reaction 2.4 (central): $15.4T collected"/><rect class="bar" x="439.0" y="135.9" width="34" height="180.1" rx="4" fill="var(--eta3)" data-tip="Full package, 2037–46 · reaction 3.6: $15.1T collected"/><rect class="bar" x="483.0" y="138.9" width="34" height="177.1" rx="4" fill="var(--eta4)" data-tip="Full package, 2037–46 · reaction 4.8: $14.9T collected"/><text class="dlab" x="434.0" y="117.6" text-anchor="middle">swing 5%</text><text class="tick" x="434.0" y="336" text-anchor="middle">2037–46</text><rect class="bar" x="588.3" y="57.4" width="34" height="258.6" rx="4" fill="var(--eta1)" data-tip="Full package, 2047–56 · reaction 1.2: $21.7T collected"/><rect class="bar" x="632.3" y="61.4" width="34" height="254.6" rx="4" fill="var(--eta2)" data-tip="Full package, 2047–56 · reaction 2.4 (central): $21.4T collected"/><rect class="bar" x="676.3" y="65.3" width="34" height="250.7" rx="4" fill="var(--eta3)" data-tip="Full package, 2047–56 · reaction 3.6: $21.0T collected"/><rect class="bar" x="720.3" y="68.9" width="34" height="247.1" rx="4" fill="var(--eta4)" data-tip="Full package, 2047–56 · reaction 4.8: $20.7T collected"/><text class="dlab" x="671.3" y="45.4" text-anchor="middle">swing 5%</text><text class="tick" x="671.3" y="336" text-anchor="middle">2047–56</text><rect x="78" y="356" width="12" height="12" rx="3" fill="var(--eta1)"/><text class="tick" x="96" y="366">sluggish (1.2)</text><rect x="248" y="356" width="12" height="12" rx="3" fill="var(--eta2)"/><text class="tick" x="266" y="366">central (2.4)</text><rect x="418" y="356" width="12" height="12" rx="3" fill="var(--eta3)"/><text class="tick" x="436" y="366">jumpy (3.6)</text><rect x="588" y="356" width="12" height="12" rx="3" fill="var(--eta4)"/><text class="tick" x="606" y="366">hair-trigger (4.8)</text></svg></div></figure>
+
+<h2>4 · The dial formula passes its blind test</h2>
+<p>The model’s functional form implies revenue should follow a two-parameter
+exponential curve in eta. We tested that the honest way: for every policy and
+decade, fit the curve on the three <i>new</i> runs only, predict the central
+run it never saw, and compare. Typical miss: 1–2% of the no-behavior
+revenue; worst: 4.7% on the smallest scenario (carryover basis, a $1.9B miss on
+a $40B total). The real dial will pin all four measured points exactly and only
+interpolate between them, so it will be tighter than this test everywhere.</p>
+<figure><figcaption>Blind test: predict the central run from the other three, then compare against the real thing</figcaption><div class="scroller"><svg viewBox="0 0 820 402" width="820" role="img" aria-label="Blind test: predict the central run from the other three, then compare against the real thing"><rect x="400.0" y="26" width="195.0" height="342" class="band"/><line class="grid" x1="205.0" y1="26" x2="205.0" y2="368"/><text class="tick" x="205.0" y="384" text-anchor="middle">-6%</text><line class="grid" x1="302.5" y1="26" x2="302.5" y2="368"/><text class="tick" x="302.5" y="384" text-anchor="middle">-4%</text><line class="grid" x1="400.0" y1="26" x2="400.0" y2="368"/><text class="tick" x="400.0" y="384" text-anchor="middle">-2%</text><line class="baseline" x1="497.5" y1="26" x2="497.5" y2="368"/><text class="tick" x="497.5" y="384" text-anchor="middle">+0%</text><line class="grid" x1="595.0" y1="26" x2="595.0" y2="368"/><text class="tick" x="595.0" y="384" text-anchor="middle">+2%</text><line class="grid" x1="692.5" y1="26" x2="692.5" y2="368"/><text class="tick" x="692.5" y="384" text-anchor="middle">+4%</text><line class="grid" x1="790.0" y1="26" x2="790.0" y2="368"/><text class="tick" x="790.0" y="384" text-anchor="middle">+6%</text><text class="rowlab" x="193" y="63.0" text-anchor="end">Cap-gains rate 40%</text><line class="err" x1="497.5" y1="48.0" x2="415.0" y2="48.0" stroke="var(--neg)"/><circle class="pt" cx="415.0" cy="48.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 40%, decade 1: formula missed the real central run by -32$B (-1.7% of the no-behavior total)"/><line class="err" x1="497.5" y1="59.0" x2="431.3" y2="59.0" stroke="var(--neg)"/><circle class="pt" cx="431.3" cy="59.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 40%, decade 2: formula missed the real central run by -36$B (-1.4% of the no-behavior total)"/><line class="err" x1="497.5" y1="70.0" x2="385.2" y2="70.0" stroke="var(--neg)"/><circle class="pt" cx="385.2" cy="70.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 40%, decade 3: formula missed the real central run by -89$B (-2.3% of the no-behavior total)"/><text class="rowlab" x="193" y="109.0" text-anchor="end">Cap-gains rate 50%</text><line class="err" x1="497.5" y1="94.0" x2="417.0" y2="94.0" stroke="var(--neg)"/><circle class="pt" cx="417.0" cy="94.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 50%, decade 1: formula missed the real central run by -32$B (-1.7% of the no-behavior total)"/><line class="err" x1="497.5" y1="105.0" x2="432.3" y2="105.0" stroke="var(--neg)"/><circle class="pt" cx="432.3" cy="105.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 50%, decade 2: formula missed the real central run by -37$B (-1.3% of the no-behavior total)"/><line class="err" x1="497.5" y1="116.0" x2="385.3" y2="116.0" stroke="var(--neg)"/><circle class="pt" cx="385.3" cy="116.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 50%, decade 3: formula missed the real central run by -91$B (-2.3% of the no-behavior total)"/><text class="rowlab" x="193" y="155.0" text-anchor="end">Cap-gains rate 25%</text><line class="err" x1="497.5" y1="140.0" x2="353.5" y2="140.0" stroke="var(--neg)"/><circle class="pt" cx="353.5" cy="140.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 25%, decade 1: formula missed the real central run by -16$B (-3.0% of the no-behavior total)"/><line class="err" x1="497.5" y1="151.0" x2="443.5" y2="151.0" stroke="var(--neg)"/><circle class="pt" cx="443.5" cy="151.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 25%, decade 2: formula missed the real central run by -9$B (-1.1% of the no-behavior total)"/><line class="err" x1="497.5" y1="162.0" x2="404.1" y2="162.0" stroke="var(--neg)"/><circle class="pt" cx="404.1" cy="162.0" r="4" fill="var(--neg)" data-tip="Cap-gains rate 25%, decade 3: formula missed the real central run by -21$B (-1.9% of the no-behavior total)"/><text class="rowlab" x="193" y="201.0" text-anchor="end">40% + tax gains at death</text><line class="err" x1="497.5" y1="186.0" x2="433.9" y2="186.0" stroke="var(--neg)"/><circle class="pt" cx="433.9" cy="186.0" r="4" fill="var(--neg)" data-tip="40% + tax gains at death, decade 1: formula missed the real central run by -31$B (-1.3% of the no-behavior total)"/><line class="err" x1="497.5" y1="197.0" x2="448.6" y2="197.0" stroke="var(--neg)"/><circle class="pt" cx="448.6" cy="197.0" r="4" fill="var(--neg)" data-tip="40% + tax gains at death, decade 2: formula missed the real central run by -35$B (-1.0% of the no-behavior total)"/><line class="err" x1="497.5" y1="208.0" x2="410.7" y2="208.0" stroke="var(--neg)"/><circle class="pt" cx="410.7" cy="208.0" r="4" fill="var(--neg)" data-tip="40% + tax gains at death, decade 3: formula missed the real central run by -90$B (-1.8% of the no-behavior total)"/><text class="rowlab" x="193" y="247.0" text-anchor="end">Tax gains at death only</text><line class="err" x1="497.5" y1="232.0" x2="645.8" y2="232.0" stroke="var(--pos)"/><circle class="pt" cx="645.8" cy="232.0" r="4" fill="var(--pos)" data-tip="Tax gains at death only, decade 1: formula missed the real central run by +9$B (+3.0% of the no-behavior total)"/><line class="err" x1="497.5" y1="243.0" x2="554.1" y2="243.0" stroke="var(--pos)"/><circle class="pt" cx="554.1" cy="243.0" r="4" fill="var(--pos)" data-tip="Tax gains at death only, decade 2: formula missed the real central run by +6$B (+1.2% of the no-behavior total)"/><line class="err" x1="497.5" y1="254.0" x2="531.4" y2="254.0" stroke="var(--pos)"/><circle class="pt" cx="531.4" cy="254.0" r="4" fill="var(--pos)" data-tip="Tax gains at death only, decade 3: formula missed the real central run by +5$B (+0.7% of the no-behavior total)"/><text class="rowlab" x="193" y="293.0" text-anchor="end">Carryover basis only</text><line class="err" x1="497.5" y1="278.0" x2="727.7" y2="278.0" stroke="var(--pos)"/><circle class="pt" cx="727.7" cy="278.0" r="4" fill="var(--pos)" data-tip="Carryover basis only, decade 1: formula missed the real central run by +2$B (+4.7% of the no-behavior total)"/><line class="err" x1="497.5" y1="289.0" x2="581.3" y2="289.0" stroke="var(--pos)"/><circle class="pt" cx="581.3" cy="289.0" r="4" fill="var(--pos)" data-tip="Carryover basis only, decade 2: formula missed the real central run by +3$B (+1.7% of the no-behavior total)"/><line class="err" x1="497.5" y1="300.0" x2="529.0" y2="300.0" stroke="var(--pos)"/><circle class="pt" cx="529.0" cy="300.0" r="4" fill="var(--pos)" data-tip="Carryover basis only, decade 3: formula missed the real central run by +2$B (+0.6% of the no-behavior total)"/><text class="rowlab" x="193" y="339.0" text-anchor="end">Full package</text><line class="err" x1="497.5" y1="324.0" x2="404.4" y2="324.0" stroke="var(--neg)"/><circle class="pt" cx="404.4" cy="324.0" r="4" fill="var(--neg)" data-tip="Full package, decade 1: formula missed the real central run by -279$B (-1.9% of the no-behavior total)"/><line class="err" x1="497.5" y1="335.0" x2="424.8" y2="335.0" stroke="var(--neg)"/><circle class="pt" cx="424.8" cy="335.0" r="4" fill="var(--neg)" data-tip="Full package, decade 2: formula missed the real central run by -348$B (-1.5% of the no-behavior total)"/><line class="err" x1="497.5" y1="346.0" x2="426.4" y2="346.0" stroke="var(--neg)"/><circle class="pt" cx="426.4" cy="346.0" r="4" fill="var(--neg)" data-tip="Full package, decade 3: formula missed the real central run by -513$B (-1.5% of the no-behavior total)"/><text class="axlab" x="497.5" y="400" text-anchor="middle">blind-test miss, % of the no-behavior revenue (shaded = ±2%; three dots per row = decades 1–3)</text></svg></div></figure>
+
+<h2>5 · And we may never need to recalibrate this knob again</h2>
+<p>The dial setting is an <i>internal</i> parameter; what matters is the
+elasticity the full model actually delivers, interactions and all. If the ratio
+between the two drifted as the dial moved, every new setting would need its own
+calibration loop. It doesn’t drift: measured response is a straight line
+through the origin, slope 1.08 (ratios 1.11, 1.08, 1.07, 1.08 —
+constant to ≈3%). Want the model to deliver elasticity E? Set the dial to
+E÷1.08. That one division replaces the calibration loop.</p>
+<figure><figcaption>Dial setting vs. what the full model actually delivers — a straight line means no recalibration needed</figcaption><div class="scroller"><svg viewBox="0 0 820 360" width="820" role="img" aria-label="Dial setting vs. what the full model actually delivers — a straight line means no recalibration needed"><line class="baseline" x1="78" y1="304.0" x2="610" y2="304.0"/><text class="tick" x="70" y="308.0" text-anchor="end">0</text><line class="grid" x1="78" y1="254.4" x2="610" y2="254.4"/><text class="tick" x="70" y="258.4" text-anchor="end">1</text><line class="grid" x1="78" y1="204.7" x2="610" y2="204.7"/><text class="tick" x="70" y="208.7" text-anchor="end">2</text><line class="grid" x1="78" y1="155.1" x2="610" y2="155.1"/><text class="tick" x="70" y="159.1" text-anchor="end">3</text><line class="grid" x1="78" y1="105.4" x2="610" y2="105.4"/><text class="tick" x="70" y="109.4" text-anchor="end">4</text><line class="grid" x1="78" y1="55.8" x2="610" y2="55.8"/><text class="tick" x="70" y="59.8" text-anchor="end">5</text><text class="tick" x="78.0" y="324" text-anchor="middle">0</text><text class="tick" x="180.3" y="324" text-anchor="middle">1</text><text class="tick" x="282.6" y="324" text-anchor="middle">2</text><text class="tick" x="384.9" y="324" text-anchor="middle">3</text><text class="tick" x="487.2" y="324" text-anchor="middle">4</text><text class="tick" x="589.5" y="324" text-anchor="middle">5</text><line class="fit" x1="78.0" y1="304.0" x2="610.0" y2="26.3"/><circle class="pt" cx="200.8" cy="238.1" r="6" fill="var(--eta1)" data-tip="Dial set to 1.2 → measured response -1.33 (ratio 1.107)"/><text class="dlab" x="200.8" y="224.1" text-anchor="middle">1.33</text><circle class="pt" cx="323.5" cy="175.9" r="6" fill="var(--eta2)" data-tip="Dial set to 2.3992 → measured response -2.58 (ratio 1.075)"/><text class="dlab" x="323.5" y="161.9" text-anchor="middle">2.58</text><circle class="pt" cx="446.3" cy="112.4" r="6" fill="var(--eta3)" data-tip="Dial set to 3.6 → measured response -3.86 (ratio 1.072)"/><text class="dlab" x="446.3" y="98.4" text-anchor="middle">3.86</text><circle class="pt" cx="569.1" cy="47.6" r="6" fill="var(--eta4)" data-tip="Dial set to 4.8 → measured response -5.16 (ratio 1.076)"/><text class="dlab" x="569.1" y="33.6" text-anchor="middle">5.16</text><text class="dlab" x="618.0" y="30.3">straight line, slope 1.08</text><text class="axlab" x="344.0" y="352" text-anchor="middle">dial setting (eta)</text><text class="axlab" transform="rotate(-90)" x="-165.0" y="24" text-anchor="middle">measured response in the full model</text></svg></div></figure>
+
+<p class="note"><b>Fine print.</b> “Revenue” = change vs. current law,
+summed over the decade shown, conventional scoring (with behavior); “no
+behavior” = static scoring. Decade windows: 2027–36, 2037–46,
+2047–56. Runs use the same 2026-start convention and baseline as the shipped
+atlas vintage (top_tax_dials_30y_v1). The response measurement (chart 5) uses the
++5pp rate scenario at year 2055 on the no-wealth-channel leg; its <i>level</i> is
+not comparable to the calibration’s official dilution factor (different shock
+size and leg) — the finding is the straightness, not the level. Death-regime
+scenarios include their revenue in the year-after-death fiscal booking.</p>
+
+<h2>What this unlocks</h2>
+<p>Next step is wiring the dial into the atlas capital-gains card: a slider
+labeled in delivered-elasticity units (≈1.1 to ≈4.4), moving every
+conventional number, the leakage split, and the Laffer surface client-side via
+the fitted curves — the static “ask” never moves, by construction.
+The three ref-package runs also kept full microdata, so the realized-ETR tile
+can respond to the dial too (one post-processing pass, no new simulation).</p>
+
+<details><summary>All the numbers (revenue vs. no-reform baseline, per decade, $B/$T)</summary><div class="scroller"><table><tr><th>Policy</th><th>Decade</th><th>No behavior</th><th>reaction 1.2</th><th>reaction 2.4 (central)</th><th>reaction 3.6</th><th>reaction 4.8</th><th>Blind-test miss</th></tr><tr><td>Cap-gains rate 40%</td><td>1</td><td>+$1.9T</td><td>+$1.0T</td><td>+$427B</td><td>−$102B</td><td>−$550B</td><td>-1.7%</td></tr><tr><td></td><td>2</td><td>+$2.7T</td><td>+$1.6T</td><td>+$847B</td><td>+$156B</td><td>−$443B</td><td>-1.4%</td></tr><tr><td></td><td>3</td><td>+$3.9T</td><td>+$2.3T</td><td>+$1.2T</td><td>+$249B</td><td>−$581B</td><td>-2.3%</td></tr><tr><td>Cap-gains rate 50%</td><td>1</td><td>+$1.9T</td><td>+$1.1T</td><td>+$432B</td><td>−$112B</td><td>−$570B</td><td>-1.7%</td></tr><tr><td></td><td>2</td><td>+$2.7T</td><td>+$1.7T</td><td>+$856B</td><td>+$145B</td><td>−$469B</td><td>-1.3%</td></tr><tr><td></td><td>3</td><td>+$4.0T</td><td>+$2.3T</td><td>+$1.2T</td><td>+$217B</td><td>−$634B</td><td>-2.3%</td></tr><tr><td>Cap-gains rate 25%</td><td>1</td><td>+$547B</td><td>+$316B</td><td>+$165B</td><td>+$19B</td><td>−$121B</td><td>-3.0%</td></tr><tr><td></td><td>2</td><td>+$773B</td><td>+$537B</td><td>+$348B</td><td>+$163B</td><td>−$16B</td><td>-1.1%</td></tr><tr><td></td><td>3</td><td>+$1.1T</td><td>+$750B</td><td>+$492B</td><td>+$240B</td><td>−$5B</td><td>-1.9%</td></tr><tr><td>40% + tax gains at death</td><td>1</td><td>+$2.3T</td><td>+$2.0T</td><td>+$1.8T</td><td>+$1.6T</td><td>+$1.4T</td><td>-1.3%</td></tr><tr><td></td><td>2</td><td>+$3.5T</td><td>+$3.1T</td><td>+$2.8T</td><td>+$2.6T</td><td>+$2.4T</td><td>-1.0%</td></tr><tr><td></td><td>3</td><td>+$5.1T</td><td>+$4.3T</td><td>+$4.0T</td><td>+$3.7T</td><td>+$3.4T</td><td>-1.8%</td></tr><tr><td>Tax gains at death only</td><td>1</td><td>+$291B</td><td>+$519B</td><td>+$741B</td><td>+$974B</td><td>+$1.2T</td><td>+3.0%</td></tr><tr><td></td><td>2</td><td>+$512B</td><td>+$795B</td><td>+$1.1T</td><td>+$1.3T</td><td>+$1.6T</td><td>+1.2%</td></tr><tr><td></td><td>3</td><td>+$780B</td><td>+$1.2T</td><td>+$1.5T</td><td>+$1.9T</td><td>+$2.2T</td><td>+0.7%</td></tr><tr><td>Carryover basis only</td><td>1</td><td>+$40B</td><td>+$158B</td><td>+$269B</td><td>+$383B</td><td>+$499B</td><td>+4.7%</td></tr><tr><td></td><td>2</td><td>+$149B</td><td>+$304B</td><td>+$447B</td><td>+$592B</td><td>+$740B</td><td>+1.7%</td></tr><tr><td></td><td>3</td><td>+$300B</td><td>+$500B</td><td>+$692B</td><td>+$885B</td><td>+$1.1T</td><td>+0.6%</td></tr><tr><td>Full package</td><td>1</td><td>+$14.6T</td><td>+$10.5T</td><td>+$10.3T</td><td>+$10.0T</td><td>+$9.8T</td><td>-1.9%</td></tr><tr><td></td><td>2</td><td>+$23.3T</td><td>+$15.6T</td><td>+$15.4T</td><td>+$15.1T</td><td>+$14.9T</td><td>-1.5%</td></tr><tr><td></td><td>3</td><td>+$35.2T</td><td>+$21.7T</td><td>+$21.4T</td><td>+$21.0T</td><td>+$20.7T</td><td>-1.5%</td></tr></table></div></details>
+</main>
+<div id="tip" role="status"></div>
+<script>
+(function () {
+  var tip = document.getElementById('tip');
+  document.addEventListener('mousemove', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-tip]') : null;
+    if (t) {
+      tip.textContent = t.getAttribute('data-tip');
+      tip.style.opacity = 1;
+      var x = Math.min(e.clientX + 14, window.innerWidth - 300);
+      tip.style.left = x + 'px';
+      tip.style.top = (e.clientY + 16) + 'px';
+    } else { tip.style.opacity = 0; }
+  });
+})();
+</script>

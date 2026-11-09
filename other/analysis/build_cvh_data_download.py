@@ -352,7 +352,7 @@ for scn in SCENARIOS:
     rows = read_csv_file(os.path.join(ROOT, scn, "static/supplemental/distribution.csv"))
     for r in rows:
         if (int(to_float(r["year"])) == YEAR_SHOW and
-            r["taxes_included"] == "iit_pr"):
+            r["taxes_included"] == "iit_pr_wealth"):
             dist_data[(scn, r["group_dimension"], r["group"])] = to_float(r["pct_chg_ati"])
 
 INCOME_MAIN   = ["Quintile 1", "Quintile 2", "Quintile 3", "Quintile 4", "Quintile 5"]

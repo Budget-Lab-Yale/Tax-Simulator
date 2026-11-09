@@ -1,0 +1,48 @@
+---
+#-------------------------------------------------------------------------------
+# Estate tax reset to 2009-law parameters, effective for decedents dying in
+# 2026+:
+#   - Basic exclusion amount: $3.5M evaluated AT 2009 (the 2009 statutory
+#     exemption), inflation-indexed forward — expressed as rules (base value
+#     $3.5M, base year 2009, CPI through 2017 then chained CPI, round down
+#     $10k), so the 2026 value (~$5.09M) and the out-year path are GENERATED,
+#     never hand-computed.
+#   - Rate schedule: the 2009 §2001(c) graduated ladder, topping out at
+#     41/43/45% above $1M/$1.25M/$1.5M (vs current law's flat 40% above $1M).
+# Pre-2026 law is current law (full subparameter restatement: reform YAMLs
+# replace subparameters wholesale).
+#
+# Deliberate departure from literal 2009 law: PORTABILITY (which did not exist
+# until 2011) is left ON, matching modern restore-2009-parameters proposals
+# (e.g. For the 99.5% Act). Set portability to 0 here to model strict 2009
+# rules.
+#-------------------------------------------------------------------------------
+
+exemption:
+  value:
+    '2014': 5340000
+    '2018': 11180000
+    '2026': 3500000
+  i_measure:
+    '2009': cpi
+    '2018': chained_cpi
+  i_base_year:
+    '2014': 2013
+    '2018': 2017
+    '2026': 2009
+  i_direction: -1
+  i_increment: 10000
+
+# 2009 §2001(c) tentative tax schedule from 2026 (current law before). The
+# calculator reads however many bracket/rate elements a year supplies; the
+# 13th/14th brackets exist only from 2026 (all-NA columns in earlier years
+# are dropped by integrate_rates_brackets).
+rates:
+  value:
+    '2014': [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.40]
+    '2026': [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.41, 0.43, 0.45]
+
+brackets:
+  value:
+    '2014': [0, 10000, 20000, 40000, 60000, 80000, 100000, 150000, 250000, 500000, 750000, 1000000]
+    '2026': [0, 10000, 20000, 40000, 60000, 80000, 100000, 150000, 250000, 500000, 750000, 1000000, 1250000, 1500000]

@@ -1,0 +1,70 @@
+---
+#-------------------------------------------------------------------------------
+# Annual net-worth (wealth) tax law parameters. LAW ONLY.
+#
+# Baseline = NO wealth tax under current law: a single 0% bracket, so for every
+# record liab_wealth is identically 0 regardless of net worth (the dormancy
+# guarantee — adding this file leaves all existing output byte-identical).
+#
+# Consumed by calc_wealth() (src/calc/functions/tax/wealth.R) via the
+# materialized net_worth column (economic Σ assets − Σ debts, no valuation
+# discount). The graduated schedule is applied DIRECTLY to net worth in ABSOLUTE
+# dollars: there is NO separate exemption subparameter — a 0%-rated bottom
+# bracket plays that role (everything below the first positive-rate threshold is
+# untaxed). This mirrors the income-tax ord.yaml design: filing-status-keyed
+# bracket arrays (via the mapper below) + a single shared rate vector.
+#
+# Reforms override brackets_single / brackets_married / brackets_head / rates at
+# the subparameter level under public/{name}/wealth.yaml (full time series each).
+# The filing_status_mapper and indexation_defaults here carry over unless a
+# reform changes them (subparameter-level merge, build_tax_law()).
+#-------------------------------------------------------------------------------
+
+# Default indexation for the bracket thresholds. Chained CPI (year-keyed, as the
+# parser requires) off a 2025 base year, rounded to the NEAREST $1M (i_direction
+# 0) — the standalone Wealth-Tax-Simulator convention (round(brackets, -6)),
+# deliberately different from estate's floor (-1). Because EVERY threshold (the
+# 0%-bracket "exemption" included) lives in one schedule, indexation is uniform:
+# no split between an indexed exemption and frozen-nominal widths. Vectors are
+# length 3 to match the reform schedules; the per-element form is required for
+# indexed bracket ARRAYS (cf. ord.yaml). Baseline's own brackets are unindexed
+# (rate 0, so indexing is moot), so these defaults are consumed only by reforms.
+indexation_defaults:
+  i_measure:
+    '2024': chained_cpi
+  i_base_year: [2025, 2025, 2025]
+  i_direction: [0, 0, 0]
+  i_increment: [1000000, 1000000, 1000000]
+
+# Bracket lower bounds keyed by filing status (1 single / 2 MFJ / 3 MFS / 4 HoH).
+# MFJ uses its own (doubled-exemption) schedule; MFS and singles share the single
+# schedule; HoH gets its own. Only BRACKETS are mapped — rates do not vary by
+# filing status, so `rates` stays a single shared subparameter (the ord.yaml
+# convention). The calculator reads the resulting wealth.brackets vector.
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_single
+    '4': brackets_head
+
+# Single-filer bracket lower bounds, in ABSOLUTE net-worth dollars (also the MFS
+# schedule). Baseline: a single bracket starting at $0, paired with a 0% rate
+# => no wealth tax. Unindexed under baseline (rate 0).
+brackets_single:
+  value: [0]
+
+# MFJ bracket lower bounds. Baseline: single 0 bracket.
+brackets_married:
+  value: [0]
+
+# Head-of-household bracket lower bounds. Baseline: single 0 bracket.
+brackets_head:
+  value: [0]
+
+# Graduated tax schedule on net worth. Shared across filing statuses; nominal
+# (unindexed), like estate's tentative schedule. Baseline: a single 0% bracket
+# => no tax. The calculator reads however many bracket/rate elements the scenario
+# supplies (rates and brackets must be the same length within a year).
+rates:
+  value: [0]

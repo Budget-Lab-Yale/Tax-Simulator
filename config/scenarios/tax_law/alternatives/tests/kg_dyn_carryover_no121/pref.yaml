@@ -1,0 +1,20 @@
+---
+# All asset classes to carryover basis at death, but with the Section 121
+# primary-residence exclusion zeroed out. Routes the FULL primary-home gain to
+# heirs (no death-time basis step-up), reproducing the pre-§121-carryover
+# behavior. Differenced against kg_dyn_carryover, this isolates the revenue
+# effect of the §121 exclusion under a carryover regime.
+kg_death_regime_equities:
+  value: 1
+kg_death_regime_pass_throughs:
+  value: 1
+kg_death_regime_primary_home:
+  value: 1
+kg_death_regime_other_home:
+  value: 1
+kg_death_regime_re_fund:
+  value: 1
+kg_sec121_excl_single:
+  value: 0
+kg_sec121_excl_married:
+  value: 0

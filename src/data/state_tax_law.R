@@ -1,16 +1,48 @@
 #------------------------------------------------------------------
 # state_tax_law.R
 #
-# Contains functions to read and parse STATE tax law configuration
-# files (config/scenarios/tax_law_state/). Reuses the federal parsing
-# machinery in tax_law.R (load_tax_law_input, parse_param) per state,
-# prefixing parameter names with "st_" and adding a state join key.
-# Design: research/state_tax/plan.md §2.2
+# Contains functions to read and parse state tax law configuration files.
+# State law lives in the state/ folder of a tax law layer: the default layer
+# holds every state's law, and an alternative's state/ folder holds its changes.
+# Reuses the federal parsing machinery in tax_law.R (load_tax_law_input,
+# parse_param) per state, prefixing parameter names with "st_" and adding a
+# state join key. Design: research/state_tax/plan.md §2.2
 #------------------------------------------------------------------
 
 
+state_tax_law_root = function() {
+
+  #----------------------------------------------------------------------------
+  # Returns the folder holding every state's default law (str).
+  #----------------------------------------------------------------------------
+
+  file.path(tax_law_path('default'), 'state')
+}
+
+
+
+state_tax_law_overlay = function(tax_law_id) {
+
+  #----------------------------------------------------------------------------
+  # Returns the folder holding a tax law alternative's state law changes, or
+  # NULL where the layer is the default or carries no state/ folder.
+  #
+  # Parameters:
+  #   - tax_law_id (str) : the runscript's tax_law cell
+  #
+  # Returns: filepath or NULL (str).
+  #----------------------------------------------------------------------------
+
+  if (identical(as.character(tax_law_id), 'default')) {
+    return(NULL)
+  }
+  path = file.path(tax_law_path(tax_law_id), 'state')
+  if (dir.exists(path)) path else NULL
+}
+
+
 build_state_tax_law = function(states, years, indexes,
-                               state_tax_law_id = 'baseline',
+                               tax_law_id = 'default',
                                output_path = NULL) {
 
   #----------------------------------------------------------------------------
@@ -33,39 +65,34 @@ build_state_tax_law = function(states, years, indexes,
   #   - years (int[])           : simulation years to return
   #   - indexes (df)            : long-format dataframe containing growth rates
   #                               of index measures; see generate_indexes()
-  #   - state_tax_law_id (str)  : reform directory under
-  #                               config/scenarios/tax_law_state/, or 'baseline'.
-  #                               A reform missing a given state's subdirectory
-  #                               means no changes for that state
+  #   - tax_law_id (str)        : the runscript's tax_law cell. The layer's
+  #                               state/ folder holds its state law changes; a
+  #                               layer without one, or without a given state's
+  #                               subfolder, means no changes for that state
   #   - output_path (str)       : scenario output root; when supplied, writes
-  #                               supplemental/tax_law_state.csv for both run
-  #                               types (mirrors build_tax_law)
+  #                               supplemental/tax_law_state.csv for each rung
+  #                               (mirrors build_tax_law)
   #
   # Returns: tibble long in state, year, and filing status; wide in st_-prefixed
   #          subparameter columns (df).
   #----------------------------------------------------------------------------
 
-  root = './config/scenarios/tax_law_state'
-
-  # Reform root must exist if specified (a typo should fail loudly)
-  if (state_tax_law_id != 'baseline' &&
-      !dir.exists(file.path(root, state_tax_law_id))) {
-    stop('Cannot find the user-supplied state tax law configuration directory')
-  }
+  root    = state_tax_law_root()
+  overlay = state_tax_law_overlay(tax_law_id)
 
   state_tax_law = states %>%
-    map(.f = ~ parse_one_state(.x, root, state_tax_law_id, years, indexes)) %>%
+    map(.f = ~ parse_one_state(.x, root, overlay, years, indexes)) %>%
     bind_rows()
 
   # Dense lookup schedules remain row data instead of becoming thousands of
   # scalar YAML columns. The calculator selects the applicable table year.
   attr(state_tax_law, 'credit_tables') = build_state_credit_tables(
-    states, root, state_tax_law_id
+    states, root, overlay
   )
 
   # Write state tax law if output path supplied, then return
   if (!is.null(output_path)) {
-    c('static', 'conventional') %>%
+    c('static', 'mechanical', 'conventional') %>%
       map(.f = ~ output_path %>%
             file.path(.x, 'supplemental', 'tax_law_state.csv') %>%
             write_csv(x = state_tax_law, file = .))
@@ -76,7 +103,7 @@ build_state_tax_law = function(states, years, indexes,
 
 
 
-build_state_credit_tables = function(states, root, state_tax_law_id) {
+build_state_credit_tables = function(states, root, overlay) {
 
   #----------------------------------------------------------------------------
   # Reads optional dense state-credit schedules. A credit_tables.csv file
@@ -152,11 +179,9 @@ build_state_credit_tables = function(states, root, state_tax_law_id) {
   }
 
   tables = map_dfr(toupper(states), function(st) {
-    baseline = read_one(file.path(root, 'baseline', tolower(st),
-                                  'credit_tables.csv'), st)
-    reform = if (state_tax_law_id != 'baseline') {
-      read_one(file.path(root, state_tax_law_id, tolower(st),
-                         'credit_tables.csv'), st)
+    baseline = read_one(file.path(root, tolower(st), 'credit_tables.csv'), st)
+    reform = if (!is.null(overlay)) {
+      read_one(file.path(overlay, tolower(st), 'credit_tables.csv'), st)
     } else {
       empty
     }
@@ -203,7 +228,7 @@ state_credit_tables_for_year = function(credit_tables, state_code, tax_year) {
 
 
 load_state_conformity_groups = function(
-  config_path = './config/scenarios/tax_law_state/conformity_groups.yaml'
+  config_path = file.path(state_tax_law_root(), 'conformity_groups.yaml')
 ) {
 
   #----------------------------------------------------------------------------
@@ -404,7 +429,7 @@ validate_state_federal_conformity = function(state_tax_law, tax_law_id,
   #----------------------------------------------------------------------------
 
   if (is.null(state_tax_law) || nrow(state_tax_law) == 0 ||
-      identical(tax_law_id, 'baseline')) {
+      identical(as.character(tax_law_id), 'default')) {
     return(invisible(TRUE))
   }
 
@@ -429,7 +454,7 @@ validate_state_federal_conformity = function(state_tax_law, tax_law_id,
 
 
 
-parse_one_state = function(st, root, state_tax_law_id, years, indexes) {
+parse_one_state = function(st, root, overlay, years, indexes) {
 
   #----------------------------------------------------------------------------
   # Reads, overlays, and parses tax law for a single state. Helper for
@@ -437,8 +462,9 @@ parse_one_state = function(st, root, state_tax_law_id, years, indexes) {
   #
   # Parameters:
   #   - st (str)               : 2-letter postal code
-  #   - root (str)             : state tax law config root
-  #   - state_tax_law_id (str) : see build_state_tax_law()
+  #   - root (str)             : folder holding every state's default law
+  #   - overlay (str)          : folder holding the layer's state law changes,
+  #                              or NULL; see state_tax_law_overlay()
   #   - years (int[])          : simulation years to return
   #   - indexes (df)           : see build_state_tax_law()
   #
@@ -447,7 +473,7 @@ parse_one_state = function(st, root, state_tax_law_id, years, indexes) {
   #          no baseline config directory (no-tax jurisdiction) (df).
   #----------------------------------------------------------------------------
 
-  baseline_path = file.path(root, 'baseline', tolower(st))
+  baseline_path = file.path(root, tolower(st))
 
   # No-tax jurisdictions carry no config; skip (weights still cover them)
   if (!dir.exists(baseline_path)) {
@@ -458,8 +484,8 @@ parse_one_state = function(st, root, state_tax_law_id, years, indexes) {
   tax_law = load_tax_law_input(baseline_path)
 
   # Overwrite baseline subparams with reform changes, if any for this state
-  reform_path = file.path(root, state_tax_law_id, tolower(st))
-  if (state_tax_law_id != 'baseline' && dir.exists(reform_path)) {
+  reform_path = if (is.null(overlay)) NA_character_ else file.path(overlay, tolower(st))
+  if (!is.na(reform_path) && dir.exists(reform_path)) {
     changes_from_baseline = load_tax_law_input(reform_path)
     for (param in names(changes_from_baseline)) {
       for (subparam in names(changes_from_baseline[[param]])) {

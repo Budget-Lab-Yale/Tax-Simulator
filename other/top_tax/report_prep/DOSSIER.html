@@ -1,0 +1,421 @@
+<title>Taxing the Top — Report-Prep Dossier</title>
+<style>
+  :root {
+    --paper: #f9fafb;
+    --ink: #1c2733;
+    --muted: #5a6b7d;
+    --line: #dce3ea;
+    --line-soft: #e8edf2;
+    --accent: #1a5b9e;
+    --accent-soft: #eaf1f8;
+    --ok: #2e7d4f;
+    --ok-soft: #e7f2ec;
+    --warn: #a06a1a;
+    --warn-soft: #f7efdf;
+    --bad: #a8433a;
+    --bad-soft: #f7e8e6;
+    --card: #ffffff;
+    --code-bg: #edf1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #131a22;
+      --ink: #d9e1ea;
+      --muted: #8da0b3;
+      --line: #2b3947;
+      --line-soft: #223040;
+      --accent: #7db0e0;
+      --accent-soft: #1b2c3e;
+      --ok: #74c69d;
+      --ok-soft: #16302a;
+      --warn: #ddab5c;
+      --warn-soft: #33290f;
+      --bad: #e08e85;
+      --bad-soft: #3a1f1b;
+      --card: #18212b;
+      --code-bg: #212c38;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #131a22; --ink: #d9e1ea; --muted: #8da0b3; --line: #2b3947;
+    --line-soft: #223040; --accent: #7db0e0; --accent-soft: #1b2c3e;
+    --ok: #74c69d; --ok-soft: #16302a; --warn: #ddab5c; --warn-soft: #33290f;
+    --bad: #e08e85; --bad-soft: #3a1f1b; --card: #18212b; --code-bg: #212c38;
+  }
+  :root[data-theme="light"] {
+    --paper: #f9fafb; --ink: #1c2733; --muted: #5a6b7d; --line: #dce3ea;
+    --line-soft: #e8edf2; --accent: #1a5b9e; --accent-soft: #eaf1f8;
+    --ok: #2e7d4f; --ok-soft: #e7f2ec; --warn: #a06a1a; --warn-soft: #f7efdf;
+    --bad: #a8433a; --bad-soft: #f7e8e6; --card: #ffffff; --code-bg: #edf1f5;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-size: 17px;
+    line-height: 1.62;
+  }
+  .wrap {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 5rem;
+  }
+  .sans { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 0.82em;
+    background: var(--code-bg);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+
+  /* ---------- header ---------- */
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 1.4rem; margin-bottom: 1.6rem; }
+  .eyebrow {
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 0.6rem;
+  }
+  h1 {
+    font-size: 2.15rem; line-height: 1.15; font-weight: 700;
+    margin: 0 0 0.7rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.02rem; color: var(--muted); font-style: italic; margin: 0 0 1rem; max-width: 40rem; }
+  .provenance {
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.78rem; color: var(--muted);
+    display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem;
+  }
+  .provenance strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- TOC ---------- */
+  nav.toc {
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.85rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    margin: 0 0 2.2rem;
+    columns: 2; column-gap: 2rem;
+  }
+  nav.toc a { display: block; color: var(--ink); text-decoration: none; padding: 0.18rem 0; }
+  nav.toc a:hover, nav.toc a:focus { color: var(--accent); }
+  nav.toc .tnum { color: var(--accent); font-weight: 600; margin-right: 0.45em; font-variant-numeric: tabular-nums; }
+  @media (max-width: 560px) { nav.toc { columns: 1; } }
+
+  /* ---------- headings ---------- */
+  h2 {
+    font-size: 1.42rem; line-height: 1.25; font-weight: 700;
+    margin: 3rem 0 0.9rem; padding-top: 1.2rem;
+    border-top: 1px solid var(--line);
+    text-wrap: balance;
+  }
+  h2 .snum { color: var(--accent); margin-right: 0.4em; }
+  h3 { font-size: 1.08rem; font-weight: 700; margin: 1.8rem 0 0.5rem; text-wrap: balance; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+  li { margin-bottom: 0.45rem; }
+  strong { font-weight: 700; }
+
+  /* ---------- ten things ---------- */
+  ol.ten { list-style: none; padding: 0; margin: 1.4rem 0; display: flex; flex-direction: column; gap: 1.1rem; }
+  ol.ten > li {
+    position: relative; padding: 0 0 0 3.2rem; margin: 0;
+  }
+  ol.ten > li::before {
+    counter-increment: ten;
+    content: counter(ten);
+    position: absolute; left: 0; top: -0.15rem;
+    font-size: 1.9rem; font-style: italic; font-weight: 400;
+    color: var(--accent); font-variant-numeric: tabular-nums;
+    width: 2.4rem; text-align: right;
+  }
+  ol.ten { counter-reset: ten; }
+  ol.ten .lede { font-weight: 700; }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; margin: 1.1rem 0 1.4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+  table {
+    border-collapse: collapse; width: 100%;
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.83rem; line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    text-align: left; font-weight: 600; font-size: 0.72rem;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.55rem 0.8rem; border-bottom: 1.5px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+  caption {
+    caption-side: top; text-align: left;
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.75rem; color: var(--muted);
+    padding: 0.55rem 0.8rem 0.15rem;
+  }
+
+  /* ---------- chips ---------- */
+  .chip {
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    display: inline-block; font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.1rem 0.55rem; border-radius: 99px; white-space: nowrap;
+  }
+  .chip.ok   { color: var(--ok);   background: var(--ok-soft); }
+  .chip.warn { color: var(--warn); background: var(--warn-soft); }
+  .chip.bad  { color: var(--bad);  background: var(--bad-soft); }
+
+  /* ---------- callouts ---------- */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    border-radius: 0 6px 6px 0;
+    padding: 0.85rem 1.1rem;
+    margin: 1.2rem 0;
+    font-size: 0.95rem;
+  }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  blockquote {
+    margin: 1.2rem 0; padding: 0.2rem 0 0.2rem 1.2rem;
+    border-left: 3px solid var(--line);
+    color: var(--muted); font-style: italic;
+  }
+
+  .figlabel {
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--accent); display: block; margin-bottom: 0.15rem;
+  }
+
+  footer {
+    margin-top: 4rem; padding-top: 1.2rem; border-top: 1px solid var(--line);
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.78rem; color: var(--muted);
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Report preparation · Internal working material</p>
+  <h1>Taxing the top: report-prep dossier</h1>
+  <p class="standfirst">Prepared overnight 2026-07-16/17 for JR, ahead of drafting the public report. This is input material — angles, numbers, critiques, factoids — not a draft. Everything here is meant to be argued with.</p>
+  <div class="provenance sans">
+    <span><strong>Physics:</strong> top_tax_dials_30y_v2 (2026-07-12: η=2.4825, σ=0.16, Tier 1.1/1.2)</span>
+    <span><strong>Windows:</strong> FY2027–36 · FY2027–56</span>
+    <span><strong>Units:</strong> $B unless noted</span>
+  </div>
+</header>
+
+<nav class="toc sans" aria-label="Contents">
+  <a href="#companions"><span class="tnum">·</span>Companion files</a>
+  <a href="#s1"><span class="tnum">1</span>The ten things to see first</a>
+  <a href="#s2"><span class="tnum">2</span>Filling the draft's placeholders</a>
+  <a href="#s3"><span class="tnum">3</span>Figure-by-figure notes</a>
+  <a href="#s4"><span class="tnum">4</span>Angles worth considering</a>
+  <a href="#s5"><span class="tnum">5</span>Overlooked analytical points</a>
+  <a href="#s6"><span class="tnum">6</span>Organization</a>
+  <a href="#s7"><span class="tnum">7</span>Traps and honesty risks</a>
+  <a href="#s8"><span class="tnum">8</span>Vintage &amp; staleness register</a>
+  <a href="#s9"><span class="tnum">9</span>Titles and pull-quotes</a>
+  <a href="#appx"><span class="tnum">A</span>Net worth by group</a>
+</nav>
+
+<h2 id="companions">Companion files</h2>
+<p>All in <code>other/top_tax/report_prep/</code>:</p>
+<div class="tablewrap"><table>
+  <tr><th>File</th><th>What it is</th></tr>
+  <tr><td><code>metrics_results.md</code></td><td>Full output of <code>report_metrics.py</code> — every number quoted below, with more precision</td></tr>
+  <tr><td><code>report_metrics.py</code></td><td>The script (rerunnable; reads dials v2 + kg_v3_revmax + atlas2_data.json)</td></tr>
+  <tr><td><code>model_mechanics_review.md</code></td><td>Plain-English mechanism inventory, interaction map, novelty claims, omissions register, 20 one-liners</td></tr>
+  <tr><td><code>outline_critique.md</code></td><td>Independent critique of the director's outline: angles, overlooked points, three alternative structures, traps, titles</td></tr>
+  <tr><td><code>external_factoids.md</code></td><td>Sourced external numbers: CBO Feb-2026 baseline, PSZ vs Auten-Splinter, CEA 8.2%, CBO/JCT/Greenbook option scores, wealth-tax literature, ITEP, OBBBA hooks</td></tr>
+  <tr><td><code>output_data_map.md</code></td><td>Where every number lives on disk; scenario-name decoder; vintage provenance and gotchas</td></tr>
+  <tr><td><code>networth_by_group.py</code> / <code>.sbatch</code></td><td>Net-worth-by-group aggregation from baseline detail (results in the appendix)</td></tr>
+</table></div>
+
+<h2 id="s1"><span class="snum">1.</span>The ten things I'd want you to see first</h2>
+
+<ol class="ten">
+  <li><span class="lede">Your placeholders are all computable today</span> — §2 below fills every $XX/Y%/Z% in the draft. Headlines: top 1% cash income 2027 <strong>$5.2T</strong> (accrual <strong>$7.8T</strong>), taxes <strong>$1.4T</strong>, ETR <strong>26.2% cash / 17.6% accrual</strong>, income floor <strong>$911k</strong>.</li>
+
+  <li><span class="lede">The draft's "negative interaction tends to be small" claim needs a rewrite — the model's headline package interaction is <em>positive</em>.</span> The full 8-lever reference stack raises <strong>$10.6T conventional over FY2027-36, 3.3% MORE than the sum of its standalone conventional scores</strong>. Rate-on-rate interactions are indeed small and negative (corp28×cg30: −0.4%), but the structural switches (deemed realization, estate reform) raise <em>other</em> levers' yields by more than the rate hikes erode each other. The honest sentence is something like: "rate increases erode one another modestly; base reforms subsidize everything around them."</li>
+
+  <li><span class="lede">The Figure 4 story confirms beautifully, with the sign flip intact.</span> CG→25% + deemed realization (current physics, surrogate-composed): Σstatic <strong>$838B</strong> &lt; Σconv <strong>$942B</strong> &lt; package conv <strong>≈$1.11T</strong>. Direct runs on the (stale-physics) revmax grid: $835B / $1,086B / <strong>$1,263B</strong>. Behavior <em>adds</em> revenue — leakage is negative — exactly the section-4 thesis.</li>
+
+  <li><span class="lede">"Policy chooses its own elasticity" is now a measured output, not a slogan.</span> The model's implied realization semi-elasticity under a CG-rate hike is <strong>−2.48</strong> under step-up; under deemed realization the measured realization response <em>flips sign</em> (mean <strong>+1.2</strong> in <code>kg_dynamics_summary</code> — realizations rise, since deferral no longer escapes anything and the wealth-carry/timing margins unlock; note the +1.2 is a package diagnostic — it includes the regime's own realization effects, not a clean conditional elasticity). See metrics §11 and the Laffer table: the same +5pp CG hike yields <strong>$338B conventional under step-up vs $515B marginal on top of deemed</strong> (stale direct grid: 1,263−748); current-physics surrogate: <strong>$235B solo vs ≈$400B conditional-on-deemed</strong> at cg=25.</li>
+
+  <li><span class="lede">The survival-ratio gradient is the single best "one chart" candidate nobody asked for</span>: conventional-as-share-of-static by lever (10y, current physics) — QBI repeal <strong>0.99</strong>, taxmax <strong>0.99</strong>, corporate <strong>0.88</strong>, ordinary <strong>0.82–0.87</strong>, wealth <strong>0.55–0.69</strong>, capital gains <strong>0.43 → 0.29</strong> (falling as the rate rises), and the death-regime/estate reforms <strong>&gt;1</strong> (carryover 6.35, deemed 2.43, estate 1.17). One picture: which buckets leak, which flow uphill.</li>
+
+  <li><span class="lede">The Laffer curve has a legal ceiling baked in, not just a behavioral one.</span> The calculator (correctly, per Sec. 1(h) lesser-of logic — <code>src/calc/functions/tax/tax.R:174</code>) never taxes gains above ordinary treatment, so once the statutory CG rate passes the 37% ordinary top rate, even the <em>static</em> score flattens (static 10y: $1,891B at 40%, $1,925B at 45%, $1,942B at 50%). Figure 5 needs this footnote or readers will read the plateau as pure behavior. (It also means "raise the CG rate to 50%" is largely symbolic without an ordinary-rate increase — a nice analytical aside.)</li>
+
+  <li><span class="lede">The destination ledgers quantify every "a dollar here erodes a dollar there" claim in the draft</span> (metrics §6, FY2028-36): corp28 → <strong>−$98B income tax</strong> per +$851B corporate (≈11.5¢ offset per gross dollar, endogenous, not assumed); wealth 2%&gt;$50M → <strong>−$450B income tax, −$87B estate, −$43B corp</strong> against +$3.9T own take (~15% cross-erosion); taxmax → +$2.77T payroll with <strong>−$398B income tax</strong>; and the estate hike <strong>adds +$49B of income tax</strong> (unlocked realizations — a <em>positive</em> spillover no scorekeeper shows).</li>
+
+  <li><span class="lede">Fiscal-context corrections from CBO's Feb-2026 baseline</span>: the $1.9T deficit is <strong>FY2026</strong>, not 2027 (relabel or reword); $3.1T in 2036 is right; cumulative FY2027-36 deficits ≈ <strong>$24.4T</strong>. Your doubling-the-ETR example computes cleanly: doubling the top 1%'s 26.2% ETR with a frozen base ≈ <strong>+$16.1T over ten years ≈ 66% of the ten-year deficit</strong>. Also: top ordinary rate is <strong>37% permanent</strong> (OBBBA), and the estate exemption <strong>$15M is verified</strong>.</li>
+
+  <li><span class="lede">The full stack raises ~2.7% of GDP per decade and its survival decays 73% → 67% → 62% across the three decades</span> — the 10-year window systematically understates base-drain for rate hikes and understates recapture for death-regime reforms. A 30-year exhibit (even one line) would be genuinely novel for a public piece.</li>
+
+  <li><span class="lede">One reconciliation must happen before publication</span>: the numbers in this dossier come from <code>top_tax_dials_30y_v2</code> (2026-07-12 physics: η=2.4825, σ=0.16, wealth-carry + estate-margins in — i.e., <em>matching the methodology memo</em>), but (a) the estate-avoidance activation bug means <strong>estate-lever scenarios lack the Kopczuk–Slemrod own-rate response</strong> (fixed in code 2026-07-16, not yet re-run); (b) the interactive's contribution-card JSON (<code>dist_card_data.json</code>) is still pinned to <strong>v1</strong> physics; (c) the revmax death-regime grid predates the η re-pin. A re-run of the dials batch + revmax grid on current code would make every number quotable. Until then, quote v2 numbers and disclose the estate-lever caveat.</li>
+</ol>
+
+<h2 id="s2"><span class="snum">2.</span>Filling the draft's placeholders</h2>
+
+<p>All from <code>top_tax_dials_30y_v2</code> baseline (2027 cross-section unless noted); taxes = federal iit + payroll + estate + deemed + wealth + corp (+vat), corp allocated by capital income. Full tables in <code>metrics_results.md</code> §§1–4.</p>
+
+<div class="tablewrap"><table>
+  <tr><th>Draft placeholder</th><th>Value</th><th>Note</th></tr>
+  <tr><td>Top 1% realized income, 2027</td><td><strong>$5.2T</strong></td><td>"cash/expanded" concept</td></tr>
+  <tr><td>…equal to income of bottom XX%</td><td><strong>bottom ~66%</strong></td><td>accrual basis: bottom ~71%</td></tr>
+  <tr><td>Top 1% accrual income, 2027</td><td><strong>$7.8T</strong></td><td>+49% over cash; "considerably more uncertainty" is right</td></tr>
+  <tr><td>Taxes remitted by top 1%</td><td><strong>$1.4T</strong> (2027)</td><td>not multiple trillions — "$XX trillion" needs the singular</td></tr>
+  <tr><td>Top 1% ETR realized / accrued</td><td><strong>26.2% / 17.6%</strong></td><td>top 0.1%: 29.2/21.5; top 0.01%: 30.0/23.7</td></tr>
+  <tr><td>Top 1% income floor</td><td><strong>$911,000</strong></td><td>top 0.1%: $4.24M; top 0.01%: $21.4M</td></tr>
+  <tr><td>Deficit 2027 → 2036</td><td><strong>$1.9T is FY2026</strong>; FY2036 $3.1T ✓</td><td>cumulative FY27-36 ≈ $24.4T (CBO Feb 2026)</td></tr>
+  <tr><td>Doubling-ETR stylized example</td><td><strong>+$16.1T/10y frozen-base ≈ 66% of the 10-year deficit</strong></td><td>uses 2027→2036 growth of the model's own baseline</td></tr>
+  <tr><td>Estate tax threshold</td><td><strong>$15M</strong> ✓</td><td>2026, permanent, indexed from 2027</td></tr>
+  <tr><td>Figure 3 package (all to 25%)</td><td>naive conv <strong>$686B</strong>, package <strong>$685B</strong> (interaction ≈ −$1B)</td><td>surrogate estimate; corp dial is linear by construction — see §3</td></tr>
+  <tr><td>Figure 4 package (cg25 + deemed)</td><td>Σstatic $838B &lt; Σconv $942B &lt; package <strong>≈$1.11T</strong></td><td>current physics; direct stale-grid runs: 835 / 1,086 / 1,263</td></tr>
+  <tr><td>Top-group income shares</td><td>top 1%: <strong>23.2% cash / 24.0% accrual</strong> of total</td><td>top 0.01%: 5.3% / 4.7%</td></tr>
+</table></div>
+
+<div class="callout warn"><p>Two wording flags on this section of the draft: use "<strong>accrue</strong>," not "receive," for the accrual measure (the whole deferral story depends on the distinction), and note the accrual number sits inside the PSZ-vs-Auten-Splinter measurement fight (top-1% share 20.7% vs 15.5% in 2022 — see <code>external_factoids.md</code>), so "no disagreement" should be scoped to the <em>realized level</em>, not the accrual magnitude or the trend.</p></div>
+
+<h2 id="s3"><span class="snum">3.</span>Figure-by-figure notes</h2>
+
+<h3><span class="figlabel">Figure 1</span>Income by top group, cash vs accrual</h3>
+<p>Data exists: <code>atlas2_data.json</code> <code>income_levels</code> (2027) or any scenario's <code>distribution_etrs.csv</code> baseline columns (2027 + 2036, all three income definitions). Consider showing the <em>ratio</em> (accrual/cash: 1.49 at top 1%, 1.27 at top 0.01%) as an annotation — it quantifies "unrealized gains play an outsized role." Note the counterintuitive wrinkle: accrual/cash <em>falls</em> at the very top in 2027 because realized gains are already a huge share of top-0.01% cash income.</p>
+
+<h3><span class="figlabel">Figure 2</span>Taxes / the tool's distribution graph</h3>
+<p>The tool's built section is titled "Who holds the income — and what the plan takes." The data behind the report version should be regenerated from v2 (the standalone <code>dist_card_data.json</code> is v1-pinned). Baseline taxes by group are in metrics §2. For the second variant's net-worth bar chart, see the <a href="#appx">appendix</a>.</p>
+
+<h3><span class="figlabel">Figure 3</span>Parts vs whole, rate package</h3>
+<p>As literally specified (corp→25 + CG/div→25) there is <strong>no direct run</strong> — corp runs exist only at 28% (single OME wedge). Two honest options: (a) keep 25/25 and present the surrogate estimate (naive conv $686B, package $685B — the corp dial is linear in Δτ by construction, so corp-25 = 4/7 × corp-28; the interaction term is ≈ −$1B); or (b) switch the figure to the direct-run package <strong>corp→28 + CG→30</strong> (<code>pc_corpr28_cgr30</code>): Σstatic $1,988B, Σconv $1,193B, package conv $1,189B (interaction −0.4%). Option (b) is cleaner to defend; option (a) matches the prose. Either way the interaction bar will be invisible at this scale — consider printing the number on the chart rather than drawing it. Caveat to carry: corporate constants are Phase-0c placeholders; the corporate share of this package is the least settled number in it.</p>
+
+<h3><span class="figlabel">Figure 4</span>CG+5pp + deemed realization</h3>
+<p>Confirmed, and it is the paper's best exhibit (see §1, item 3). Recommend adding the <em>static-vs-conventional definition box between Figures 3 and 4</em> — the sign flip is the subtlest idea in the piece (<code>outline_critique.md</code> §C1 has the exact language problem). If you want direct-run bars rather than surrogate composition, the revmax grid has all three cells — but it is pre-η-re-pin; a 6-scenario re-run (cg_05pp_{stepup,deemed} + cg_00pp_deemed + baseline) on current code would pin the figure.</p>
+
+<h3><span class="figlabel">Figure 5</span>Laffer curves by death regime</h3>
+<p>Two sources: current-physics curves (dials v2: step-up direct at 6 knots; deemed/carryover conditionals surrogate-composed — metrics §8a) or the direct stale grid (metrics §8b). Shape notes: under step-up the 10y curve is essentially flat from 40% up (and $564B at 50% vs $563B at 45% — the peak is a plateau, not a spike); under deemed the conditional yield keeps climbing through 50%. Two required footnotes: (i) the Sec. 1(h) ordinary-treatment ceiling (§1, item 6) — part of the plateau is law, not behavior; (ii) NIIT stacks +3.8pp on everything shown. Also consider plotting <em>30-year</em> revenue — the regime gap widens with the horizon (deferred gains land at death), which is the analytically honest way to show carryover's in-between-ness: solo carryover raises $252B/10y vs deemed's $706B, and at 30y $1,334B vs $3,183B — the ordering is stable but the dollar gap roughly quadruples ($454B → $1.85T) as deferred gains land at death.</p>
+
+<h3><span class="figlabel">Variant-2 Figure 2</span>Aggregate net worth by group</h3>
+<p>Computed from baseline detail — table in the <a href="#appx">appendix</a> (sbatch job). Ranking convention is simple tax-unit expanded-income rank; label it as such.</p>
+
+<h2 id="s4"><span class="snum">4.</span>Angles worth considering (beyond the outline's)</h2>
+
+<p>The two agent files have the full lists (14 angles in <code>outline_critique.md</code> §B; 20 one-liners in <code>model_mechanics_review.md</code> §5). The ones I would actually push, with the numbers now attached:</p>
+
+<ol>
+  <li><strong>"Policy chooses its own elasticity"</strong> — carried by Figure 5 plus the measured semi-elasticity flip (−2.48 → +1.2). This is the project's genuinely new quantified claim; frame as a capability ("because realization behavior is a model <em>output</em>, we can trace how the elasticity moves with the death regime"), soften "no one else has quantified this" to "to our knowledge."</li>
+  <li><strong>The leaky-bucket gradient</strong> — the survival table (§1, item 5) as one chart. It reframes the whole piece from "how much money is there" to "which taxes keep what they ask for," and it makes base-broadening (QBI 0.99, taxmax 0.99) look as good as it actually is without editorializing.</li>
+  <li><strong>Deferred is not gone</strong> — under the stack, <strong>$3.3T of gains are deemed-realized at death within the first decade</strong> (metrics §11); under current law those dollars exit through the step-up drain. Pairs with the destination ledgers: the money doesn't vanish, it relocates or waits.</li>
+  <li><strong>The estate hike that raises income tax</strong> — the +$49B income-tax spillover from the estate lever is a tidy, counterintuitive proof that the model's cross-base wiring is real, and it runs <em>against</em> the report's general "levers erode each other" grain — which is exactly why it's credible.</li>
+  <li><strong>A wealth tax is an income surtax in stock units</strong> — the memo's own arithmetic (1% at a 4% yield = 25% income surtax; ε=−7 ≈ ETI 0.28 in flow units). Best inoculation against "your avoidance elasticities are huge" <em>and</em> against "wealth taxes are free money."</li>
+  <li><strong>The 30-year lens</strong> — survival 73→67→62; ~2.7% of GDP per decade; deferral recapture and bathtub drain both live mostly outside the 10-year window. No other public scorer shows this.</li>
+  <li><strong>The two ETRs (ask vs collected)</strong> — under the full stack the top 0.01% accrual ETR goes <strong>23.7% baseline → 48.9% asked → 40.9% collected</strong> (v2 physics; the 37.3% in older notes was v1). The 8pp gap is the avoidance margin; label it "first-order welfare burden vs realized revenue," not "deadweight loss" (the evasion slice is a transfer).</li>
+  <li><strong>Payroll is not absent at the top, it's just capped</strong> — the taxmax lever alone raises $2.5T/10y at 0.99 survival; that coexists awkwardly with the draft's "payroll taxes touch little to no income at the top" (also NIIT/Additional Medicare already reach top income). Precision here preempts a cheap rebuttal.</li>
+</ol>
+
+<h2 id="s5"><span class="snum">5.</span>Analytical points the current draft overlooks</h2>
+
+<p>(Deduplicated against <code>outline_critique.md</code> §C, which has twelve — the ones below are either mine or sharpened by the computed numbers.)</p>
+
+<ol>
+  <li><strong>The interaction-sign correction (§1, item 2).</strong> As drafted, section 3 says cross-tax interactions are negative-and-small and section 4 says packages beat parts — but the stack-level fact is that the package interaction is <em>positive</em> once structural switches are in the mix. The two sections can be unified: "rate × rate: small, negative; rate × base-reform: large, positive." That is a better organizing insight than either sentence alone.</li>
+  <li><strong>Static ≠ "no interactions."</strong> The draft's Figure-3 text calls the top bar "no interactions and no taxpayer response." In this model the static score <em>does</em> include mechanical law interactions (e.g., deemed tax deductible from the estate) — what it freezes is behavior. Precision here matters because Figure 4's whole point is a static-vs-conventional comparison.</li>
+  <li><strong>The Sec. 1(h) ceiling (§1, item 6)</strong> — without it, Figure 5's plateau will be read as pure lock-in, and "the revenue-maximizing CG rate is ~45%" overstated: past ~41% statutory the dial mostly stops binding mechanically. (Related: the CG dial moves qualified dividends too — say so once, since "capital gains and dividend rates" is doing quiet work in the draft's package definitions.)</li>
+  <li><strong>What "conventional" excludes, stated as a floor.</strong> No labor supply, no real saving response, no investment/growth effects; every behavioral number is reporting, timing, avoidance, or financing. So the behavioral haircuts here are a <em>floor</em> on true economic cost — a framing that both disciplines the "just raise rates" reading and preempts the "you ignored growth" attack. (The bathtub is an accounting channel, not a savings elasticity; the memo says this well — keep it in the report.)</li>
+  <li><strong>σ is a residual: the ETI decomposition is not separately identified.</strong> The model matches ETI=0.25 by construction; what it adds is <em>where</em> the response goes (which bases, when), not an independent estimate of <em>how big</em> it is. The report should lean on destination claims, not magnitude claims, for the conversion channel.</li>
+  <li><strong>The wealth-tax cross-base drains are the least-disciplined numbers in the model</strong> (elasticity bundle → concealment split is a structural ruling), while the wealth lever's own-base revenue is a disclosed ceiling (migration folded in). Quote the own number with a band, and the drains as direction + order of magnitude.</li>
+  <li><strong>The deemed-realization <em>level</em> is JCT-anchored</strong> (25% valuation/compliance discount calibrated to land near JCT's ~$600B) — the novel content of Figures 4/5 is the <em>elasticity shift</em>, not the deemed revenue level. One sentence of disclosure buys a lot of credibility.</li>
+  <li><strong>Estate-lever numbers currently understate avoidance</strong> (activation bug, §1 item 10): the estate solo's 1.17 survival would drop somewhat with the Kopczuk–Slemrod response active (expected give-back ≈ 13% of the estate delta per the margins build). Either re-run before publishing estate numbers or footnote the omission.</li>
+  <li><strong>First-decade FY plumbing</strong>: FY2027 deltas are 0.75-weighted (surprise enactment CY2027, no 2026 lead-in in the dials vintage) and estate/wealth legs book FY+1 — single-year numbers near the window edges are conventions, not economics. Quote window totals.</li>
+</ol>
+
+<h2 id="s6"><span class="snum">6.</span>Organization</h2>
+
+<p><code>outline_critique.md</code> §D has three full structures. My recommendation is its <strong>Alt 3</strong> (keep the director's five-beat spine, tightened): parts-vs-whole becomes the thesis exhibit <em>inside</em> the rate-raising section; Figures 3 and 4 become an explicit before/after pair with a static-vs-conventional definition box between them; the deficit becomes a recurring yardstick rather than a one-time mention; realized income leads, accrual follows with its uncertainty flagged. Two further notes:</p>
+
+<ul>
+  <li><strong>The interactive section should use the tool's real section names</strong> — the built atlas is titled "How much revenue is there at the top?" with sections "Build a package," "Who holds the income — and what the plan takes," "Standalone scores vs. the combined package," "What each policy does to the other bases," "The frontier: how much is there, at what price?," and "The capital-gains policy in three dimensions." The outline's names (Distribution / Parts vs. Whole / Spillovers) don't match — either rename the tool sections or the prose. The outline also doesn't mention the frontier or the 3-D capital-gains surface at all; the frontier ("revenue vs. who pays") deserves a sentence, and the 3-D surface <em>is</em> Figure 5's interactive twin.</li>
+  <li><strong>Caveats live next to the exhibit they qualify</strong> (corporate placeholder on the corporate chart; conventional-only on the first revenue chart; wealth ceiling on the wealth dial), not in a terminal caveat paragraph.</li>
+</ul>
+
+<h2 id="s7"><span class="snum">7.</span>Traps and honesty risks</h2>
+
+<p>Top five of the ten in <code>outline_critique.md</code> §E:</p>
+
+<ol>
+  <li>"No disagreement that income is concentrated" — scope it to the realized level; name Auten–Splinter and PSZ (20.7% vs 15.5% top-1% share, 2022).</li>
+  <li>"Interactions are very small" — never unqualified (see §5, item 1).</li>
+  <li>False precision — surrogate ±2.5%, placeholder corp constants, residual σ, ceiling wealth elasticities: two significant figures everywhere, bands on corp and wealth.</li>
+  <li>The accrual ETR is not "the real rate they pay" — it's a single-year cross-section with a volatile denominator; the defensible claim is about deferral and forgiveness at death. (CEA's 8.2% is the same denominator move — cite it as a cousin, not a validation.)</li>
+  <li>The doubling example invites a strawman charge — show static and conventional side by side rather than build-then-demolish.</li>
+</ol>
+
+<h2 id="s8"><span class="snum">8.</span>Vintage and staleness register (what's quotable tonight)</h2>
+
+<div class="tablewrap"><table>
+  <tr><th>Object</th><th>Vintage / physics</th><th>Quotable?</th></tr>
+  <tr><td>Income levels, ETRs, thresholds, taxes by group</td><td>dials v2 baseline (η, σ irrelevant to baseline)</td><td><span class="chip ok">Yes</span></td></tr>
+  <tr><td>Solo/pair/stack revenue scores, survival ratios, ledgers</td><td>dials v2 (2026-07-12 physics = memo physics)</td><td><span class="chip ok">Yes</span> with estate-lever caveat</td></tr>
+  <tr><td>Estate-lever scores (<code>s_estate_*</code>, estate-conditioned cells)</td><td>v2, missing KS own-rate response (activation bug)</td><td><span class="chip warn">Caveat</span> understates avoidance ≈13% of estate delta — footnote or re-run</td></tr>
+  <tr><td>"Ask vs collected" ETRs (stack)</td><td>v2</td><td><span class="chip ok">Yes</span> (note older 37.3% figure was v1)</td></tr>
+  <tr><td>Laffer grid by death regime (direct)</td><td>kg_v3_revmax, η=2.3992, pre-Tier-1</td><td><span class="chip warn">Directional</span> re-run before print</td></tr>
+  <tr><td>Contribution/dist card JSON</td><td><strong>v1</strong> — one physics vintage behind</td><td><span class="chip bad">Regenerate</span> before shipping the tool</td></tr>
+  <tr><td>Deficit/CBO numbers</td><td>External (CBO Feb 2026 via CRFB)</td><td><span class="chip ok">Yes</span> verify FY2027 exact figure against the CBO tables</td></tr>
+</table></div>
+
+<p><strong>Suggested runs before publication</strong> (in value order): (1) re-run the dials batch on post-2026-07-16 code (estate/avoidance activation fix; also picks up any σ/η follow-ups) — this refreshes every headline; (2) re-run the 18-scenario revmax grid on current code for Figure 5 (and consider extending to +30/35pp — memory notes the argmax hit the +25pp boundary under the old spec); (3) if Figure 3 stays "all at 25%," author a corp-25 OME (the channel is linear, but a real input beats a scaled one in a methods footnote); (4) regenerate the contribution card from v2+.</p>
+
+<h2 id="s9"><span class="snum">9.</span>Titles and pull-quotes</h2>
+
+<p>Ten titles and eight pull-quotes in <code>outline_critique.md</code> §F. The three I'd shortlist: "<strong>Taxing the Top: How Much Is Really There?</strong>" (matches the tool's own headline), "<strong>The Same Dollar, Taxed Five Ways</strong>," "<strong>Deferred, Not Gone</strong>." Best pull-quote of the lot:</p>
+
+<blockquote>"How responsive the wealthy are to the capital-gains rate is not a fixed fact of nature. It is, in part, a consequence of how we choose to tax gains held until death."</blockquote>
+
+<h2 id="appx"><span class="snum">A.</span>Appendix: net worth by group (baseline detail, dials v2)</h2>
+
+<p><em>From sbatch job 18580875, <code>networth_by_group.py</code> over <code>top_tax_dials_30y_v2</code> baseline detail. Convention: non-dependent tax units, simple tax-unit ranking by expanded income or net worth, no equivalence scale — so the income cutoffs here differ slightly from the production distribution tables ($830k vs $911k top-1% floor); use the distribution_etrs cutoffs in the report text and this table for the wealth aggregates only.</em></p>
+
+<div class="tablewrap"><table>
+  <caption>2027 — 187.4M non-dependent tax units; totals: income $21.4T, net worth $203.0T</caption>
+  <tr><th>Group</th><th class="num">By income: floor</th><th class="num">Net worth held</th><th class="num">By net worth: floor</th><th class="num">Net worth held</th></tr>
+  <tr><td>Top 20%</td><td class="num">$146k</td><td class="num"><strong>$161.7T</strong></td><td class="num">$814k</td><td class="num"><strong>$181.4T</strong></td></tr>
+  <tr><td>Top 10%</td><td class="num">$226k</td><td class="num">$136.1T</td><td class="num">$1.82M</td><td class="num">$158.1T</td></tr>
+  <tr><td>Top 5%</td><td class="num">$326k</td><td class="num">$110.1T</td><td class="num">$3.66M</td><td class="num">$134.4T</td></tr>
+  <tr><td>Top 1%</td><td class="num">$830k</td><td class="num"><strong>$61.0T</strong></td><td class="num">$15.0M</td><td class="num"><strong>$80.0T</strong></td></tr>
+  <tr><td>Top 0.1%</td><td class="num">$3.87M</td><td class="num">$25.9T</td><td class="num">$75.0M</td><td class="num">$34.7T</td></tr>
+  <tr><td>Top 0.01%</td><td class="num">$18.8M</td><td class="num">$11.1T</td><td class="num">$238M</td><td class="num">$16.1T</td></tr>
+</table></div>
+
+<p><strong>2036</strong>: totals income $29.7T, net worth $290.3T; top 1% by income holds $86.4T; top 1% by wealth holds $113.5T (floor $20.1M).</p>
+
+<p>Factoids that fall out of this table:</p>
+<ul>
+  <li><strong>The income-rich and the wealth-rich are overlapping but distinct groups</strong>: the top 1% by income holds $61T of net worth; the top 1% by wealth holds $80T. Ranked by wealth, the top 1% <em>income</em> is only $3.6T (vs $5.2T income-ranked) — retirees and low-realizing holders dominate the wealth top. Useful for the draft's "income and wealth are highly correlated" note — correlated, yes; interchangeable, no.</li>
+  <li><strong>The 2027 top-1% wealth floor (~$15.0M) sits almost exactly at the estate exemption ($15M)</strong> — the estate tax is, almost by construction, a top-1%-of-wealth tax.</li>
+  <li>Wealth concentration exceeds income concentration: top 1% share of net worth ≈ 30% (income-ranked) to 39% (wealth-ranked) vs a 23% income share.</li>
+  <li>Aggregate net worth ≈ <strong>9.5× aggregate cash income</strong> (203 / 21.4) — the stock-vs-flow ratio that makes small wealth-tax rates equivalent to large income surtaxes.</li>
+</ul>
+
+<footer>
+  Source of record: <code>other/top_tax/report_prep/DOSSIER.md</code> (this page is its HTML render).
+  Physics vintage top_tax_dials_30y_v2 · metrics rerunnable via <code>report_metrics.py</code> ·
+  Prepared 2026-07-17.
+</footer>
+</div>

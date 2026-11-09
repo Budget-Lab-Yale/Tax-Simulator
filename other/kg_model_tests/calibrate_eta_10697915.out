@@ -1,0 +1,46 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 10 years (full sample)...
+  loaded
+Average baseline tau (realization-weighted, across all years): 0.1866
+Anchor: log((tau_avg_B + perturbation)/tau_avg_B) = 0.05221
+
+Calibrating eta to hit elasticity = -0.62 at sim-year 10 (calendar 2035)...
+
+Coarse sweep:
+  eta =   1.00  ->  eta_30 = -0.0972
+  eta =   3.00  ->  eta_30 = -0.2919
+  eta =   5.00  ->  eta_30 = -0.4869
+  eta =   8.00  ->  eta_30 = -0.7799
+  eta =  12.00  ->  eta_30 = -1.1716
+  eta =  18.00  ->  eta_30 = -1.7610
+  eta =  25.00  ->  eta_30 = -2.4516
+  eta =  40.00  ->  eta_30 = -3.9415
+  eta =  60.00  ->  eta_30 = -5.9473
+
+Bracketing: [5.00, 8.00]
+  iter  1  eta = 6.50000  eta_30 = -0.63335
+  iter  2  eta = 5.75000  eta_30 = -0.56012
+  iter  3  eta = 6.12500  eta_30 = -0.59673
+  iter  4  eta = 6.31250  eta_30 = -0.61504
+  iter  5  eta = 6.40625  eta_30 = -0.62420
+  iter  6  eta = 6.35938  eta_30 = -0.61962
+  iter  7  eta = 6.38281  eta_30 = -0.62191
+  iter  8  eta = 6.37109  eta_30 = -0.62077
+  iter  9  eta = 6.36523  eta_30 = -0.62019
+  iter 10  eta = 6.36230  eta_30 = -0.61991
+
+Calibrated eta = 6.3623  (eta_30 = -0.6199, target = -0.6200)
+
+Update the `eta` default in kg_dyn_run_bathtub_pass() (src/sim/kg_dynamics.R) to this value.
+
+Elasticity profile by sim year (calibrated eta):
+ sim_year year   eta_t
+        1 2026 -0.7024
+        5 2030 -0.6525
+       10 2035 -0.6199

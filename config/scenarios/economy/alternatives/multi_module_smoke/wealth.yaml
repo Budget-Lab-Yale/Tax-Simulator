@@ -1,0 +1,5 @@
+# The smoke test exercises the behavior modules, not the saving-financing
+# channel, so the bathtub is off and the run stays a single conventional pass.
+
+financing_profile:
+  value: none

@@ -1,0 +1,71 @@
+# Generated file -- written by the calibrator, not by hand.
+#
+# The income-conversion response: how much top salary and active pass-through
+# compensation is repackaged as unrealized equity appreciation when the wedge
+# between ordinary and equity rates widens. The converted dollars land in the
+# bathtub's gain state, which is why this is a piece of kg_dynamics rather than a
+# response of its own.
+#
+# Written by : the sigma pipeline -- two legs of a five point top rate increase,
+#              the top elasticity measurement, and the interpolation onto the
+#              target -- other/top_tax/tests/compute_top_eti.R
+# Read by    : the behavior leg, through the `conversion` piece of kg_dynamics.
+#
+# sigma is a residual. Entity shifting and evasion supply about 0.18 of the 0.25
+# top-income elasticity target on their own, so sigma is whatever closes the gap,
+# which makes it conditional on the rest of the stack in a way a directly estimated
+# parameter would not be. That is why the whole stack appears in its dependency
+# list, and why a change to any part of it costs a re-derivation rather than a
+# re-hash.
+
+_channel:
+  role: state
+
+conv:
+  value: 0.2002
+  kind: calibrated
+  set: '2026-07-30'
+  target: >
+    Top-subset ordinary-income ETI of 0.25 (Saez-Slemrod-Giertz central;
+    taxable income EXCLUDING net capital gains, after deductions,
+    top-bracket membership fixed at baseline) measured on the +5pp
+    top-ordinary leg (topord_plus5, 2025:2035) with the full behavior stack
+    running. sigma is the RESIDUAL conversion margin: at sigma = 0 entity
+    shifting and evasion alone produce an ETI of 0.1820, so sigma closes the
+    remaining gap. Grid sigma 0 0.16 0.3 gave ETI 0.1820 0.2363 0.2840; the
+    pin is the piecewise-linear interpolation onto the target, which does
+    NOT force the origin because the intercept is the point.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/behavior/entity_shifting/pearce_prisinzano.R
+    - src/behavior/evasion/debacker.R
+    - src/behavior/charity/50.R
+    - src/sim/sigma_conversion.R
+  invalidated_by_hashes:
+    src/behavior/entity_shifting/pearce_prisinzano.R: '417bd83d700004da61178cf1fbeb21d4'
+    src/behavior/evasion/debacker.R: '30fcf7b063f9aeeb487402a862ba8334'
+    src/behavior/charity/50.R: dede5ce971690cdc05465114730ec080
+    src/sim/sigma_conversion.R: fb43de9bc62443e5c70f0b23e390944b
+  rederive: other/top_tax/sigma_calib/measure_sigma.R
+  note: >
+    History 0.08 -> 0.157 -> 0.16. The 2026-07-12 move was driven by
+    entity-shifting tau_eq repricing plus the evasion cross-base fix, not by
+    the estate build. Method and measured legs:
+    other/top_tax/sigma_explainer.md. Derived under charity/50 (elasticity
+    -0.5), the elasticity product runs actually use. This is the
+    re-derivation the waiver was waiting for; if the value moved, the waiver
+    on this entry should now be removed rather than re-dated. The kg Bellman
+    calibration is orthogonal (disjoint base: ordinary income excludes
+    realizations) unless the pool ever starts taxing gains. Measured from
+    vintages: sigma_calib_50_conv_00_v2 sigma_calib_50_conv_16_v2
+    sigma_calib_50_conv_30_v2. Per-year ETIs:
+    other/top_tax/sigma_calib/sigma_eti_charity50.csv.
+
+pt_labor_share:
+  value: 0.75
+  kind: sourced
+  citation: >
+    Labor-content share of active pass-through income (Smith, Yagan, Zidar and
+    Zwick), applied to the active pass-through legs of the conversion pool.

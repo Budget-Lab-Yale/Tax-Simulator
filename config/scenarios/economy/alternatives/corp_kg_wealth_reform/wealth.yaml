@@ -1,0 +1,5 @@
+# Gate fixture, reform leg: half of the tax paid above baseline during life is
+# financed out of wealth.
+
+financing_profile:
+  value: 'flat:0.5'

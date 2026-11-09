@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Corporate Tax Distribution and ETR Review</title>
+  <style>
+    :root { color-scheme: light; --ink:#18201d; --muted:#59645f; --line:#d9dedb; --paper:#fff; --band:#f3f6f4; --accent:#176b52; --warn:#8a4b12; }
+    * { box-sizing: border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font:16px/1.55 Arial, sans-serif; letter-spacing:0; }
+    header { background:#17352c; color:#fff; padding:44px 24px 38px; }
+    header > div, main { width:min(1040px, calc(100% - 40px)); margin:auto; }
+    h1 { margin:0 0 10px; font:700 36px/1.15 Georgia, serif; letter-spacing:0; }
+    h2 { margin:42px 0 12px; font:700 25px/1.2 Georgia, serif; letter-spacing:0; }
+    h3 { margin:26px 0 8px; font-size:18px; }
+    p { margin:10px 0; }
+    .subtitle { color:#d8e5df; max-width:760px; margin:0; }
+    .meta { margin-top:18px; color:#bcd0c7; font-size:14px; }
+    main { padding:28px 0 64px; }
+    .finding { border-left:4px solid var(--accent); background:var(--band); padding:16px 18px; margin:12px 0; }
+    .finding strong { color:var(--accent); }
+    .note { border-left-color:var(--warn); }
+    code { background:#eef2f0; padding:2px 5px; overflow-wrap:anywhere; }
+    ul { padding-left:22px; }
+    li { margin:6px 0; }
+    .table-wrap { overflow-x:auto; margin:14px 0 24px; border:1px solid var(--line); }
+    table { border-collapse:collapse; width:100%; min-width:560px; font-variant-numeric:tabular-nums; }
+    th, td { padding:10px 12px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
+    th:first-child, td:first-child { text-align:left; }
+    th { background:var(--band); font-size:13px; text-transform:uppercase; color:#39433f; }
+    tr:last-child td { border-bottom:0; }
+    .formula { padding:14px 16px; background:#eef2f0; font:15px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-x:auto; }
+    .sources { color:var(--muted); font-size:14px; }
+    footer { border-top:1px solid var(--line); margin-top:48px; padding-top:18px; color:var(--muted); font-size:14px; }
+    @media (max-width:600px) { h1 { font-size:29px; } header { padding:34px 20px 30px; } header > div, main { width:min(100% - 28px, 1040px); } }
+  </style>
+</head>
+<body>
+  <header><div>
+    <h1>Corporate Tax Distribution and ETR Review</h1>
+    <p class="subtitle">Review of the recent top-tax corporate-only run, its distribution-table incidence allocation, and its treatment in effective tax rates.</p>
+    <p class="meta">Prepared July 11, 2026 · Branch: wealth · Run vintage: top_tax_dials_30y_v1</p>
+  </div></header>
+  <main>
+    <section class="finding">
+      <strong>Bottom line:</strong> Corporate tax is present in both outputs. It is hard to see because the standard distribution file bundles it into the broadest tax tier, while the ETR file exposes it only in the combined <code>wealth_cit_vat</code> tier. The ETR denominator is also grossed up by allocated corporate tax, muting the change in the total reported ETR.
+    </section>
+
+    <h2>Recent Runs</h2>
+    <p>The relevant completed 30-year batch is:</p>
+    <p><code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v1</code></p>
+    <p>It contains 199 scenarios covering 2026–2057. The corporate-only scenario is <code>s_corp_r28</code>, representing a 28% corporate rate beginning in 2027. The current runscript has subsequently moved to a 2027 simulation start under the surprise-enactment convention.</p>
+    <p>The ETR output now includes two reform legs:</p>
+    <ul>
+      <li><strong>Static:</strong> law-only tax liability, or the amount asked.</li>
+      <li><strong>Conventional:</strong> liability collected after modeled income and behavioral effects.</li>
+    </ul>
+
+    <h2>Distribution Allocation</h2>
+    <p>The model uses a stock-based Harberger allocation rather than allocating corporate tax solely by observed capital income.</p>
+    <ul>
+      <li>The default normal-return share is <code>sigma_N = 0.375</code>.</li>
+      <li>The supernormal-return portion is allocated by C-corporate-equity exposure.</li>
+      <li>The normal-return portion is split 50% to labor and 50% to broad net capital.</li>
+      <li>Capital portions receive a 40% foreign-owner haircut; labor does not.</li>
+      <li>Owner-occupied housing enters broad capital at 70% of net home equity, excluding the estimated land share.</li>
+    </ul>
+    <p>Under these assumptions, approximately 67.5% of the national corporate revenue change is assigned to US households:</p>
+    <div class="formula">(1 - .375) × .60 + .375 × .50 + .375 × .50 × .60 = 67.5%</div>
+    <p>The remaining 32.5% is principally foreign-borne. Therefore, the household distribution is intentionally smaller than the national corporate revenue score.</p>
+
+    <h3>Household-Allocated Corporate Change</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Year</th><th>Household allocation</th></tr></thead>
+      <tbody><tr><td>2027</td><td>$32.94B</td></tr><tr><td>2036</td><td>$67.84B</td></tr></tbody>
+    </table></div>
+
+    <h3>2027 Distribution by Fixed Expanded-Income Group</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Group</th><th>Allocation</th><th>Share</th></tr></thead>
+      <tbody>
+        <tr><td>Quintile 1</td><td>$0.32B</td><td>1.0%</td></tr>
+        <tr><td>Quintile 2</td><td>$0.87B</td><td>2.6%</td></tr>
+        <tr><td>Quintile 3</td><td>$1.89B</td><td>5.7%</td></tr>
+        <tr><td>Quintile 4</td><td>$3.98B</td><td>12.1%</td></tr>
+        <tr><td>Quintile 5</td><td>$25.76B</td><td>78.2%</td></tr>
+        <tr><td>Top 10%</td><td>$21.52B</td><td>65.3%</td></tr>
+        <tr><td>Top 1%</td><td>$9.22B</td><td>28.0%</td></tr>
+        <tr><td>Top 0.1%</td><td>$4.02B</td><td>12.2%</td></tr>
+      </tbody>
+    </table></div>
+    <section class="finding note"><strong>Visibility issue:</strong> <code>distribution.csv</code> does not retain an aggregated <code>liab_corp</code> column. Corporate tax is included only in <code>iit_pr_death_cit_vat_wealth</code>, where it is mixed with the other included taxes.</section>
+
+    <h2>Effective Tax Rates</h2>
+    <p>The ETR file allocates both the baseline level of corporate receipts and the reform delta. It reports three incidence conventions:</p>
+    <ul>
+      <li><code>equity_supernormal</code>: headline stock-based convention.</li>
+      <li><code>capital_income</code>: agency-style reconciliation using capital income.</li>
+      <li><code>uniform_networth</code>: allocation across net worth.</li>
+    </ul>
+
+    <h3>2027 Corporate ETR Component</h3>
+    <p>Static leg, expanded-income denominator, fixed ranking, and headline <code>equity_supernormal</code> incidence:</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Group</th><th>Baseline corporate ETR</th><th>Reform corporate ETR</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>Quintile 1</td><td>0.604%</td><td>0.674%</td><td>+0.070 pp</td></tr>
+        <tr><td>Quintile 5</td><td>1.475%</td><td>1.643%</td><td>+0.169 pp</td></tr>
+        <tr><td>Top 1%</td><td>1.538%</td><td>1.714%</td><td>+0.176 pp</td></tr>
+        <tr><td>Top 0.1%</td><td>1.402%</td><td>1.563%</td><td>+0.161 pp</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Overall Expanded-Income ETR</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Year and leg</th><th>Baseline total ETR</th><th>Reform total ETR</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>2027 static</td><td>20.668%</td><td>20.784%</td><td>+0.116 pp</td></tr>
+        <tr><td>2027 conventional</td><td>20.668%</td><td>20.745%</td><td>+0.077 pp</td></tr>
+        <tr><td>2036 static</td><td>21.973%</td><td>22.143%</td><td>+0.169 pp</td></tr>
+        <tr><td>2036 conventional</td><td>21.973%</td><td>22.103%</td><td>+0.130 pp</td></tr>
+      </tbody>
+    </table></div>
+
+    <p>In 2027, allocated baseline corporate tax is approximately $283.0B and allocated reform corporate tax is approximately $315.9B, a $32.94B increase. The corporate tax is therefore present and reconciles to the distribution result.</p>
+    <p>The total ETR rises less than the corporate component because expanded and Haig-Simons income add allocated corporate tax to both the numerator and the pre-tax-income denominator. The conventional leg is smaller still because modeled income, realization, and individual-income-tax offsets reduce the amount collected.</p>
+
+    <h2>Assessment</h2>
+    <ul>
+      <li>This is primarily a presentation problem, not a corporate-tax omission.</li>
+      <li>The burden is strongly concentrated toward the top, although the labor leg and broad stock base make it less concentrated than a pure capital-income allocation.</li>
+      <li>The corporate-income gross-up mechanically mutes the change in total ETR.</li>
+      <li>The combined <code>wealth_cit_vat</code> tier makes the corporate component difficult to identify without inspecting the component columns.</li>
+      <li>Rounded total-ETR displays in the atlas can make a 0.1–0.2 percentage-point corporate effect appear negligible.</li>
+    </ul>
+
+    <h2>Code References</h2>
+    <p class="sources">
+      Allocation definitions: <code>src/data/post_processing/corp_alloc.R</code><br>
+      Standard distribution integration: <code>src/data/post_processing/distribution.R</code><br>
+      ETR construction and decomposition: <code>src/data/post_processing/distribution_etrs.R</code><br>
+      Run history: <code>other/top_tax/session_2026-07-10_decades.md</code>
+    </p>
+    <footer>Source results inspected directly from the <code>s_corp_r28</code> supplemental outputs in <code>top_tax_dials_30y_v1</code>.</footer>
+  </main>
+</body>
+</html>

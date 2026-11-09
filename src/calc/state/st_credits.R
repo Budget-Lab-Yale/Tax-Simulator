@@ -142,7 +142,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'div_ord',           # (dbl)  ordinary dividends (earned-credit investment test)
     'div_pref',          # (dbl)  qualified dividends (earned-credit investment test)
     'txbl_kg',           # (dbl)  taxable net capital gain (earned-credit investment test)
-    'part_scorp',        # (dbl)  partnership/S-corp share of Schedule E (earned-credit investment test)
+    'net_rent',          # (dbl)  net rental and royalty income (earned-credit investment test)
+    'net_estate',        # (dbl)  net estate and trust income (earned-credit investment test)
 
     # State tax law (scalar; vector table params accessed by column name),
     # declared per credit-family module

@@ -1,0 +1,8 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types,economy.interfaces.tax_data_id,economy.interfaces.tax_data_vintage
+baseline,default,,,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_all,private/niskanen_housing/co_all,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_all,private/niskanen_housing/dr_all,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_all_x2,private/niskanen_housing/co_all_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_all_x2,private/niskanen_housing/dr_all_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_all_unl,private/niskanen_housing/co_all_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_all_unl,private/niskanen_housing/dr_all_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918

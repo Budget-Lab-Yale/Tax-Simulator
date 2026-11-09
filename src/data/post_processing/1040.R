@@ -1,8 +1,35 @@
 #---------------------------------------------------
 # 1040.R
-# 
-# Post-processing functions to generate 1040 report 
+#
+# Post-processing functions to generate 1040 report
 #---------------------------------------------------
+
+
+pivot_1040_long = function(df, id_cols, names_to = 'series') {
+
+  #----------------------------------------------------------------------------
+  # Reshapes a wide 1040 totals dataframe long in series and variable. Count
+  # columns are prefixed count and the rest amount, then pivoted on the separator.
+  #
+  # Parameters:
+  #   - df (df)          : wide 1040 totals dataframe
+  #   - id_cols (str[])  : identifier columns to keep wide
+  #   - names_to (str)   : name for the count/amount series column
+  #
+  # Returns: tibble long in (series, Variable) with a value column (df).
+  #----------------------------------------------------------------------------
+
+  df %>%
+    rename_with(.cols = starts_with('n_'),
+                .fn   = ~ str_replace(., 'n_', 'count.')) %>%
+    rename_with(.cols = -c(all_of(id_cols), starts_with('count.')),
+                .fn   = ~ paste0('amount.', .)) %>%
+    pivot_longer(cols      = -all_of(id_cols),
+                 names_to  = c(names_to, 'Variable'),
+                 names_sep = '[.]',
+                 values_to = 'value') %>%
+    return()
+}
 
 
 build_1040_report = function(id) {
@@ -27,22 +54,15 @@ build_1040_report = function(id) {
                        'static',
                        'totals', 
                        '1040.csv') %>%
-          read_csv(show_col_types = F) %>%  
-    
-    # Pivot long in variable 
-    rename_with(.cols = starts_with('n_'), 
-                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-    rename_with(.cols = -c(year, starts_with('count.')), 
-                .fn   = ~ paste0('amount.', .)) %>%
-    pivot_longer(cols      = -year, 
-                 names_to  = c('series', 'Variable'), 
-                 names_sep = '[.]',
-                 values_to = 'value') %>% 
-    pivot_wider(names_from  = series, 
-                values_from = value) 
+          read_csv(show_col_types = F) %>%
+
+    # Pivot long in variable
+    pivot_1040_long(id_cols = 'year') %>%
+    pivot_wider(names_from  = series,
+                values_from = value)
   
-  # Read in counterfactual scenario 1040 totals 
-  scenario = c('static', 'conventional') %>% 
+  # Read in counterfactual scenario 1040 totals, one block per reportable rung
+  scenario = REPORTING_LEGS %>% 
     map(.f = ~ file.path(globals$output_root, 
                          id, 
                          .x,
@@ -53,18 +73,11 @@ build_1040_report = function(id) {
     ) %>% 
     bind_rows() %>% 
     
-    # Pivot long in variable 
-    select(-starts_with('mtr_')) %>% 
-    rename_with(.cols = starts_with('n_'), 
-                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-    rename_with(.cols = -c(year, run_type, starts_with('count.')), 
-                .fn   = ~ paste0('amount.', .)) %>%
-    pivot_longer(cols      = -c(year, run_type), 
-                 names_to  = c('series', 'Variable'), 
-                 names_sep = '[.]',
-                 values_to = 'value') %>% 
-    pivot_wider(names_from  = series, 
-                values_from = value) %>% 
+    # Pivot long in variable
+    select(-starts_with('mtr_')) %>%
+    pivot_1040_long(id_cols = c('year', 'run_type')) %>%
+    pivot_wider(names_from  = series,
+                values_from = value) %>%
     
     # Join baseline numbers 
     left_join(baseline %>% 
@@ -79,13 +92,13 @@ build_1040_report = function(id) {
     pivot_wider(names_from  = run_type, 
                 values_from = c(count, diff_count, amount, diff_amount)) %>% 
     
-    # Rename variables 
-    recode_1040_vars(id) %>% 
+    # Rename variables
+    recode_1040_vars() %>%
     filter(!is.na(Variable)) %>% 
-    select(year, Variable, baseline_count, baseline_amount, count_static, 
-           amount_static, diff_count_static, diff_amount_static, 
-           count_conventional, amount_conventional, diff_count_conventional, 
-           diff_amount_conventional)
+    select(year, Variable, baseline_count, baseline_amount,
+           all_of(as.vector(outer(
+             c('count', 'amount', 'diff_count', 'diff_amount'),
+             REPORTING_LEGS, paste, sep = '_'))))
   
   
   # Convert to year-indexed list
@@ -105,78 +118,53 @@ build_1040_report = function(id) {
     # Create worksheet
     addWorksheet(wb = wb, sheetName = as.character(yr))
     
+    # Each rung gets a four-column block, separated from the one before it by a
+    # narrow spacer column, so the layout follows the number of rungs
+    leg_col   = 5 + (seq_along(REPORTING_LEGS) - 1) * 5
+    last_col  = max(leg_col) + 3
+
     # Write data
     writeData(wb       = wb, 
               sheet    = as.character(yr), 
               x        = scenario[[i]] %>% 
                            select(Variable, baseline_count, baseline_amount), 
               startRow = 3)
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = scenario[[i]] %>%
-                           select(count_static, amount_static, 
-                                  diff_count_static, diff_amount_static),
-              startRow = 3,
-              startCol = 5)
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = scenario[[i]] %>%
-                           select(count_conventional, amount_conventional, 
-                                  diff_count_conventional, diff_amount_conventional),
-              startRow = 3,
-              startCol = 10)
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Baseline', 
-              xy       = c(2, 2))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Policy reform, static', 
-              xy       = c(5, 2))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Policy reform, conventional', 
-              xy       = c(10, 2))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns', 
-              xy       = c(2, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount', 
-              xy       = c(3, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns', 
-              xy       = c(5, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount', 
-              xy       = c(6, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns, difference from baseline', 
-              xy       = c(7, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount, difference from baseline', 
-              xy       = c(8, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns', 
-              xy       = c(10, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount', 
-              xy       = c(11, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns, difference from baseline', 
-              xy       = c(12, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount, difference from baseline', 
-              xy       = c(13, 3))
+    for (k in seq_along(REPORTING_LEGS)) {
+      writeData(wb       = wb, 
+                sheet    = as.character(yr), 
+                x        = scenario[[i]] %>%
+                             select(all_of(paste0(
+                               c('count', 'amount', 'diff_count', 'diff_amount'),
+                               '_', REPORTING_LEGS[k]))),
+                startRow = 3,
+                startCol = leg_col[k])
+    }
+
+    # Write column headers
+    headers = bind_rows(
+      tribble(
+        ~text,                                          ~col, ~row,
+        'Baseline',                                        2,    2,
+        'Number of returns',                               2,    3,
+        'Amount',                                          3,    3
+      ),
+      seq_along(REPORTING_LEGS) %>%
+        map(.f = ~ tibble(
+          text = c(paste0('Policy reform, ', REPORTING_LEGS[.x]),
+                   'Number of returns',
+                   'Amount',
+                   'Number of returns, difference from baseline',
+                   'Amount, difference from baseline'),
+          col  = leg_col[.x] + c(0, 0, 1, 2, 3),
+          row  = c(2, 3, 3, 3, 3))) %>%
+        bind_rows()
+    )
+    for (j in 1:nrow(headers)) {
+      writeData(wb    = wb,
+                sheet = as.character(yr),
+                x     = headers$text[j],
+                xy    = c(headers$col[j], headers$row[j]))
+    }
 
     # Add title
     writeData(wb = wb, sheet = as.character(yr), startRow = 1, 
@@ -184,10 +172,11 @@ build_1040_report = function(id) {
     
     
     # Format numbers and cells 
+    header_cols = c(2:3, leg_col %>% map(.f = ~ .x + 0:3) %>% unlist())
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 4:(nrow(scenario[[i]]) + 4),
-             cols       = 2:13,
+             cols       = 2:last_col,
              gridExpand = T,
              style      = createStyle(numFmt = 'NUMBER'),
              stack      = T)
@@ -195,25 +184,23 @@ build_1040_report = function(id) {
                sheet = as.character(yr),
                rows  = 2,
                cols  = 2:3)
-    mergeCells(wb    = wb,
-               sheet = as.character(yr),
-               rows  = 2,
-               cols  = 5:8)
-    mergeCells(wb    = wb,
-               sheet = as.character(yr),
-               rows  = 2,
-               cols  = 10:13)
+    for (k in seq_along(REPORTING_LEGS)) {
+      mergeCells(wb    = wb,
+                 sheet = as.character(yr),
+                 rows  = 2,
+                 cols  = leg_col[k] + 0:3)
+    }
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 2:(nrow(scenario[[i]]) + 4),
-             cols       = 2:13,
+             cols       = 2:last_col,
              gridExpand = T,
              style      = createStyle(halign = 'center'),
              stack      = T)
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 1:100,
-             cols       = 1:13,
+             cols       = 1:last_col,
              gridExpand = T,
              style      = createStyle(fontSize = 10,
                                       wrapText = T), 
@@ -221,14 +208,15 @@ build_1040_report = function(id) {
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 2,
-             cols       = c(2:3, 5:8, 10:13),
+             cols       = header_cols,
              gridExpand = T,
              style      = createStyle(border = 'bottom'),
              stack      = T)
     setColWidths(wb     = wb,
                  sheet  = as.character(yr),
-                 cols   = 1:13,
-                 widths = c(47, 10, 10, 2, 10, 10, 10, 10, 2, 10, 10, 10, 10))
+                 cols   = 1:last_col,
+                 widths = c(47, 10, 10,
+                            rep(c(2, 10, 10, 10, 10), length(REPORTING_LEGS))))
 
   }
   
@@ -247,7 +235,7 @@ build_1040_report = function(id) {
       deleteData(wb         = wb, 
                  sheet      = i, 
                  rows       = 1:(nrow(scenario[[i]]) + 4),
-                 cols       = 4:13, 
+                 cols       = 4:(max(5 + (length(REPORTING_LEGS) - 1) * 5) + 3), 
                  gridExpand = T)
       addStyle(wb         = wb, 
                sheet      = i, 
@@ -315,21 +303,15 @@ build_stacked_1040_reports = function(counterfactual_ids) {
                   .fns  = ~ if_else(scenario_id == 'baseline', ., . - lag(.)))) %>% 
     ungroup() %>%  
   
-    # Reshape wide in scenario 
-    rename_with(.cols = starts_with('n_'), 
-                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-    rename_with(.cols = -c(scenario_id, year, run_type, starts_with('count.')), 
-                .fn   = ~ paste0('amount.', .)) %>%
-    pivot_longer(cols      = -c(scenario_id, year, run_type), 
-                 names_to  = c('Series', 'Variable'), 
-                 names_sep = '[.]',
-                 values_to = 'value') %>% 
-    pivot_wider(names_from  = scenario_id, 
+    # Reshape wide in scenario
+    pivot_1040_long(id_cols  = c('scenario_id', 'year', 'run_type'),
+                    names_to = 'Series') %>%
+    pivot_wider(names_from  = scenario_id,
                 values_from = value) %>%
     
     # Clean up 
-    relocate(run_type, Variable, Series) %>% 
-    recode_1040_vars('baseline') %>%
+    relocate(run_type, Variable, Series) %>%
+    recode_1040_vars() %>%
     filter(!is.na(Variable)) %>% 
     mutate(Series = if_else(Series == 'amount', 'Amount', 'Number of returns'))
   
@@ -421,15 +403,14 @@ build_stacked_1040_reports = function(counterfactual_ids) {
 
 
 
-recode_1040_vars = function(df, scenario_id) {
-  
+recode_1040_vars = function(df) {
+
   #----------------------------------------------------------------------------
-  # Converts subset of variable names to human-readable descriptions. 
-  # Unspecified mappings are returned as NA.  
-  # 
+  # Converts subset of variable names to human-readable descriptions.
+  # Unspecified mappings are returned as NA.
+  #
   # Parameters:
-  #   - df (df)           : dataframe long in Variable with 1040.csv names 
-  #   - scenario_id (str) : scenario ID
+  #   - df (df) : dataframe long in Variable with 1040.csv names
   #
   # Returns: dataframe with recoded Variable column (df).
   #----------------------------------------------------------------------------
@@ -514,6 +495,7 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'tip_ded'               ~ 'Below-the-line tip deduction',
       Variable == 'ot_ded'                ~ 'Below-the-line overtime deduction',
       Variable == 'senior_ded'            ~ 'Below-the-line senior deduction for itemizers',
+      Variable == 'char_nonitem_ded'      ~ 'Charitable deduction for non-itemizers',
       Variable == 'txbl_inc'              ~ 'Taxable income',
       Variable == 'liab_ord'              ~ 'Ordinary-rate tax liability',
       Variable == 'liab_pref'             ~ 'Preferred-rate tax liability',

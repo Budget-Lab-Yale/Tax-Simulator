@@ -1,0 +1,54 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Rows read: 221831
+weight  range: [0.03, 18497.68]   n(weight<=0)=0
+age1    range: [18.00, 98.00]
+id      range: [3, 2025000935]
+
+--- net worth sign (weighted) ---
+  < 0 : 7.01% (13.8M units, 9018 records) 
+  = 0 : 21.34% (42.0M units, 25660 records) 
+  > 0 : 71.65% (141.0M units, 187153 records) 
+
+--- any positive debt? ---
+  debts > 0 : 60.47% (119.0M units, 135572 records) 
+  total debt outstanding (wtd): $18.673 T
+  total assets (wtd):           $212.530 T
+
+--- low percentiles, ALL ages (weighted) ---
+    pctile networth
+    <char>    <num>
+ 1:   p0.5   -96536
+ 2:     p1   -62924
+ 3:     p2   -30068
+ 4:     p3   -17199
+ 5:     p5    -4672
+ 6:    p10        0
+ 7:    p15        0
+ 8:    p20        0
+ 9:    p25        0
+10:    p50    86169
+
+min net worth: $-919,707   (most negative record)
+
+--- by age bin: % negative, % exactly zero, and p1/p3/p5 ---
+    age_bin pct_neg pct_zero      p1     p3     p5
+     <fctr>   <num>    <num>   <num>  <num>  <num>
+ 1:     <25    12.5     40.4  -38720 -11684  -8298
+ 2:   25-29    14.8     26.5  -91492 -54749 -32424
+ 3:   30-34    14.6     24.6 -286799 -75438 -42400
+ 4:   35-39     5.4     26.1  -82108 -17321  -2703
+ 5:   40-44     5.3     22.0  -74197 -14980  -4355
+ 6:   45-49     4.7     20.5  -69055 -14980      0
+ 7:   50-54     3.8     16.2  -33156  -4594      0
+ 8:   55-59     2.8     13.6  -29361      0      0
+ 9:   60-64     3.2     13.5  -17294  -1289      0
+10:   65-69     5.6     13.7  -47762  -3973   -480
+11:   70-74     2.6     11.2  -11450      0      0
+12:   75-79     2.5      6.2   -4570      0      0
+13:     80+     1.0     15.5    -827      0      0

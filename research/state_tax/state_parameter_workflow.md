@@ -20,7 +20,7 @@ start learning state law.
 Everything below is weights-independent and should proceed now:
 
 1. Build a source packet for the state.
-2. Encode baseline YAML parameters under `config/scenarios/tax_law_state/baseline/{st}/`.
+2. Encode baseline YAML parameters under `config/scenarios/tax_law/default/state/{st}/`.
 3. Add or extend worksheet-style unit tests in `src/tests/state/test_state_calc.R`.
 4. Write known-differences notes for data limits, projected years, and omitted features.
 5. Run record-level cross-model checks against TAXSIM and, where useful, PolicyEngine.

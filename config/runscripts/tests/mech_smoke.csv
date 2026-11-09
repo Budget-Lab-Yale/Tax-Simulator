@@ -1,0 +1,7 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,default,2025:2027,,wages1 wages2,nextdollar nextdollar
+sd_bump_plain,tests/sd_bump_10k,no_saving_channel,default,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar
+sd_bump_wealth,tests/sd_bump_10k,default,default,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar
+er_oasi_1pp,tests/pr_test/er_oasi_1pp,no_saving_channel,default,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar
+er_oasi_taxmax,tests/pr_test/er_oasi_taxmax,default,default,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar
+ee_hi_1pp,tests/pr_test/ee_hi_1pp,no_saving_channel,default,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar

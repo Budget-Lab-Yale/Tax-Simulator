@@ -1,0 +1,42 @@
+# Generated file -- written by other/top_tax/sigma_calib/write_sigma_sweep.py.
+#
+# One sweep point, conv = 0.30, on the trial grid {0.0, 0.16, 0.30} used to pin the
+# conversion margin.
+# This is not a shipped calibration, and no scenario should bind it except the
+# runscript generated alongside it.
+#
+# This is the shipped config/calibrations/kg/conversion.yaml with the conv entry
+# replaced. pt_labor_share keeps its own provenance.
+#
+# Bound by  : config/scenarios/behavior/alternatives/sigma_calib_100_conv_30/
+# Measured by: other/top_tax/sigma_calib/measure_sigma.R
+#
+# The file name matters. It stays `conversion.yaml` inside a differently named
+# folder, because entries are labelled '{file stem}.{entry}', so calling it
+# conv_30.yaml would relabel every entry in it and detach any waiver written
+# against `conversion.conv`.
+
+_channel:
+  role: state
+
+conv:
+  value: 0.30
+  kind: judgment
+  note: >
+    A sweep trial rather than a calibrated value, which is why the kind is
+    judgment. It has no derivation to go stale: it is an input to the calibration
+    that pins conv, one of the points on the grid {0.0, 0.16, 0.30}. The measurement
+    script reads the vintages the grid produces, measures the top-subset ordinary
+    elasticity of taxable income at each, and interpolates for the sigma hitting the
+    target of 0.25. That interpolation is the shipped value in
+    config/calibrations/kg/conversion.yaml. The zero point is the floor, the
+    elasticity entity shifting and evasion produce with no conversion, so sigma is a
+    residual rather than an independent estimate.
+    Measured by: other/top_tax/sigma_calib/measure_sigma.R
+
+pt_labor_share:
+  value: 0.75
+  kind: sourced
+  citation: >
+    Labor-content share of active pass-through income (Smith, Yagan, Zidar and
+    Zwick), applied to the active pass-through legs of the conversion pool.

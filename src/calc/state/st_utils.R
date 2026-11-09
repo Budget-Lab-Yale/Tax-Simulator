@@ -24,7 +24,7 @@ st_param_schema = local({
   #----------------------------------------------------------------------------
 
   cache = NULL
-  function(path = './config/scenarios/tax_law_state/params_schema.yaml') {
+  function(path = file.path(state_tax_law_root(), 'params_schema.yaml')) {
     if (!is.null(cache)) {
       return(cache)
     }

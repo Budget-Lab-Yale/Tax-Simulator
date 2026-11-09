@@ -3,26 +3,37 @@
 #----------------------------------------------------------------
 
 
-do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) { 
+do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
+                    calc_estate_flag = TRUE, calc_wealth_flag = TRUE) {
 
   #----------------------------------------------------------------------------
   # Calculates payroll and individual income taxes for all tax units. Form-
   # behavior optimization in which the filer needs to calculate taxes more
-  # than once is performed here (rather than inside of a calc function.) 
+  # than once is performed here (rather than inside of a calc function.)
   # Currently supports charitable contribution reporting optimization when
   # a deduction is available both above the line and on Schedule A.
-  # 
+  #
   # Parameters:
-  #   - tax_units (df)       : tibble of tax units, exogenous variables only
-  #   - baseline_pr_er (df)  : tibble of baseline employer-side payroll 
-  #                            liabilities. NULL if baseline
-  #   - vars_1040 (str[])    : vector of (calculated) names of 1040 variables  
-  #                            to return
-  #   - vars_payroll (str[]) : vector of (calculated) names of payroll tax  
-  #                            variables to return
-  # 
+  #   - tax_units (df)          : tibble of tax units, exogenous variables only
+  #   - baseline_pr_er (df)     : tibble of baseline employer-side payroll
+  #                               liabilities. NULL if baseline
+  #   - vars_1040 (str[])       : vector of (calculated) names of 1040 variables
+  #                               to return
+  #   - vars_payroll (str[])    : vector of (calculated) names of payroll tax
+  #                               variables to return
+  #   - calc_estate_flag (bool) : whether to compute estate liability. TRUE for
+  #                               the static and conventional passes, which read
+  #                               it; FALSE for the callers that read only income
+  #                               tax results, saving a pass over the frame.
+  #                               Estate tax is computed after income tax and
+  #                               never feeds back into it
+  #   - calc_wealth_flag (bool) : whether to compute annual wealth tax liability,
+  #                               under the same contract as calc_estate_flag.
+  #                               The net_worth MTR sets it TRUE so that the
+  #                               dollar bump reprices the marginal wealth rate
+  #
   # Returns: tibble of tax units with new columns for calculated tax variables
-  #          (df).  
+  #          (df).
   #----------------------------------------------------------------------------
       
   
@@ -74,49 +85,73 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   # Check whether individual income taxes need to be calculated more than once.
   # If both an above-the-line and an itemized charitable deduction are available,
   # the taxpayer chooses between the two by calculating their taxes twice
-  if (any(tax_units$char.above_limit > 0 & tax_units$char.item_limit > 0)) { 
-    
-    # Force filers to take the above-the-line deduction
-    above = tax_units %>% 
-      do_1040(return_vars = vars_1040,
-              force_char  = T, 
-              char_above  = T) %>% 
-      mutate(id            = tax_units$id, 
-             char_ded_type = 'above')
-    
-    # Force filers to take the itemized deduction
-    item = tax_units %>% 
-      do_1040(return_vars = vars_1040, 
-              force_char  = T, 
-              char_above  = F) %>% 
-      mutate(id            = tax_units$id,
-             char_ded_type = 'item')
-    
+  if (any(tax_units$char.above_limit > 0 & tax_units$char.item_limit > 0)) {
+
+    # Force filers to take each deduction form in turn
+    legs = list(above = T, item = F) %>%
+      imap(.f = ~ tax_units %>%
+             do_1040(return_vars = vars_1040,
+                     force_char  = T,
+                     char_above  = .x) %>%
+             mutate(id            = tax_units$id,
+                    char_ded_type = .y))
+
     # Determine which is better
-    opt = above %>% 
-      select(above = liab_iit_net) %>% 
+    opt = legs$above %>%
+      select(above = liab_iit_net) %>%
       bind_cols(
-        item %>% 
+        legs$item %>%
           select(item = liab_iit_net)
-      ) %>% 
-      mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>% 
+      ) %>%
+      mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>%
       select(char_ded_type)
-    
+
     # Select optimized answer
     tax_units %<>%
       bind_cols(opt) %>%
-      left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
+      left_join(bind_rows(legs), by = c('id', 'char_ded_type')) %>%
       select(-char_ded_type)
     
-  # Standard case: just calculate the 1040 once  
+  # Standard case: just calculate the 1040 once
   } else {
-    tax_units %<>% 
+    tax_units %<>%
       bind_cols(do_1040(., vars_1040))
   }
 
 
+  #------------
+  # Estate tax
+  #------------
+
+  # Calculate per-record liability conditional on death this year. It sits in the
+  # chain so that each pass and each behavioral response reprices it; mortality is
+  # a weights operation and stays in src/sim/estate.R. Drop any estate columns the
+  # frame already carries, since the MTR loop re-runs do_taxes on frames that have
+  # them.
+  if (calc_estate_flag) {
+    tax_units %<>%
+      select(-any_of(ESTATE_OUTPUT_COLS)) %>%
+      bind_cols(calc_estate(., globals$estate_params))
+  }
+
+
+  #------------
+  # Wealth tax
+  #------------
+
+  # Calculate the annual wealth tax on the net_worth column set in run_one_year. It
+  # sits in the chain so that every pass recomputes it on its own frame, including
+  # the avoidance module's, which overwrites net worth, and the net worth MTR
+  # bump's. Liability stays its own column and is never folded into income tax.
+  if (calc_wealth_flag) {
+    tax_units %<>%
+      select(-any_of(WEALTH_OUTPUT_COLS)) %>%
+      bind_cols(calc_wealth(.))
+  }
+
+
   #----------------
-  # Add other vars 
+  # Add other vars
   #----------------
   
 
@@ -184,22 +219,6 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       )
     )
   
-  # Attach AGI bracketed liability variables for post-processing
-  
-  suppressMessages(tax_units %<>%
-    bind_cols(
-        integrate_rates_brackets(
-          df              = .,
-          n_brackets      = NULL, 
-          prefix_brackets = 'ord.brackets', 
-          prefix_rates    = 'ord.rates', 
-          y               = 'agi',
-          output_name     = 'liab_brac', 
-          by_bracket      = T
-        )
-    )
-    )
-  
   # Set "corporate tax change", a variable used to measure the off-model 
   # corporate tax revenue changes owing to business entity shifting, to 0 if 
   # not running business entity shifting behavioral feedback
@@ -263,12 +282,23 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   #----------------------------------------------------------------------------
   
   
-  # Create tibble-length vectors for form-behavior booleans 
+  # Create tibble-length vectors for form-behavior booleans
   force_char = rep(force_char, nrow(tax_units))
   char_above = rep(char_above, nrow(tax_units))
-  
-  
-  tax_units %>% 
+
+  # Calculate a tax concept with charitable contributions masked to zero where
+  # the forced form says they belong on the other side of the 1040, restoring
+  # the original values afterward (from the *_ duplicates created below)
+  with_char_masked = function(df, zero_when, calc_fn) {
+    df %>%
+      mutate(across(.cols = c(char_cash, char_noncash),
+                    .fns  = ~ if_else(zero_when, 0, .))) %>%
+      bind_cols(calc_fn(.)) %>%
+      mutate(char_cash    = char_cash_,
+             char_noncash = char_noncash_)
+  }
+
+  tax_units %>%
     
     # Create duplicates for variables affected by form-behavior optimization
     mutate(across(.cols  = c(char_cash, char_noncash), 
@@ -282,14 +312,12 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Net capital gain includable in AGI
     bind_cols(calc_kg(.)) %>% 
       
-    # AGI, including taxable OASI benefits
-    mutate(across(.cols = c(char_cash, char_noncash), 
-                  .fns  = ~ if_else(force_char & !char_above, 0, .))) %>% 
-    bind_cols(calc_agi(.)) %>% 
-    mutate(char_cash    = char_cash_, 
-           char_noncash = char_noncash_) %>% 
-      
-      
+    # AGI, including taxable OASI benefits (charitable masked out of the
+    # above-the-line deduction when forcing the itemized form)
+    with_char_masked(force_char & !char_above, calc_agi) %>%
+
+
+
     #----------------
     # Taxable income 
     #----------------
@@ -297,21 +325,19 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Standard deduction
     bind_cols(calc_std_ded(.)) %>% 
       
-    # Itemized deductions
-    mutate(across(.cols = c(char_cash, char_noncash), 
-                  .fns  = ~ if_else(force_char & char_above, 0, .))) %>%
-    bind_cols(calc_item_ded(.)) %>% 
-    mutate(char_cash    = char_cash_, 
-           char_noncash = char_noncash_) %>% 
+    # Itemized deductions (charitable masked out of the itemized deduction
+    # when forcing the above-the-line form)
+    with_char_masked(force_char & char_above, calc_item_ded) %>%
     
     # Personal exemptions
     bind_cols(calc_pe_ded(.)) %>% 
     
+    # Other below-the-line deductions (before QBI, whose taxable income
+    # limit is net of them)
+    bind_cols(calc_below_ded(.)) %>% 
+    
     # QBI deduction
     bind_cols(calc_qbi_ded(.)) %>% 
-    
-    # Other below-the-line deductions 
-    bind_cols(calc_below_ded(.)) %>% 
     
     # Taxable income and itemizer status
     bind_cols(calc_txbl_inc(.)) %>%
@@ -389,11 +415,11 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
       caregiver_cred_ref    = 0, 
     ) %>%
     
-    # CTC
-    bind_cols(calc_ctc(.)) %>% 
-    
     # EITC
     bind_cols(calc_eitc(.)) %>% 
+    
+    # CTC
+    bind_cols(calc_ctc(.)) %>% 
     
     # Rebates / UBI
     bind_cols(calc_rebate(.)) %>%
@@ -490,45 +516,117 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T, 
-                     type = 'nextdollar') {
-  
+calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
+                     type = 'nextdollar', actual_liab_wealth = NULL,
+                     baseline_pr_er = NULL, actual_liab_estate = NULL,
+                     actual_estate_p_dsue = NULL) {
+
   #----------------------------------------------------------------------------
-  # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
-  # with respect to given variable. Includes employee-side payroll taxes. 
+  # Calculates MTR, either at the next-dollar or 0-actual extensive margin,
+  # with respect to given variable. Includes employee-side payroll taxes.
   #
   # Note: for next-dollar MTRs, variable "wages" means non-tip, non-OT wages.
-  # For extensive margin MTRs, variable "wages" means all wages, including 
+  # For extensive margin MTRs, variable "wages" means all wages, including
   # tips and OT.
-  # 
+  #
   # Always double-check whether the variable you want a tax rate for is handled
-  # by the logic below!! It's not generalized to every variable due to 
+  # by the logic below!! It's not generalized to every variable due to
   # compositional issues (i.e. some variables are components of others).
-  # 
+  #
   # Parameters:
-  #   - tax_units (df)          : tibble of tax units, exogenous variables only
-  #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
-  #                               against
-  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare 
-  #                               against
-  #   - var (str)               : name of variable to increment
-  #   - pr (bool)               : whether to include payroll taxes in the MTR
-  #                               calculation
-  #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
-  #                               for delta in tax when reducing the value to 0
+  #   - tax_units (df)             : tibble of tax units, exogenous variables only
+  #   - actual_liab_iit (dbl[])    : vector of net income tax liability to compare
+  #                                  against
+  #   - actual_liab_pr (dbl[])     : vector of total payroll tax to compare
+  #                                  against
+  #   - var (str)                  : name of variable to increment
+  #   - pr (bool)                  : whether to include payroll taxes in the MTR
+  #                                  calculation
+  #   - type (str)                 : "nextdollar" for next-dollar MTR, "extensive"
+  #                                  for delta in tax when reducing the value to 0
+  #   - actual_liab_wealth (dbl[]) : vector of annual wealth tax liability to
+  #                                  compare against, read only for
+  #                                  var == 'net_worth'. NULL for income and
+  #                                  payroll MTRs, which do not move net worth
+  #   - actual_liab_estate (dbl[]) : vector of expected estate liability, the
+  #                                  blend over the two DSUE branches
+  #
+  #                                    E[liab] = p_dsue * liab_dsue +
+  #                                              (1 - p_dsue) * liab_nodsue
+  #
+  #                                  read only for var == 'estate'. It must come
+  #                                  from the frame the recompute runs on, never
+  #                                  from the baseline
+  #   - actual_estate_p_dsue (dbl[]) : the same frame's estate_p_dsue vector,
+  #                                  required for var == 'estate'. The dollar bump
+  #                                  cannot move the DSUE bin, whose lookup is on
+  #                                  reported gross estate, so this is asserted
+  #                                  equal to the recompute's. Since the actuals
+  #                                  arrive as bare vectors, that assertion is
+  #                                  also what catches a misaligned frame
+  #   - baseline_pr_er (df)        : baseline employer-side payroll, passed to the
+  #                                  internal do_taxes() recompute. do_taxes
+  #                                  rescales wages by the employer payroll delta
+  #                                  against baseline and bakes the rescaled wages
+  #                                  into the frame it returns, so the recompute's
+  #                                  total rescaling has to equal the actuals'.
+  #                                  Which value does that depends on the frame:
+  #                                  a frame that has not been through do_taxes
+  #                                  takes the same value the actuals ran under,
+  #                                  and one that has takes NULL. Threading the
+  #                                  real value into the second case rescales
+  #                                  twice and puts the income tax effect of that
+  #                                  wage shift into the dollar numerator
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
-  
+
   # Set output variable name
   mtr_name = paste0('mtr_', var)
-  
+
+  # The wealth tax has one base, net worth, so recompute it in the bumped pass for
+  # the net worth MTR and skip it for every other variable
+  calc_wealth_flag = (var == 'net_worth')
+
+  # Likewise reprice the estate tax only for the estate MTR. There is no estate
+  # column: the perturbation is remapped below to estate_base_bump, a dollar on the
+  # taxable base inside its pmax, so the delta is the derivative of liability with
+  # respect to the base, positive by construction and not gated by the deductibility
+  # switch. The emitted rate is a statutory price conditional on death, with no
+  # mortality in it; that enters in the Bellman and the aggregation weights.
+  calc_estate_flag = (var == 'estate')
+  if (calc_estate_flag) {
+    if (type != 'nextdollar') {
+      stop('calc_mtrs: the estate MTR is defined only as a next-dollar ',
+           'right-derivative (type = "nextdollar"); got type = "', type, '".')
+    }
+    # The actuals arrive as bare vectors, so check their length here and their
+    # alignment through the DSUE identity below
+    if (is.null(actual_liab_estate) || is.null(actual_estate_p_dsue)) {
+      stop('calc_mtrs: var = "estate" requires same-frame actual_liab_estate ',
+           '(the DSUE-blended expected liability) and actual_estate_p_dsue.')
+    }
+    stopifnot(length(actual_liab_estate)   == nrow(tax_units),
+              length(actual_estate_p_dsue) == nrow(tax_units))
+    # Add the bump input at zero if the frame lacks it, so the increment below
+    # takes it to one
+    if (!('estate_base_bump' %in% names(tax_units))) {
+      tax_units$estate_base_bump = 0
+    }
+  }
+
   # Next-dollar calculation
   if (type == 'nextdollar') {
-    
+
     # Deal with composite variables. Initialize list of variables to increment
     vars = c(var)
-    
+
+    # Remap the estate variable to its base-bump input. Unlike net worth it is not
+    # a stored column, so incrementing it by name would error
+    if (var == 'estate') {
+      vars = c('estate_base_bump')
+    }
+
     if (var %in% c('wages1', 'wages2')) {
       vars = c(var, 'wages')
     }
@@ -616,11 +714,23 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       if (var %in% c('farm1', 'farm2')) {
         other_vars = c('farm')
       }
-      if (var %in% c('tips1', 'ot1')) {
-        other_vars = c('wages1', 'wages')
+
+      # Tips and overtime are components of wages and carry their own
+      # household-level aggregate, so both are decremented, matching the columns
+      # the next-dollar branch increments above. No calculator reads the bare
+      # aggregates today -- the deductions in below_ded.R and payroll in pr.R read
+      # the per-earner columns -- but a later one would.
+      if (var == 'tips1') {
+        other_vars = c('wages1', 'wages', 'tips')
       }
-      if (var %in% c('tips2', 'ot2')) {
-        other_vars = c('wages2', 'wages')
+      if (var == 'tips2') {
+        other_vars = c('wages2', 'wages', 'tips')
+      }
+      if (var == 'ot1') {
+        other_vars = c('wages1', 'wages', 'ot')
+      }
+      if (var == 'ot2') {
+        other_vars = c('wages2', 'wages', 'ot')
       }
       if (var %in% c('part_active', 'part_active_loss')) {
         other_vars = c('part_se1')
@@ -646,25 +756,55 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   
   # Invalid type
   else {
-    new_values = tax_units %>% 
-      mutate(across(.cols = all_of(vars), .fns  = ~ NA))
+    stop('Invalid MTR type: ', type)
   }
   
   
-  # Re-calculate taxes
-  new_values %>% 
+  # Re-calculate taxes. Choose baseline_pr_er by the frame convention in the
+  # parameter documentation above, so that the total wage rescaling is the same on
+  # both sides of the difference.
+  recomputed = new_values %>%
     do_taxes(
-      baseline_pr_er = NULL,
-      vars_payroll   = return_vars$calc_pr,
-      vars_1040      = fed_calc_vars(incl_payroll = F)
-    ) %>%
-    
+      baseline_pr_er   = baseline_pr_er,
+      vars_payroll     = return_vars$calc_pr,
+      vars_1040        = fed_calc_vars(incl_payroll = F),
+      calc_estate_flag = calc_estate_flag,
+      calc_wealth_flag = calc_wealth_flag
+    )
+
+  # The base bump cannot move the DSUE state probability, whose bin lookup is on
+  # reported gross estate, which the bump does not enter. Assert it rather than
+  # assume it: since the actuals arrive as bare vectors, this identity is also what
+  # catches a shuffled or wrong frame.
+  if (calc_estate_flag) {
+    if (!isTRUE(all.equal(recomputed$estate_p_dsue,
+                          as.numeric(actual_estate_p_dsue)))) {
+      stop('calc_mtrs: bumped-frame estate_p_dsue differs from the supplied ',
+           'actual_estate_p_dsue. Either the actuals were computed on a ',
+           'different frame / row order than tax_units, or the base bump ',
+           'moved the DSUE bin (it must not -- bin lookup is on ',
+           'reported_gross).')
+    }
+  }
+
+  recomputed %>%
+
     # Calculate MTR and return
     mutate(
-      
-      # Calculate numerator: change in taxes 
-      delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr),
-      
+
+      # Calculate numerator: change in taxes. The wealth and estate terms enter
+      # only for their own MTR variable and are zero otherwise, where those
+      # liabilities are not computed at all. The estate term differences expected
+      # liability, taking the DSUE blend before the response formulas downstream
+      # rather than after, which is an approximation.
+      delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr) +
+                    (if (calc_wealth_flag) liab_wealth - actual_liab_wealth else 0) +
+                    (if (calc_estate_flag)
+                       estate_p_dsue * liab_estate_dsue +
+                         (1 - estate_p_dsue) * liab_estate_nodsue -
+                         actual_liab_estate
+                     else 0),
+
       # Calculate denominator: change in variable value
       delta_var = case_when(
         type == 'nextdollar' ~ 1,
@@ -753,4 +893,3 @@ do_salt_workaround_baseline = function(tax_units) {
     return()
   
 }
-

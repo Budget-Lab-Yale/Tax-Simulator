@@ -26,7 +26,7 @@ test_state_calc = function() {
                 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
                 'AR', 'MS', 'MT', 'LA', 'IA'),
     years   = 2017:2035,
-    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 1980:2036) %>%
               mutate(growth = 0.025)
   )
   credit_tables = attr(law, 'credit_tables')
@@ -5270,7 +5270,7 @@ test_state_calc = function() {
     law_sub = build_state_tax_law(
       states  = subset_states,
       years   = 2024,
-      indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+      indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 1980:2036) %>%
                 mutate(growth = 0.025)
     )
     for (st in subset_states) {
@@ -5295,7 +5295,7 @@ test_state_calc = function() {
   law_zero = build_state_tax_law(
     states  = no_broad_zero_states,
     years   = 2017:2035,
-    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 1980:2036) %>%
               mutate(growth = 0.025)
   )
   for (st in no_broad_zero_states) {
@@ -5349,7 +5349,8 @@ st_test_unit = function(overrides = list()) {
     txbl_kg = 0, kg_pref = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
     part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
     alimony = 0, other_inc = 0,
-    sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
+    sch_e = 0, part_scorp = 0, net_rent = 0, net_estate = 0,
+    ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
     txbl_ira_dist = 0, ot_ded = 0, hsa_contr = 0,
     char_cash = 0, char_noncash = 0,

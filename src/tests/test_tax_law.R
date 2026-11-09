@@ -119,7 +119,7 @@ test_eitc_childless_threshold_indexed = function() {
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  tax_law_ids = c('baseline', 'baseline_2024', 'baseline_2024_tcja_ext',
+  tax_law_ids = c('default', 'baseline_2024', 'baseline_2024_tcja_ext', 'baseline_2024_pre_obbba',
                   'tests/baseline_2017', 'tests/tcja_2017',
                   'tests/booker_ctc_tcja_ext')
 

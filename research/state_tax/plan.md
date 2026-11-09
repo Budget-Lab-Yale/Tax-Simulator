@@ -219,7 +219,7 @@ non-filers are the population of interest.
 **Separate state tax-law root, reusing all existing machinery per state:**
 
 ```
-config/scenarios/tax_law_state/
+config/scenarios/tax_law/default/state/
 ├── baseline/
 │   ├── il/            # one dir per jurisdiction, lowercase postal code
 │   │   ├── agi.yaml   # conformity + additions/subtractions params

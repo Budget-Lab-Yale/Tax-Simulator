@@ -1,0 +1,545 @@
+<title>Methodology skeleton — top-tax project</title>
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#1A2233; --muted:#5A6473; --accent:#00356B;
+  --accent-ink:#00356B; --tint:#EDF1F7; --card:#F3F2EC; --rule:#DCDFE4;
+  --pill-neutral-bg:#E7EBF1; --pill-neutral-fg:#33405A;
+  --pill-amber-bg:#F6ECD4; --pill-amber-fg:#7A5A10;
+  --pill-red-bg:#F5DFDC; --pill-red-fg:#8C2F24;
+  --pill-violet-bg:#E9E4F2; --pill-violet-fg:#4E3B78;
+  --pill-grey-bg:#E9E9E6; --pill-grey-fg:#5C6066;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#12161E; --ink:#E6E9EF; --muted:#98A2B3; --accent:#7FA8D9;
+    --accent-ink:#A9C4E4; --tint:#1B2431; --card:#191F2A; --rule:#2A3140;
+    --pill-neutral-bg:#243043; --pill-neutral-fg:#B9C6DB;
+    --pill-amber-bg:#3A2F14; --pill-amber-fg:#E4C170;
+    --pill-red-bg:#41211D; --pill-red-fg:#E79A8E;
+    --pill-violet-bg:#2C2540; --pill-violet-fg:#C3B4E8;
+    --pill-grey-bg:#242830; --pill-grey-fg:#A2A8B3;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#12161E; --ink:#E6E9EF; --muted:#98A2B3; --accent:#7FA8D9;
+  --accent-ink:#A9C4E4; --tint:#1B2431; --card:#191F2A; --rule:#2A3140;
+  --pill-neutral-bg:#243043; --pill-neutral-fg:#B9C6DB;
+  --pill-amber-bg:#3A2F14; --pill-amber-fg:#E4C170;
+  --pill-red-bg:#41211D; --pill-red-fg:#E79A8E;
+  --pill-violet-bg:#2C2540; --pill-violet-fg:#C3B4E8;
+  --pill-grey-bg:#242830; --pill-grey-fg:#A2A8B3;
+}
+:root[data-theme="light"]{
+  --paper:#FBFAF7; --ink:#1A2233; --muted:#5A6473; --accent:#00356B;
+  --accent-ink:#00356B; --tint:#EDF1F7; --card:#F3F2EC; --rule:#DCDFE4;
+  --pill-neutral-bg:#E7EBF1; --pill-neutral-fg:#33405A;
+  --pill-amber-bg:#F6ECD4; --pill-amber-fg:#7A5A10;
+  --pill-red-bg:#F5DFDC; --pill-red-fg:#8C2F24;
+  --pill-violet-bg:#E9E4F2; --pill-violet-fg:#4E3B78;
+  --pill-grey-bg:#E9E9E6; --pill-grey-fg:#5C6066;
+}
+html{background:var(--paper)}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-size:17px; line-height:1.62; margin:0;
+}
+.wrap{max-width:74ch; margin:0 auto; padding:3rem 1.4rem 5rem}
+a{color:var(--accent-ink); text-decoration-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+a:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:2px}
+
+.eyebrow{
+  font-family:ui-sans-serif,system-ui,sans-serif; font-size:.72rem; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 .8rem;
+}
+h1{font-size:1.9rem; line-height:1.2; font-weight:600; margin:.1rem 0 .4rem; text-wrap:balance}
+.subtitle{color:var(--muted); font-style:italic; margin:0 0 1.6rem}
+h2{
+  font-size:1.28rem; font-weight:600; line-height:1.3; text-wrap:balance;
+  margin:3rem 0 .8rem; padding-top:1.4rem; border-top:1px solid var(--rule);
+}
+h2 .secno{color:var(--accent-ink); margin-right:.45rem}
+h3{font-size:1.02rem; font-weight:600; margin:1.6rem 0 .4rem}
+p{margin:.75rem 0}
+ul,ol{padding-left:1.3rem; margin:.75rem 0}
+li{margin:.35rem 0}
+strong{font-weight:600}
+hr{border:0; border-top:1px solid var(--rule); margin:2.5rem 0}
+
+.note{
+  background:var(--card); border:1px solid var(--rule); border-radius:6px;
+  padding:.9rem 1.1rem; margin:1.2rem 0; font-size:.95rem;
+}
+.note p{margin:.45rem 0}
+
+.claim{
+  border-left:3px solid var(--accent); background:var(--tint);
+  padding:.85rem 1.1rem; margin:1rem 0; border-radius:0 6px 6px 0;
+}
+.claim .lab{
+  display:block; font-family:ui-sans-serif,system-ui,sans-serif; font-size:.68rem;
+  font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--accent-ink); margin-bottom:.3rem;
+}
+.claim em, .claim{font-style:italic}
+.claim .lab{font-style:normal}
+
+.ids{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:.8rem; color:var(--accent-ink); white-space:nowrap;
+}
+code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:.85em; background:var(--tint); padding:.08em .3em; border-radius:3px;
+}
+
+.map{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:.5rem; margin:1.2rem 0 0; padding:0; list-style:none;
+  font-family:ui-sans-serif,system-ui,sans-serif; font-size:.82rem;
+}
+.map li{margin:0}
+.map a{
+  display:block; padding:.5rem .7rem; border:1px solid var(--rule); border-radius:5px;
+  text-decoration:none; color:var(--ink); background:var(--card); line-height:1.35;
+}
+.map a:hover{border-color:var(--accent)}
+.map .secno{color:var(--accent-ink); font-weight:700; margin-right:.35rem}
+
+.tblwrap{overflow-x:auto; margin:1rem 0 1.6rem; border:1px solid var(--rule); border-radius:6px}
+table{
+  border-collapse:collapse; width:100%; min-width:860px;
+  font-family:ui-sans-serif,system-ui,sans-serif; font-size:.82rem; line-height:1.45;
+  font-variant-numeric:tabular-nums;
+}
+caption{
+  text-align:left; font-family:ui-sans-serif,system-ui,sans-serif; font-size:.72rem;
+  font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--muted);
+  padding:.7rem .8rem .35rem;
+}
+th{
+  text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--muted); padding:.5rem .8rem;
+  border-bottom:1px solid var(--rule); background:var(--card); white-space:nowrap;
+}
+td{padding:.55rem .8rem; border-bottom:1px solid var(--rule); vertical-align:top}
+tr:last-child td{border-bottom:0}
+td:first-child{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-weight:600; color:var(--accent-ink); white-space:nowrap;
+}
+
+.pill{
+  display:inline-block; font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:.68rem; font-weight:600; letter-spacing:.03em; white-space:nowrap;
+  padding:.12em .55em; border-radius:99px;
+  background:var(--pill-neutral-bg); color:var(--pill-neutral-fg);
+}
+.pill.amber{background:var(--pill-amber-bg); color:var(--pill-amber-fg)}
+.pill.red{background:var(--pill-red-bg); color:var(--pill-red-fg)}
+.pill.violet{background:var(--pill-violet-bg); color:var(--pill-violet-fg)}
+.pill.grey{background:var(--pill-grey-bg); color:var(--pill-grey-fg)}
+
+.qcard{
+  border:1px solid var(--rule); border-radius:6px; padding:.8rem 1rem; margin:.7rem 0;
+  background:var(--card);
+}
+.qcard .qno{
+  font-family:ui-sans-serif,system-ui,sans-serif; font-weight:700; font-size:.78rem;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--accent-ink);
+  display:block; margin-bottom:.25rem;
+}
+.qcard p{margin:.3rem 0}
+
+.len{color:var(--muted); font-weight:400; font-size:.85rem; font-style:italic}
+.footer{margin-top:3.5rem; padding-top:1.2rem; border-top:1px solid var(--rule);
+  color:var(--muted); font-size:.85rem; font-style:italic}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+
+<p class="eyebrow">Tax-Simulator · Budget Lab at Yale · top-tax project</p>
+<h1>Methodology skeleton-of-argument</h1>
+<p class="subtitle">v2, ground-up · 2026-07-16 · for markup, nothing drafted yet</p>
+
+<div class="note">
+  <p><strong>Working title candidates.</strong> (1) <em>Taxing the top: model methodology</em> ·
+  (2) <em>How much is really there? Methods behind the top-tax estimates</em> ·
+  (3) <em>Behavioral and mechanical interactions in the top-tax model</em></p>
+  <p><strong>Purpose of this file.</strong> Every section below is stated as a <strong>claim</strong> — the
+  sentence the section exists to establish — followed by what it argues, the decisions it weaves
+  in (ledger IDs), and what goes to the appendix. Mark up freely: strike claims, reorder,
+  demote or promote. This is the contract for the draft.</p>
+  <p><strong>Audience contract.</strong> Danny (10 minutes) reads page 0 + the ledger + the boxed
+  bullets that open each Part I section. Leiserson/Patel (an hour) read Part I. Anyone
+  challenging a specific choice follows its ledger ID into Part II.</p>
+</div>
+
+<ul class="map">
+  <li><a href="#page0"><span class="secno">p.0</span>How to read this</a></li>
+  <li><a href="#ledger"><span class="secno">§0</span>The decision ledger</a></li>
+  <li><a href="#s1"><span class="secno">§1</span>Question &amp; shape of the answer</a></li>
+  <li><a href="#s2"><span class="secno">§2</span>One dollar at the top</a></li>
+  <li><a href="#s3"><span class="secno">§3</span>The accounting layer</a></li>
+  <li><a href="#s4"><span class="secno">§4</span>Shared-state architecture</a></li>
+  <li><a href="#s5"><span class="secno">§5</span>The channels</a></li>
+  <li><a href="#s6"><span class="secno">§6</span>Calibration as a system</a></li>
+  <li><a href="#s7"><span class="secno">§7</span>Measurement: ETRs + surrogate</a></li>
+  <li><a href="#s8"><span class="secno">§8</span>What the model does not do</a></li>
+  <li><a href="#appendix"><span class="secno">II</span>Appendix plan</a></li>
+  <li><a href="#openq"><span class="secno">?</span>Open questions for you</a></li>
+</ul>
+
+<h2 id="page0">Page 0 — How to read this document</h2>
+
+<p>Three reading paths, stated explicitly on the first page:</p>
+<ul>
+  <li><strong>10 minutes:</strong> the thesis paragraph, the decision ledger (§0), and the boxed
+  “choices made here” bullets that open each Part I section.</li>
+  <li><strong>One hour:</strong> Part I straight through (~18–22&nbsp;pp target, math-light,
+  mechanism-in-words).</li>
+  <li><strong>Deep dive:</strong> Part II appendix entries, keyed one-to-one to ledger IDs, carrying
+  derivations, calibration procedures, and provenance.</li>
+</ul>
+
+<div class="claim">
+  <span class="lab">The thesis paragraph (draft claim)</span>
+  Progressive proposals reach the same small group of taxpayers through several statutes at
+  once. Scoring each alone and summing overstates the combined capacity, because the bases
+  overlap mechanically and because behavior re-routes income between them. This model closes
+  both loops on record-level balance sheets: the channels interact not through assumed
+  cross-elasticities but through shared model state, and the parameters are calibrated to the
+  stack as a whole rather than channel by channel. This document records every methodological
+  choice that makes that claim honest, and what each choice costs.
+</div>
+
+<h2 id="ledger">§0 — The decision ledger</h2>
+
+<p>One table, ~30 rows, grouped by family. Columns: <strong>ID · Decision · Value/form ·
+Anchor/evidence · Alternative considered · Status.</strong> The status vocabulary is fixed:
+<span class="pill">pinned</span> <span class="pill violet">residual</span>
+<span class="pill amber">placeholder (disclosed)</span>
+<span class="pill amber">accepted-with-disclosure</span>
+<span class="pill grey">excluded-by-convention</span>
+<span class="pill red">re-pin pending</span>.
+Values below to be re-verified against code constants at draft time — the in-code provenance
+stamps, not this document, are the source of truth. Each row gets an appendix cross-reference
+in the draft.</p>
+
+<div class="tblwrap"><table>
+<caption>Architecture</caption>
+<thead><tr><th>ID</th><th>Decision</th><th>Value / form</th><th>Anchor</th><th>Alternative</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>A1</td><td>Static leg stays law-only; distribution tables static-sourced; interactions read from receipts</td><td>—</td><td>house convention</td><td>behavior-inclusive distribution</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A2</td><td>Pinned channel order: corp incidence → wealth haircut → realization → conversion → entity → evasion → avoidance → tax calc; asserted at runtime</td><td>—</td><td>no-dollar-moves-twice discipline</td><td>unordered / simultaneous</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A3</td><td>Reporting-vs-real firewall: reporting responses touch only cash tax paid; real responses flow into every base</td><td>—</td><td>reporting_vs_real audit</td><td>—</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A4</td><td>Interactions carried by shared state (τ_eq, F, h, hidden ledger, bathtub forcing), not hand-set cross-elasticities</td><td>—</td><td>—</td><td>assumed cross-elasticity matrix</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A5</td><td>The stack is the unit of calibration: σ residual, η full-sim inversion, staleness watch, batching rule</td><td>—</td><td>—</td><td>channel-by-channel calibration</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A6</td><td>Mechanical channels contribute reform deltas only (estate = CBO level + Δ; corporate = OME wedge mapped on-model)</td><td>—</td><td>CBO level disagreements</td><td>on-model levels</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A7</td><td>Surprise (unexpected) framing, effective 2027; FY death-year+1 booking; sim runs one year past window</td><td>—</td><td>Clausing convention</td><td>anticipated reform</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>A8</td><td>Excluded by scoring convention: real labor supply, real saving elasticity, explicit migration, macro feedback, enforcement</td><td>—</td><td>—</td><td>—</td><td><span class="pill grey">excluded-by-convention</span></td></tr>
+</tbody></table></div>
+
+<div class="tblwrap"><table>
+<caption>Realization &amp; timing at death</caption>
+<thead><tr><th>ID</th><th>Decision</th><th>Value</th><th>Anchor</th><th>Alternative</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>R1</td><td>Single-pool entropy Bellman; η <em>is</em> the long-run realization semi-elasticity; aggregate revmax ≈ 1/η</td><td>spec v3</td><td>exponential reservation-benefit micro-foundation</td><td>v2 responsive/inert split</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>R2</td><td>η pinned by full-simulator inversion</td><td>2.4825 (target E = −0.6/0.238 = −2.52, slope 1.0155)</td><td>DMM / JCT–CBO tradition</td><td>miniature calibrator + dilution bridge (retired)</td><td><span class="pill red">re-pin pending</span> (+3.7% drift from estate term → ≈2.4901)</td></tr>
+<tr><td>R3</td><td>Short-run retiming as additive overlay, long-run invariant</td><td>timeable share 0.2542, ±1 yr, ref_wedge 0.05</td><td>full-sim announcement moment</td><td>in-Bellman timing</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>R4</td><td>Deemed-realization valuation haircut</td><td>0.25</td><td>JCT levels; estate ρ_pt consistency</td><td>none / per-asset</td><td><span class="pill">pinned</span> (data calibration, not law)</td></tr>
+<tr><td>R5</td><td>Mechanical-vs-behavioral revenue allocation blend in the applier</td><td>0.5</td><td>bounded by R ($55.9B) and G ($40.4B) allocations</td><td>pure R or pure G</td><td><span class="pill amber">accepted-with-disclosure</span></td></tr>
+<tr><td>R6</td><td>Discounting in the Bellman</td><td>Fisher-deflated tsy_10y (real, year-varying)</td><td>inflation cancels in hold/realize</td><td>nominal / fixed β</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>R7</td><td>Single asset bucket (5 wealth classes collapsed)</td><td>—</td><td>—</td><td>per-class Bellman</td><td><span class="pill grey">roadmap</span></td></tr>
+<tr><td>R8</td><td>Wealth-carry term h in MC and τ_eq</td><td>h = record-level E[τ_w·τ_cg], survivor branch only</td><td>deferral arithmetic (no free parameter)</td><td>product of means; two-state exposed split</td><td><span class="pill amber">accepted-with-disclosure</span> (age-cell smear understates −8.5% to −33%, conservative)</td></tr>
+<tr><td>R9</td><td>Estate death-value offset in F</td><td>F = (1−c_φ,eff)·τ·(1−e), leg-paired e; c_φ,eff peels charitable bequests</td><td>§2053-style deductibility</td><td>F estate-blind (pre-build)</td><td><span class="pill">pinned</span></td></tr>
+</tbody></table></div>
+
+<div class="tblwrap"><table>
+<caption>ETI / base-shifting</caption>
+<thead><tr><th>ID</th><th>Decision</th><th>Value</th><th>Anchor</th><th>Alternative</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>E1</td><td>σ conversion calibrated as the ETI residual</td><td>σ = 0.16 → top-ordinary ETI 0.2508</td><td>ETI target 0.25 (SSG central)</td><td>σ as free structural parameter</td><td><span class="pill violet">residual</span></td></tr>
+<tr><td>E2</td><td>σ pool &amp; gate</td><td>wages + 0.75·active PT; top-bracket gate</td><td>pool×σ disciplined jointly</td><td>narrow founder-only pool</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>E3</td><td>Entity-shifting semi-elasticity &amp; repriced retention leg</td><td>e = 0.3788/0.6 (P&amp;P); τ_dist = 0.45·mtr_kg + 0.55·τ_eq</td><td>Pearce–Prisinzano 2018</td><td>legacy β = 0.25 stub (retired)</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>E4</td><td>Evasion: visibility-gated net-of-tax response, positive legs</td><td>Sch C/F .046, PT .052, rent .040; wages/int/div zero; top mult 1.0</td><td>DeBacker–Heim–Yuskavage</td><td>top-graded multiplier (deferred; sweep 1.5–2.0)</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>E5</td><td>Charity: cash tax-price elasticity only</td><td>−0.5 central (−1 variant)</td><td>standard lit</td><td>appreciated-asset margin</td><td><span class="pill grey">partial (gap disclosed)</span></td></tr>
+</tbody></table></div>
+
+<div class="tblwrap"><table>
+<caption>Wealth &amp; estate reporting</caption>
+<thead><tr><th>ID</th><th>Decision</th><th>Value</th><th>Anchor</th><th>Alternative</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>W1</td><td>Wealth-avoidance semi-elasticities</td><td>marketable −7, closely-held −17</td><td>Wealth-Tax-Simulator seed; author-accepted</td><td>lit-band sweep</td><td><span class="pill">pinned</span> (migration subsumed → wealth card is a ceiling)</td></tr>
+<tr><td>W2</td><td>Hidden ledger: concealment consistent across wealth/income/estate bases</td><td>χ_pub = 1.0, χ_priv = 0.5; evasion→wealth link</td><td>can’t-lowball-an-exchange-price logic</td><td>base-by-base independent avoidance</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>W3</td><td>Estate own-rate reported-estate response</td><td>ε = 0.16, net-of-tax power form, keyed to Δprice</td><td>Kopczuk–Slemrod 2001 (band .10–.22)</td><td>none (pre-build)</td><td><span class="pill">pinned</span> (applied to reported gross; mild overstatement near low exemptions)</td></tr>
+</tbody></table></div>
+
+<div class="tblwrap"><table>
+<caption>Mechanical channels</caption>
+<thead><tr><th>ID</th><th>Decision</th><th>Value</th><th>Anchor</th><th>Alternative</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>B1</td><td>Bathtub saving-financing share s(age, wealth pctile)</td><td>0.10 → 0.80 by percentile; effective dollar-weighted ≈0.6–0.8 at the top</td><td>persistent-flow anchor, ε≈0.7 (Straub); DFJ/DSZ/MSS/Fagereng tilts</td><td>flat s</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>B2</td><td>Within-age mobility matrix M</td><td>identity</td><td>bounding sweep: M ≤ ±$2B/10y</td><td>uniform / estimated</td><td><span class="pill">pinned</span> (second-order, shown)</td></tr>
+<tr><td>B3</td><td>Bathtub forcing &amp; kernel</td><td>F = ΔT⁰ − ΔY_exog; G = (1+r_total) − s(τy + τ_w); conventional-only</td><td>—</td><td>behavioral saving elasticity</td><td><span class="pill">pinned</span> (financing, not saving — by design)</td></tr>
+<tr><td>B4</td><td>Corporate incidence constants</td><td>σ_N .375, κ .40, ω_div .85, ω_kg .50, δ .057, ERP .05, exposure vector</td><td>OTA/TPC, Fed Z.1, NIPA, Rosenthal–Austin</td><td>measured Phase-1 values</td><td><span class="pill amber">placeholder (disclosed)</span>; corporate row not stacking-order-invariant</td></tr>
+<tr><td>B5</td><td>Estate valuation bridge frozen; never reform-overridden</td><td>r = .951, ρ_pt = .612, γ = .0914; cluster cap 300</td><td>SOI 2022 death-year</td><td>reform-adjustable measurement</td><td><span class="pill">pinned</span> (law/measurement separation)</td></tr>
+<tr><td>B6</td><td>Heir allocation by cumulative-dollar rank match; inheritance gross of estate tax</td><td>—</td><td>ties to totals identity</td><td>proportional smear (kept for deemed, which has no threshold)</td><td><span class="pill">pinned</span></td></tr>
+</tbody></table></div>
+
+<div class="tblwrap"><table>
+<caption>Measurement (income-ETR side + surrogate)</caption>
+<thead><tr><th>ID</th><th>Decision</th><th>Value</th><th>Anchor</th><th>Alternative</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td>M1</td><td>Haig-Simons denominator: realized gains swapped for balance-sheet accruals; DC double-count removed; denominator &amp; ranking frozen at baseline in both legs</td><td>—</td><td>—</td><td>behavior-moving denominator</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>M2</td><td>Welfare vs collections = numerator-only swap: static liability ETR (envelope) vs conventional realized ETR</td><td>—</td><td>envelope theorem</td><td>re-sourcing microdata from conventional detail</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>M3</td><td>Tier structure: nested federal tiers + standalone state/local/excise tier</td><td>—</td><td>DINA-style other-taxes rate</td><td>—</td><td><span class="pill">pinned</span></td></tr>
+<tr><td>M4</td><td>Corporate ETR shown as a three-convention band (equity-supernormal / capital-income / uniform-net-worth)</td><td>—</td><td>placeholder exposure status</td><td>single convention</td><td><span class="pill amber">accepted-with-disclosure</span></td></tr>
+<tr><td>M5</td><td>Interactive served by an f/g/I/T surrogate (solo curves + pairwise + triple interactions), exact at anchors</td><td>holdout: conventional ±2.6/±3.4/±4.4% by decade</td><td>blind quiz validation</td><td>serving raw runs only</td><td><span class="pill">pinned</span> (worst corner wealth×estate, disclosed)</td></tr>
+</tbody></table></div>
+
+<hr>
+<p class="eyebrow">Part I — The argument</p>
+<p><em>Every section opens with a boxed 2–5 bullet “Decisions made here: [IDs]” recap.
+Target lengths in parentheses.</em></p>
+
+<h2 id="s1"><span class="secno">§1</span>The question and the shape of the answer <span class="len">(~2 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+Because the proposals under study tax the same people and largely the same dollars, the
+policy-relevant object is not any lever’s own score but the survival and destination of the
+combined ask — so the model’s outputs are conventional-as-a-share-of-static, a by-base
+destination ledger, and ask-vs-collected effective rates, rather than a headline elasticity.
+</div>
+<ul>
+  <li>Sets up the two overstatement mechanisms (mechanical overlap, behavioral re-routing) in
+  plain terms, with one worked miniature example (a dollar of founder equity under CG + estate
+  + wealth levers).</li>
+  <li>States what the reader will be able to trace by the end: every number in the atlas
+  exhibits back to a ledger row.</li>
+  <li>Decisions woven: <span class="ids">A1</span> (what static and conventional each mean),
+  <span class="ids">A7</span> (framing and window), <span class="ids">A8</span> (the exclusions,
+  stated up front, not buried).</li>
+</ul>
+
+<h2 id="s2"><span class="secno">§2</span>One dollar at the top: the overlap map <span class="len">(~2–3 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+On record-level balance sheets, base overlap is an accounting fact, not an assumption: the
+model holds, for each tax unit, the asset portfolio, the unrealized-gain stock, and the income
+flows those assets throw off, so a dollar can be located in every base that claims it.
+</div>
+<ul>
+  <li>Follow one dollar: earned (ordinary base) → converted (unrealized-gain state) → held
+  (wealth base, carrying a deferred CG liability) → realized (CG base) or died (estate base,
+  heir basis treatment) → and upstream of all of it, corporate profit before it ever reaches
+  the household.</li>
+  <li>Introduces the data substrate exactly as deeply as the argument needs: per-record balance
+  sheets (14 asset classes, accrual columns), the Forbes-anchored top tail, the age-80 topcode —
+  one honest paragraph on donor-clone clustering and the cluster cap
+  (<span class="ids">B5</span>), full detail to Appendix D.</li>
+  <li>This section is the map the rest of the paper walks.</li>
+</ul>
+
+<h2 id="s3"><span class="secno">§3</span>Static, conventional, and the accounting layer <span class="len">(~2 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+Every scenario runs twice — a law-only static pass that is the welfare/first-order object, and
+a conventional pass with all channels on — and because every reported quantity is a delta
+against one common baseline, “where did the money end up” is an accounting identity across
+revenue heads, not a modeling convention.
+</div>
+<ul>
+  <li>Static vs conventional, precisely; why distribution stays static-sourced
+  (<span class="ids">A1</span>); why mechanical channels are delta-only
+  (<span class="ids">A6</span>); FY booking and the run-one-year-past rule
+  (<span class="ids">A7</span>).</li>
+  <li>The destination ledger as identity: receipts by head (IIT/payroll, corporate, estate,
+  wealth, deemed re-attributed to the death tier), summing exactly. Kept brief — this is the
+  accounting frame, not an exhibit walkthrough.</li>
+  <li>The two-channel-type distinction (behavior modules vs mechanical conventional-side
+  appliers) and the pinned run order (<span class="ids">A2</span>), stated here as part of the
+  specification, with the no-double-counting rationale.</li>
+</ul>
+
+<h2 id="s4"><span class="secno">§4</span>The shared-state architecture <span class="len">(~3 pp; the load-bearing section)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+The channels interact because they price off the same internal objects — a change to one lever
+propagates into every other through model state, which is what distinguishes this from a
+system of assumed cross-elasticities.
+</div>
+<p>Four shared objects, each introduced with the interaction it carries:</p>
+<ol>
+  <li><strong>τ_eq(age, t)</strong> — PV tax per dollar entering the unrealized-gain state;
+  produced by the realization Bellman, consumed by σ conversion and the entity-shifting
+  retention leg (<span class="ids">E3</span>). <em>CG-rate and death-regime levers therefore
+  reprice the conversion and retention shelters endogenously.</em></li>
+  <li><strong>F — the death-forgiveness value</strong> = (1−c_φ,eff)·τ·(1−e): carries the death
+  regime, charitable bequests, and estate exposure (<span class="ids">R9</span>). <em>The
+  estate rate and step-up repeal move realizations through the same object.</em></li>
+  <li><strong>h — the wealth-carry</strong> = E[τ_w·τ_cg] (<span class="ids">R8</span>): a
+  wealth tax makes deferral costlier every year the gain is held. <em>The wealth lever unlocks
+  realizations and cheapens σ conversion.</em></li>
+  <li><strong>The hidden ledger + firewall</strong> (<span class="ids">W2, A3</span>): one
+  concealment decision, consistent across the wealth, income, and estate bases; cash is
+  reported, balance sheets are real.</li>
+</ol>
+<p>Plus the <strong>bathtub forcing</strong> F = ΔT⁰ − ΔY_exog (<span class="ids">B3</span>) as
+the fifth coupling: every during-life tax (and the corporate shock) drains future estate and
+capital-income bases.</p>
+<ul>
+  <li>Ends with the paper’s honesty rule: where a coupling is <em>missing</em> (the Bellman
+  prices exactly one tax rate plus these terms; the corporate layer is absent from τ_eq), the
+  error shows up as missing interaction, not noise — forward-pointer to §8.</li>
+</ul>
+
+<h2 id="s5"><span class="secno">§5</span>The channels <span class="len">(~6–8 pp total; each channel ≤1 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+Given the shared state, each channel is a short story: one margin, one functional form, one
+calibration anchor, one disclosed limitation.
+</div>
+<p>Organized in the five families, but written as prose essays, not template boxes (the
+template lives in Appendix A). Each ends with its ledger IDs.</p>
+<ul>
+  <li><strong>5.1 Realization (the entropy Bellman).</strong> Single pool, closed-form response
+  r_D = r_B·exp(−η ΔMC), η is the long-run semi-elasticity, revmax ≈ 1/η; the v2→v3 collapse
+  told as a decision narrative (why the inert floor was redundant and what it was doing to the
+  revmax curve). Timing overlay as a separate, long-run-invariant margin.
+  <span class="ids">[R1–R7]</span></li>
+  <li><strong>5.2 Wealth-carry and the estate death-value offset</strong> — the two “the
+  Bellman now sees the other levers” builds, told together as the Tier-1 program; what each
+  unlocked (63/63 cells responding to a pure estate reform; +$127B on a 3% wealth dial).
+  <span class="ids">[R8, R9]</span></li>
+  <li><strong>5.3 Income conversion (σ).</strong> The founder-equity path; wedge = own MTR −
+  τ_eq; the residual logic previewed, full treatment in §6. <span class="ids">[E1, E2]</span></li>
+  <li><strong>5.4 Entity shifting.</strong> P&amp;P margin; the τ_eq repricing that retired the
+  β stub (and thereby made the C-corp retention shelter collapse under deemed-at-death); SECA
+  companion consistency. <span class="ids">[E3]</span></li>
+  <li><strong>5.5 Evasion.</strong> Visibility gating as the identifying idea; what information
+  reporting shuts down; the flat top-end multiplier as the disclosed weak joint.
+  <span class="ids">[E4]</span></li>
+  <li><strong>5.6 Wealth avoidance, the hidden ledger, and the estate own-rate response.</strong>
+  Reported-base responses under the firewall; concealment vs valuation gaming; KS ε on the
+  change in the estate price only (level avoidance already lives in the frozen valuation
+  bridge — the law/measurement separation doing work). <span class="ids">[W1–W3, B5]</span></li>
+  <li><strong>5.7 The wealth bathtub.</strong> Financing, not saving — a share s of the new tax
+  bill is paid out of wealth and compounds into lost future estate/CG/wealth base; the
+  calibrated s-profile in one paragraph + one small figure. <span class="ids">[B1–B3]</span></li>
+  <li><strong>5.8 Corporate incidence.</strong> The wedge → flows/markdown/offset mapping in
+  words; the placeholder status stated plainly, with what is and isn’t sensitive to it; the
+  stacking-order caveat. <span class="ids">[B4]</span></li>
+  <li><strong>5.9 First-order-labor margins and what is deliberately excluded.</strong> Charity
+  (and its missing appreciated-asset margin), employment, migration-as-ceiling.
+  <span class="ids">[E5, A8]</span></li>
+</ul>
+
+<h2 id="s6"><span class="secno">§6</span>Calibration as a system <span class="len">(~2 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+Because the channels share state, the stack — not the channel — is the unit of calibration:
+σ is a residual conditional on everything else, η is pinned by inverting the full simulator’s
+measured elasticity, and an automated staleness watch keeps “conditional on the stack” true
+over time rather than true once.
+</div>
+<ul>
+  <li>The σ residual chain: target ETI 0.25 → σ* formula → why σ doubled when entity shifting
+  was repriced and evasion fixed (a feature of the residual design, presented as such).
+  In-bundle vs out-of-bundle margins and the batching rule (re-derive σ once per batch).
+  <span class="ids">[E1, A5]</span></li>
+  <li>The η full-sim pin: the E_full(η) line, the −0.6/0.238 target, why the measurement is now
+  arithmetic to repeat; the pending +3.7% re-pin flagged honestly.
+  <span class="ids">[R2]</span></li>
+  <li>Provenance guards and the calibration-reference watch as methodology, not plumbing: this
+  is what makes the parameter table in Appendix B a living contract with the code.</li>
+</ul>
+
+<h2 id="s7"><span class="secno">§7</span>Measurement: effective tax rates, and a note on the interactive <span class="len">(~2 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+The ask-vs-collected exhibit is one ETR measured twice: a Haig-Simons income denominator
+frozen at baseline in both legs, with the static-liability numerator giving the first-order
+welfare burden (envelope theorem) and the conventional numerator giving realized collections —
+so the gap between them is, to first order, the cost of the avoidance response.
+</div>
+<ul>
+  <li>The HS denominator construction (accruals swap, retirement double-count removal) and why
+  the denominator must not move with behavior. <span class="ids">[M1, M2]</span></li>
+  <li>Tiers in one paragraph; the corporate three-convention band as the honest rendering of
+  placeholder exposures. <span class="ids">[M3, M4]</span></li>
+  <li><strong>Box: how the interactive serves 200 runs as a continuous surface.</strong> The
+  f/g/I/T surrogate in ~150 words: solo anchor curves, pairwise and triple interaction terms,
+  exact at fitted points, blind-holdout error bounds (±2.6–4.4% conventional by decade; worst
+  corner wealth×estate, disclosed in-app). <span class="ids">[M5]</span></li>
+  <li>Evasion-in-the-welfare-ETR caveat (the wedge is pure DWL only for costly channels; the
+  evasion slice is a transfer) — one honest paragraph.</li>
+</ul>
+
+<h2 id="s8"><span class="secno">§8</span>What the model does not do <span class="len">(~1.5 pp)</span></h2>
+<div class="claim"><span class="lab">Claim</span>
+The known gaps are enumerable, signed, and mostly conservative; where a gap is in the ETI
+bundle it carries a re-calibration cost, and where it is out-of-bundle it does not — so the
+register below is also a build sequencer.
+</div>
+<p>The limitations register (table): each gap with location, direction, size where measured,
+and status. Inherits the candor of the margins-gap assessment; includes at minimum — corporate
+placeholders (<span class="ids">B4</span>); wealth-carry smear (<span class="ids">R8</span>,
+conservative); single asset bucket (<span class="ids">R7</span>); appreciated-asset charity
+(<span class="ids">E5</span>); corporate layer missing from τ_eq; flat evasion top-multiplier
+(<span class="ids">E4</span>); migration-as-ceiling (<span class="ids">A8/W1</span>); η re-pin
+pending (<span class="ids">R2</span>); estate KS on reported gross
+(<span class="ids">W3</span>).</p>
+
+<h2><span class="secno">§9</span>References</h2>
+<p>Full citations: Dowd–McClelland–Muthitacharoen; Saez–Slemrod–Giertz; Kopczuk–Slemrod (2001);
+DeBacker–Heim–Yuskavage; Pearce–Prisinzano (2018); Straub (2019); De Nardi–French–Jones;
+Mian–Straub–Sufi; Fagereng et al.; Bastian (2023); Guyton et al.; JCT/CBO realization
+conventions; Rosenthal–Austin; OTA/TPC supernormal-share estimates.</p>
+
+<hr>
+<h2 id="appendix">Part II — Appendix (keyed to ledger IDs)</h2>
+<ul>
+  <li><strong>A. Channel deep dives</strong> under the seven-header template (salvaged from the
+  prior draft), one entry per channel, at referee depth. A.1 realization (derivation largely
+  salvageable), A.2 τ_eq recursion + verification, A.3 wealth-carry &amp; estate-offset math,
+  A.4 σ (pool/gate/wedge + residual algebra), A.5 entity shifting, A.6 evasion, A.7 wealth
+  avoidance + hidden ledger mechanics (χ, R-rules, firewall), A.8 estate own-rate, A.9 bathtub
+  (kernel, cells, applier, WEALTH_CAP_FLOWS), A.10 corporate incidence (wedge split, markdown
+  recursion, offset, D/P rulings distilled), A.11 charity/employment.</li>
+  <li><strong>B. Parameter &amp; provenance master table</strong> — superset of the ledger, with
+  reference moments, derivation dates, and code provenance stamps; doubles as the
+  staleness-watch contract.</li>
+  <li><strong>C. Mechanical plumbing detail</strong> — estate valuation bridge + heir allocator;
+  receipts/FY conventions; corporate ETR conventions.</li>
+  <li><strong>D. Data substrate</strong> — Tax-Data balance sheets and accruals, the Forbes
+  splice, donor-clone clustering and the cluster cap, topcodes.</li>
+  <li><strong>E. Calibration procedures</strong> — the η inversion (grid, fit, target), σ
+  re-derivation recipe, timeable-share root-find, staleness-watch spec.</li>
+</ul>
+
+<h2 id="openq">Open questions for you before drafting</h2>
+
+<div class="qcard"><span class="qno">Q1 · η re-pin (R2)</span>
+<p>Draft the doc at 2.4825 with the ≈2.4901 re-pin flagged as pending — or do the re-pin first
+so the doc ships internally consistent?</p></div>
+
+<div class="qcard"><span class="qno">Q2 · Corporate posture (B4)</span>
+<p>Present corporate incidence as a full channel with placeholder constants (current plan), or
+fence it into a clearly provisional subsection so reviewers don’t spend their bandwidth
+challenging Phase-0c numbers?</p></div>
+
+<div class="qcard"><span class="qno">Q3 · Atlas numbers in the doc</span>
+<p>Should Part I quote headline results (70→66→61% survival, 23.7/48.9/37.3 ETRs) to motivate
+sections, or stay results-free (pure methods) so it doesn’t stale against re-runs?</p></div>
+
+<div class="qcard"><span class="qno">Q4 · The σ story</span>
+<p>The 0.08→0.16 doubling is a great teaching example of the residual design but could read as
+instability to a cold reviewer. Tell it in full (§6, my preference), or summarize and put the
+history in Appendix E?</p></div>
+
+<div class="qcard"><span class="qno">Q5 · Ledger granularity</span>
+<p>~30 rows as sketched, or coarser (~15, one per channel) with sub-decisions only in the
+appendix?</p></div>
+
+<p class="footer">Source of truth for values: in-code provenance stamps
+(<code>KG_DYN_CALIB_PROVENANCE</code>, <code>SIGMA_CALIB_PROVENANCE</code>, …) and
+<code>calibration_reference.csv</code>. Markdown twin of this page:
+<code>other/top_tax/METHODOLOGY_SKELETON.md</code>.</p>
+
+</div>

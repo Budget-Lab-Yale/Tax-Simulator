@@ -43,9 +43,13 @@ tryCatch({
 
     task_id = as.integer(Sys.getenv('SLURM_ARRAY_TASK_ID'))
 
-    # Build ordered list of scenarios: baseline (if ran) + counterfactuals
+    # Build the ordered scenario list from the manifest rather than by looking for
+    # a baseline config on disk. The staging directory persists across runs of one
+    # vintage, so a baseline config left by an earlier run would shift the array
+    # indexing and drop the last counterfactual
+    manifest = readRDS(file.path(staging_dir, 'manifest.rds'))
     all_scenarios = c()
-    if (file.exists(file.path(staging_dir, 'baseline', 'config.rds'))) {
+    if (any(manifest$phase == '1')) {
       all_scenarios = c('baseline')
     }
     all_scenarios = c(all_scenarios, counterfactual_ids)
@@ -63,60 +67,78 @@ tryCatch({
     config = readRDS(file.path(staging_dir, scenario_id, 'config.rds'))
     scenario_info = config$scenario_info
 
-    # Read all per-year results
-    output = scenario_info$years %>%
-      map(~ readRDS(file.path(staging_dir, scenario_id,
-                              paste0('year_', .x, '.rds'))))
+    # Activate the scenario's legs: aggregation reads configuration too, for the
+    # corporate distribution smear and the housing structure share
+    config_activate(economy  = scenario_info$resolved_economy,
+                    behavior = scenario_info$resolved_behavior)
+
+    # Read all per-year results and assemble a per-year list of the shape run_sim
+    # produces in one process. Baseline results are in year_{y}.rds, holding the
+    # static totals and a null conventional; a counterfactual's are split across
+    # the Phase 2A and Phase 2C files.
+    output = scenario_info$years %>% map(function(y) {
+      if (scenario_id == 'baseline') {
+        readRDS(file.path(staging_dir, scenario_id, paste0('year_', y, '.rds')))
+      } else {
+        static_rds = file.path(staging_dir, scenario_id,
+                                paste0('year_', y, '_static.rds'))
+        mech_rds   = file.path(staging_dir, scenario_id,
+                                paste0('year_', y, '_mech.rds'))
+        conv_rds   = file.path(staging_dir, scenario_id,
+                                paste0('year_', y, '_conv.rds'))
+        s_res = readRDS(static_rds)
+        c_res = readRDS(conv_rds)
+
+        # The mechanical rung runs only where a transmission channel is live. Where
+        # it did not, it equals the static rung and is reported from those totals
+        mt = NULL
+        if (file.exists(mech_rds)) mt = readRDS(mech_rds)$mechanical_totals
+        if (is.null(mt)) mt = s_res$static_totals
+
+        # A scenario with no behavior has no conventional totals; fall back to the
+        # rung below
+        ct = c_res$conventional_totals
+        if (is.null(ct)) ct = mt
+
+        list(mtrs                = s_res$mtrs,
+             static_totals       = s_res$static_totals,
+             mechanical_totals   = mt,
+             conventional_totals = ct)
+      }
+    })
 
     # --- Write static outputs ---
-    static_root = file.path(scenario_info$output_path, 'static')
+    # Write through the same helper run_sim uses; see src/sim/run.R
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'static'),
+      totals_slot          = 'static_totals',
+      vat_price_offset     = config$vat_price_offset,
+      scenario_info        = scenario_info
+    )
 
-    config$vat_price_offset %>%
-      write_csv(file.path(static_root, 'supplemental', 'vat_price_offset.csv'))
-    config$excess_growth_offset %>%
-      write_csv(file.path(static_root, 'supplemental', 'excess_growth_offset.csv'))
-
-    static_totals_pr = output %>%
-      map(.f = ~.x$static_totals$pr) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', 'payroll.csv'))
-
-    static_totals_1040 = output %>%
-      map(.f = ~.x$static_totals$`1040`) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', '1040.csv'))
-
-    output %>%
-      map(.f = ~.x$static_totals$`1040_by_agi`) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
-
-    # State mode: write state totals and the parsed state tax law
-    # (mirrors run_sim(); plan §2.4)
+    # Write the parsed state tax law, where the scenario computes state taxes
+    # (mirrors run_sim())
     if (!is.null(scenario_info$states)) {
-      output %>%
-        map(.f = ~.x$static_totals$state) %>%
-        bind_rows() %>%
-        write_csv(file.path(static_root, 'totals', 'state.csv'))
       build_state_tax_law(
-        states           = scenario_info$states,
-        years            = scenario_info$years,
-        indexes          = config$indexes,
-        state_tax_law_id = scenario_info$state_tax_law_id,
-        output_path      = scenario_info$output_path
+        states      = scenario_info$states,
+        years       = scenario_info$years,
+        indexes     = config$indexes,
+        tax_law_id  = scenario_info$tax_law_id,
+        output_path = scenario_info$output_path
       )
     }
 
-    static_totals_pr %>%
-      left_join(static_totals_1040, by = 'year') %>%
-      calc_receipts(
-        scenario_root         = static_root,
-        vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-        other_root            = scenario_info$interface_paths$`Macro-Projections`,
-        cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-        off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-        excess_growth_all_rev = scenario_info$excess_growth_all_rev
+    # --- Write mechanical outputs (skip for baseline) ---
+    if (scenario_id != 'baseline') {
+      write_pass_outputs(
+        output               = output,
+        root                 = file.path(scenario_info$output_path, 'mechanical'),
+        totals_slot          = 'mechanical_totals',
+        vat_price_offset     = config$vat_price_offset,
+        scenario_info        = scenario_info
       )
+    }
 
     # CBO baseline benchmark (baseline-only post-processing). Phase 3b is
     # counterfactual-only, so this baseline-only step lives here in Phase 3a,
@@ -126,47 +148,13 @@ tryCatch({
 
     # --- Write conventional outputs (skip for baseline) ---
     if (scenario_id != 'baseline') {
-
-      conv_root = file.path(scenario_info$output_path, 'conventional')
-
-      config$vat_price_offset %>%
-        write_csv(file.path(conv_root, 'supplemental', 'vat_price_offset.csv'))
-      config$excess_growth_offset %>%
-        write_csv(file.path(conv_root, 'supplemental', 'excess_growth_offset.csv'))
-
-      conv_totals_pr = output %>%
-        map(.f = ~.x$conventional_totals$pr) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', 'payroll.csv'))
-
-      conv_totals_1040 = output %>%
-        map(.f = ~.x$conventional_totals$`1040`) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', '1040.csv'))
-
-      output %>%
-        map(.f = ~.x$conventional_totals$`1040_by_agi`) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
-
-      # State mode: write conventional state totals (mirrors run_sim())
-      if (!is.null(scenario_info$states)) {
-        output %>%
-          map(.f = ~.x$conventional_totals$state) %>%
-          bind_rows() %>%
-          write_csv(file.path(conv_root, 'totals', 'state.csv'))
-      }
-
-      conv_totals_pr %>%
-        left_join(conv_totals_1040, by = 'year') %>%
-        calc_receipts(
-          scenario_root         = conv_root,
-          vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-          other_root            = scenario_info$interface_paths$`Macro-Projections`,
-          cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-          off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-          excess_growth_all_rev = scenario_info$excess_growth_all_rev
-        )
+      write_pass_outputs(
+        output               = output,
+        root                 = file.path(scenario_info$output_path, 'conventional'),
+        totals_slot          = 'conventional_totals',
+        vat_price_offset     = config$vat_price_offset,
+        scenario_info        = scenario_info
+      )
     }
 
     cat(paste0('Phase 3a: completed scenario=', scenario_id, '\n'))
@@ -190,6 +178,12 @@ tryCatch({
     scenario_id = counterfactual_ids[task_id]
     cat(paste0('Phase 3b: post-processing scenario=', scenario_id, '\n'))
 
+    # Activate the scenario's legs: post-processing reads the corporate foreign
+    # share and the housing structure share
+    .si = get_scenario_info(scenario_id)
+    config_activate(economy  = .si$resolved_economy,
+                    behavior = .si$resolved_behavior)
+
     # Formatted 1040 report
     build_1040_report(scenario_id)
 
@@ -199,11 +193,19 @@ tryCatch({
     # Distribution tables
     build_distribution_tables(scenario_id, baseline_id = 'baseline')
 
+    # Effective tax rate levels, under accrual income definitions and the
+    # stock-based corporate incidence conventions
+    build_distribution_etrs(scenario_id)
+
     # Time burden tables
     build_timeburden_table(scenario_id)
 
     # Horizontal equity
     build_horizontal_table(scenario_id)
+
+    # Capital gains bathtub diagnostics
+    scenario_info = get_scenario_info(scenario_id)
+    kg_dyn_build_summary(scenario_info)
 
     # State revenue estimates (no-op when state mode is off; mirrors
     # do_scenario())
@@ -228,7 +230,7 @@ tryCatch({
       build_stacked_state_rev_est(counterfactual_ids)
     }
 
-    if (runtime_args$delete_detail == 1) {
+    if (resolve_detail_purge(runtime_args$delete_detail)$final) {
       purge_detail()
     }
 
@@ -236,6 +238,5 @@ tryCatch({
   }
 
 }, error = function(e) {
-  message(paste0('ERROR in aggregate (phase=', phase, '): ', e$message))
-  quit(status = 1)
+  report_driver_error(e, paste0('aggregate phase ', phase), staging_dir)
 })

@@ -1,0 +1,8 @@
+---
+
+# Whether to repeal head of household filing status (forcing would-be
+# HoH tax units into filing single) 
+repeal_hoh:
+  value: 
+    '2014': 0
+    '2023': 1

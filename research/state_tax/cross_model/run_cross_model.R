@@ -69,7 +69,7 @@ if (isTRUE(get_arg('--report-only', FALSE))) {
 states = get_arg('--states')
 if (is.null(states)) stop('--states is required (codes or ALL)')
 if (length(states) == 1 && toupper(states) == 'ALL') {
-  states = list.dirs('./config/scenarios/tax_law_state/baseline',
+  states = list.dirs('./config/scenarios/tax_law/default/state',
                      recursive = F, full.names = F) %>%
     toupper()
 }

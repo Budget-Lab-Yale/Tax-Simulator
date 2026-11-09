@@ -1,0 +1,17 @@
+---
+# +2pp across-the-board on preferred rates plus deemed realization at death
+# across all assets. Primary-home contribution is §121-net (carve-out applied
+# per record).
+rates:
+  value: [0.02, 0.17, 0.22]
+
+kg_death_regime_equities:
+  value: 2
+kg_death_regime_pass_throughs:
+  value: 2
+kg_death_regime_primary_home:
+  value: 2
+kg_death_regime_other_home:
+  value: 2
+kg_death_regime_re_fund:
+  value: 2

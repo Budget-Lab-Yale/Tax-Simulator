@@ -1,0 +1,230 @@
+# Generated file -- written by the calibrator, not by hand.
+#
+# The capital gains bathtub's calibrated response parameters. The calibrator that
+# measures them writes them here, so that a shipped number and the run that
+# produced it cannot drift apart.
+#
+# Written by : other/kg_model_tests/form_ab/measure_efull_logs.R   (eta_logs)
+#              other/top_tax/eta_dial/measure_efull_by_eta.R       (eta)
+#              other/kg_model_tests/form_ab/confirm_efull_logs.R   (timeable_share_logs)
+# Read by    : the behavior leg. A scenario reaches these values by binding the
+#              `bathtub` piece of kg_dynamics to this file, and a sweep binds a
+#              different file of the same shape, so that a grid over eta is
+#              recorded in the vintage.
+#
+# The `conditions` block on each entry states what the calibration assumed. The
+# parse-time check compares it against what the run resolves, so a scenario that
+# changes one of those assumptions stops rather than use a number derived under
+# different ones. Three things get past a stop: re-deriving and re-pinning,
+# overriding the value in an alternative, or putting a dated waiver on the entry in
+# the file that points here.
+#
+# The reform-side rates these calibrations read come from the mechanical rung
+# rather than the static one, and the cell averages now drop records whose
+# measured marginal rate on gains falls outside the unit interval. eta_logs is
+# derived under both. The two levels-form entries are dormant under the shipped
+# configuration and were derived under neither, so a run that flips response_form
+# stops until they are re-derived. timeable_share_logs is pinned as it was before
+# both changes and reports stale. Notes at other/mechanical_pass/DESIGN.md and
+# other/top_tax/v6_run_state.md.
+#
+# inputs.R is a dependency because it decides which rung's detail the cell rates
+# are read from, which feeds the measured elasticity as directly as the Bellman
+# does.
+
+_channel:
+  role: state
+
+eta:
+  value: 2.4825
+  kind: calibrated
+  set: '2026-07-26'
+  target: >
+    Constant semi-elasticity of realizations with respect to the gains rate. The
+    full-simulation elasticity was measured at 2055 under a five point gains shock
+    across the grid (2 2.3992 3) and inverted through the origin for the eta hitting
+    -2.5210, which is -0.6 over the 0.238 top-rate divisor. The single-pool entropy
+    model makes that elasticity linear in eta through the origin, so it is fitted
+    through the origin here where the net-of-tax form needs a piecewise fit. Measured at each grid point: -2.0483 -2.4395 -3.0325. Fitted
+    slope 1.01551.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/bellman.R
+    - src/sim/kg/recurrence.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/apply.R
+    - src/sim/kg/inputs.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
+    src/sim/kg/bellman.R: '1aa6776c70f4d508eec34de176318dd7'
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/timing.R: 'cda95c0c59a0f210ae6dc1d606c3b82e'
+    src/sim/kg/apply.R: '7c492eed46072763e8de8b2994f0de10'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
+  conditioned_on:
+    settings.kg.applier_allocation: '0.5'
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.timing_window: 1
+  rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
+  active_when:
+    kg.response_form: levels
+  note: >
+    Dormant under the shipped configuration, which sets response_form to 'logs', so
+    only a run that flips that setting reads this. It is higher than eta_logs because
+    the semi-elastic slope is flatter and so needs a larger eta to hit the same
+    full-simulation elasticity. The response increases in the magnitude of eta.
+
+    apply.R is a dependency because the applier rule feeds the measured elasticity:
+    a change to that rule once biased every conventional gains estimate by 37% on a
+    five point rate score, so the dependency list runs wider than the Bellman.
+
+    Grid and fit: other/top_tax/eta_dial/eta_repin_fit.csv. The trial values are
+    config/calibrations/kg/sweeps/eta_*/bathtub.yaml, and
+    other/top_tax/eta_dial/launch_eta_dial_levels.sh launches the sweep, refusing to
+    run until response_form is flipped to 'levels'. Measured from vintages
+    eta_dial_e20_v2 eta_dial_c_v2 eta_dial_e30_v2.
+
+eta_logs:
+  value: 1.6342
+  kind: calibrated
+  set: '2026-07-29'
+  target: >
+    Constant net-of-tax elasticity dlog(r_D)/dlog(1 - MC). Same protocol and
+    same local moment as the levels eta: E_full measured at sim-year 2055 on
+    the +5pp gains shock across the trial grid (1.5 1.9 2.3), inverted
+    piecewise for the eta_tilde that hits E_full = -2.5210 (= -0.6/0.238,
+    the author-locked top-rate divisor). Measured E_full at each grid point:
+    -2.3240 -2.9113 -3.5036.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/bellman.R
+    - src/sim/kg/recurrence.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/apply.R
+    - src/sim/kg/inputs.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: '1d1f2f5e56cfe5221acd2747aef238bf'
+    src/sim/kg/bellman.R: '1aa6776c70f4d508eec34de176318dd7'
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/timing.R: cda95c0c59a0f210ae6dc1d606c3b82e
+    src/sim/kg/apply.R: ad6c6cb405f4f8614f87362e6f4d4927
+    src/sim/kg/inputs.R: de62007711ce0746aec13022df0bc3cb
+  conditioned_on:
+    settings.kg.applier_allocation: '0.5'
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.timing_window: 1
+  rederive: other/kg_model_tests/form_ab/measure_efull_logs.R
+  active_when:
+    kg.response_form: logs
+  note: >
+    LIVE by default (response_form = 'logs' since 2026-07-22). Lower than
+    the levels eta because the net-of-tax full-sim slope is steeper, so the
+    same E_full needs a smaller eta_tilde. Through-origin inversion for
+    comparison: 1.6461 (residuals +0.0268 +0.0015 -0.0188) -- the shipped
+    value is the piecewise one. Grid + fit:
+    other/kg_model_tests/form_ab/eta_tilde_fit.csv, and the trial values
+    themselves are config/calibrations/kg/sweeps/eta_logs_*/bathtub.yaml.
+
+timeable_share:
+  value: 0.2542
+  kind: calibrated
+  set: '2026-07-09'
+  target: >
+    Short-run announcement moment: a short-run semi-elasticity of +5.04, twice the
+    long-run magnitude with the sign flipped, since a future rate increase pulls
+    realizations forward. Measured at the announcement year under a five point
+    delayed permanent shock, and identified given eta, since the long-run moment does
+    not depend on this share: the overlay nets to zero under a uniform permanent
+    shock.
+  derived_under:
+    tax_data: '2026050315'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/recurrence.R
+    - src/sim/kg/inputs.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: 54f11bfc9f9d613373cd39e453f09168
+    src/sim/kg/timing.R: cda95c0c59a0f210ae6dc1d606c3b82e
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
+  conditioned_on:
+    settings.kg.timing_window: 1
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.applier_allocation: '0.5'
+  rederive: other/kg_model_tests/calibrate.R
+  active_when:
+    kg.response_form: levels
+  note: >
+    Live only when response_form is 'levels'. Derived under Tax-Data 2026050315,
+    an earlier vintage than the 2026070814 the rest of the capital gains calibration
+    uses. The code asserts that the timing overlay is robust to the Tax-Data
+    vintage, which is why this does not read as stale; that assertion has not been
+    re-tested. other/kg_model_tests/calibrate.R is a drift diagnostic and no longer
+    ships values, so re-deriving this share means running the short-run leg by
+    hand.
+
+timeable_share_logs:
+  value: 0.2452
+  kind: calibrated
+  set: '2026-07-27'
+  target: >
+    Short-run announcement moment: a short-run semi-elasticity of +5.04, twice the
+    long-run magnitude with the sign flipped, since a future rate increase pulls
+    realizations forward. Measured in 2026 under a two point permanent shock whose
+    rate rises in 2027. Law is unchanged in 2026, so movement that year is retiming
+    alone, which separates the overlay from the elasticity. Identified given
+    eta: the long-run moment does not depend on this share, and that was checked
+    across the grid rather than assumed, coming out at -2.6677 -2.6792 -2.6934. The
+    grid 0.15 0.2542 0.4 gave short-run elasticities of +2.6877 +5.2636 +8.8133, and
+    the pin interpolates piecewise-linearly onto the target after checking the grid
+    is monotone.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/recurrence.R
+    - src/sim/kg/inputs.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
+    src/sim/kg/timing.R: 'cda95c0c59a0f210ae6dc1d606c3b82e'
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
+  acknowledged:
+    date: '2026-07-29'
+    reason: >
+      Pinned before the reform-side cell rates moved to the mechanical rung and
+      before the cell averages began dropping records whose measured marginal rate
+      on gains falls outside the unit interval, and not re-derived under either.
+      eta_logs was re-derived under both and moved 1.7 percent in total, from
+      1.6625 to 1.6342, so this share's own drift is expected to be of that order.
+      The long-run moment eta is measured from does not depend on the share, which
+      was checked across the grid, so the shipped eta does not inherit the
+      staleness. Re-deriving means three full-sample vintages through
+      measure_timeable.R.
+  conditioned_on:
+    settings.kg.timing_window: 1
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.applier_allocation: '0.5'
+  rederive: other/kg_model_tests/form_ab/measure_timeable.R
+  active_when:
+    kg.response_form: logs
+  note: >
+    Live under the shipped configuration, which sets response_form to 'logs'.
+    measure_timeable.R derives it. The earlier solver in
+    other/kg_model_tests/calibrate.R found eta and this share together in a
+    standalone Bellman, and was demoted to a drift diagnostic when eta moved onto
+    the full simulator; the instability that demoted it is why measure_timeable.R
+    checks the grid is monotone before inverting. Measured from vintages
+    form_timeable_logs_15 form_timeable_logs_25.
+    form_timeable_logs_40. Per-point measurements:
+    other/kg_model_tests/form_ab/timeable_logs.csv.

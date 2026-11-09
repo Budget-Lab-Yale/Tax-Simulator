@@ -1,0 +1,11 @@
+---
+# Delayed-implementation +2pp across-the-board on preferred rates.
+# Policy announced in 2026 but effective from 2027 onwards. The Bellman
+# should produce a forward-looking acceleration in 2026 (taxpayers realize
+# at the lower rate before the hike), then suppressed realization from
+# 2027 on. Step-up unchanged.
+rates:
+  value:
+    '2025': [0.00, 0.15, 0.20]
+    '2026': [0.00, 0.15, 0.20]
+    '2027': [0.02, 0.17, 0.22]

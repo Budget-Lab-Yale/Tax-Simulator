@@ -1,0 +1,52 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 30 years (full sample)...
+  loaded
+Building extended grid, tau matrices, and real-rate beta series...
+  beta range: [0.9794, 0.9885] (real-rate discount, from /nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline)
+Average baseline tau (realization-weighted, across all years): 0.1859
+Target semi-elasticity at 1pp perturbation: dlog(R)/dtau = -2.5210
+
+Calibrating psi to hit semi-elasticity = -2.5210 at sim-year 30 (calendar 2055)...
+
+Coarse sweep:
+  psi =  0.800  ->  semi_elast = -75.6354
+  psi =  1.600  ->  semi_elast = -52.9630
+  psi =  3.200  ->  semi_elast = -24.2649
+  psi =  6.400  ->  semi_elast = -10.7627
+  psi = 12.800  ->  semi_elast = -5.0975
+  psi = 25.600  ->  semi_elast = -2.4836
+  psi = 51.200  ->  semi_elast = -1.2262
+  psi = 102.400  ->  semi_elast = -0.6093
+
+Bracketing: [12.800, 25.600]
+  iter  1  psi = 19.20000  semi_elast = -3.33992
+  iter  2  psi = 22.40000  semi_elast = -2.84881
+  iter  3  psi = 24.00000  semi_elast = -2.65371
+  iter  4  psi = 24.80000  semi_elast = -2.56585
+  iter  5  psi = 25.20000  semi_elast = -2.52407
+  iter  6  psi = 25.40000  semi_elast = -2.50368
+  iter  7  psi = 25.30000  semi_elast = -2.51383
+  iter  8  psi = 25.25000  semi_elast = -2.51894
+  iter  9  psi = 25.22500  semi_elast = -2.52150
+  iter 10  psi = 25.23750  semi_elast = -2.52022
+  iter 11  psi = 25.23125  semi_elast = -2.52086
+  iter 12  psi = 25.22813  semi_elast = -2.52118
+  iter 13  psi = 25.22969  semi_elast = -2.52102
+
+Calibrated psi = 25.2297  (semi_elast = -2.5210, target = -2.5210)
+
+Update KG_DYN_DEFAULT_PSI in src/sim/kg_dynamics.R to this value.
+
+Semi-elasticity profile by sim year (calibrated psi):
+ sim_year year semi_elast
+        1 2026    -2.0053
+        5 2030    -2.5431
+       10 2035    -2.5839
+       20 2045    -2.5133
+       30 2055    -2.5210

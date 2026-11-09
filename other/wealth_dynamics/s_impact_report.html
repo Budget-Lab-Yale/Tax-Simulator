@@ -1,0 +1,423 @@
+<title>What does s &gt; 0 cost? — wealth bathtub cross-base interactions</title>
+<style>
+  :root{
+    --ground:#f5f7f8; --surface:#ffffff; --surface-2:#eef2f4;
+    --ink:#16242e; --body:#33444f; --muted:#6b7c86; --faint:#92a0a8;
+    --hair:#dbe3e8; --hair-strong:#c6d2d8;
+    --teal:#0e7c8b; --teal-deep:#0a4f59; --teal-wash:#e3f0f1;
+    --amber:#c07426; --plum:#8a4b86; --grey:#9aa3ad;
+    --lost:#b5473d; --lost-wash:#fbf3f1; --good:#2f7d5b;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--body);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;margin:0}
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px 96px}
+  .col{max-width:68ch}
+  h1,h2,h3{font-family:var(--serif);color:var(--ink);text-wrap:balance;
+    font-weight:600;letter-spacing:-0.01em;line-height:1.15}
+  h2{font-size:1.7rem;margin:0 0 .35em}
+  h3{font-size:1.18rem;margin:1.8em 0 .4em}
+  p{margin:0 0 1em}
+  a{color:var(--teal-deep)}
+  strong{color:var(--ink);font-weight:600}
+  .eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--teal);font-weight:600}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .lost{color:var(--lost)}
+  .dim{color:var(--muted)}
+
+  header.hero{padding:64px 0 30px}
+  header.hero h1{font-size:3rem;margin:.18em 0 .25em;line-height:1.05}
+  .lede{font-size:1.22rem;color:var(--body);max-width:65ch}
+  .lede .key{color:var(--ink);font-weight:600}
+  .meta-line{font-family:var(--mono);font-size:.78rem;color:var(--muted);
+    margin-top:18px;display:flex;flex-wrap:wrap;gap:6px 18px}
+
+  section{padding:30px 0;border-top:1px solid var(--hair)}
+  section.flush{border-top:none}
+
+  .verdict{background:var(--ink);color:#dfe8ec;border-radius:14px;
+    padding:26px 28px;margin:8px 0 4px}
+  .verdict h2{color:#fff;font-size:1.25rem;margin-bottom:.5em}
+  .verdict p{color:#c3d2d8;max-width:64ch;margin-bottom:0}
+  .verdict .lost{color:#f0a59b}
+  .verdict .pos{color:#8fd0b3}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:20px}
+  .stat{background:var(--surface);border:1px solid var(--hair);border-radius:12px;
+    padding:16px 16px 14px}
+  .stat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:1.5rem;color:var(--ink);font-weight:600;line-height:1.1}
+  .stat .v.lost{color:var(--lost)}
+  .stat .l{font-size:.82rem;color:var(--muted);margin-top:5px;line-height:1.35}
+
+  .mech{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:0;
+    align-items:stretch;margin:10px 0 4px}
+  .mech .box{background:var(--surface);border:1px solid var(--hair);border-radius:12px;
+    padding:15px 16px}
+  .mech .box .t{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--teal);margin-bottom:6px}
+  .mech .box .d{font-size:.9rem;color:var(--body)}
+  .mech .arr{display:flex;align-items:center;justify-content:center;color:var(--teal);
+    font-size:1.4rem;padding:0 12px;font-family:var(--mono)}
+
+  .tbl-wrap{overflow-x:auto;margin:6px 0 2px;border:1px solid var(--hair);border-radius:12px}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;background:var(--surface)}
+  caption{caption-side:bottom;color:var(--muted);font-size:.78rem;text-align:left;
+    padding:8px 4px 0}
+  th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--hair);white-space:nowrap}
+  thead th{font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2)}
+  tbody tr:last-child td{border-bottom:none}
+  td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  tr.rule td{border-bottom:2px solid var(--hair-strong)}
+  tr.tot td{font-weight:600;color:var(--ink);background:var(--surface-2)}
+  .swatch{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:middle}
+  .tag{font-family:var(--mono);font-size:.72rem;padding:2px 7px;border-radius:5px;
+    background:var(--surface-2);color:var(--muted)}
+
+  .chart{background:var(--surface);border:1px solid var(--hair);border-radius:14px;
+    padding:20px 20px 14px;margin:8px 0}
+  .chart .ct{font-family:var(--serif);color:var(--ink);font-size:1.05rem;font-weight:600}
+  .chart .cs{font-size:.85rem;color:var(--muted);margin:2px 0 12px}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:.8rem}
+  .legend span{display:inline-flex;align-items:center;gap:7px;color:var(--body)}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+  .legend i.sq{width:10px;height:10px;border-radius:2px}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .axis{stroke:var(--hair-strong);stroke-width:1}
+  .grid{stroke:var(--hair);stroke-width:1}
+  .tick{font-family:var(--mono);font-size:10px;fill:var(--faint)}
+  .endlab{font-family:var(--mono);font-size:10.5px;font-variant-numeric:tabular-nums;font-weight:600}
+  .zero{stroke:var(--hair-strong);stroke-width:1.2}
+  .barlab{font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums;fill:var(--ink);font-weight:600}
+  .barcat{font-family:var(--sans);font-size:12px;fill:var(--body)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .note{background:var(--teal-wash);border:1px solid #c4dfe1;border-left:3px solid var(--teal);
+    border-radius:8px;padding:14px 16px;font-size:.9rem;color:#244;margin:14px 0}
+  .note b{color:var(--teal-deep)}
+  .callout{background:var(--lost-wash);border:1px solid #eccdc8;border-left:3px solid var(--lost);
+    border-radius:8px;padding:14px 16px;font-size:.9rem;margin:14px 0}
+  ul.tight{margin:.2em 0 1em;padding-left:1.15em}
+  ul.tight li{margin:.4em 0}
+  code{font-family:var(--mono);font-size:.85em;background:var(--surface-2);
+    padding:1px 5px;border-radius:4px;color:#244}
+  footer{border-top:1px solid var(--hair);margin-top:30px;padding-top:22px;
+    font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+  footer .path{color:var(--teal-deep);word-break:break-all}
+  @media(max-width:720px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .mech{grid-template-columns:1fr}
+    .mech .arr{transform:rotate(90deg);padding:6px 0}
+    .grid2{grid-template-columns:1fr}
+    header.hero h1{font-size:2.2rem}
+  }
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="eyebrow">Tax-Simulator · Wealth Dynamics · cross-base interaction</div>
+  <h1>What does turning on <span class="num">s</span> cost the revenue estimate?</h1>
+  <p class="lede">Two reforms &mdash; capital gains <span class="key">+5pp</span> and a simple top
+  ordinary rate <span class="key">&rarr;&nbsp;39.6%</span> &mdash; each scored with the
+  <code>kg_dynamics/turnover</code> behavior module at <span class="key">s&nbsp;=&nbsp;0</span> (channel
+  off) and <span class="key">s&nbsp;=&nbsp;0.5</span> (half of the net above-baseline during-life tax is
+  financed out of wealth). Switching the saving-financing channel on shaves
+  <span class="key">$8&ndash;9&nbsp;billion</span> off each reform's 10-year estimate &mdash; and almost
+  all of it lands in <span class="key">income tax</span>, not estate.</p>
+  <div class="meta-line">
+    <span>FY 2027&ndash;2036</span><span>full sample</span><span>Tax-Data 2026060918</span>
+    <span>vintages: wealth_explore (CG) · wealth_toprate</span>
+  </div>
+</header>
+
+<section class="flush">
+  <div class="verdict">
+    <h2>The headline</h2>
+    <p>Including <span class="num">s&nbsp;&gt;&nbsp;0</span> lowers the 10-year conventional estimate by
+    <span class="lost">&minus;$8.34B</span> for CG&nbsp;+5pp and <span class="lost">&minus;$9.02B</span> for
+    top-rate&nbsp;&rarr;&nbsp;39.6 &mdash; about <span class="lost">2%</span> of each reform's revenue. The
+    split is lopsided: <span class="lost">~92%</span> is eroded <strong style="color:#fff">income tax</strong>
+    (the financed-out wealth no longer throws off taxable capital income), a small slice is
+    <strong style="color:#fff">estate tax</strong> (a thinner base for the dying top tail), a sliver is
+    <strong style="color:#fff">payroll</strong> (SECA on eroded pass-through), and <span class="pos">$0</span>
+    is wealth tax &mdash; neither reform has a net-worth base for the channel to reprice.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="v lost">&minus;$8.34B</div><div class="l">CG&nbsp;+5pp: s&gt;0 impact on the 10y estimate</div></div>
+    <div class="stat"><div class="v lost">&minus;$9.02B</div><div class="l">Top-rate&nbsp;&rarr;39.6: s&gt;0 impact on the 10y estimate</div></div>
+    <div class="stat"><div class="v lost">~92%</div><div class="l">share of the s&gt;0 impact that is income tax, both reforms</div></div>
+    <div class="stat"><div class="v">$265&ndash;310B</div><div class="l">cumulative wealth financed out of the base by 2036</div></div>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <h2>How the channel is isolated</h2>
+    <p>The reform's conventional revenue <em>estimate</em> is <code>conv(reform) &minus; baseline</code>.
+    Baseline is shared across <span class="num">s</span>, so the <strong>impact of including s&nbsp;&gt;&nbsp;0
+    is exactly</strong> <code>conv(reform, s=0.5) &minus; conv(reform, s=0)</code> &mdash; baseline cancels and
+    nothing but the saving share differs. Everything is on the <strong>conventional</strong> pass: the static
+    counterfactual is identical across <span class="num">s</span> by construction, so distribution tables are
+    untouched and the interaction surfaces only in receipts.</p>
+  </div>
+  <div class="note">
+    <b>Two clean tells that this is the channel and nothing else.</b> At <span class="num">s&nbsp;=&nbsp;0</span>
+    the estate and payroll deltas are <b>exactly $0</b> for both reforms &mdash; neither touches estate or
+    payroll law, so without the wealth channel those bases cannot move. And the <b>wealth-tax delta is $0</b>
+    at <span class="num">s&nbsp;=&nbsp;0.5</span> too: the channel reprices only bases the scenario actually has,
+    and neither reform carries a net-worth tax.
+  </div>
+</section>
+
+<section>
+  <h2>The 10-year estimate, with and without the channel</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Reform</th><th>Kind of tax</th>
+          <th class="n">Estimate, s=0</th><th class="n">Estimate, s=0.5</th>
+          <th class="n">s&gt;0 impact</th>
+        </tr>
+      </thead>
+      <tbody id="hltbody"></tbody>
+    </table>
+    <caption>10-year sums, FY 2027&ndash;2036, $ billions. &ldquo;Estimate&rdquo; = reform &minus; baseline conventional receipts.
+    &ldquo;s&gt;0 impact&rdquo; = the s=0.5 column minus the s=0 column. Net total nets refundable-credit outlays; income
+    is gross of them (outlays move only +$0.05&ndash;0.11B over the window). Corp / VAT / other are unchanged and omitted.</caption>
+  </div>
+</section>
+
+<section>
+  <h2>Where the $8&ndash;9B lands</h2>
+  <p class="col">The same picture as bars: income tax is the channel's overwhelming cost, estate is a
+  distant second (and larger for the top-rate reform), payroll a sliver, wealth nil.</p>
+  <div class="chart">
+    <div class="ct">s&gt;0 impact by kind of tax &mdash; 10-year total</div>
+    <div class="cs">$ billions, FY 2027&ndash;2036. Bars extend left (revenue lost when the channel is on).</div>
+    <svg id="barchart" viewBox="0 0 920 300" role="img" aria-label="s>0 impact by tax type, both reforms"></svg>
+    <div class="legend">
+      <span><i class="sq" style="background:var(--teal)"></i>CG&nbsp;+5pp</span>
+      <span><i class="sq" style="background:var(--amber)"></i>Top-rate&nbsp;&rarr;39.6</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>It is not a one-time hit &mdash; it compounds</h2>
+  <p class="col">The financed-out wealth accumulates year over year, so the eroded balance sheet throws off
+  steadily less taxable income. The annual revenue loss therefore <strong>grows monotonically</strong> across
+  the window and is still accelerating in 2036 &mdash; the 10-year sum understates the steady-state cost.</p>
+  <div class="grid2">
+    <div class="chart">
+      <div class="ct">Annual s&gt;0 revenue impact</div>
+      <div class="cs">net total, $B/yr &mdash; deeper every year</div>
+      <svg id="linechart" viewBox="0 0 460 300" role="img" aria-label="annual s>0 total impact by year"></svg>
+      <div class="legend">
+        <span><i style="background:var(--teal)"></i>CG&nbsp;+5pp</span>
+        <span><i style="background:var(--amber)"></i>Top-rate&nbsp;&rarr;39.6</span>
+      </div>
+    </div>
+    <div class="chart">
+      <div class="ct">Cumulative wealth financed out</div>
+      <div class="cs">D&#8320; drained from the base, $B &mdash; the mechanical driver</div>
+      <svg id="drainchart" viewBox="0 0 460 300" role="img" aria-label="cumulative wealth drain by year"></svg>
+      <div class="legend">
+        <span><i style="background:var(--teal)"></i>CG&nbsp;+5pp</span>
+        <span><i style="background:var(--amber)"></i>Top-rate&nbsp;&rarr;39.6</span>
+      </div>
+    </div>
+  </div>
+  <div class="note">
+    <b>Why the estate slice is bigger for the top-rate reform.</b> The top-rate forcing falls on ordinary
+    income of high earners &mdash; households more likely to leave taxable estates &mdash; and it grows with
+    nominal income, so by 2036 it has drained <b>$310B</b> vs CG's <b>$265B</b> and the estate impact is
+    <b>accelerating</b> (&minus;0.01&rarr;&minus;0.14 $B/yr). CG's drain is front-loaded on realizers and
+    catches relatively more pass-through wealth, which is why <em>its</em> payroll (SECA) slice is the larger one.
+  </div>
+</section>
+
+<section>
+  <h2>The mechanism, end to end</h2>
+  <div class="mech">
+    <div class="box"><div class="t">Forcing</div><div class="d">Higher during-life tax (CG&nbsp;rate / ordinary&nbsp;rate). A share <span class="num">s=0.5</span> is paid out of wealth, not consumption.</div></div>
+    <div class="arr">&rarr;</div>
+    <div class="box"><div class="t">Drain &amp; compound</div><div class="d">The deficit compounds in the cohort bathtub &mdash; <span class="num">$265&ndash;310B</span> of net worth eroded by 2036.</div></div>
+    <div class="arr">&rarr;</div>
+    <div class="box"><div class="t">Bases reprice</div><div class="d">A thinner balance sheet &rArr; less capital income (<b>income</b>), a smaller gross estate (<b>estate</b>), less SE income (<b>payroll</b>).</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Reading the result &mdash; caveats</h2>
+  <ul class="tight col">
+    <li><strong>Conventional-only, mechanical.</strong> This is the saving-financing channel, not a behavioral
+    elasticity. Static estimates and distribution tables are unchanged; the interaction is a conventional-side
+    receipts effect by design.</li>
+    <li><strong>The 10-year figure understates the estate piece.</strong> The drain is still compounding in 2036
+    and the annual estate loss is accelerating, so a longer window would show a larger &mdash; and more
+    estate-weighted &mdash; total.</li>
+    <li><strong>Wealth-tax delta is structurally $0 here.</strong> Add a net-worth base (e.g. a Warren / nickel-dime
+    wealth tax) and the channel would also erode <em>that</em> base; these two reforms simply have none.</li>
+    <li><strong>s = 0.5 is the working assumption</strong> (1 &minus; MPC), flat across ages and symmetric, per the
+    v1 design. The sign and ordering are robust; the magnitude scales with <span class="num">s</span>.</li>
+    <li><strong>Full sample required</strong> &mdash; the wealth-dynamics run guard hard-stops any sub-sample, so
+    both legs are 100% of records.</li>
+  </ul>
+</section>
+
+<footer>
+  <div>Tax-Simulator · Budget Lab at Yale · generated 2026-06-24 · branch <span class="num">wealth</span></div>
+  <div style="margin-top:6px">Report: <span class="path">/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/wealth_dynamics/s_impact_report.html</span></div>
+  <div style="margin-top:4px">Data: <span class="path">other/wealth_dynamics/s_impact_{summary,receipts,drain}.csv</span> · analysis: <span class="path">other/wealth_dynamics/analyze_s_impact.R</span></div>
+</footer>
+
+</div>
+
+<script>
+const D = {
+  years: [2027,2028,2029,2030,2031,2032,2033,2034,2035,2036],
+  drainYears: [2026,2027,2028,2029,2030,2031,2032,2033,2034,2035,2036],
+  // 10-year sums ($B): est at s=0, est at s=0.5, s>0 impact
+  summary: {
+    cg5: {
+      income:  [406.053, 398.316, -7.737],
+      estate:  [0.000,  -0.264,  -0.264],
+      payroll: [0.000,  -0.221,  -0.221],
+      wealth:  [0.000,   0.000,   0.000],
+      total:   [406.693, 398.356, -8.337]
+    },
+    toprate: {
+      income:  [490.520, 482.259, -8.261],
+      estate:  [0.000,  -0.612,  -0.612],
+      payroll: [0.000,  -0.099,  -0.099],
+      wealth:  [0.000,   0.000,   0.000],
+      total:   [490.520, 481.503, -9.017]
+    }
+  },
+  // annual s>0 impact ($B/yr), FY 2027-2036
+  annual: {
+    cg5:     { total:  [-0.333,-0.433,-0.520,-0.630,-0.739,-0.851,-0.983,-1.129,-1.266,-1.453] },
+    toprate: { total:  [-0.249,-0.366,-0.498,-0.635,-0.782,-0.936,-1.104,-1.291,-1.472,-1.684] }
+  },
+  // cumulative wealth drain D_alloc ($B), 2026-2036
+  drain: {
+    cg5:     [23.58,46.09,66.97,87.29,108.27,130.29,153.70,178.73,205.63,234.45,265.26],
+    toprate: [18.78,39.29,61.09,84.85,110.48,138.05,167.67,199.51,233.67,270.32,309.57]
+  }
+};
+const COL = { cg5:'#0e7c8b', toprate:'#c07426' };
+const f2 = x => (x>=0?'+':'−') + Math.abs(x).toFixed(2);
+const NS = 'http://www.w3.org/2000/svg';
+const el = (n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+/* ---- headline table ---- */
+(function(){
+  const order = [['income','Income tax'],['payroll','Payroll'],['estate','Estate'],['wealth','Wealth'],['total','Net total']];
+  const legs = [['cg5','CG +5pp'],['toprate','Top-rate → 39.6']];
+  const tb = document.getElementById('hltbody');
+  legs.forEach(([lk,ln],li)=>{
+    order.forEach(([tk,tn],ri)=>{
+      const tr = document.createElement('tr');
+      if (tk==='total') tr.className='tot';
+      if (tk==='total' && li===0) tr.className='tot rule';
+      const v = D.summary[lk][tk];
+      const cells = [
+        ri===0 ? `<td rowspan="${order.length}"><strong>${ln}</strong></td>` : '',
+        `<td>${tn}</td>`,
+        `<td class="n">${f2(v[0])}</td>`,
+        `<td class="n">${f2(v[1])}</td>`,
+        `<td class="n ${v[2]<-0.001?'lost':''}">${f2(v[2])}</td>`
+      ].join('');
+      tr.innerHTML = cells;
+      tb.appendChild(tr);
+    });
+  });
+})();
+
+/* ---- horizontal divergent bar chart: s>0 impact by tax type ---- */
+(function(){
+  const svg = document.getElementById('barchart');
+  const W=920,H=300, padL=120, padR=70, padT=14, padB=28;
+  const cats = [['income','Income'],['estate','Estate'],['payroll','Payroll'],['wealth','Wealth']];
+  const x0 = padL; // zero line near left (all values <=0)
+  const maxAbs = 8.5;
+  const xw = W - padL - padR;
+  const xOf = v => x0 + (-v/maxAbs)*xw; // v negative -> extends right
+  const band = (H-padT-padB)/cats.length;
+  const bh = 15, gap = 6;
+  // zero axis
+  svg.appendChild(el('line',{x1:x0,y1:padT,x2:x0,y2:H-padB,class:'zero'}));
+  // x grid ticks
+  for(let g=0; g<=8; g+=2){
+    const xx = x0 + (g/maxAbs)*xw;
+    svg.appendChild(el('line',{x1:xx,y1:padT,x2:xx,y2:H-padB,class:'grid'}));
+    const t=el('text',{x:xx,y:H-padB+16,'text-anchor':'middle',class:'tick'}); t.textContent='−'+g; svg.appendChild(t);
+  }
+  cats.forEach(([tk,tn],i)=>{
+    const cy = padT + i*band + band/2;
+    const cl=el('text',{x:padL-12,y:cy+4,'text-anchor':'end',class:'barcat'}); cl.textContent=tn; svg.appendChild(cl);
+    ['cg5','toprate'].forEach((lk,j)=>{
+      const v = D.summary[lk][tk][2];
+      const yy = cy - (bh+gap)/2 + j*(bh+gap) - bh/2 + (bh/2);
+      const top = cy - (bh+gap/2) + j*(bh+gap);
+      const x2 = xOf(v);
+      svg.appendChild(el('rect',{x:x0, y:top, width:Math.max(0,x2-x0), height:bh, rx:2, fill:COL[lk], opacity:0.92}));
+      if (Math.abs(v) > 0.001){
+        const lab=el('text',{x:x2+6, y:top+bh-3, class:'barlab', fill:COL[lk]}); lab.textContent=f2(v); svg.appendChild(lab);
+      } else {
+        const lab=el('text',{x:x0+6, y:top+bh-3, class:'barlab', fill:'var(--faint)'}); lab.textContent='0.00'; svg.appendChild(lab);
+      }
+    });
+  });
+})();
+
+/* ---- line chart helper ---- */
+function lineChart(id, xs, series, yMin, yMax, opts){
+  opts = opts||{};
+  const svg = document.getElementById(id);
+  const W=460,H=300, padL=44, padR=46, padT=16, padB=30;
+  const xw=W-padL-padR, yh=H-padT-padB;
+  const xOf=i=> padL + (xs.length<2?0:(i/(xs.length-1))*xw);
+  const yOf=v=> padT + (1-(v-yMin)/(yMax-yMin))*yh;
+  // grid + y ticks
+  const yticks = opts.yticks || 5;
+  for(let k=0;k<=yticks;k++){
+    const v = yMin + (k/yticks)*(yMax-yMin);
+    const yy = yOf(v);
+    svg.appendChild(el('line',{x1:padL,y1:yy,x2:W-padR,y2:yy,class:'grid'}));
+    const t=el('text',{x:padL-8,y:yy+3,'text-anchor':'end',class:'tick'});
+    t.textContent=(opts.fmt?opts.fmt(v):v.toFixed(0)); svg.appendChild(t);
+  }
+  // zero line if in range
+  if (yMin<0 && yMax>0){ svg.appendChild(el('line',{x1:padL,y1:yOf(0),x2:W-padR,y2:yOf(0),class:'zero'})); }
+  // x ticks (first, mid, last)
+  [0, Math.floor((xs.length-1)/2), xs.length-1].forEach(i=>{
+    const t=el('text',{x:xOf(i),y:H-padB+16,'text-anchor':'middle',class:'tick'}); t.textContent=xs[i]; svg.appendChild(t);
+  });
+  series.forEach(s=>{
+    let d='';
+    s.v.forEach((v,i)=> d += (i?'L':'M')+xOf(i).toFixed(1)+' '+yOf(v).toFixed(1)+' ');
+    svg.appendChild(el('path',{d, fill:'none', stroke:s.color, 'stroke-width':2.2, 'stroke-linejoin':'round'}));
+    const li=s.v.length-1;
+    svg.appendChild(el('circle',{cx:xOf(li),cy:yOf(s.v[li]),r:3.2,fill:s.color}));
+    const lab=el('text',{x:xOf(li)+6,y:yOf(s.v[li])+(s.labDy||3),class:'endlab',fill:s.color});
+    lab.textContent=(opts.endfmt?opts.endfmt(s.v[li]):s.v[li].toFixed(2)); svg.appendChild(lab);
+  });
+}
+
+lineChart('linechart', D.years,
+  [{v:D.annual.cg5.total,color:COL.cg5,labDy:-5},{v:D.annual.toprate.total,color:COL.toprate,labDy:12}],
+  -1.8, 0, {yticks:6, fmt:v=>'−'+Math.abs(v).toFixed(1), endfmt:v=>f2(v)});
+
+lineChart('drainchart', D.drainYears,
+  [{v:D.drain.cg5,color:COL.cg5,labDy:14},{v:D.drain.toprate,color:COL.toprate,labDy:-6}],
+  0, 320, {yticks:4, fmt:v=>v.toFixed(0), endfmt:v=>v.toFixed(0)});
+</script>

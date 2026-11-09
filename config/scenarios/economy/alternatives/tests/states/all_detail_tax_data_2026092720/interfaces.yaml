@@ -1,0 +1,7 @@
+# Reads Tax-Data vintage 2026092720_filer_refit_v2.
+
+tax_data_vintage:
+  value: '2026092720_filer_refit_v2'
+
+tax_data_id:
+  value: baseline

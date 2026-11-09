@@ -1,0 +1,25 @@
+---
+# 03-deductions stack step: SALT reverted to pre-OBBBA (baseline_2024) so that at
+# this step the itemized-deduction limitation / mortgage / Pease provisions are ON
+# (inherited from baseline) while the SALT cap is still OFF. SALT turns on at 04-salt.
+# Only the SALT subparameters that differ between baseline_2024 and baseline are
+# restated (salt_limit_married, salt_floor, salt_floor_thresh); everything else in
+# item.yaml falls through to baseline (OBBBA).
+
+salt_limit_married:
+  value:
+    '2014': Inf
+    '2018': 10000
+    '2026': Inf
+
+# Minimum value of SALT cap
+salt_floor:
+  value:
+    '2014': 0
+    
+# Income above which SALT deduction phases out towards the floor
+salt_floor_thresh:
+  value:
+    '2014': Inf
+    
+# Amount of PTE SALT workaround allowed, non-SSTBs

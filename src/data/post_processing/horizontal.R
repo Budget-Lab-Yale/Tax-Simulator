@@ -70,15 +70,8 @@ build_horizontal_table = function(id) {
   for (yr in get_scenario_info(id)$dist_years) {
 
     # Read baseline and scenario microdata
-    baseline = globals$baseline_root %>%
-      file.path('baseline/static/detail', paste0(yr, '.csv')) %>%
-      fread() %>%
-      tibble()
-
-    scenario = globals$output_root %>%
-      file.path(id, 'static/detail', paste0(yr, '.csv')) %>%
-      fread() %>%
-      tibble()
+    baseline = read_static_detail('baseline', yr)
+    scenario = read_static_detail(id, yr)
 
     # Combine with scenario labels
     scenario_id = id
@@ -90,13 +83,18 @@ build_horizontal_table = function(id) {
       # Remove dependent returns and negative/zero income
       filter(dep_status == 0, expanded_inc > 0) %>%
 
-      # Join baseline income for consistent percentile ranking
+      # Join baseline income so the percentile ranking is consistent across
+      # scenarios, dropping records with no positive-income baseline to anchor to.
+      # Scenario static detail can carry different expanded income than baseline,
+      # since the mechanical gains injection adds heirs' and decedents' gains, so
+      # an unmatched join would put an NA rate into the quantiles.
       left_join(
         baseline %>%
           filter(dep_status == 0, expanded_inc > 0) %>%
           select(id, inc = expanded_inc),
         by = 'id'
       ) %>%
+      filter(!is.na(inc)) %>%
 
       # Compute effective tax rate and grouping variables
       mutate(

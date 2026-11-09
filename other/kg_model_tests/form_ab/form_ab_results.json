@@ -1,0 +1,270 @@
+{
+  "window_memo": "FY2027-2036",
+  "window_fig": "FY2047-2056",
+  "gdp_3d_B": 822024.9,
+  "table1": {
+    "levels": {
+      "rate2pp": {
+        "static_10y_B": 344.1,
+        "conventional_10y_B": 142.7
+      },
+      "deemed": {
+        "static_10y_B": 290.9,
+        "conventional_10y_B": 678.2
+      },
+      "rate2pp_deemed": {
+        "static_10y_B": 663.0,
+        "conventional_10y_B": 915.0
+      }
+    },
+    "logs": {
+      "rate2pp": {
+        "static_10y_B": 344.1,
+        "conventional_10y_B": 146.1
+      },
+      "deemed": {
+        "static_10y_B": 290.9,
+        "conventional_10y_B": 650.3
+      },
+      "rate2pp_deemed": {
+        "static_10y_B": 663.0,
+        "conventional_10y_B": 898.2
+      }
+    }
+  },
+  "laffer": {
+    "levels": {
+      "stepup": [
+        {
+          "rate_pct": 20,
+          "conv_10y_B": 0.0,
+          "conv_3d_B": 0.0,
+          "conv_3d_pct_gdp": 0.0
+        },
+        {
+          "rate_pct": 25,
+          "conv_10y_B": 168.4,
+          "conv_3d_B": 499.3,
+          "conv_3d_pct_gdp": 0.0607
+        },
+        {
+          "rate_pct": 30,
+          "conv_10y_B": 301.9,
+          "conv_3d_B": 871.1,
+          "conv_3d_pct_gdp": 0.106
+        },
+        {
+          "rate_pct": 35,
+          "conv_10y_B": 401.4,
+          "conv_3d_B": 1127.9,
+          "conv_3d_pct_gdp": 0.1372
+        },
+        {
+          "rate_pct": 40,
+          "conv_10y_B": 453.0,
+          "conv_3d_B": 1292.4,
+          "conv_3d_pct_gdp": 0.1572
+        },
+        {
+          "rate_pct": 45,
+          "conv_10y_B": 466.6,
+          "conv_3d_B": 1378.0,
+          "conv_3d_pct_gdp": 0.1676
+        }
+      ],
+      "carryover": [
+        {
+          "rate_pct": 20,
+          "conv_10y_B": 257.5,
+          "conv_3d_B": 657.1,
+          "conv_3d_pct_gdp": 0.0799
+        },
+        {
+          "rate_pct": 25,
+          "conv_10y_B": 481.8,
+          "conv_3d_B": 1273.9,
+          "conv_3d_pct_gdp": 0.155
+        },
+        {
+          "rate_pct": 30,
+          "conv_10y_B": 669.8,
+          "conv_3d_B": 1756.2,
+          "conv_3d_pct_gdp": 0.2136
+        },
+        {
+          "rate_pct": 35,
+          "conv_10y_B": 821.5,
+          "conv_3d_B": 2115.6,
+          "conv_3d_pct_gdp": 0.2574
+        },
+        {
+          "rate_pct": 40,
+          "conv_10y_B": 921.7,
+          "conv_3d_B": 2374.2,
+          "conv_3d_pct_gdp": 0.2888
+        },
+        {
+          "rate_pct": 45,
+          "conv_10y_B": 978.7,
+          "conv_3d_B": 2544.7,
+          "conv_3d_pct_gdp": 0.3096
+        }
+      ],
+      "deemed": [
+        {
+          "rate_pct": 20,
+          "conv_10y_B": 693.8,
+          "conv_3d_B": 1443.6,
+          "conv_3d_pct_gdp": 0.1756
+        },
+        {
+          "rate_pct": 25,
+          "conv_10y_B": 1021.8,
+          "conv_3d_B": 2282.5,
+          "conv_3d_pct_gdp": 0.2777
+        },
+        {
+          "rate_pct": 30,
+          "conv_10y_B": 1315.7,
+          "conv_3d_B": 3000.3,
+          "conv_3d_pct_gdp": 0.365
+        },
+        {
+          "rate_pct": 35,
+          "conv_10y_B": 1576.2,
+          "conv_3d_B": 3611.1,
+          "conv_3d_pct_gdp": 0.4393
+        },
+        {
+          "rate_pct": 40,
+          "conv_10y_B": 1785.0,
+          "conv_3d_B": 4127.8,
+          "conv_3d_pct_gdp": 0.5021
+        },
+        {
+          "rate_pct": 45,
+          "conv_10y_B": 1949.8,
+          "conv_3d_B": 4561.6,
+          "conv_3d_pct_gdp": 0.5549
+        }
+      ]
+    },
+    "logs": {
+      "stepup": [
+        {
+          "rate_pct": 20,
+          "conv_10y_B": 0.0,
+          "conv_3d_B": 0.0,
+          "conv_3d_pct_gdp": 0.0
+        },
+        {
+          "rate_pct": 25,
+          "conv_10y_B": 171.4,
+          "conv_3d_B": 500.0,
+          "conv_3d_pct_gdp": 0.0608
+        },
+        {
+          "rate_pct": 30,
+          "conv_10y_B": 288.8,
+          "conv_3d_B": 836.5,
+          "conv_3d_pct_gdp": 0.1018
+        },
+        {
+          "rate_pct": 35,
+          "conv_10y_B": 347.9,
+          "conv_3d_B": 1010.1,
+          "conv_3d_pct_gdp": 0.1229
+        },
+        {
+          "rate_pct": 40,
+          "conv_10y_B": 330.7,
+          "conv_3d_B": 1035.4,
+          "conv_3d_pct_gdp": 0.126
+        },
+        {
+          "rate_pct": 45,
+          "conv_10y_B": 245.9,
+          "conv_3d_B": 920.0,
+          "conv_3d_pct_gdp": 0.1119
+        }
+      ],
+      "carryover": [
+        {
+          "rate_pct": 20,
+          "conv_10y_B": 246.9,
+          "conv_3d_B": 641.1,
+          "conv_3d_pct_gdp": 0.078
+        },
+        {
+          "rate_pct": 25,
+          "conv_10y_B": 485.2,
+          "conv_3d_B": 1279.2,
+          "conv_3d_pct_gdp": 0.1556
+        },
+        {
+          "rate_pct": 30,
+          "conv_10y_B": 674.9,
+          "conv_3d_B": 1759.9,
+          "conv_3d_pct_gdp": 0.2141
+        },
+        {
+          "rate_pct": 35,
+          "conv_10y_B": 810.8,
+          "conv_3d_B": 2083.7,
+          "conv_3d_pct_gdp": 0.2535
+        },
+        {
+          "rate_pct": 40,
+          "conv_10y_B": 873.3,
+          "conv_3d_B": 2263.8,
+          "conv_3d_pct_gdp": 0.2754
+        },
+        {
+          "rate_pct": 45,
+          "conv_10y_B": 867.6,
+          "conv_3d_B": 2305.0,
+          "conv_3d_pct_gdp": 0.2804
+        }
+      ],
+      "deemed": [
+        {
+          "rate_pct": 20,
+          "conv_10y_B": 664.4,
+          "conv_3d_B": 1399.1,
+          "conv_3d_pct_gdp": 0.1702
+        },
+        {
+          "rate_pct": 25,
+          "conv_10y_B": 1011.9,
+          "conv_3d_B": 2267.7,
+          "conv_3d_pct_gdp": 0.2759
+        },
+        {
+          "rate_pct": 30,
+          "conv_10y_B": 1319.4,
+          "conv_3d_B": 3005.6,
+          "conv_3d_pct_gdp": 0.3656
+        },
+        {
+          "rate_pct": 35,
+          "conv_10y_B": 1583.3,
+          "conv_3d_B": 3618.7,
+          "conv_3d_pct_gdp": 0.4402
+        },
+        {
+          "rate_pct": 40,
+          "conv_10y_B": 1781.4,
+          "conv_3d_B": 4113.5,
+          "conv_3d_pct_gdp": 0.5004
+        },
+        {
+          "rate_pct": 45,
+          "conv_10y_B": 1918.1,
+          "conv_3d_B": 4495.4,
+          "conv_3d_pct_gdp": 0.5469
+        }
+      ]
+    }
+  },
+  "missing": []
+}

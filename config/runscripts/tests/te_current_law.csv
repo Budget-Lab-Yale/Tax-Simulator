@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2026,2026,,
+baseline,default,,2025:2026,2026,,
 repeal_salt,tests/tax_expenditures/repeal_salt,,2025:2026,2026,,
 repeal_mid,tests/tax_expenditures/repeal_mid,,2025:2026,2026,,
 repeal_char,tests/tax_expenditures/repeal_char,,2025:2026,2026,,

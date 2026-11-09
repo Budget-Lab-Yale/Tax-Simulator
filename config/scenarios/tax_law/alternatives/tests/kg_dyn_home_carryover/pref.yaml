@@ -1,0 +1,16 @@
+---
+# Mixed regime exercising §121 under carryover: the primary residence is put on
+# carryover basis (gain routed to heirs, net of the §121 cap via the death-time
+# basis step-up) while every other asset class is deemed-realized. Confirms the
+# §121 carve-out flows through the route channel for any reform combination, not
+# just the all-carryover corner.
+kg_death_regime_equities:
+  value: 2
+kg_death_regime_pass_throughs:
+  value: 2
+kg_death_regime_primary_home:
+  value: 1
+kg_death_regime_other_home:
+  value: 2
+kg_death_regime_re_fund:
+  value: 2

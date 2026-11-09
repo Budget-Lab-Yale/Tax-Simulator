@@ -1,0 +1,77 @@
+# Hand-edited. The estate measurement bridge's chosen inputs, split from its fitted
+# ones the same way config/calibrations/kg/settings.yaml is.
+#
+# Two kinds of number go into the bridge from Tax-Data economic wealth to reported
+# gross estate. The valuation factors r and rho_pt come out of an optimizer and live
+# in valuation_fit.yaml, which the calibrator writes. A guard threshold, a pooling
+# rule and which death year to freeze at are chosen rather than fitted, and live
+# here.
+#
+# Only a fitted value can go stale, since only a fitted value has inputs. The fit
+# records which of these choices it was made under, so changing one stops estate
+# runs until the fit is redone or the entry carries a dated waiver.
+#
+# Read by : other/estate_tax/calibrate_estate_v2.R, for the cluster cap, which is an
+#           input to the fit rather than an output of it, and
+#           other/estate_tax/write_frozen_params.R, for all four.
+
+_channel:
+  role: state
+
+
+cluster_death_weight_cap:
+  value: 300
+  kind: judgment
+  note: >
+    Cap on the expected deaths in one cluster of records sharing an exact gross
+    estate above $5M. Tax-Data replicates donor records, and in the top tail those
+    replicas form clusters contributing a multiple of the real death weight, which is
+    an artifact of the data rather than a feature of the population. The rule is
+    generic and the value is re-derived per Tax-Data vintage from the cluster size
+    distribution, where the legitimate scale was about 240 on vintage 2026060918.
+    Validated against pre-TCJA death years. It is an input to the valuation fit
+    rather than an output of it, so the fit is conditioned on it and would be redone
+    if it moved.
+
+gamma_pool_factor:
+  value: 1.5
+  kind: judgment
+  note: >
+    Selection guard on the lifetime gift add-back. The add-back is pooled only from
+    SOI size bins whose lower bound is at least this multiple of the exemption. Bins
+    near the exemption hold returns that are taxable because of gifts, so pooling
+    them would attribute to gifts what selection put there. Where that contamination
+    stops mattering is a judgment, and no derivation is recorded.
+
+soi_death_year:
+  value: 2022
+  kind: structural
+  note: >
+    The death year the per-bin SOI parameters are frozen at, being the latest year
+    with observed filings. It is a convention rather than a measurement: the model
+    applies these fractions to future death years, where the alternative is
+    extrapolating them.
+
+soi_exemption:
+  value: 12060000
+  kind: structural
+  note: >
+    The exemption in force in soi_death_year, in dollars. It is pinned alongside the
+    death year because the per-bin fractions are conditional on it, so the two move
+    together.
+
+widowhood_scf_year:
+  value: 2022
+  kind: structural
+  note: >
+    The SCF wave the widowhood shares are measured from, being the latest wave on
+    disk. Read by other/estate_tax/write_widowhood_shares.R.
+
+widowhood_age_band_lower_bounds:
+  value: [18, 50, 60, 70, 80]
+  kind: judgment
+  note: >
+    Lower bounds of the age bands the widowhood shares are conditioned on. Widowhood
+    rises steeply with age, so the bands are finer past 50 where the mass of estates
+    sits; the top band is open-ended at 80, matching the age top code in Tax-Data.
+    Coarse enough that every band by sex cell holds respondents.

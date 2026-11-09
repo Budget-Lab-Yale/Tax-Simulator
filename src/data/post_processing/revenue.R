@@ -1,13 +1,164 @@
 #-------------------------------------------------------------------------
 # revenue.R
-# 
+#
 # Post-processing functions to produce revenue estimates for fiscal years
 #-------------------------------------------------------------------------
 
 
 
-calc_receipts = function(totals, scenario_root, vat_root, other_root, 
-                         cost_recovery_root, off_model_root, excess_growth_all_rev) {
+# The reportable rungs, in ladder order. Every counterfactual carries all three:
+# a rung that cannot differ from the one below reports that rung's totals.
+REPORTING_LEGS = c('static', 'mechanical', 'conventional')
+
+
+
+add_receipts_total = function(receipts, name) {
+
+  #----------------------------------------------------------------------------
+  # Appends the total budget-effect column to a wide receipts dataframe:
+  # the sum of all revenue components less refundable credit outlays.
+  #
+  # Parameters:
+  #   - receipts (df) : wide receipts dataframe (receipts_full.csv layout)
+  #   - name (str)    : name for the new total column
+  #
+  # Returns: receipts with the total column appended (df).
+  #----------------------------------------------------------------------------
+
+  receipts[[name]] = with(receipts,
+    revenues_payroll_tax + revenues_income_tax - outlays_tax_credits +
+    revenues_corp_tax + revenues_estate_tax + revenues_wealth_tax +
+    revenues_vat + revenues_other
+  )
+  return(receipts)
+}
+
+
+
+ome_corp_col = function(ome_df, static) {
+
+  #----------------------------------------------------------------------------
+  # Resolves the pass-appropriate corporate Off-Model-Estimates revenue series.
+  # From interface version 5 the corporate off-model estimate carries two streams.
+  # The conventional leg reads the corporate column, which holds the modeled
+  # corporate behavioral response gross of the on-model individual tax offset. The
+  # static leg reads corporate_static, the mechanical revenue change, which the
+  # static receipts booking and the distribution smear consume. The record
+  # incidence channel stays on the conventional stream.
+  #
+  # A static-leg read of a revenues.csv without the static column stops the run.
+  # Scenarios with no corporate provision read the baseline off-model estimate,
+  # whose static column is zero.
+  #
+  # Parameters:
+  #   - ome_df (df)   : an Off-Model-Estimates revenues.csv, read as-is
+  #   - static (lgl)  : TRUE for the static leg, FALSE for conventional
+  #
+  # Returns: a two-column tibble (year, corporate) holding the resolved series.
+  #----------------------------------------------------------------------------
+
+  if (static) {
+    if (!'corporate_static' %in% names(ome_df)) {
+      stop('Off-Model-Estimates revenues.csv lacks a `corporate_static` column: ',
+           'static-leg corporate receipts and the distribution smear require the ',
+           'two-stream structure of interface version 5 or later. Point the ',
+           "economy leg's interfaces.yaml at a later vintage, or regenerate the ",
+           'vintage with a corporate_static stream.', call. = FALSE)
+    }
+    return(ome_df %>% transmute(year, corporate = corporate_static))
+  }
+
+  ome_df %>% transmute(year, corporate = corporate)
+}
+
+
+
+read_receipts_long = function(path, values_to) {
+
+  #----------------------------------------------------------------------------
+  # Reads a receipts_full.csv, adds the total budget-effect column, and pivots
+  # long in series.
+  #
+  # Parameters:
+  #   - path (str)      : path to a receipts_full.csv
+  #   - values_to (str) : name for the value column in the long output
+  #
+  # Returns: tibble long in (year, series) (df).
+  #----------------------------------------------------------------------------
+
+  path %>%
+    read_csv(show_col_types = F) %>%
+    add_receipts_total('total') %>%
+    pivot_longer(cols      = -year,
+                 names_to  = 'series',
+                 values_to = values_to) %>%
+    return()
+}
+
+
+
+split_by_measure = function(rev_est) {
+
+  #----------------------------------------------------------------------------
+  # Splits a revenue table long in Measure into a measure-indexed list.
+  #
+  # Parameters:
+  #   - rev_est (df) : revenue estimates with a Measure column
+  #
+  # Returns: list of dataframes named by measure (lst).
+  #----------------------------------------------------------------------------
+
+  measures = c('Dollars', 'Baseline dollars', 'Share of GDP')
+  measures %>%
+    map(.f = ~ rev_est %>%
+          filter(Measure == .x) %>%
+          select(-Measure)) %>%
+    set_names(measures) %>%
+    return()
+}
+
+
+
+style_rev_sheet = function(wb, sheet, n_cols, comma_rows, pct_rows,
+                           border_rows, bold_rows, center_rows) {
+
+  #----------------------------------------------------------------------------
+  # Applies the revenue workbook's number formats, borders, bold headers,
+  # centering, and column widths to a sheet. Callers supply the row positions,
+  # which differ between the single-scenario report and the stacked one.
+  #
+  # Parameters:
+  #   - wb (Workbook)     : openxlsx workbook object (modified in place)
+  #   - sheet (str)       : sheet name
+  #   - n_cols (int)      : number of columns in the written tables
+  #   - comma_rows (int[]): rows formatted with comma separators
+  #   - pct_rows (int[])  : rows formatted as percentages
+  #   - border_rows (int[]) : rows given a bottom border
+  #   - bold_rows (int[]) : rows in bold
+  #   - center_rows (int[]) : rows center-aligned
+  #
+  # Returns: void (modifies wb in place).
+  #----------------------------------------------------------------------------
+
+  addStyle(wb = wb, sheet = sheet, rows = comma_rows, cols = 2:n_cols,
+           gridExpand = T, style = createStyle(numFmt = 'COMMA'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = pct_rows, cols = 2:n_cols,
+           gridExpand = T, style = createStyle(numFmt = 'PERCENTAGE'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = border_rows, cols = 1:n_cols,
+           gridExpand = T, style = createStyle(border = 'bottom'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = bold_rows, cols = 1:n_cols,
+           gridExpand = T, style = createStyle(textDecoration = 'bold'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = center_rows, cols = 2:n_cols,
+           gridExpand = T, style = createStyle(halign = 'center'), stack = T)
+  setColWidths(wb = wb, sheet = sheet, cols = 1:n_cols,
+               widths = c(29, rep(6, n_cols - 1)))
+}
+
+
+
+calc_receipts = function(totals, scenario_root, vat_root, other_root,
+                         cost_recovery_root, off_model_root,
+                         leg = c('static', 'mechanical', 'conventional')) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -19,13 +170,20 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits paid during filing season
   #        - pmt_refund_withheld    (dbl) : advance credits paid throughout year
   #        - pmt_pr_nonwithheld     (dbl) : payroll tax paid at time of filing
-  #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)  
+  #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)
+  #        - est_tax_exp            (dbl) : expected estate tax liability, $B (CY of death)
+  #        - wealth_tax             (dbl) : annual wealth tax liability, $B (CY)
   #   - scenario_root         (str) : directory where scenario's data is written
   #   - vat_root              (str) : directory for VAT revenue for this scenario
   #   - other_root            (str) : Macro-Projections root (for other taxes)
   #   - cost_recovery_root    (str) : Cost-Recovery-Simulator director for this scenario
   #   - off_model_root        (str) : directory for miscellaneous off-model deltas for this scenario
-  #   - excess_growth_all_rev (int) : whether to apply excess growth to all revenue or just IIT/payroll/corporate taxes
+  #   - leg                   (str) : 'static', 'mechanical' or 'conventional'.
+  #        Selects the corporate off-model stream and the on-model rate delta: the
+  #        mechanical corporate change on the static and mechanical legs, the
+  #        behavioral one on the conventional leg. There is no corporate-level
+  #        avoidance on the mechanical rung, which carries the individual-side
+  #        channels alone.
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal year
@@ -37,6 +195,12 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - Value added tax revenues
   #----------------------------------------------------------------------------
   
+  leg = match.arg(leg)
+
+  # The corporate streams come in two forms, mechanical and behavioral, and the
+  # mechanical leg reads the same one the static leg does.
+  corp_mechanical = leg %in% c('static', 'mechanical')
+
   # Read VAT receipts
   revenues_vat = vat_root %>%
     file.path('revenues.csv') %>% 
@@ -44,14 +208,9 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     select(year, revenues_vat = receipts_fy)
   
   # Read other receipts (CBO projections)
-  revenues_other = c('historical.csv', 'projections.csv') %>% 
-    map(.f = ~ other_root %>% 
-          file.path(.x) %>%
-          read_csv(show_col_types = F) %>%
-          mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>% 
-          select(year, revenues_corp_tax = rev_corp, revenues_estate_tax = rev_estate, revenues_other)
-    ) %>% 
-    bind_rows()
+  revenues_other = read_macro_spliced(other_root) %>%
+    mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>%
+    select(year, revenues_corp_tax = rev_corp, revenues_estate_tax = rev_estate, revenues_other)
   
   # Read deltas attributable to cost recovery changes
   deltas_cost_recovery = cost_recovery_root %>% 
@@ -59,43 +218,119 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     read_csv(show_col_types = F) %>% 
     rename(delta_revenues_cost_recovery = delta)
   
-  # Read off-model deltas 
+  # Read off-model deltas
   deltas_off_model = off_model_root %>%
-    file.path('revenues.csv') %>% 
+    file.path('revenues.csv') %>%
     read_csv(show_col_types = F)
-  
-  # Read excess growth offset (on CY basis) and convert to FY basis
-  excess_growth_offset_cy = scenario_root %>% 
-    file.path('/supplemental/excess_growth_offset.csv') %>% 
-    read_csv(show_col_types = F)
-  
-  # Convert CY excess growth offset to FY basis using 75%/25% weighting
-  # FY factor = 75% of current CY factor + 25% of previous CY factor
-  excess_growth_offset_fy = excess_growth_offset_cy %>%
-    mutate(
-      income_factor_fy = 0.75 * income_factor + 0.25 * lag(income_factor, default = 1)
-    ) %>%
-    select(year, income_factor_fy)
+
+  # Resolve the pass's corporate stream and put it in the corporate column, so
+  # that the booking below reads one name either way. Both raw columns are dropped
+  # first so the rejoin cannot collide.
+  corp_series = ome_corp_col(deltas_off_model, static = corp_mechanical)
+  deltas_off_model = deltas_off_model %>%
+    select(-any_of(c('corporate', 'corporate_static'))) %>%
+    left_join(corp_series, by = 'year')
+
+  # Calculate the on-model corporate statutory rate delta, booked on top of the
+  # CBO corporate receipts level. The static and mechanical passes take the
+  # mechanical change and the conventional pass the base-eroded one; see
+  # src/sim/corp_rate.R. The
+  # scenario's rate comes from this pass's tax law file. Receipts are already on a
+  # fiscal year basis, so this books directly beside cost recovery below with no
+  # calendar year smear.
+  deltas_corp_rate = corp_rate_delta(
+    rate_series = corp_rate_read_series(
+      file.path(scenario_root, 'supplemental', 'tax_law.csv')),
+    rev_corp    = revenues_other %>% select(year, rev_corp = revenues_corp_tax),
+    static      = corp_mechanical
+  ) %>%
+    rename(delta_revenues_corp_rate = delta)
+
+  # Read the model baseline estate tax series. Estate revenue is reported as the
+  # CBO level plus the on-model delta of scenario against model baseline, so that
+  # baseline receipts stay anchored to CBO and the model supplies only reform
+  # deltas, which is the quantity it is validated on. The baseline leg is always
+  # the baseline's static totals.
+  baseline_estate_path = globals$baseline_root %>%
+    file.path('baseline/static/totals/estate.csv')
+  baseline_estate = NULL
+  if (file.exists(baseline_estate_path)) {
+    baseline_estate = baseline_estate_path %>%
+      read_csv(show_col_types = F) %>%
+      select(year, est_tax_exp_baseline = est_tax_exp)
+
+    # A totals file covering only part of this scenario's years, from a baseline
+    # run over a shorter window, would zero the estate delta for the uncovered
+    # years in the coalesce below. Rebuild from detail instead
+    if (!all(totals$year %in% baseline_estate$year)) {
+      baseline_estate = NULL
+    }
+  }
+  if (is.null(baseline_estate)) {
+
+    # Phase 3a of the SLURM pipeline runs scenarios as a parallel array, so the
+    # baseline totals may not be written when a counterfactual's receipts job
+    # runs. Rebuild the series from the baseline detail files, which Phase 2
+    # guarantees exist
+    baseline_estate = get_estate_totals_from_detail(
+      detail_root = file.path(globals$baseline_root, 'baseline/static/detail'),
+      years       = totals$year
+    )
+    if (!is.null(baseline_estate)) {
+      baseline_estate %<>% select(year, est_tax_exp_baseline = est_tax_exp)
+    } else {
+      warning('estate: baseline totals/estate.csv at ', baseline_estate_path,
+              ' is missing or does not cover years ',
+              min(totals$year), ':', max(totals$year), ', and the baseline ',
+              'detail files cannot supply them (missing, or predating the ',
+              'on-model estate tax?). On-model estate deltas are set to 0 — ',
+              'estate reform effects will NOT appear in receipts. Re-run ',
+              'the baseline.')
+    }
+  }
   
   totals %>%
+
+    # Join the model baseline estate series, taking a zero delta when unavailable
+    { if (!is.null(baseline_estate)) left_join(., baseline_estate, by = 'year')
+      else mutate(., est_tax_exp_baseline = est_tax_exp) } %>%
     mutate(
-      
-      # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus 
-      # 25% of previous CY withheld 
-      outlays_tax_credits = 0.75 * pmt_refund_withheld + 
-        0.25 * lag(pmt_refund_withheld) + 
+
+      # Fiscal year receipts are nonwithheld tax plus 75% of the current calendar
+      # year's withheld tax plus 25% of the prior year's. The lag default imputes
+      # zero for the missing prior year when the simulation starts at the year the
+      # policy takes effect, which is unbiased for a delta whenever that prior
+      # year's change is zero. The resulting partial first-year row is written to
+      # receipts_full.csv and dropped from receipts.csv.
+      outlays_tax_credits = 0.75 * pmt_refund_withheld +
+        0.25 * lag(pmt_refund_withheld, default = 0) +
         pmt_refund_nonwithheld,
-      
-      revenues_income_tax = 0.75 * pmt_iit_withheld + 
-        0.25 * lag(pmt_iit_withheld) + 
+
+      revenues_income_tax = 0.75 * pmt_iit_withheld +
+        0.25 * lag(pmt_iit_withheld, default = 0) +
         pmt_iit_nonwithheld,
-      
-      revenues_payroll_tax = 0.75 * pmt_pr_withheld + 
-        0.25 * lag(pmt_pr_withheld) + 
+
+      revenues_payroll_tax = 0.75 * pmt_pr_withheld +
+        0.25 * lag(pmt_pr_withheld, default = 0) +
         pmt_pr_nonwithheld,
-      
+
       delta_revenues_corp_tax = 0.75 * corp_tax_change +
-        0.25 * lag(corp_tax_change)
+        0.25 * lag(corp_tax_change, default = 0),
+
+      # Book the estate tax delta a year late. Liability on a decedent dying in
+      # calendar year t is due nine months after death on Form 706, so it falls
+      # entirely in fiscal year t + 1. The lag imputes zero for the first
+      # simulation year, as the withheld splits above do.
+      delta_revenues_estate_tax = lag(
+        coalesce(est_tax_exp - est_tax_exp_baseline, 0), default = 0),
+
+      # Book the annual wealth tax a year late, as a level. There is no current-law
+      # wealth tax to anchor to, so unlike the estate tax it is not a delta against
+      # a CBO series. Being nonwithheld, it is paid at filing in the spring after
+      # the assessment year, so net worth in calendar year t is remitted in fiscal
+      # year t + 1. The model books ordinary nonwithheld income tax in year, which
+      # is a simplification in calc_receipts.
+      revenues_wealth_tax = lag(coalesce(wealth_tax, 0), default = 0)
     ) %>%
     
     
@@ -107,33 +342,40 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>% 
     
     # Join deltas from cost recovery changes
-    left_join(deltas_cost_recovery, by = 'year') %>% 
-    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>% 
+    left_join(deltas_cost_recovery, by = 'year') %>%
+    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>%
+
+    # Join the on-model statutory rate delta onto the corporate line, where the
+    # off-model rate wedge it replaces was booked
+    left_join(deltas_corp_rate, by = 'year') %>%
+    mutate(revenues_corp_tax = revenues_corp_tax +
+             coalesce(delta_revenues_corp_rate, 0)) %>%
     
-    # Join off-model estimates (deltas) and aggregate, applying excess growth offset where necessary
-    left_join(deltas_off_model, by = 'year') %>% 
-    left_join(excess_growth_offset_fy, by = 'year') %>% 
-    mutate(revenues_payroll_tax = revenues_payroll_tax + (payroll * income_factor_fy),
-           revenues_income_tax = revenues_income_tax + (individual * income_factor_fy),  
-           revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy, 
-           revenues_estate_tax = revenues_estate_tax + estate, 
-           revenues_vat        = revenues_vat + vat) %>% 
+    # Join off-model estimates (deltas) and aggregate
+    left_join(deltas_off_model, by = 'year') %>%
+    mutate(revenues_payroll_tax = revenues_payroll_tax + payroll,
+           revenues_income_tax  = revenues_income_tax + individual,
+           revenues_corp_tax    = revenues_corp_tax + corporate,
+           revenues_vat         = revenues_vat + vat,
+
+           # CBO level plus the on-model delta. The off-model estate column is
+           # superseded by the on-model estate tax
+           revenues_estate_tax  = revenues_estate_tax + delta_revenues_estate_tax) %>%
     
-    # Apply excess growth to non-IIT/payroll/corporate revenues if applicable 
-    mutate(
-      all_rev = excess_growth_all_rev,
-      across(
-        .cols = c(revenues_estate_tax, revenues_vat, revenues_other), 
-        .fns  = ~ . * if_else(all_rev == 1, income_factor_fy, 1)
-      )
-    ) %>% 
-    
-    # Drop incomplete year
+    # Final column selection
+    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits,
+           revenues_corp_tax, revenues_estate_tax, revenues_wealth_tax,
+           revenues_vat, revenues_other) ->
+    fy_receipts
+
+  # Write the internal file, keeping the partial first year so that calc_rev_est
+  # can produce a delta for it when the simulation starts at the effective year
+  fy_receipts %>%
+    write_csv(file.path(scenario_root, 'totals', 'receipts_full.csv'))
+
+  # Write the public file, dropping the partial first year
+  fy_receipts %>%
     filter(year != min(year)) %>%
-    
-    # Write CSV
-    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -163,60 +405,33 @@ calc_rev_est = function(id) {
     return()
   }
   
-  # Read baseline receipts
-  baseline = file.path(globals$baseline_root, 
-                       'baseline', 
-                       'static', 
+  # Read baseline receipts, including the partial first year
+  baseline = file.path(globals$baseline_root,
+                       'baseline',
+                       'static',
                        'totals',
-                       'receipts.csv') %>%
-    read_csv(show_col_types = F) %>%
-    
-    # Pivot long in variable type
-    mutate(total = revenues_payroll_tax + 
-                   revenues_income_tax - 
-                   outlays_tax_credits +
-                   revenues_corp_tax + 
-                   revenues_estate_tax + 
-                   revenues_vat + 
-                   revenues_other) %>% 
-    pivot_longer(cols      = -year, 
-                 names_to  = 'series', 
-                 values_to = 'baseline')
-  
-  for (static in c(T, F)) {
-  
-    # Read VAT price offset for baseline dollars calculation
-    vat_price_offset = globals$output_root %>% 
-      file.path(id, 'static/supplemental/vat_price_offset.csv') %>% 
-      read_csv(show_col_types = F)
-    
-    # Read in counterfactual scenario receipts 
-    scenario = file.path(globals$output_root, 
-                         id, 
-                         if_else(static, 'static', 'conventional'),
-                         'totals', 
-                         'receipts.csv') %>%
-      read_csv(show_col_types = F) %>%
-      
-      # Pivot long in variable type
-      mutate(total = revenues_payroll_tax + 
-                     revenues_income_tax - 
-                     outlays_tax_credits +
-                     revenues_corp_tax + 
-                     revenues_estate_tax + 
-                     revenues_vat +
-                     revenues_other) %>% 
-      pivot_longer(cols      = -year, 
-                   names_to  = 'series', 
-                   values_to = 'counterfactual')
-    
+                       'receipts_full.csv') %>%
+    read_receipts_long(values_to = 'baseline')
+
+  # Read VAT price offset for baseline dollars calculation
+  vat_price_offset = read_vat_offset(id)
+
+  # One estimate per reportable rung. The mechanical rung's totals are written for
+  # every counterfactual, from the static ones where the rung was skipped, so the
+  # loop needs no special case.
+  for (leg in REPORTING_LEGS) {
+
+    # Read in counterfactual scenario receipts, including the partial first year
+    scenario = file.path(globals$output_root,
+                         id,
+                         leg,
+                         'totals',
+                         'receipts_full.csv') %>%
+      read_receipts_long(values_to = 'counterfactual')
+
     # Read GDP and adjust for VAT (i.e. price level rises)
-    gdp = globals$interface_paths %>% 
-      filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
-      get_vector('path') %>% 
-      file.path(c('historical.csv', 'projections.csv')) %>% 
-      map(~ read_csv(.x, show_col_types = F)) %>% 
-      bind_rows() %>% 
+    gdp = interface_root('Macro-Projections') %>%
+      read_macro_spliced() %>%
       left_join(scenario %>% 
                   filter(series == 'revenues_vat') %>% 
                   select(year, vat = counterfactual), 
@@ -241,30 +456,26 @@ calc_rev_est = function(id) {
                    values_to = 'delta') %>% 
       pivot_wider(names_from  = `year`, 
                   values_from = delta) %>% 
-      arrange(Measure, 
-              match(Series, c('total', 'revenues_income_tax', 
-                              'revenues_payroll_tax', 'revenues_corp_rate', 'revenues_corp_tax', 
-                              'revenues_estate_tax', 'revenues_other',
+      arrange(Measure,
+              match(Series, c('total', 'revenues_income_tax',
+                              'revenues_payroll_tax', 'revenues_corp_tax',
+                              'revenues_estate_tax', 'revenues_wealth_tax', 'revenues_other',
                               'revenues_vat', 'outlays_tax_credits'))
-      ) %>% 
+      ) %>%
       mutate(Series = case_when(
-        Series == 'total'                ~ 'Total budget effect', 
-        Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
-        Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
+        Series == 'total'                ~ 'Total budget effect',
+        Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax',
+        Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax',
         Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
-        Series == 'revenues_corp_rate'   ~ '  Revenues, corporate income tax (rate change)',
         Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
         Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
+        Series == 'revenues_wealth_tax'  ~ '  Revenues, wealth tax',
         Series == 'revenues_vat'         ~ '  Revenues, value added tax',
         Series == 'revenues_other'       ~ '  Revenues, other'
-      )) 
+      ))
     
     # Convert to measure-indexed list
-    rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
-      map(.f = ~ rev_est %>% 
-            filter(Measure == .x) %>% 
-            select(-Measure)) %>% 
-      set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
+    rev_est = split_by_measure(rev_est)
     
     # Write machine-readable version
     rev_est$Dollars %>% 
@@ -276,7 +487,7 @@ calc_rev_est = function(id) {
       mutate(year = as.integer(year)) %>% 
       write_csv(file.path(globals$output_root, 
                           id, 
-                          if_else(static, 'static', 'conventional'),
+                          leg,
                           'supplemental', 
                           'revenue_estimates.csv'))
 
@@ -297,53 +508,23 @@ calc_rev_est = function(id) {
     writeData(wb = wb, sheet = as.character(id), startRow = 23, 
               x = 'FY budget effects of policy change, share of GDP')
     
-    # Format numbers and cells 
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = c(2:10, 14:21), 
-             cols       = 2:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'COMMA'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id),
-             rows       = 25:31, 
-             cols       = 2:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'PERCENTAGE'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = c(1, 2, 10, 12, 13, 21, 23, 24, 32), 
-             cols       = 1:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(border = 'bottom'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = c(2, 13, 24), 
-             cols       = 1:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(textDecoration = 'bold'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = 2:31,
-             cols       = 2:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(halign = 'center'), 
-             stack      = T)
-    setColWidths(wb     = wb,
-                 sheet  = as.character(id),
-                 cols   = 1:ncol(rev_est$Dollars),
-                 widths = c(29, rep(6, ncol(rev_est$Dollars) - 1)))
-      
+    # Format numbers and cells, nine series rows per block
+    style_rev_sheet(
+      wb          = wb,
+      sheet       = as.character(id),
+      n_cols      = ncol(rev_est$Dollars),
+      comma_rows  = c(2:10, 14:21),
+      pct_rows    = 25:31,
+      border_rows = c(1, 2, 10, 12, 13, 21, 23, 24, 32),
+      bold_rows   = c(2, 13, 24),
+      center_rows = 2:31
+    )
 
     # Write revenue estimates file
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
                                   as.character(id), 
-                                  if_else(static, 'static', 'conventional'),
+                                  leg,
                                   'supplemental', 
                                   'revenue_estimates.xlsx'), 
                  overwrite = T)
@@ -370,47 +551,35 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     return()
   }
   
-  for (static in c(T, F)) {
-    
-    # Read VAT price offset for baseline dollars calculation
-    vat_price_offsets = counterfactual_ids %>% 
-      map(.f = ~ globals$output_root %>% 
-            file.path(.x, 'static/supplemental/vat_price_offset.csv') %>% 
-            read_csv(show_col_types = F) %>% 
-            mutate(scenario_id = .x) 
-      ) %>% 
-      bind_rows()
-    
-    
-    stacked_rev_est = c('baseline', counterfactual_ids) %>% 
-      
-      # Read scenario receipts file and store 
+  # Read VAT price offset for baseline dollars calculation
+  vat_price_offsets = counterfactual_ids %>%
+    map(.f = ~ read_vat_offset(.x) %>%
+          mutate(scenario_id = .x)
+    ) %>%
+    bind_rows()
+
+  for (leg in REPORTING_LEGS) {
+
+    stacked_rev_est = c('baseline', counterfactual_ids) %>%
+
+      # Read scenario receipts file, including the partial first year. Baseline has
+      # one rung only
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
-                           .x, 
-                           if_else(static | .x == 'baseline', 'static', 'conventional'),
-                           'totals', 
-                           'receipts.csv') %>% 
-            read_csv(show_col_types = F) %>% 
-            mutate(scenario_id = .x,
-                   Dollars = revenues_payroll_tax + 
-                             revenues_income_tax - 
-                             outlays_tax_credits +
-                             revenues_corp_tax + 
-                             revenues_estate_tax + 
-                             revenues_vat + 
-                             revenues_other) %>% 
-            select(scenario_id, year, Dollars, vat = revenues_vat)) %>% 
-      bind_rows() %>% 
-      
+                           .x,
+                           if_else(.x == 'baseline', 'static', leg),
+                           'totals',
+                           'receipts_full.csv') %>%
+            read_csv(show_col_types = F) %>%
+            add_receipts_total('Dollars') %>%
+            mutate(scenario_id = .x) %>%
+            select(scenario_id, year, Dollars, vat = revenues_vat)) %>%
+      bind_rows() %>%
+
       # Calculate share-of-GDP metric, accounting  for introduction of a VAT
       left_join(
-        globals$interface_paths %>% 
-          filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
-          get_vector('path') %>% 
-          file.path(c('historical.csv', 'projections.csv')) %>% 
-          map(~ read_csv(.x, show_col_types = F)) %>% 
-          bind_rows() %>% 
-          select(year, gdp_fy), 
+        interface_root('Macro-Projections') %>%
+          read_macro_spliced() %>%
+          select(year, gdp_fy),
         by = 'year'
       ) %>%
       mutate(`Share of GDP` = Dollars / (gdp_fy + vat))  %>% 
@@ -441,18 +610,15 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     
     
     # Convert to measure-indexed list, adding totals row in the process
-    stacked_rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
-      map(.f = ~ stacked_rev_est %>% 
-            filter(Measure == .x) %>% 
-            select(-Measure) %>% 
+    stacked_rev_est = split_by_measure(stacked_rev_est) %>%
+      map(.f = ~ .x %>%
             bind_rows(
-              (.) %>%
-                summarise(across(.cols = -scenario_id, 
-                                 .fns  = sum)) %>% 
+              .x %>%
+                summarise(across(.cols = -scenario_id,
+                                 .fns  = sum)) %>%
                 mutate(scenario_id = 'Total')
-            ) %>% 
-            rename(Scenario = scenario_id)) %>% 
-      set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
+            ) %>%
+            rename(Scenario = scenario_id))
     
     
     # Create workbook
@@ -480,57 +646,27 @@ calc_stacked_rev_est = function(counterfactual_ids) {
               x = 'Stacked FY budget effects of policy changes, share of GDP')
     
     
-    # Format numbers and cells 
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = c(2:(nrow(stacked_rev_est$Dollars) + 2),
-                            1 + start_real:(start_real + nrow(stacked_rev_est$`Baseline dollars`))),
-             cols       = 2:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'COMMA'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = 1 + start_gdp:(start_gdp + nrow(stacked_rev_est$`Share of GDP`)), 
-             cols       = 2:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'PERCENTAGE'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = c(1, 2, nrow(stacked_rev_est$Dollars) + c(1, 2), 
-                            start_real + c(-1, 0, nrow(stacked_rev_est$`Baseline dollars`) + c(-1, 0)),
-                            start_gdp  + c(-1, 0, nrow(stacked_rev_est$`Share of GDP`) + c(-1, 0))
-                            ),
-             cols       = 1:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(border = 'bottom'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = c(2, start_real, start_gdp), 
-             cols       = 1:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(textDecoration = 'bold'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = 2:(1 + start_gdp + nrow(stacked_rev_est$`Share of GDP`)), 
-             cols       = 2:(ncol(stacked_rev_est$Dollars)), 
-             gridExpand = T,
-             style      = createStyle(halign = 'center'), 
-             stack      = T)
-    setColWidths(wb     = wb,
-                 sheet  = 'Stacked revenue estimates',
-                 cols   = 1:ncol(stacked_rev_est$Dollars),
-                 widths = c(29, rep(6, ncol(stacked_rev_est$Dollars) - 1)))
-    
-    
+    # Format numbers and cells, at row positions that depend on the table size
+    style_rev_sheet(
+      wb          = wb,
+      sheet       = 'Stacked revenue estimates',
+      n_cols      = ncol(stacked_rev_est$Dollars),
+      comma_rows  = c(2:(nrow(stacked_rev_est$Dollars) + 2),
+                      1 + start_real:(start_real + nrow(stacked_rev_est$`Baseline dollars`))),
+      pct_rows    = 1 + start_gdp:(start_gdp + nrow(stacked_rev_est$`Share of GDP`)),
+      border_rows = c(1, 2, nrow(stacked_rev_est$Dollars) + c(1, 2),
+                      start_real + c(-1, 0, nrow(stacked_rev_est$`Baseline dollars`) + c(-1, 0)),
+                      start_gdp  + c(-1, 0, nrow(stacked_rev_est$`Share of GDP`) + c(-1, 0))),
+      bold_rows   = c(2, start_real, start_gdp),
+      center_rows = 2:(1 + start_gdp + nrow(stacked_rev_est$`Share of GDP`))
+    )
+
+
     # Write revenue estimates file
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
                                   counterfactual_ids[length(counterfactual_ids)], 
-                                  if_else(static, 'static', 'conventional'),
+                                  leg,
                                   'supplemental', 
                                   'stacked_revenue_estimates.xlsx'), 
                  overwrite = T)

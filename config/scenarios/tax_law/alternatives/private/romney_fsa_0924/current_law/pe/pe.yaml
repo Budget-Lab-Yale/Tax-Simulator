@@ -1,0 +1,7 @@
+---
+
+# Whether dependents qualify for exemptions
+dep_qualify:
+  value:
+    '2014': 1
+    '2026': 0

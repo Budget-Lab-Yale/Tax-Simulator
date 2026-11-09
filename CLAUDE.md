@@ -20,24 +20,27 @@ Tax-Simulator is a policy microsimulation model for analyzing the budgetary, dis
 
 ```
 Tax-Simulator/
-├── config/
+├── config/                          # configuration only -- no executable code
+│   ├── output_roots.yaml            # Output path configuration
 │   ├── interfaces/
-│   │   ├── interface_versions.yaml  # Dependent model versions
-│   │   └── output_roots.yaml        # Shared production root (local root: $TAXSIM_LOCAL_ROOT)
+│   │   └── interface_versions.yaml  # Dependent model type + version (vintages live in the economy leg)
+│   ├── calibrations/                # calibrator-written; never hand-edited, EXCEPT settings.yaml
+│   │   ├── kg/                      #   bathtub.yaml, conversion.yaml (written), settings.yaml (owned)
+│   │   ├── estate/                  #   valuation_fit.yaml (written), settings.yaml (owned),
+│   │   │                            #   bridge.yaml (the merge of the two + SOI; what the model reads)
+│   │   └── wealth_profiles/         #   per-profile s.csv + M.csv + provenance.yaml
 │   ├── runscripts/                  # Simulation configuration CSV files
-│   └── scenarios/
-│       ├── behavior/                # Behavioral feedback modules (.R files)
-│       └── tax_law/                 # Tax law configuration directories
-│           ├── baseline/            # Current law baseline tax parameters
-│           ├── baseline_2024/       # 2024 baseline tax parameters
-│           ├── public/              # Public policy reform scenarios
-│           ├── private/             # Internal/private policy scenarios
-│           └── tests/               # Test scenarios
+│   └── scenarios/                   # the three legs, each default/ + alternatives/
+│       ├── tax_law/                 #   what is the policy
+│       ├── economy/                 #   how does the world work
+│       └── behavior/                #   how do agents respond (behavior.yaml per folder)
 ├── src/
+│   ├── behavior/                    # Behavior MODULE code, by family (charity/, evasion/, ...)
 │   ├── sim/
-│   │   └── behavior.R               # Behavioral helper functions (e.g., apply_mtr_elasticity)
+│   │   └── behavior.R               # The behavior-leg loader + apply_mtr_elasticity
 │   └── misc/
-│       └── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
+│       ├── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
+│       └── scenario_config.R        # Economy/behavior leg resolution engine
 ├── docs/                            # Shipped model documentation
 │   └── model_documentation.md       # The deep reference: data → calculator → outputs
 ├── research/                        # State-tax research corpus
@@ -62,10 +65,13 @@ be rare there.
 
 Runscripts are CSV files that define simulation parameters. Think of them as "recipes" for running the model.
 
-**Required Columns:**
+**A runscript names FILES, never values.** The schema is exactly eight columns
+and any other column is a parse error whose message names the replacement:
+
 - `ID`: Scenario identifier (e.g., "TCJA_full_extension"). Reserved word: "baseline"
-- `tax_law`: Path to tax law YAML directory (relative to `config/scenarios/tax_law/`)
-- `behavior`: Path to behavioral feedback module (relative to `config/scenarios/behavior/`, omit `.R` extension)
+- `tax_law`: `default`, or a path under `config/scenarios/tax_law/alternatives/`
+- `economy`: `default`, or a path under `config/scenarios/economy/alternatives/`
+- `behavior`: `default` (no response), or a path under `config/scenarios/behavior/alternatives/`. The folder holds one `behavior.yaml` naming the response stack — NOT a module path
 - `years`: Simulation years in format `{start_year}:{end_year}` (e.g., "2024:2034")
 - `dist_years`: Years for full distribution table calculation (computationally intensive)
 - `mtr_vars`: Space-delimited list of variables for marginal tax rate calculation (e.g., "wages kg_lt tips1")
@@ -73,13 +79,17 @@ Runscripts are CSV files that define simulation parameters. Think of them as "re
 
 Note: if you want to run a policy change starting in t, always start the simulation via `years` earlier -- at least t - 1. 
 
-**Optional Columns:**
-- `dep.{MODEL_NAME}.vintage`: Override dependent model vintage
-- `dep.{MODEL_NAME}.ID`: Override dependent model scenario ID
-- `states`: State income tax mode — space-delimited 2-letter codes (e.g. "IL CO NY") or "all" (the ENABLED entries in `config/scenarios/tax_law_state/jurisdictions.yaml` -- adding a baseline directory alone does not change a run). Empty/absent = federal-only (bit-identical to pre-state behavior). If any counterfactual sets `states`, the baseline row must set a superset (validated in `parse_globals()`). Adds `totals/state.csv` and (for counterfactuals) `supplemental/state_rev_est.csv` outputs. State weights come from the pinned `State-Weights` interface (`dep.State-Weights.vintage/.ID`; federal-only rows carry no such dependency), fit by Tax-Data on the row's Tax-Data vintage -- `parse_globals()` refuses a mismatch, and every state-mode row must pin the baseline row's vintage. `state_weights_method: placeholder` restores the uniform 1/53 split for A/B reproduction only. The default vintage is the Phase 4 dry run, PROVISIONAL until P6 publishes production weights; federal results are unaffected either way.
-- `state_tax_law`: State tax law reform directory under `config/scenarios/tax_law_state/` (default `baseline`); overlay semantics identical to federal, per state
-- `state_detail`: 0/1 (default 0). When 1 (and `states` is set), writes ONE compact per-year state detail matrix at `detail/state/{year}.csv` (`id` + one liability column per state) per run type — not 51 full detail files. Purged by `delete_detail` like other detail output. Stacked runs (`stacked=1`) with state mode also produce `stacked_state_rev_est_{static,conventional}.csv` at the vintage root (incremental state deltas in runscript order)
-- Custom columns can be added if you modify `get_scenario_info()` in `src/misc/config_parser.R`
+Retired columns and where they went: `dep.{MODEL}.vintage` / `dep.{MODEL}.ID`
+→ an economy alternative's `interfaces.yaml`; `s` / `wealth_financing` → an
+economy alternative's `wealth.yaml` (`financing_profile`, which accepts a
+profile folder name, `none`, or the `flat:<s>` shorthand); `assumptions` and
+`assumption.{channel}.{name}` → an economy alternative folder;
+`excess_growth*` → nothing, the machinery was removed from the model.
+The state tax columns went the same way: `states`, `state_weights_method` and
+`state_detail` → an economy alternative's `states.yaml` (`jurisdictions`,
+`weights_method`, `detail`); `dep.State-Weights.*` → its `interfaces.yaml`;
+`state_tax_law` → the tax law leg itself, whose layers carry state law under
+`state/` (see State Income Taxes below).
 
 **Runtime Parameters (command-line arguments, not in runscript CSV):**
 
@@ -87,7 +97,6 @@ You need to supply these cmd line args when running from bash:
 
 - `runscript_names`: path of runscript, relative to ./config/runscripts, include the name but exclude the ".csv" 
 - `scenario_id`: name of a single scenario to run; if NULL, all scenarios in runscript execute
-- `user_id`: User identifier for tracking runs (string, typically use "user_test" for local runs)
 - `local`: whether to write to local (1) or production (0). Do local unless prompt specifies otherwise
 - `vintage`: specific folder name to write to; if NULL, uses timestamp. Do NULL unless prompt specifies otherwise
 - `pct_sample` = fraction of records to use in simulation, floating point number b/n 0 and 1. Do 1 unless prompt specifies otherwise
@@ -102,10 +111,12 @@ You need to supply these cmd line args when running from bash:
   Examples:
 
   # Local run with 10% sample
-  Rscript src/main.R private/my_scenario NULL user_test 1 NULL 0.1 1 NULL 0 none
+  Rscript src/main.R private/my_scenario NULL 1 NULL 0.1 1 NULL 0 none
 
   # Production run with full sample
-  Rscript src/main.R public/my_scenario scenario_id user_test 0 vintage_name 1 1 baseline_vintage 1 none
+  Rscript src/main.R public/my_scenario scenario_id 0 vintage_name 1 1 baseline_vintage 1 none
+
+  (The old `user_id` argument — position 3 — was retired 2026-07-25; it was never read.)
 
   **Important Notes:**
   - **Windows limitation**: Multicore parallelization is not supported on Windows due to R's parallel processing limitations. Always use `'none'` on Windows.
@@ -114,9 +125,9 @@ You need to supply these cmd line args when running from bash:
 
 **Example:**
 ```csv
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2034,,tips1 tips2,nextdollar nextdollar
-income_tax,public/tips/income_tax,,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,default,2024:2034,,tips1 tips2,nextdollar nextdollar
+income_tax,public/tips/income_tax,default,default,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar
 ```
 
 ### Tax Law Configuration
@@ -142,6 +153,7 @@ Tax law is represented as collections of **tax parameters** (thematically relate
 - `niit.yaml`: Net Investment Income Tax
 - `pe.yaml`: Personal exemptions
 - `rebate.yaml`: Generic per-person refundable credit (for stimulus, UBI modeling)
+- `estate.yaml`: Estate tax (exemption, graduated rate schedule, portability switch, income-tax-at-death deduction switch)
 
 **YAML Structure:**
 ```yaml
@@ -180,17 +192,329 @@ Reform YAML files override baseline at the **subparameter level** — the entire
 
 **Detailed override rules, common mistakes, and examples are in the `/policy-config` skill** (`.claude/skills/policy-config/SKILL.md`).
 
+### Scenario Configuration: the three legs
+
+A scenario is three pointers, and each of them names a FOLDER:
+
+| Leg | Answers | Where |
+|---|---|---|
+| `tax_law` | what is the policy | `config/scenarios/tax_law/` |
+| `economy` | how does the world work | `config/scenarios/economy/` |
+| `behavior` | how do agents respond | `config/scenarios/behavior/` (`behavior.yaml`; module code in `src/behavior/`) |
+
+Every leg has the same shape: a complete `default/` layer, plus sparse deltas
+under `alternatives/` (nesting arbitrary, folders human-named). A runscript cell
+is the reserved word `default` or a path under that leg's `alternatives/`.
+Resolution machinery for the economy and behavior legs is
+`src/misc/scenario_config.R`; tax law keeps its own subparameter-replacement
+parser (`src/data/tax_law.R`), reached through `tax_law_path()`.
+
+Economy values — η, σ, the corporate incidence shares, the evasion
+elasticities, the estate reporting response, the interface vintages, the saving
+profile — are read at the point of use through `economy_param('kg', 'eta')`,
+never captured at source time, because they are scenario-scoped. Override
+granularity is the whole named entry: an alternative's file replaces value,
+kind and provenance together, never merges within an entry. `locked: true`
+entries (the estate valuation bridge) refuse override outright.
+
+Each economy channel file declares a `_channel` role. A `transmission` channel
+is conventional-side only, and reading one on the static pass is an error, so
+"static results are law-only" is checked rather than assumed. `state` channels are
+readable on both passes.
+
+**Every entry declares a `kind`, and each kind owes different provenance.** The
+schema check at load time rejects an entry missing its required fields.
+
+| kind | meaning | required | staleness-checked |
+|---|---|---|---|
+| `calibrated` | output of a procedure | `set`, `target`, `derived_under`, `invalidated_by`, `rederive` | yes |
+| `sourced` | from a paper or convention | `citation` | no |
+| `judgment` | someone chose it | `note` | no |
+| `structural` | a model-form switch | `note` | no |
+
+Only `calibrated` values can go stale, because only they have inputs. A stale
+value **HARD STOPS the run** (`CONFIG_ENFORCE_STALENESS`), on three arms: the
+data vintages in `derived_under` no longer match the run's, a file in
+`invalidated_by` has changed content since the value was pinned, or a
+`conditioned_on` configuration value has moved. The check runs ONCE, at parse
+time (`parse_globals` → `resolve_all_scenarios`), which is also what covers the
+SLURM path. Three legitimate ways past a stop, all visible in the output:
+re-derive and re-pin, override the value in an alternative, or put a dated
+`waiver: {date, reason}` block on the entry in the POINTING alternative file.
+`active_when` marks an entry the live configuration does not read (the kg
+per-form pairs).
+
+**After a behavior-preserving refactor** that touches a file listed in some
+`invalidated_by`, verify byte-identical output first, then re-pin the hash —
+never the other way round.
+
+**What does NOT go here:** numerical plumbing (epsilons, tolerances), structural
+bounds (age topcodes), and operational toggles.
+
+**Environment variables are retired.** The nineteen `KG_ETA`/`SIGMA_CONV`/
+`CORP_KAPPA`-style back doors are gone. A sweep is now a scenario, which means
+it is recorded in the vintage instead of vanishing with the shell.
+
+**Every vintage carries a manifest** at its root: `dependencies.csv` (interface
+versions), `scenarios.csv` (the three leg pointers per scenario),
+`scenario_config.csv` (every resolved value, its kind and role, and whether the
+scenario overrode it), `behavioral_assumptions.csv` (tax law + the resolved
+behavior stack: alternative, kg pieces, ordered module paths), and
+`code_version.csv` (git commit + dirty flag).
+
+**SLURM:** `globals` and `scenario_info` already serialize wholesale, so nothing
+extra is staged — but every driver must call `config_activate(economy =
+scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)`
+after loading `config.rds`, because `economy_param()` is fail-closed and errors
+if no scenario is active. This is already done in `worker.R`, `frozen.R`,
+`bathtub.R`, `wealth.R` and both `aggregate.R` phases; a NEW driver must do it
+too.
+
+### On-Model Estate Tax
+
+Estate tax liability is computed per record in the normal year pass (no pre-pass;
+each death year is independent, expected-value). Key facts:
+
+- **Law vs measurement are strictly separated.** Estate LAW (exemption, rate
+  schedule, portability, deductibility of the decedent's income tax at death)
+  lives in `estate.yaml` and is reform-overridable like any
+  parameter. The MEASUREMENT bridge from Tax-Data economic wealth to reported
+  gross estate (valuation factors r/rho_pt, per-bin deduction/DSUE fractions, gift
+  add-back gamma, donor-clone cluster cap) lives in
+  `config/calibrations/estate/bridge.yaml` and must NEVER be overridden by a
+  reform. `bridge.yaml` is generated: `calibrate_estate_v2.R` writes the fitted
+  r/rho_pt to `config/calibrations/estate/valuation_fit.yaml`, the chosen inputs
+  (cluster cap, gift-pooling factor, SOI death year and exemption) are in
+  `config/calibrations/estate/settings.yaml`, and
+  `write_frozen_params.sbatch` merges those with the SOI table to emit the
+  bridge. It is pinned to a Tax-Data vintage; a mismatch is reported at parse
+  time by the `estate.valuation_bridge` entry's staleness check, at warn level.
+- **Calculator is pure and weight-free** (`calc_estate()`,
+  `src/calc/functions/tax/estate.R`): liability conditional on death, two full
+  DSUE/no-DSUE branch calcs for singles (the unified-credit kink is nonlinear),
+  joint records at the both-die event with 2x exemption. Mortality (`estate_m`,
+  incl. the cluster cap — a population-level weights operation) is computed in
+  `src/sim/estate.R` and applied only at aggregation.
+- **Detail columns**: `estate_m`, `estate_p_dsue`, `liab_estate_nodsue`,
+  `liab_estate_dsue`, `estate_distributable` on every detail file.
+- **Receipts**: `revenues_estate_tax` = CBO level + on-model delta
+  (scenario − model-baseline), booked in FY death-year + 1. The model never sets
+  baseline estate LEVELS (a known growth-slope disagreement with CBO); it
+  contributes reform deltas only. The off-model estate delta is superseded.
+- **Heir-side distribution (stage 2)**: the rank-matching allocator
+  (`allocate_estate_to_heirs()`, `src/data/post_processing/estate_allocator.R`)
+  passes each leg-scenario's expected estate tax through to heirs by matching
+  cumulative dollar mass (estates sorted by distributable value, heirs by
+  inheritance; DSUE/no-DSUE branches enter as separate ladder entries). It runs
+  on the fly inside `process_for_distribution()` for both legs — no
+  cross-scenario file dependency. Heir structure (p, inheritance) comes from
+  the baseline Estate-Tax-Distribution interface; inheritance is GROSS of
+  estate tax (assumption, evidence in thoughts doc §12), so only the liability
+  column varies by scenario. Aggregate identity Σw·p·λ = E[estate tax] per
+  (leg, year) ties to `totals/estate.csv`; per-year diagnostics land in
+  `static/supplemental/estate_allocator_diag_{t}.csv`. Heir-ladder exhaustion
+  is a hard error. NOTE: kg_dynamics deemed-realization tax deliberately keeps
+  the proportional-to-inheritance smear (it has no exemption threshold — the
+  rank match exists because the estate tax is threshold'd).
+
+### Wealth Dynamics (the wealth bathtub)
+
+A **mechanical, conventional-side** saving-financing channel that lets cross-base
+interactions surface: a share `s = 1 − MPC` of the net above-baseline
+**during-life** tax (income + payroll − deemed + **wealth**) is financed out of
+wealth rather than consumption, compounds over time, and **drains into the estate
+(and capital-income) base at death**. Quantifies capital-gains-during-life ↔
+estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics.R`
+(+ generic cohort primitives in `src/sim/cohort_bathtub.R`). Key facts:
+
+- **It is NOT a behavior module.** There is no `do_wealth_dynamics()` hook. The
+  channel is configured by a per-scenario **FINANCING PROFILE** — a
+  bracket-varying saving share `s(age, net-worth percentile)` plus a within-age
+  transition matrix `M` — resolved by `wealth_dyn_resolve_profile()` from a
+  **folder** under `config/calibrations/wealth_profiles/<name>/` (two files: `s.csv` =
+  per-cell `s = 1 − MPC`; `M.csv` = the `n_pctiles × n_pctiles` transition,
+  absent ⇒ identity). One economy value selects it,
+  `wealth.financing_profile`, taking a profile folder name, `none`/`off` to force
+  it off, or the `flat:<s>` shorthand (constant `s_mat`, identity `M`). The old
+  `s` and `wealth_financing` runscript columns are retired.
+  `scenario_uses_wealth_dynamics()` keys off
+  `max(s_mat) > 0` (so a flat-zero profile — `flat:0` — is dormant and skips the
+  ~2× split-pass compute), NOT the `behavior` column.
+  The shipped `default` is **calibrated**
+  (2026-07-07, persistent-flow anchor: s ≈ 0.1 bottom → 0.80 top percentile,
+  age-tilted; memo at `other/wealth_dynamics/default_s_calibration.md`), so the
+  channel is ON model-wide for any scenario whose economy leg does not set
+  `financing_profile: none`. `example_age_wealth/` is an illustrative (not calibrated) bracket
+  profile. The haircut applier (`wealth_dyn_apply_to_records()`) is invoked
+  **directly as a fixed step at the head of the final conventional pass** in
+  `run_one_year()`, before the behavior modules and `do_taxes`; it consumes the
+  precomputed deficit `P` (so only the pre-pass reads the profile).
+- **Conventional-only.** Static stays the clean law-only counterfactual; the
+  interaction surfaces as the `static − conventional` estate/capital-income
+  delta, reported via **receipts** (distribution tables stay static-sourced, D20).
+  Composes with kg: a scenario names a behavior alternative that binds the kg
+  bathtub *and* an economy alternative with `financing_profile: flat:0.5`; the
+  haircut applies first, kg runs on the haircut frame.
+- **Cells** = (age cohort × within-age net-worth percentile). Joint key
+  `pmax(age1,age2)` pre-80+-topcode (matches kg / distribution). Ranking **drops
+  `net_worth ≤ 0`** (plan D17 — deliberately differs from `distribution.R`'s `< 0`).
+- **Forcing is the GENERALIZED after-tax cash flow `F = ΔT⁰ − ΔY_exog`,
+  CONVENTIONAL (wealth-excluding):** `ΔT⁰ = Δ(liab_iit_pr + liab_wealth)` =
+  `Δ(liab_iit_net + liab_pr − liab_deemed + liab_wealth)`, scenario − baseline;
+  `ΔY_exog` = the corporate channel's analytic external-income shock
+  (`corp_dY_exog` detail column; 0 for every non-corp scenario — numerically
+  identical to the old tax-only forcing there). Measured on a dedicated
+  **conv-no-wealth pass** (behavior on, haircut off) → its own output root
+  `{scenario}/conventional_no_wealth/detail/` (never clobbers final-conv detail;
+  no totals/receipts written).
+- **Kernel** `G(a,p,t) = (1 + r_total(t)) − s·(τ·y + τ_w)`: `r_total` = per-year
+  **nominal GDP/capita** growth (Macro-Projections `gdp_c`); `τ` = `mtr_cap_bundle`
+  (composition-weighted capital-income bundle MTR, measured through the
+  calculator); `y` = cell-aggregate `ΣF/Σgross` (clamped ≥0); `τ_w` = marginal
+  wealth rate (`mtr_net_worth`). Guard `0 < G ≤ 1+r_total` per cell.
+- **Recurrence is per-living-record** (NO `(1−m)` factor — deaths handled only at
+  aggregation via each record's `estate_m`, D1). State `P(a,p,t)` + percentile
+  cutoffs written to `{scenario}/conventional/supplemental/wealth_dynamics_state/{year}.rds`.
+- **`WEALTH_CAP_FLOWS`** (`src/sim/wealth_dynamics.R`) is the SINGLE SOURCE OF
+  TRUTH for which capital flows the MTR bump and the haircut scale, and at what
+  weight (pure-capital 1.0; pass-through slice 0.2, the `economy.R` raw list).
+  Scale `kg_lt_basis` with `kg_lt`. value.* assets scale **uniformly** by `(1−f)`
+  (so `s_pt`/`rho_pt` stay invariant); pass-through flows by `(1 − 0.2·f)`.
+  `net_worth` is recomputed from the eroded balance sheet so `calc_wealth`
+  reprices `liab_wealth` and `calc_estate` the estate base.
+- **`net_worth` pass semantics:** under the channel, CONVENTIONAL `net_worth` is
+  post-haircut; STATIC is un-haircut. Pin the heir-allocator `Σw·p·λ` identity to
+  **static** `totals/estate.csv`.
+- **Guards** (mirror kg): `wealth_dyn_check_run_compat()` hard-stops `pct_sample ≠
+  1` / VAT. The channel's own provenance stamp (`WEALTH_DYN_PROVENANCE`,
+  `wealth_dyn_check_provenance()`, `WEALTH_STRICT_CALIB`) was retired 2026-07-26:
+  the profile is a calibrated entry in `wealth.yaml`, checked at parse time like
+  every other one.
+- **Operational params** in the economy leg's `wealth.yaml` (`fmax`,
+  `n_pctiles`, `r_total_additive_delta`) — structural knobs, not a reform file. `s` and `M` are NOT here: they live in the per-scenario
+  financing **profile** folder (above). Profiles are regenerated by
+  `other/wealth_dynamics/write_profiles.py`. (NB: the old global
+  `transition_matrix_file` YAML knob and the `bounding_orchestrator.sh` that
+  `sed`-swapped it are superseded — identity-vs-uniform M is now just two profile
+  folders, with no pipeline serialization.)
+- **Run one year past the reporting window** (estate/wealth deltas are FY
+  death-year+1 lagged).
+
+### On-Model Corporate Incidence
+
+A **mechanical, conventional-side, REVENUE-side** channel (`src/sim/corp/`)
+that maps the gross corporate receipts delta from Off-Model-Estimates onto records:
+flow cuts (dividends/interest/rent/pt), an equity markdown on exposed `value.*`
+stocks, kg gain adjustments, bathtub dissaving, and an **endogenous individual-tax
+offset that simply materializes in conventional receipts deltas**. Static stays the
+clean law-only counterfactual and the distribution smear is untouched (D4/D5);
+the channel contributes reform **deltas only**. Design docs:
+`other/corporate_incidence/{CONSIDERATIONS,FORMAL_MODEL}.md` (rulings D1–D18, P1–P14).
+
+- **Activation is FAIL-CLOSED and automatic** (no runscript column): the scenario's
+  OME vintage must carry `corporate_meta.yaml` next to `revenues.csv`
+  (`gross_of_offset: true`, `provision_type: rate`, `beyond_horizon: extend|zero`).
+  Absent metadata + nonzero corporate wedge → channel OFF, status quo, one loud
+  warning. Present-but-invalid metadata, a depreciation-signature (seesaw) wedge
+  path, or enactment before the sim window → **hard stop**. A/B runs use the
+  existing `dep.Off-Model-Estimates.vintage`/`.ID` overrides.
+- **Parameters are hardcoded `CORP_*` constants** (WEALTH_CAP_FLOWS style,
+  provenance-commented; several are Phase-0c placeholders — update in place when
+  measured). Sweep corners via env vars ONLY: `CORP_SIGMA_N`, `CORP_KAPPA`,
+  `CORP_PRICED_AS_PERMANENT=1`.
+- **Paths are analytic** (`corp_resolve_paths`, memoized; no serialized state, no
+  new SLURM phase): π_t = `gdp_corp − rev_corp` (Macro-Projections); wedge split by
+  σ_N; η(t) vintaging at 0.057 (`do_capital_adjustment` convention); debt-rollover
+  ramp for interest; D15 κ-split (corporate flows retain κ·η·w_norm; noncorporate
+  lines get (1−κ)·η·w_norm ∝ Macro `gdp_interest`/`gdp_rent`/0.2·`gdp_proprietors`);
+  perfect-foresight markdown M_t/μ_t by backward recursion (constant nominal
+  r = tsy_10y(enactment) + ERP, Gordon terminals, telescoping hard-asserted).
+- **Record applier runs at the head of EVERY conventional-side pass** (incl.
+  conv-no-wealth), BEFORE the wealth haircut and behavior modules. D16 contract:
+  dividends/interest/rent/pt flows are external income → accumulate analytically
+  into the **`corp_dY_exog`** detail column; kg and retirement distributions are
+  internal conversions (tax leg only — adding them to ΔY_exog double-counts the
+  markdown). `value.*` markdown is **column-specific** (ω_a exposure; basis never
+  scales; `value.db` never debited (D10); pt stocks untouched (P14) so ρ_pt/s_pt
+  stay frozen); `net_worth` recomputed. Retirement distributions scale with their
+  source-balance markdown (P7; dc-share split for pensions).
+- **kg composition (D18, one rule, two entry points):** non-kg runs get the exact
+  per-record form `Δkg = ω_kg[φ·kg_lt − μ·(kg_lt + kg_lt_basis)]` inside the
+  applier (basis co-scales with φ only). kg_dynamics runs skip that block: the
+  PRICE margin enters as a bathtub **gain-state debit**
+  (`corp_kg_state_debit_by_year`: D_a(t) = μ_t·V_corp_exposed_a, recomputed each
+  year, consumed by `extra_R` ONLY — recurrence stays clean, deemed gains already
+  see the markdown through record `value.*`), and the QUANTITY margin is the
+  post-behavior φ step (`corp_apply_kg_quantity_to_records`). Never both.
+- **Wealth bathtub forcing generalized** to F = ΔT⁰ − ΔY_exog (see the wealth
+  section). The wealth applier ranks cells on the RAW pre-corp `net_worth`
+  (`rank_value` argument) so the markdown never shifts records across cells.
+- **Guards:** `corp_check_run_compat` hard-stops `pct_sample ≠ 1` / VAT /
+  excess-growth. **Conservation diagnostic** (WARN-level reconciliation REPORT):
+  `conventional/supplemental/corp_conservation_diag_{t}.csv` — per-line
+  analytic-vs-realized is the testable content; the three-way identity is a report.
+- **Receipts plumbing unchanged:** corporate input keeps its 0.75/0.25 CY→FY
+  booking; the endogenous offset rides ordinary receipts deltas; estate/wealth
+  legs book FY+1 → **run one year past the reporting window**. Stacking caveat:
+  with an endogenous offset the corporate row is NOT stacking-order-invariant
+  (§8.13).
+
 ### Behavioral Feedback Modules
 
 Behavioral modules are R scripts that simulate taxpayer responses to policy changes. They enable conventional and partial dynamic revenue estimates.
 
 **Module Organization:**
-- Location: `config/scenarios/behavior/`
-- Organized in subfolders by behavior type (e.g., `/charity`, `/employment`)
-- Module filename describes what it does (e.g., `100.R` = elasticity of -1.0)
+- Location: `src/behavior/{family}/*.R` — module code is executable, so it lives
+  under `src/`. It is still loaded BY PATH at scenario time, never sourced at
+  startup, which is why `main.R`, `src/slurm/setup.R` and `src/slurm/common.R`
+  all skip `behavior/` when they walk `src/` recursively. Keep those three in
+  lockstep.
+- Organized in subfolders by behavior FAMILY (e.g. `charity/`, `employment/`).
+  The family is the parent folder name and determines the hook: a file in
+  `charity/` must define `do_charity()`.
+- Module filename describes what it does (e.g. `100.R` = elasticity of -1.0)
+- **Modules are self-contained.** Their parameters are hardcoded in the file with
+  citations, because the module is the only reader. A variant is a separate file
+  (`charity/50.R` vs `charity/100.R`), never a config override, so the assumption
+  is traceable to a file in git rather than to a CSV cell.
+
+**Selecting modules: the behavior leg.** A scenario's `behavior` cell names a
+folder holding one `behavior.yaml` with two sections:
+
+```yaml
+kg_dynamics: [bathtub, conversion, entity_shifting]   # or: none
+modules:
+  - src/behavior/conversion/sigma.R
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/evasion/debacker.R
+  - src/behavior/charity/50.R
+  - src/behavior/estate/avoidance.R
+```
+
+- `modules` is a bare list of paths. There is NO registry and no list of known
+  names: the loader takes any path that exists. Adding a behavior is writing one
+  file and listing it.
+- `kg_dynamics` is `none` or the pieces of the gains bathtub the scenario binds
+  (`bathtub` is required when active). Writable as a list of piece names or as a
+  mapping of piece → stamped calibration file. The applier
+  (`src/behavior/kg_dynamics/turnover.R`) is injected automatically and listing
+  it by hand is an error.
+- **Execution order is not the listed order.** The loader stable-sorts against
+  one pinned family order — `kg_dynamics → conversion → entity_shifting →
+  evasion → wealth → charity → estate` — because later families read what earlier
+  ones wrote. Families outside that list are order-insensitive and run last, in
+  the order listed. Nothing is ever rejected for being unfamiliar.
+- Parse-time checks (`behavior_validate_spec`, `src/sim/behavior.R`) stop the run
+  before it starts on: a listed path that does not exist, a duplicate, a bound kg
+  piece with no module or a module with an unbound piece, conversion without the
+  bathtub, wealth without estate, or the applier listed by hand. Evasion without
+  an estate module warns loudly. These replaced five hand-written order guards
+  that used to fire mid-run.
+- `scenario_uses_kg_dynamics()` and `scenario_uses_sigma()` read the resolved
+  spec, not a module-name prefix.
 
 **Module Structure:**
-Every module must contain a function named `do_{subfolder_name}()`:
+Every module must contain a function named `do_{family}()`:
 
 ```r
 do_behavior_name = function(tax_units, ...) {
@@ -251,6 +575,44 @@ pct_chg = case_when(
 
 ## Model Execution Flow
 
+### The three reportable rungs
+
+Every counterfactual scenario reports up to three passes, each a superset of the
+one below it. The specifications live in `PASS_SPECS` (`src/sim/run.R`), which one
+generic body consumes.
+
+| rung | is | output |
+|---|---|---|
+| `static` | new law on baseline behavior and baseline bases, no cross-base transmission | `{scenario}/static/` |
+| `mechanical` | static plus every transmission channel: corporate incidence, the wealth drawdown, the employer payroll wage adjustment. No behavior | `{scenario}/mechanical/` |
+| `conventional` | mechanical plus the behavior modules | `{scenario}/conventional/` |
+
+The conventional wedge against static decomposes as `(mechanical − static)` plus
+`(conventional − mechanical)`, transmission first and behavior on the transmitted
+frame. That is already the order of operations inside the conventional pass.
+
+The kg frozen-realization injection is on the static and mechanical rungs: it is
+baseline realization behavior priced under the new law, which is law arithmetic
+rather than transmission. The conventional rung takes the full bathtub state
+through its behavior module instead.
+
+**A rung is skipped when it cannot differ from the one below.** The mechanical
+rung runs only where a transmission channel is live — corporate incidence active,
+a wealth financing profile with a nonzero saving share, or a reform changing
+employer-side payroll law (`scenario_uses_er_payroll_reform()`,
+`src/sim/payroll.R`). The conventional rung runs only where the behavior stack is
+non-empty. A skipped rung writes nothing, and the reporting layer reads the rung
+below in its place.
+
+Each rung that applies the wealth haircut needs its own drawdown forcing, so
+`run_wealth_bathtub_pass()` takes the rung it serves, reads that rung's
+`{rung}_no_wealth/detail/`, and writes state under `{rung}/supplemental/`. The
+mechanical rung measures its forcing with behavior off.
+
+The forcing's external-income term is the sum of the corporate channel's flow cut
+(`corp_dY_exog`) and the payroll adjustment's wage shave (`pr_dY_exog`), both
+detail columns.
+
 1. **Static Mode** (for non-baseline scenarios):
    - Input attributes held fixed at baseline levels
    - Calculate taxes under policy reform
@@ -268,12 +630,95 @@ There is lots of post-processing for each scenario out of the box. If the user i
 asking you a question about a specific variable, it likely exists already in the output 
 folders. Files and key things to know:
   - within the interface root, you will see all scenario folders
-  - within a scenario folder, you will see two options: static and conventional
+  - within a scenario folder, you will see the rungs that ran: static, mechanical
+    (only where a transmission channel is live) and conventional
   - within each of those run-types, you will see:
     - detail: individual tax unit detail files by year
     - total: level aggregations of the detail files
     - supplemental: other files including revenue estimates (deltas), distribution (exists only for static because distribution is a static concept), etc
   - note that baseline lacks the deltas-related files because deltas are relative to baseline
+
+## Comment and Prose Style
+
+**This is a hard requirement, not a preference.** Every comment, docstring, error
+message, and YAML `note:` / `target:` field in this repository is written in one
+voice: the voice of the pre-2026 code on `main`. Full rules and worked examples
+are in `other/style/comment_style.md`. Read it before writing prose here. The
+reference files are `src/data/tax_law.R`, `src/calc/do_taxes.R`, and
+`src/data/post_processing/distribution.R` — open one and match it.
+
+**The four shapes:**
+
+1. **File header: three lines.** Name the file, say what is in it, stop.
+   ```r
+   #-------------------------------------------------------------------------------
+   # wealth_dynamics.R
+   #
+   # Contains functions to simulate saving responses to tax changes and their
+   # effect on the estate tax base
+   #-------------------------------------------------------------------------------
+   ```
+   Where the file rests on an assumption a reader could not recover from the
+   code, add one short paragraph below the banner stating the assumption and its
+   number — modelled on the 85% fringe-benefit note in `do_taxes.R`. Nothing
+   else goes in a header: no design rationale, no history, no list of what the
+   file does not do.
+
+2. **Function docstring: verb first, third person.** "Calculates payroll and
+   individual income taxes for all tax units." Then the existing `Parameters:` /
+   `Returns:` blocks. Every function gets a `Returns:` line.
+
+3. **Inline comment: names the action, one line, verb first.** "Read baseline
+   YAML files". "Overwrite baseline subparams with specified changes". "Loop over
+   years". "Add age cuts". Two or three lines are fine where a number or an
+   assumption needs stating.
+
+4. **Citations and formulas: the number, the source, flat.** Formula on its own
+   indented line. No range of estimates, no note about which other paper is the
+   wrong one, no discussion of what the choice implies.
+   ```r
+   # Assume an elasticity of reported estates with respect to the net-of-tax
+   # rate of 0.16 (Kopczuk and Slemrod 2001).
+   #
+   #   retained = ((1 - tau_S) / (1 - tau_B)) ^ report_eps
+   ```
+
+**Never write these:**
+
+- **Capital letters for emphasis.** Not `MECHANICAL`, not `NOT`, not `MUST`, not
+  `do NOT`. Rewrite the sentence instead.
+- **Stacked hyphenated modifiers.** "the net above-baseline during-life
+  after-tax cash-flow shock" is four modifiers and one noun.
+- **References a reader cannot follow.** `(D7)`, `(P1/F4)`, `spec §3.2`,
+  `DESIGN_LOCK R6`, `ruling 4`, plan filenames, `.claude/plans/*`.
+- **Line numbers in other files.** They are wrong the moment they are written.
+  Name the file, never the line.
+- **Invented terms used as if established.** Name the thing plainly every time.
+- **Changelogs and self-assessment.** When a value was re-pinned, that a
+  refactor came back identical, "byte-identical", "verified", "smoke-verified",
+  "clean", "exact". That is commit-message content.
+- **Closing flourishes** of the form "which is what makes X a Y rather than a
+  Z", or "and that is the whole mechanism".
+- **Notation in running prose.** `ΔT⁰`, `ΣF/Σgross`, `Σw·p·λ`. A formula on its
+  own line reads; the same symbols mid-sentence do not.
+- **Statements of what the code does not do**, unless a reader would otherwise
+  reach for it.
+
+**Length ceiling: about six lines per comment block.** Past that, the content
+belongs in a memo under `other/` with a one-line pointer from the code. The one
+exception is a function whose entire job is an equation — the recurrence in
+`wealth_dynamics.R` or `kg/recurrence.R` — where the displayed formulas earn
+their space.
+
+**Applies equally to YAML.** The `note:` and `target:` fields in
+`config/scenarios/economy/` and `config/calibrations/` are prose and follow the
+same rules. Keep the numbers, citations and dependency lists byte-exact; only the
+prose around them changes.
+
+**When you touch a stale comment, fix the fact, do not translate it.** A comment
+describing a retired runscript column, a deleted file, or an environment variable
+that no longer exists is wrong, not just badly written. Correct it and say so in
+your summary.
 
 ## Coding Conventions
 
@@ -307,12 +752,36 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 3. Reforms OVERWRITE baseline subparameters — include full time series and all indexation fields
 4. Create a runscript CSV referencing the reform's `tax_law` path
 
+## State Income Taxes
+
+State taxes ride on the same three legs as everything else:
+
+- **Law** is in the tax law leg. `config/scenarios/tax_law/default/state/{st}/`
+  holds each state's default law, alongside the registry (`jurisdictions.yaml`),
+  the conformity groups and the parameter schema. A tax law alternative changes a
+  state's law with files under its own `state/{st}/` folder, with the same
+  subparameter-replacement rules as federal law. So one `tax_law` cell sets both.
+- **Which states a run computes**, how records are split across them, and whether
+  the per-year state detail matrix is written, are in the economy leg's
+  `states.yaml` (`jurisdictions`, `weights_method`, `detail`). The default is
+  `none`: a federal-only run, which neither reads nor needs a State-Weights
+  vintage. The State-Weights pin is in `interfaces.yaml`.
+- Every counterfactual's jurisdictions must be among the baseline's, and every
+  scenario computing state taxes must read the baseline's State-Weights vintage.
+  Both are checked at parse time (`validate_scenario_states()`).
+
+Each rung that collects totals runs the state calculator on its own frame
+(`collect_totals()` in `src/sim/run.R`), writing `totals/state.csv`; a skipped
+rung reports the rung below, as for federal totals. Post-processing writes
+`supplemental/state_rev_est.csv` per rung, and stacked runs write
+`stacked_state_rev_est_{rung}.csv` at the vintage root.
+
 ## State-Tax Development Protocol
 
 Use this protocol for every state-law research, configuration, or calculator task.
 
-1. Start by reading `config/scenarios/tax_law_state/README.md`,
-   `config/scenarios/tax_law_state/jurisdictions.yaml`,
+1. Start by reading `config/scenarios/tax_law/default/state/README.md`,
+   `config/scenarios/tax_law/default/state/jurisdictions.yaml`,
    `research/state_tax/state_parameter_rollout.csv`, and the relevant
    `research/source_packets/{state}.md`. Also read the state
    implementation plan when a design decision is involved.
@@ -334,7 +803,7 @@ Use this protocol for every state-law research, configuration, or calculator tas
    state name. Do not add `state == ...` branches without documenting why a
    parameterized design is inadequate and adding focused regression tests.
    For fixed or selective federal conformity, use the numeric group contract in
-   `config/scenarios/tax_law_state/conformity_groups.yaml`; build and validate a
+   `config/scenarios/tax_law/default/state/conformity_groups.yaml`; build and validate a
    shared reference-law overlay before setting a group to `ready: true`.
 5. Add a jurisdiction to the enabled registry only after its YAML profile,
    source packet, worksheet tests, and parser/convention tests are complete.
@@ -397,15 +866,19 @@ This is prose only. Variable and file names keep the short forms.
 ### Running a Simulation
 1. Create or modify runscript CSV with scenario parameters
 2. Ensure tax law YAML files exist for each scenario's `tax_law` value
-3. If using behavioral feedback, ensure module exists at specified `behavior` path
+3. If using behavioral feedback, ensure the behavior alternative folder exists and lists modules that exist
 4. Execute model with runscript as input
 
 ### Creating a Behavioral Module
-1. Choose appropriate subfolder in `config/scenarios/behavior/` (or create new)
+1. Choose appropriate family subfolder in `src/behavior/` (or create new)
 2. Create `.R` file with descriptive name
-3. Implement `do_{subfolder_name}()` function with required signature
-4. Add formatted documentation
-5. Reference module in runscript's `behavior` column as `{subfolder}/{filename}`
+3. Implement `do_{family}()` function with required signature
+4. Add formatted documentation, and hardcode the module's parameters in the file
+   with their citations
+5. Add its path to a behavior alternative's `behavior.yaml`, and name that folder
+   in the runscript's `behavior` column. If the new family must run before or
+   after an existing one, add it to `BEHAVIOR_FAMILY_ORDER` in
+   `src/sim/behavior.R`; if order does not matter, leave it out and it runs last.
 
 ### Debugging Tax Calculations
 - Check relevant YAML files for parameter values in simulation years
@@ -427,17 +900,22 @@ This is prose only. Variable and file names keep the short forms.
 
 **Usage:**
 ```bash
-bash slurm_run.sh <runscript> <scenario_id> <user_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>
+bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [submit_mode] [years_per_task]
 ```
-Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism).
+Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism). The optional `submit_mode` is `chains` (default: one dependency chain per scenario, up to eleven sbatch calls each — the cluster refuses submissions beyond 200/hour, so this caps out near 18 scenarios) or `batch` (one array per phase spanning all scenarios with a barrier between phases, about ten sbatch calls total — use for large homogeneous batches).
+
+The optional `years_per_task` (default 1) is how many consecutive years one array task of a per-year phase (`1`, `2A`, `2MN`, `2M`, `2N`, `2C`) runs. Each task is its own R process and pays a fixed startup toll — sourcing `src/`, loading packages — before any calculation, and on a 31-year grid that toll is most of a task's runtime. Batching pays it once per task instead of once per year, at the cost of a longer critical path if the partition ever grants full concurrency. It is a scheduling choice and does not change results, so it stays out of the vintage manifest. The pre-passes (`1B`, `2B`, `2MW`, `2W`) already run every year in one job. The year phases ask for `30 min × years_per_task` of walltime; memory is unchanged, since the worker frees each year's frames before reading the next.
 
 **Pipeline phases:**
 1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`
 2. Phase 1 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each baseline year
-3. Phase 2 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each counterfactual × year
-4. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario
-5. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
-6. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
+3. Phase 1B (SLURM array): `src/slurm/frozen.R` — kg_dynamics frozen mechanical pre-pass per scenario (writes static-side mech state consumed by Phase 2A; no-op for non-kg scenarios)
+4. Phase 2A/2B/2C (SLURM array): `src/slurm/worker.R` (2A static, 2C conventional) + `src/slurm/bathtub.R` (2B kg bathtub) — `run_one_year()` for each counterfactual × year
+5. Phase 2MN/2MW/2M (SLURM array, **only for scenarios with a live transmission channel**): `src/slurm/worker.R` 2MN (mech-no-wealth, the mechanical rung's forcing pass; wealth scenarios only) + `src/slurm/mech_wealth.R` 2MW (mechanical wealth bathtub pre-pass; wealth scenarios only) + `src/slurm/worker.R` 2M (mechanical). DAG: 2A → 2MN → 2MW → 2M → 2B; 2MW also depends on Phase 1 baseline
+6. Phase 2N/2W (SLURM array, **only for `s>0` wealth scenarios**): `src/slurm/worker.R` 2N (conv-no-wealth, the `ΔT⁰`/`mtr_cap_bundle` pass) + `src/slurm/wealth.R` 2W (wealth bathtub pre-pass). DAG: 2B → 2N → 2W → 2C; 2W also depends on Phase 1 baseline
+7. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario, per rung
+8. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
+9. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
 
 **CRITICAL — keeping the SLURM pipeline in sync:**
 
@@ -449,12 +927,19 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
 | `do_scenario()` baseline-only post-processing (e.g. `build_cbo_comparison()`) | `src/slurm/aggregate.R` Phase 3a (Phase 3b is counterfactual-only) |
 | `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
+| `run_frozen_pass()` or the kg mechanical state contract | `src/slurm/frozen.R` (Phase 1B) |
+| `run_wealth_bathtub_pass()` or the wealth state/detail contract | `src/slurm/wealth.R` (Phase 2W) and `src/slurm/mech_wealth.R` (Phase 2MW) |
+| A `PASS_SPECS` entry, or `do_scenario()` pass sequencing, or a new `pass_type` | `src/slurm/worker.R` (phase dispatch), `src/slurm/setup.R` (manifest rows + `submission_plan` columns + `N_PHASE*`), `slurm_run.sh` (phase blocks, `plan_range` column indices, the chains-mode `read` destructuring, downstream deps), `other/performance/test_slurm_dependency_graph.sh` |
+| A totals slot or a `calc_receipts()` leg | `src/slurm/aggregate.R` Phase 3a (per-rung `readRDS` + `write_pass_outputs`) |
 | `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
 | `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
+| A new SLURM driver script                           | must call `config_activate(economy = scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)` after loading `config.rds` |
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
 | `run_one_year()` signature                          | `src/slurm/worker.R` |
+| The unit of work an array task covers | all three together: `src/slurm/setup.R` (the manifest's `years` list-column), `src/slurm/common.R` (`get_task`), `src/slurm/worker.R` (the year loop, and what hoists above it) |
+| The `src/` startup source-walk predicate            | all three copies together: `src/main.R`, `src/slurm/setup.R`, `src/slurm/common.R` (they skip `main.R`, `slurm/`, `tests/` and `behavior/`) |
 
-Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts.
+Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp/`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources `src/` recursively — no manifest, phase, or worker changes. (That walk skips `src/behavior/`: behavior modules are loaded by path at scenario time, so adding one still needs no SLURM change, but CHANGING the walk predicate does — see the table row above.)
 
 ## Notes and Best Practices
 
@@ -466,3 +951,4 @@ Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax c
 - **Heterogeneous elasticities**: Assign different elasticities to different demographic groups/income levels using `case_when()`
 - **Extensive margin simulation**: Use probabilities and RNG for binary outcomes (e.g., employment exit)
 - **Global random seed**: Always reset with `set.seed(globals$random_seed)` before stochastic operations
+- **Report full paths for deliverables**: Whenever you finish producing a document, chart, table, or other output artifact, print its FULL absolute path (e.g., `/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/.../file.html`) in your summary — never just the filename or a relative path

@@ -1,0 +1,373 @@
+<title>Taxing capital gains on accrual — design review</title>
+<style>
+  :root {
+    --paper:      #F3F5F3;
+    --panel:      #FBFCFB;
+    --panel-2:    #EEF2EF;
+    --ink:        #16262A;
+    --ink-soft:   #4C5E62;
+    --ink-faint:  #7A8B8C;
+    --line:       #D3DBD7;
+    --line-soft:  #E4EAE6;
+    --accent:     #0E6B5A;
+    --accent-ink: #0B5546;
+    --accent-soft:#E1EEE9;
+    --amber:      #9C6612;
+    --amber-soft: #F4E9D3;
+    --mono-bg:    #EAF0ED;
+    --shadow:     0 1px 2px rgba(16,38,42,.06), 0 8px 24px rgba(16,38,42,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:      #0D1A1B;
+      --panel:      #132323;
+      --panel-2:    #0F1E1E;
+      --ink:        #E6ECE9;
+      --ink-soft:   #A2B4AF;
+      --ink-faint:  #6F8480;
+      --line:       #26403E;
+      --line-soft:  #1C302F;
+      --accent:     #52B99B;
+      --accent-ink: #7ED0B6;
+      --accent-soft:#15302A;
+      --amber:      #D7A544;
+      --amber-soft: #2A2413;
+      --mono-bg:    #0F1E1E;
+      --shadow:     0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --paper:#F3F5F3; --panel:#FBFCFB; --panel-2:#EEF2EF; --ink:#16262A;
+    --ink-soft:#4C5E62; --ink-faint:#7A8B8C; --line:#D3DBD7; --line-soft:#E4EAE6;
+    --accent:#0E6B5A; --accent-ink:#0B5546; --accent-soft:#E1EEE9; --amber:#9C6612;
+    --amber-soft:#F4E9D3; --mono-bg:#EAF0ED;
+    --shadow:0 1px 2px rgba(16,38,42,.06), 0 8px 24px rgba(16,38,42,.05);
+  }
+  :root[data-theme="dark"] {
+    --paper:#0D1A1B; --panel:#132323; --panel-2:#0F1E1E; --ink:#E6ECE9;
+    --ink-soft:#A2B4AF; --ink-faint:#6F8480; --line:#26403E; --line-soft:#1C302F;
+    --accent:#52B99B; --accent-ink:#7ED0B6; --accent-soft:#15302A; --amber:#D7A544;
+    --amber-soft:#2A2413; --mono-bg:#0F1E1E;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 40px) 96px; }
+
+  /* ---- type ---- */
+  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; font-weight: 600; text-wrap: balance; letter-spacing: -.01em; }
+  h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: .2em 0 .3em; }
+  h2 { font-size: clamp(22px, 3.4vw, 28px); line-height: 1.2; margin: 0 0 .4em; }
+  h3 { font-size: 18.5px; margin: 0 0 .35em; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-weight: 700; letter-spacing: 0; }
+  p { margin: 0 0 1em; }
+  a { color: var(--accent-ink); }
+  code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: .88em; }
+  code { background: var(--mono-bg); padding: .08em .38em; border-radius: 4px; }
+  strong { font-weight: 700; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 .5em;
+  }
+
+  /* ---- masthead ---- */
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 22px; margin-bottom: 40px; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px;
+    font-size: 13px; color: var(--ink-faint); font-variant-numeric: tabular-nums;
+  }
+  .meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .lede { font-size: 19px; color: var(--ink-soft); max-width: 62ch; }
+
+  /* ---- sections ---- */
+  section { margin: 0 0 44px; }
+  .kicker { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .kicker .num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+    color: var(--ink-faint); font-weight: 500; padding-top: 3px;
+  }
+
+  /* ---- cards / callouts ---- */
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 22px; box-shadow: var(--shadow);
+  }
+  .stack { display: flex; flex-direction: column; gap: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700;
+    letter-spacing: .05em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.settled { background: var(--accent-soft); color: var(--accent-ink); }
+  .pill.decide  { background: var(--amber-soft); color: var(--amber); }
+
+  .callout {
+    border-left: 3px solid var(--amber); background: var(--amber-soft);
+    border-radius: 0 10px 10px 0; padding: 16px 20px; margin: 0 0 8px;
+  }
+  .callout .eyebrow { color: var(--amber); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .comp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .comp-head h3 { margin: 0; }
+
+  /* ---- formula block ---- */
+  .formula {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px;
+    background: var(--mono-bg); border: 1px solid var(--line-soft); border-radius: 8px;
+    padding: 12px 16px; overflow-x: auto; color: var(--ink); margin: 0 0 12px;
+  }
+  .formula .c { color: var(--ink-faint); }
+
+  /* ---- tables ---- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; background: var(--panel); }
+  th, td { text-align: left; padding: 11px 15px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th { background: var(--panel-2); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); font-weight: 700; }
+  tbody tr:last-child td { border-bottom: none; }
+  td .asset { font-weight: 600; }
+  td small { color: var(--ink-faint); }
+
+  ul.clean { margin: 0; padding-left: 0; list-style: none; }
+  ul.clean li { position: relative; padding-left: 22px; margin-bottom: 9px; }
+  ul.clean li::before { content: ""; position: absolute; left: 4px; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  ul.clean li.miss::before { background: var(--amber); border-radius: 1px; }
+
+  .two-col-list { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; }
+  @media (max-width: 640px) { .two-col-list { grid-template-columns: 1fr; } }
+  .two-col-list h4 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+  .cap { color: var(--accent); }
+  .cap.warn { color: var(--amber); }
+
+  /* decisions list */
+  .decision { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line-soft); }
+  .decision:last-child { border-bottom: none; }
+  .decision .body { flex: 1; }
+  .decision h4 { margin: 0 0 3px; font-size: 15.5px; }
+  .decision p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+  .foot { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink-faint); }
+
+  /* theme toggle */
+  .toggle { position: fixed; top: 14px; right: 14px; z-index: 10;
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink-soft);
+    font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer; box-shadow: var(--shadow); }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media print { .toggle { display: none; } }
+</style>
+
+<button class="toggle" id="themebtn" type="button" aria-label="Toggle light / dark">◐ Theme</button>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Budget Lab · Tax-Simulator · design decision memo</p>
+    <h1>Taxing capital gains on accrual</h1>
+    <p class="lede">Two things to sign off on: <strong>how we approximate mark-to-market</strong> from the data we have, and <strong>what we do about assets you can't realistically mark</strong> — the deferral-charge question, which is a policy call, not a plumbing detail.</p>
+    <div class="meta">
+      <span><span class="dot"></span>2026-07-11</span>
+      <span>branch <code>wealth</code></span>
+      <span>companion: <code>other/accrual_tax/DESIGN.md</code></span>
+      <span>status: pre-build</span>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section>
+    <div class="kicker"><span class="num">01</span><h2>Where we landed</h2></div>
+    <p>An accrual tax has three parts. The first two are settled; the third is the decision this memo exists for.</p>
+    <div class="stack">
+      <div class="card">
+        <div class="comp-head"><h3>A · Ongoing flow — tax the accrual columns directly</h3><span class="pill settled">Settled</span></div>
+        <p style="margin:0">Tax the imputed accrual (<code>accruals.*</code> — each asset class's historical-average total return × current value) each year, and switch <em>off</em> realization taxation on those assets. Because realizations are no longer taxed, we never need to track basis or follow a taxpayer over time — it's <strong>stateless</strong>. This is a legitimate proxy for the go-forward flow of a mark-to-market tax.</p>
+      </div>
+      <div class="card">
+        <div class="comp-head"><h3>B · Transition — the built-in gain at enactment</h3><span class="pill settled">Settled</span></div>
+        <p style="margin:0">The flow only captures appreciation <em>after</em> enactment. Gains that accrued <em>before</em> it (the stock <code>value − basis</code> on day one) are a separate one-time base, phased in over several years — as in the real Wyden/Biden proposals. Sizable, and computed from the balance sheet, not from <code>accruals.*</code>.</p>
+      </div>
+      <div class="card" style="border-color:var(--amber)">
+        <div class="comp-head"><h3>C · Illiquid assets — MTM or a deferral charge?</h3><span class="pill decide">Decide</span></div>
+        <p style="margin:0">Private businesses and homes can't realistically be marked to market every year (no cash for tax on paper gains; annual valuation is hard). The alternative is to keep taxing them at sale/death but add an <strong>interest charge for the deferral</strong>. This is a genuine policy fork with revenue, distribution, and complexity consequences — <a href="#deferral">section 04</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <div class="kicker"><span class="num">02</span><h2>Why the data forces this shape</h2></div>
+    <p>Tax-Data is a <strong>repeated representative cross-section, not a panel</strong> — the same household can't be followed year to year. That single fact rules some designs in and others out.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="cap" style="color:var(--accent)">What works</h3>
+        <ul class="clean">
+          <li>Taxing <code>accruals.*</code> — it's a <em>within-year</em> imputed flow, so no differencing across years is needed.</li>
+          <li>A deferral charge — it lands on the gain <em>stock</em> at a within-year event (a sale or death), which the cross-section represents cleanly.</li>
+          <li>Deemed realization at death — already built, and consistent for exactly this reason.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 class="cap warn" style="color:var(--amber)">What doesn't</h3>
+        <ul class="clean">
+          <li class="miss">Literal per-record mark-to-market — <code>value(t) − value(t−1)</code> needs a panel we don't have.</li>
+          <li class="miss">But we don't need it: <code>accruals.*</code> <em>is</em> the flow proxy, and taxing it sidesteps the missing panel entirely.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <div class="kicker"><span class="num">03</span><h2>What the flow proxy captures — and misses</h2></div>
+    <p>Being honest about the <code>accruals.*</code> approach, so the trade-offs are on the table before we commit.</p>
+    <div class="card">
+      <div class="two-col-list">
+        <div>
+          <h4 class="cap">Captures</h4>
+          <ul class="clean">
+            <li>Go-forward appreciation, by asset class.</li>
+            <li>Concentration across the wealth distribution — the top holds far more equities, so it still bears most of the tax.</li>
+            <li>Stateless: no basis ledger, no cohort machinery, no new SLURM phase.</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="cap warn">Misses</h4>
+          <ul class="clean">
+            <li class="miss">Year-to-year volatility and down-year losses — the rate is a smooth average, always positive.</li>
+            <li class="miss">Return heterogeneity <em>within</em> an asset class — everyone gets the class-average rate.</li>
+            <li class="miss">The pre-enactment built-in gain — handled separately by the transition calc (part B), not by the flow.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="deferral">
+    <div class="kicker"><span class="num">04</span><h2>The deferral charge — the policy decision</h2></div>
+    <p>For assets we don't mark annually, the question is how hard to lean against deferral. A plain realization tax lets gains compound untaxed — an interest-free loan from the Treasury. A deferral (retrospective) charge claws that back.</p>
+
+    <div class="callout">
+      <p class="eyebrow">The decision</p>
+      <p>For <strong>private businesses and homes</strong>: pure MTM, a deferral charge, or exemption (homes already have the §121 exclusion)? The leading hybrid is <strong>MTM the marketable assets, deferral-charge the illiquid ones</strong> — but that's a call for you, not a default.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="comp-head"><h3>Mark-to-market</h3></div>
+        <p style="margin:0 0 8px">Tax accrued gains every year (via the flow proxy). Cleanest economics, no lock-in.</p>
+        <p style="margin:0; font-size:14px; color:var(--ink-soft)"><strong>Cost:</strong> asks illiquid owners to pay cash on paper gains; leans on annual valuations the model imputes rather than observes.</p>
+      </div>
+      <div class="card">
+        <div class="comp-head"><h3>Deferral charge</h3></div>
+        <p style="margin:0 0 8px">Tax at sale/death as today, plus interest for the years the gain went untaxed. Preserves liquidity; approximates MTM's present value.</p>
+        <p style="margin:0; font-size:14px; color:var(--ink-soft)"><strong>Cost:</strong> needs a holding period, which the data doesn't carry.</p>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 8px">Making the deferral charge computable</h3>
+    <p>The holding period isn't in the data — but we can impute it from the very columns we couldn't tax directly. The gain-to-basis ratio and the accrual rate imply how long an asset has been held:</p>
+    <div class="formula">
+      r<span class="c">&nbsp;// implied return</span> = accruals<sub>k</sub> / value<sub>k</sub><br>
+      H<span class="c">&nbsp;// implied holding period</span> = ln(value<sub>k</sub> / basis<sub>k</sub>) / ln(1 + r)<br>
+      charge = &tau; · gain<sub>k</sub> · [ (1 + i)<sup>H</sup> − 1 ]&nbsp;&nbsp;<span class="c">// i = statutory deferral rate</span>
+    </div>
+    <p style="margin-bottom:0">The charge rides the existing realization and death machinery, so it stays <strong>stateless</strong> and cheap. Two conventions to pin down: the interest formula (simple compounding vs. an annuitized lookback) and the rate <code>i</code>.</p>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <div class="kicker"><span class="num">05</span><h2>Proposed treatment by asset class</h2></div>
+    <p>The starting point for discussion — every row is adjustable.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Asset class</th><th>Proposed treatment</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="asset">Equities</span><br><small>value.equities</small></td><td>Mark-to-market</td><td>Liquid, priced daily — MTM is feasible in law and in the model.</td></tr>
+          <tr><td><span class="asset">RE / investment funds</span><br><small>value.re_fund</small></td><td>Mark-to-market</td><td>Marketable; treat with equities.</td></tr>
+          <tr><td><span class="asset">Pass-throughs</span><br><small>value.pass_throughs</small></td><td>Deferral charge</td><td>Private business — illiquid, hard to value annually; interest charge preserves liquidity.</td></tr>
+          <tr><td><span class="asset">Other homes</span><br><small>value.other_home</small></td><td>Deferral charge</td><td>Illiquid; realization-plus-interest is the realistic policy.</td></tr>
+          <tr><td><span class="asset">Primary home</span><br><small>value.primary_home</small></td><td>Deferral, or exempt under cap</td><td>§121 exclusion already modeled; most proposals shield the primary residence below a cap.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <div class="kicker"><span class="num">06</span><h2>Open decisions for sign-off</h2></div>
+    <div class="card">
+      <div class="decision">
+        <span class="pill decide">Primary</span>
+        <div class="body"><h4>Illiquid-asset treatment</h4><p>MTM everything, or MTM liquid + deferral-charge illiquid, or exempt the primary home under a cap.</p></div>
+      </div>
+      <div class="decision">
+        <span class="pill decide">Formula</span>
+        <div class="body"><h4>Deferral-charge convention & rate</h4><p>Simple compounding <code>(1+i)^H − 1</code> vs. annuitized lookback; statutory rate <code>i</code>.</p></div>
+      </div>
+      <div class="decision">
+        <span class="pill decide">Transition</span>
+        <div class="body"><h4>Built-in gain phase-in</h4><p>One-time recognition at enactment vs. an N-year schedule.</p></div>
+      </div>
+      <div class="decision">
+        <span class="pill decide">Rate</span>
+        <div class="body"><h4>Rate on the accrual base</h4><p>Ordinary rates vs. a preferential mark-to-market rate; whether it varies over time.</p></div>
+      </div>
+      <div class="decision">
+        <span class="pill decide">Scope</span>
+        <div class="body"><h4>Applicability threshold</h4><p>Wyden-style net-worth / income floor (e.g. &gt;$1B or &gt;$100M for 3 yrs). Both fields exist in the data.</p></div>
+      </div>
+      <div class="decision">
+        <span class="pill settled">Required</span>
+        <div class="body"><h4>Turn off the lock-in response on marked assets</h4><p>Under MTM there's no lock-in, so <code>kg_dynamics</code> must not also model a realization response on marked classes. The per-class regime already supports this — a consistency edit, not a choice.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <div class="kicker"><span class="num">07</span><h2>Build cost</h2></div>
+    <p>Under this approach the whole thing is a <strong>stateless</strong> calculator, in the same category as the corporate-incidence channel — no new cross-year state, no new SLURM phase.</p>
+    <ul class="clean">
+      <li>New reform-overridable <code>accrual.yaml</code> (dormant at baseline): per-class treatment, rate, deferral rate, phase-in, threshold.</li>
+      <li>New <code>calc_accrual()</code> in <code>src/calc/functions/tax/</code>, called from <code>do_taxes</code>; mirrors <code>calc_wealth</code>.</li>
+      <li>Flow, transition, and deferral charge are all within-year and stateless.</li>
+      <li>Only a <em>literal</em> cohort mark-to-market bathtub would be a large build — and this approach deliberately avoids needing it.</li>
+    </ul>
+  </section>
+
+  <div class="foot">
+    Full design memo with the rejected alternatives and consistency proofs:
+    <code>/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/accrual_tax/DESIGN.md</code>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themebtn');
+    var root = document.documentElement;
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var cur = root.getAttribute('data-theme');
+      var isDark = cur ? cur === 'dark'
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+  })();
+</script>

@@ -1,0 +1,45 @@
+## A.2 Converting ordinary income into gains
+
+Owner-managers can take part of their compensation as appreciation in a business they control rather than as salary or current profit: below-market salary at a closely held C corporation, sweat equity realized on eventual sale, profits interests and carried interest, founder stock. Each of these routes trades a dollar taxed this year at ordinary rates for a dollar of unrealized gain taxed later, or never. We model them together as a single conversion margin.
+
+The price of the salary path is the taxpayer's own marginal rate on that compensation source, $m_{i\ell}$, measured through the calculator (payroll tax included) for each source $\ell$: own wages, spouse wages, and active partnership, S-corporation, and sole proprietorship income. The price of the equity path is $\tau_{eq}(a,t)$, the equivalent tax rate on a dollar entering the deferred-gain state: the expected present value of tax that dollar eventually generates through sales during life and its treatment at death, computed by the realization model of Section A.1 for each age group $a$ and year $t$. The wedge between the two paths is $W_{i\ell} = m_{i\ell} - \tau_{eq}(a_i, t)$, and the behavioral forcing is the reform-induced change in that wedge,
+
+$$\Delta W_{i\ell} \;=\; \Delta m_{i\ell} \;-\; \Delta\tau_{eq}(a_i, t),$$
+
+so a higher top ordinary rate widens the wedge while a policy that taxes gains at death raises $\tau_{eq}$ and narrows it. The amount converted is
+
+$$\Delta c_{i\ell} \;=\; \sigma \,\Delta W_{i\ell}\, P_{i\ell},$$
+
+where the pool $P_{i\ell}$ is wages in full and 75 percent of active pass-through income, the labor-content share estimated by Smith, Yagan, Zidar, and Zwick (2019). The response is recomputed each year from that year's wedge, runs in either direction, and is capped so no compensation source turns negative. Conversion is limited to tax units with taxable income at or above the top ordinary bracket threshold and some active business income; in 2026 this is roughly one million tax units holding about $1.5 trillion of compensation. Converted dollars leave wages and pass-through income immediately, shrinking the income and payroll tax bases, and enter the taxpayer's stock of unrealized gains, where they are realized and taxed in later years according to the dynamics of Section A.1 and meet whatever death regime the policy specifies.
+
+The response parameter $\sigma$ is set residually. The evidence that disciplines this margin is the elasticity of taxable income at the top, for which we adopt the Saez, Slemrod, and Giertz (2012) central value of 0.25. But the other reporting margins already generate most of that response: with evasion, entity shifting, and charitable giving turned on and conversion turned off, a five-point increase in the top ordinary rate produces a measured elasticity of top-bracket taxable income (excluding net capital gains) of about 0.20. Adding an independently estimated conversion elasticity on top would count the same behavior twice, since those estimates are themselves drawn from total-response evidence. We therefore run the full model with every other margin on and solve for the $\sigma$ that brings the total to 0.25. Because the converted amount is linear in $\sigma$, two runs pin the answer: $\sigma = 0.16$, meaning 0.16 percent of the pool converts per percentage point of wedge change, confirmed by a full run at that value. The calibration disciplines the product of $\sigma$ and the pool definition, so a narrower pool would simply imply a proportionally larger $\sigma$ with the same aggregate response. The value is conditional on the rest of the stack and is re-derived whenever the other margins change.
+
+## A.3 Moving between corporate and pass-through form
+
+Business income moves between pass-through and C-corporation form in response to the difference in their all-in tax rates, following Pearce and Prisinzano (2018). On the corporate side, a dollar of profit bears the entity-level tax and then a shareholder-level tax on what remains. We assume a share $\alpha = 0.45$ of after-tax corporate earnings is paid out currently and taxed at the shareholder's marginal rate on long-term gains, $\tau_g$ (dividends and gains are assumed to face the same rate). The retained share is priced at $\tau_{eq}(a,t)$, the equivalent deferred-gain tax rate from Section A.1: a retained dollar is an unrealized gain in the shareholder's hands, and its tax cost is the expected present value of tax it generates through later realization and its treatment at death. The all-in corporate rate is
+
+$$\tau^{C}_i \;=\; \tau_c \;+\; (1-\tau_c)\,\big[\,\alpha\,\tau_{g,i} + (1-\alpha)\,\tau_{eq}(a_i,t)\,\big],$$
+
+where $\tau_c$ is the statutory corporate rate. The pass-through side is the taxpayer's ordinary marginal rate on active pass-through income, $\tau^{P}_i$, inclusive of self-employment tax and any pass-through deduction.
+
+The share of business income that changes form responds to the change in the differential under the reform:
+
+$$\Delta q_i \;=\; \varepsilon\,\Delta\big(\tau^{C}_i - \tau^{P}_i\big), \qquad \varepsilon = 0.63,$$
+
+a semi-elasticity: 0.63 percent of the taxpayer's business income shifts per percentage point change in the differential. The value comes from Pearce and Prisinzano's preferred estimate, rescaled by the pass-through sector's 60 percent share of business income at which it was identified. The shifting base is each record's positive net pass-through business income across partnerships, S corporations, and sole proprietorships. When income shifts toward corporate form, it leaves the pass-through base, pays the entity-level tax, and returns to the shareholder as after-corporate-tax distributions, so the score records both the corporate receipts and the shareholder-level tax on what is paid out; dollars leaving one base arrive in the other.
+
+Because $\tau_{eq}$ enters the all-in corporate rate, the value of corporate form as a shelter depends on the capital-gains and death-tax regime, not just on the entity rates. Under stepped-up basis, retained earnings held to death escape shareholder tax entirely and $\tau_{eq}$ is low, so corporate form shelters effectively. A policy that taxes unrealized gains at death raises $\tau_{eq}$, and with it $\tau^{C}$, even when no corporate parameter changes; the differential moves against corporate form and previously sheltered income shifts back toward pass-through status, where it is taxed currently. The model produces this unwinding automatically.
+
+## A.4 Underreporting of income
+
+When marginal rates rise, some income stops being reported. We follow DeBacker, Heim, and Yuskavage, who estimate the elasticity of noncompliance with respect to the net-of-tax rate from IRS random-audit data and treat it as a component of the elasticity of taxable income. For each income type $j$ with elasticity $e_j$, reported income under the reform is
+
+$$\tilde y_{ij} \;=\; y_{ij}\left[\,1 + e_j\!\left(\frac{1-m_{ij}}{1-m^0_{ij}} - 1\right)\right],$$
+
+where $m_{ij}$ and $m^0_{ij}$ are the taxpayer's marginal rates on that income under the reform and under the baseline. Only income the IRS cannot see through third-party information returns responds: self-employment income (with farm income treated the same way), at 0.046; partnership and S-corporation income, at 0.052; and rent, at 0.040. Wages, interest, and dividends are covered by information reporting and do not respond; audit data show misreporting rates near one percent for wages against a large majority of unmatched sole proprietorship income. Only positive income responds — the overstatement of losses and deductions is not modeled — and because these estimates come from detected noncompliance in random audits, which miss some sophisticated evasion at the very top, they are best read as a floor.
+
+Evaded income does not vanish; it accumulates in the evader's hands, largely inside the closely held businesses whose income went unreported. The model keeps the balance sheet consistent with the tax return: a taxpayer who hides business income from the income tax does not then present the underlying assets to the wealth tax or the estate tax. For each record we form the evaded share of closely held income,
+
+$$u_i \;=\; \frac{\sum_{\ell}\big(y_{i\ell} - \tilde y_{i\ell}\big)}{\sum_{\ell} y_{i\ell}},$$
+
+summing over the record's positive closely held income sources, and remove that share of its closely held assets from the reported wealth-tax base and from the reported estate at death. Where a wealth tax also induces concealment (Section A.5), the two are combined as a union, $1 - a_i = (1 - c_i)(1 - u_i)$, where $c_i$ is the concealed fraction from the wealth-tax response and $a_i$ the combined share removed, so an asset hidden through both routes is removed only once. The taxpayer's actual balance sheet is untouched: the assets still earn income, still enter the saving and realization dynamics, and still pass to heirs in full. What shrinks is only what the tax authority observes, which is what each reported base is computed from.

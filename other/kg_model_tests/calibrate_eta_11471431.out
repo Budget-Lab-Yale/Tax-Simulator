@@ -1,0 +1,38 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 10 years (full sample)...
+  loaded
+Building extended grid, accrual rates, tau matrices...
+Error in `filter()`:
+ℹ In argument: `year %in% years`.
+Caused by error in `match()`:
+! 'match' requires vector arguments
+Backtrace:
+     ▆
+  1. ├─global kg_dyn_load_life_table_extension(years = YEARS)
+  2. │ └─load_one(path_M)
+  3. │   └─... %>% filter(year %in% years, x %in% ages_ext)
+  4. ├─dplyr::filter(., year %in% years, x %in% ages_ext)
+  5. ├─dplyr:::filter.data.frame(., year %in% years, x %in% ages_ext)
+  6. │ └─dplyr:::filter_rows(.data, dots, by)
+  7. │   └─dplyr:::filter_eval(...)
+  8. │     ├─base::withCallingHandlers(...)
+  9. │     └─mask$eval_all_filter(dots, env_filter)
+ 10. │       └─dplyr (local) eval()
+ 11. ├─year %in% years
+ 12. └─base::.handleSimpleError(...)
+ 13.   └─dplyr (local) h(simpleError(msg, call))
+ 14.     └─rlang::abort(message, class = error_class, parent = parent, call = error_call)
+Warning messages:
+1: In fread(path, skip = 5, header = FALSE, col.names = c("year", "x",  :
+  Column name 'year' not found in column name header (case sensitive), skipping.
+2: In fread(path, skip = 5, header = FALSE, col.names = c("year", "x",  :
+  Column name 'x' not found in column name header (case sensitive), skipping.
+3: In fread(path, skip = 5, header = FALSE, col.names = c("year", "x",  :
+  Column name 'q' not found in column name header (case sensitive), skipping.
+Execution halted

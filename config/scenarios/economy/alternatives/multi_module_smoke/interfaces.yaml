@@ -1,0 +1,5 @@
+# Gate fixture: the multi-module smoke test is pinned to an older Tax-Data
+# vintage so its recorded output stays comparable across model changes.
+
+tax_data_vintage:
+  value: '2026050315'

@@ -1,0 +1,125 @@
+<title>Table 1 — income above the top thresholds, before and after tax</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --b-cg:#D55E00; --b-iit:#0072B2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#d9e1ea; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+            --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+            --b-cg:#e8722a; --b-iit:#3a90d0; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#d9e1ea; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+    --b-cg:#e8722a; --b-iit:#3a90d0; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --b-cg:#D55E00; --b-iit:#0072B2; }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font-family: Charter, "Bitstream Charter", Cambria, Georgia, serif;
+         font-size:16px; line-height:1.55; }
+  .wrap { max-width: 54rem; margin:0 auto; padding:2.2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:1rem; margin-bottom:1.6rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600;
+             letter-spacing:.13em; text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; line-height:1.2; text-wrap:balance; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; }
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+         padding:1.3rem 1.4rem 1rem; margin:1.6rem 0; }
+  .opt { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700;
+         letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin:0 0 .4rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",Roboto,sans-serif; font-size:1.06rem;
+            font-weight:700; margin:0 0 .15rem; line-height:1.35; text-wrap:balance; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.8rem; color:var(--muted); margin:0 0 .9rem; }
+  .tw { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-family:system-ui,"Segoe UI",sans-serif; }
+  th, td { padding:.55rem .7rem; text-align:right; font-variant-numeric:tabular-nums;
+           white-space:nowrap; }
+  thead th { font-size:.72rem; font-weight:700; color:var(--muted); line-height:1.3;
+             vertical-align:bottom; border-bottom:1.5px solid var(--line); }
+  thead th.lead { text-align:left; }
+  tbody tr.grp th { text-align:left; font-family:system-ui,sans-serif; font-size:.74rem;
+                    letter-spacing:.05em; text-transform:uppercase; color:var(--accent);
+                    border-top:1px solid var(--line); border-bottom:1px solid var(--grid);
+                    padding:.5rem .7rem .35rem; white-space:normal; font-weight:700; }
+  tbody tr.grp th .gloss { display:block; font-size:.68rem; letter-spacing:0;
+                           text-transform:none; font-weight:500; color:var(--muted); }
+  tbody th[scope="row"] { text-align:left; font-weight:700; color:var(--ink); font-size:.9rem; }
+  tbody td { font-size:.92rem; }
+  tbody td .pct { color:var(--muted); font-size:.8rem; }
+  tbody td.key { font-weight:700; }
+  tbody tr.d + tr.d th, tbody tr.d + tr.d td { border-top:1px solid var(--grid); }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+         border-top:1px solid var(--grid); margin-top:.8rem; padding-top:.55rem; line-height:1.5; }
+  .cap b { color:var(--ink); }
+  .cap + .cap { border-top:none; margin-top:.45rem; padding-top:0; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Table 1 · calendar year 2027 · nominal dollars and share of GDP</p>
+  <h1>Table 1</h1>
+  <p class="standfirst">Income above each top group's own entry threshold, and what remains after the
+  tax on it. Bases held fixed; nothing below a threshold is touched.</p>
+</header>
+
+<div class="fig">
+  <p class="opt">Table 1</p>
+  <h2>Income above each top group's threshold, before and after tax, 2027</h2>
+  <p class="sub">Nominal dollars, share of 2027 GDP in parentheses · groups ranked on their own income
+  measure · 2027 GDP $33.7&nbsp;trillion</p>
+  <div class="tw">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col" class="lead">Group</th>
+        <th scope="col">Entry<br>threshold</th>
+        <th scope="col">Tax units</th>
+        <th scope="col">Total income<br>of the group</th>
+        <th scope="col">Income above<br>the threshold</th>
+        <th scope="col">After-tax income<br>above the threshold</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="grp"><th colspan="6" scope="colgroup">AGI
+        <span class="gloss">the tax code's existing measure of cash income</span></th></tr>
+      <tr class="d"><th scope="row">Top 1%</th><td>$713k</td><td>1.9M</td>
+        <td>$4.3T <span class="pct">(12.8%)</span></td>
+        <td>$3.0T <span class="pct">(8.9%)</span></td>
+        <td class="key">$2.1T <span class="pct">(6.2%)</span></td></tr>
+      <tr class="d"><th scope="row">Top 0.1%</th><td>$3.5M</td><td>0.19M</td>
+        <td>$2.2T <span class="pct">(6.5%)</span></td>
+        <td>$1.5T <span class="pct">(4.6%)</span></td>
+        <td class="key">$1.1T <span class="pct">(3.3%)</span></td></tr>
+      <tr class="d"><th scope="row">Top 0.01%</th><td>$18.5M</td><td>0.02M</td>
+        <td>$1.0T <span class="pct">(3.1%)</span></td>
+        <td>$0.7T <span class="pct">(2.1%)</span></td>
+        <td class="key">$0.5T <span class="pct">(1.5%)</span></td></tr>
+
+      <tr class="grp"><th colspan="6" scope="colgroup">AGI with accruals
+        <span class="gloss">AGI less realized gains plus accruals</span></th></tr>
+      <tr class="d"><th scope="row">Top 1%</th><td>$1.5M</td><td>1.9M</td>
+        <td>$8.0T <span class="pct">(23.7%)</span></td>
+        <td>$5.2T <span class="pct">(15.5%)</span></td>
+        <td class="key">$4.4T <span class="pct">(13.1%)</span></td></tr>
+      <tr class="d"><th scope="row">Top 0.1%</th><td>$7.1M</td><td>0.19M</td>
+        <td>$3.6T <span class="pct">(10.6%)</span></td>
+        <td>$2.2T <span class="pct">(6.6%)</span></td>
+        <td class="key">$1.9T <span class="pct">(5.7%)</span></td></tr>
+      <tr class="d"><th scope="row">Top 0.01%</th><td>$26.3M</td><td>0.02M</td>
+        <td>$1.6T <span class="pct">(4.7%)</span></td>
+        <td>$1.1T <span class="pct">(3.3%)</span></td>
+        <td class="key">$1.0T <span class="pct">(2.9%)</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="cap">To calculate tax above the threshold, each record above a threshold has its income
+  and deductions scaled down proportionally to the threshold and repriced under current law; the fall in
+  its tax is the tax on the dollars above. Federal individual income and payroll tax. Groups cut over
+  non-dependent tax units. Source: The Budget Lab Tax-Simulator, 2027 current-law baseline.</p>
+</div>
+</div>

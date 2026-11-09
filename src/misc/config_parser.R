@@ -1,78 +1,274 @@
 #-----------------------------------------------------------------------
-# config_parser.R 
-# 
-# Contains functions to parse runtime options and build interface paths
+# config_parser.R
+#
+# Contains functions to parse the runscript and resolve each scenario's
+# configuration
+#
+# A scenario row is an ID, pointers to its tax law, economy and behavior, and the
+# scope of the computation: which years to run, which to build distribution tables
+# for, and which marginal tax rates to calculate. It names folders, never values.
+# Every value a runscript used to carry now lives in a folder instead, which is
+# what gives it a record of where it came from. Any other column stops the run,
+# with a message naming what replaced it.
 #-----------------------------------------------------------------------
 
 
+# The whole runscript schema. Anything else stops the run: a value now belongs in
+# an alternative folder, and a misspelled column should fail rather than be
+# ignored.
+RUNSCRIPT_FIXED_COLS = c('ID', 'tax_law', 'economy', 'behavior', 'years',
+                         'dist_years', 'mtr_vars', 'mtr_types')
+
+# What each retired column was replaced by, for the error message
+ALT_HINT = paste0('an economy alternative folder ',
+                  '(config/scenarios/economy/alternatives/<name>/')
+GONE = 'nothing -- the excess-growth machinery was removed from the model'
+RUNSCRIPT_RETIRED = c(
+  'dep.{X}.vintage'        = paste0(ALT_HINT, 'interfaces.yaml -> {x}_vintage)'),
+  'dep.{X}.ID'             = paste0(ALT_HINT, 'interfaces.yaml -> {x}_id)'),
+  'assumptions'            = 'the economy / behavior columns',
+  'assumption.{ch}.{nm}'   = 'an economy or behavior alternative folder entry {ch}.{nm} (see config/scenarios/README.md)',
+  's'                      = paste0(ALT_HINT, 'wealth.yaml -> financing_profile: flat:<s>)'),
+  'wealth_financing'       = paste0(ALT_HINT, 'wealth.yaml -> financing_profile)'),
+  'excess_growth'          = GONE,
+  'excess_growth_start_year' = GONE,
+  'excess_growth_all_rev'  = GONE,
+  'corp_incidence_phasein' = 'nothing (it was never read)',
+  'states'                 = paste0(ALT_HINT, 'states.yaml -> jurisdictions)'),
+  'state_weights_method'   = paste0(ALT_HINT, 'states.yaml -> weights_method)'),
+  'state_detail'           = paste0(ALT_HINT, 'states.yaml -> detail)'),
+  'state_tax_law'          = 'the tax_law column: state law lives under each tax law layer\'s state/ folder',
+  'first_year'             = 'the years column ({start}:{end})',
+  'last_year'              = 'the years column ({start}:{end})'
+)
 
 
-parse_globals = function(runscript_name, scenario_id, local, vintage, 
-                         baseline_vintage, pct_sample, multicore) {
-  
+
+validate_runscript_columns = function(runscript, runscript_name) {
+
   #----------------------------------------------------------------------------
-  # Parses data interface versioning requirements and runscript; generates 
-  # scenario-specific, version-consistent filepaths for data interfaces. 
-  # Confirms that these filepaths exist. 
-  # 
+  # Checks the runscript's columns: the eight above and nothing else. Collects
+  # every problem and stops once, naming what replaced each retired column.
+  #----------------------------------------------------------------------------
+
+  cols = colnames(runscript)
+  bad  = c()
+
+  describe_retired = function(col) {
+    if (str_detect(col, '^dep[.].+[.]vintage$')) {
+      iface = col %>% str_remove('^dep[.]') %>% str_remove('[.]vintage$')
+      key   = iface %>% str_to_lower() %>% str_replace_all('[ -]', '_')
+      return(paste0(col, ' : name an economy alternative whose interfaces.yaml ',
+                    'gives ', key, '_vintage'))
+    }
+    if (str_detect(col, '^dep[.].+[.]ID$')) {
+      iface = col %>% str_remove('^dep[.]') %>% str_remove('[.]ID$')
+      key   = iface %>% str_to_lower() %>% str_replace_all('[ -]', '_')
+      return(paste0(col, ' : name an economy alternative whose interfaces.yaml ',
+                    'gives ', key, '_id'))
+    }
+    if (str_detect(col, '^(economy|behavior)[.]')) {
+      return(paste0(col, ' : per-value override columns were removed -- ',
+                    'put the value in an alternative folder and name the ',
+                    'folder in the ', str_extract(col, '^(economy|behavior)'),
+                    ' column'))
+    }
+    if (str_detect(col, '^assumption[.]')) {
+      return(paste0(col, ' : use ', RUNSCRIPT_RETIRED[['assumption.{ch}.{nm}']]))
+    }
+    if (col %in% names(RUNSCRIPT_RETIRED)) {
+      return(paste0(col, ' : use ', RUNSCRIPT_RETIRED[[col]]))
+    }
+    paste0(col, ' : unknown column (the runscript schema is a strict whitelist)')
+  }
+
+  for (col in setdiff(cols, RUNSCRIPT_FIXED_COLS)) {
+    bad = c(bad, describe_retired(col))
+  }
+
+  missing = setdiff(c('ID', 'tax_law', 'years'), cols)
+  if (length(missing) > 0) {
+    bad = c(bad, paste0('missing required column(s): ', paste(missing, collapse = ', ')))
+  }
+
+  if (length(bad) > 0) {
+    stop(paste0(
+      "Invalid runscript '", runscript_name, "':\n  - ",
+      paste(bad, collapse = '\n  - '), '\n',
+      'A runscript names FILES, not values: the schema is exactly\n  ',
+      paste(RUNSCRIPT_FIXED_COLS, collapse = ', '), '\n',
+      'Every per-value column mechanism (dep.*, assumption.*, s /\n',
+      'wealth_financing, excess_growth*, and the dotted {leg}.{channel}.{name}\n',
+      'form) was removed in the three-leg redesign; there is no fallback.\n',
+      'Mapping table and auto-rewrite: config/scenarios/README.md,\n',
+      '  python3 other/migrations/migrate_runscripts.py --check <runscript>\n'))
+  }
+
+  invisible(TRUE)
+}
+
+
+
+read_runscript = function(runscript_name, scenario_id) {
+
+  #----------------------------------------------------------------------------
+  # Reads and checks a runscript, filling in any leg column left out and cutting to
+  # the requested scenario.
+  #
+  # The baseline row is always kept. Whether the baseline actually runs depends on
+  # whether an existing one was supplied, but its paths must stay resolvable either
+  # way: post-processing looks the baseline up by name, and dropping the row breaks
+  # a run of a single scenario.
+  #----------------------------------------------------------------------------
+
+  runscript = runscript_name %>%
+    paste0('.csv') %>%
+    file.path('./config/runscripts/', .) %>%
+    read_csv(show_col_types = FALSE)
+
+  validate_runscript_columns(runscript, runscript_name)
+
+  for (col in c('economy', 'behavior', 'dist_years', 'mtr_vars', 'mtr_types')) {
+    if (!(col %in% colnames(runscript))) {
+      runscript[[col]] = NA_character_
+    }
+  }
+
+  if (!is.null(scenario_id)) {
+    if (!(scenario_id %in% runscript$ID)) {
+      stop("Scenario ID '", scenario_id, "' not found in runscript")
+    }
+    runscript %<>%
+      filter(ID %in% c('baseline', scenario_id))
+  }
+
+  runscript
+}
+
+
+
+tax_data_sample_universe = function(interface_paths, runscript) {
+
+  #----------------------------------------------------------------------------
+  # Builds the population from every Tax-Data path/year pair used by the run.
+  #
+  # Tax-Data vintages do not necessarily contain the same IDs, and projection
+  # years can add new IDs within a vintage. Pairing each scenario's path with its
+  # own year specification includes both kinds of additions without trying to
+  # read irrelevant path/year combinations.
+  #
+  # Returns: unique vector of tax-unit IDs, before sampling.
+  #----------------------------------------------------------------------------
+
+  tax_data_sources = interface_paths %>%
+    filter(interface == 'Tax-Data') %>%
+    select(ID, path) %>%
+    left_join(runscript %>% select(ID, years), by = 'ID')
+
+  if (nrow(tax_data_sources) == 0) {
+    stop('Cannot build the sample universe: the run has no Tax-Data paths')
+  }
+  if (any(is.na(tax_data_sources$years))) {
+    missing_ids = tax_data_sources$ID[is.na(tax_data_sources$years)]
+    stop('Cannot build the sample universe: no runscript years found for ',
+         paste(unique(missing_ids), collapse = ', '))
+  }
+
+  tax_data_files = tax_data_sources %>%
+    mutate(year = map(years, parse_year_spec)) %>%
+    select(path, year) %>%
+    unnest_longer(year) %>%
+    distinct(path, year)
+
+  map2(
+    tax_data_files$path,
+    tax_data_files$year,
+    ~ fread(file.path(.x, paste0('tax_units_', .y, '.csv')),
+            select = 'id', showProgress = FALSE)$id
+  ) %>%
+    unlist(use.names = FALSE) %>%
+    unique()
+}
+
+
+
+parse_globals = function(runscript_name, scenario_id, local, vintage,
+                         baseline_vintage, pct_sample, multicore) {
+
+  #----------------------------------------------------------------------------
+  # Parses the runtime arguments and the runscript, resolves every scenario's
+  # economy and behavior legs, builds and checks the paths to the input data, and
+  # writes the run manifest.
+  #
   # Parameters:
-  #   - runscript_name (str)   : name of runscript CSV file 
-  #   - scenario_id (str)      : optional name of scenario ID contained in 
-  #                              the runscript; "NULL" indicates all 
+  #   - runscript_name (str)   : name of runscript CSV file
+  #   - scenario_id (str)      : optional name of scenario ID contained in
+  #                              the runscript; "NULL" indicates all
   #   - local (int)            : whether this is a local run (1) or a production
-  #                              run (0)  
-  #   - vintage (str)          : optional argument (NULL if not provided) to 
-  #                              manually supply output vintage folder rather 
+  #                              run (0)
+  #   - vintage (str)          : optional argument (NULL if not provided) to
+  #                              manually supply output vintage folder rather
   #                              than being dynamically generated. Of the format
   #                              YYYYMMDDHHMM.
-  #   - baseline_vintage (str) : optional argument (NULL if not provided) to 
+  #   - baseline_vintage (str) : optional argument (NULL if not provided) to
   #                              skip the baseline run and instead use an existing
-  #                              baseline run for MTRs and revenue estimates. Of 
-  #                              the format YYYYMMDDHHMM. 
-  #   - pct_sample (dbl)       : share of records used in simulation 
+  #                              baseline run for MTRs and revenue estimates. Of
+  #                              the format YYYYMMDDHHMM.
+  #   - pct_sample (dbl)       : share of records used in simulation
   #   - multicore (str)        : dimension across which to parallelize code. One
-  #                              of three values: 'none', 'scenario', or 'year'. 
-  #                              Given enough cores, choose the dimension with 
+  #                              of three values: 'none', 'scenario', or 'year'.
+  #                              Given enough cores, choose the dimension with
   #                              the largest N (generally 'year'). But note that
   #                              some behavioral feedback modules require
   #                              sequential calculation of year, in which case
   #                              'year' is not a valid option and will result in
   #                              a race condition. Always review before running!
   #
-  # Returns: list of 7:
-  #   - runscript (df)       : tibble representation of the runscripts CSV
-  #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
-  #   - output_root (str)    : path where output data is written
-  #   - baseline_root (str)  : path where baseline data is written/read from
-  #   - pct_sample (dbl)     : share of records used in simulation 
-  #   - detail_vars (str[])  : vector of microdata output column names
-  #   - multicore (str)      : parallelization setting (see arguments)
+  # Returns: list of:
+  #   - random_numbers (df)   : tibble of random numbers used across simulations
+  #   - random_seed (int)     : the seed those draws were made under
+  #   - runscript (df)        : tibble representation of the runscript CSV
+  #   - scenario_configs (list): per-ID resolved configuration (economy leg,
+  #                             behavior leg, interface paths)
+  #   - interface_paths (df)  : tibble with ID-interface-filepath info in rows
+  #   - output_root (str)     : path where output data is written
+  #   - baseline_root (str)   : path where baseline data is written/read from
+  #   - pct_sample (dbl)      : share of records used in simulation
+  #   - sample_ids (int[])    : vector of tax unit IDs comprising the
+  #                             sample population (all IDs for 100%)
+  #   - detail_vars (str[])   : vector of microdata output column names
+  #   - multicore (str)       : parallelization setting (see arguments)
+  #   - economy_defaults / behavior_defaults : each leg's default layer
   #----------------------------------------------------------------------------
-  
-  # Set random seed 
-  set.seed(76)
-  
-  # Read and parse data dependency interface file paths
-  output_roots       = read_yaml('./config/interfaces/output_roots.yaml')
-  interface_versions = read_yaml('./config/interfaces/interface_versions.yaml') %>% 
-    map2(.x = ., 
-         .y = names(.), 
-         .f = ~ file.path(output_roots$production, 
-                          .x$type, 
-                          .y, 
-                          paste0('v', .x$version))) %>% 
-    as_tibble() %>% 
-    pivot_longer(cols      = everything(), 
-                 names_to  = 'interface', 
-                 values_to = 'path') %>% 
-    filter(interface != 'Tax-Simulator')
-  
-  # Get default vintages/scenario IDs
-  interface_defaults = read_yaml('./config/interfaces/interface_versions.yaml') %>% 
-    map(.f = ~ .x[c('default_vintage', 'default_id')])
-  
+
+  # Set the random seed. It is returned so that behavior modules can re-seed before
+  # drawing, and so that SLURM workers, which are new R processes that never run
+  # this function, seed the same way.
+  #
+  # This block stays first. Nothing between here and the draws below may use the
+  # generator, or every random number in the model shifts.
+  random_seed = 76
+  set.seed(random_seed)
+
+  # Read each input interface's type and version. The vintage is scenario
+  # configuration, but the version is pinned here, because it tracks which code the
+  # interface is compatible with rather than anything about the world.
+  output_roots           = read_yaml('./config/output_roots.yaml')
+  interface_versions_raw = read_yaml('./config/interfaces/interface_versions.yaml')
+  interface_meta = names(interface_versions_raw) %>%
+    discard(.p = ~ .x == 'Tax-Simulator') %>%
+    set_names(.) %>%
+    map(.f = ~ list(
+      key  = str_to_lower(str_replace_all(.x, '[ -]', '_')),
+      root = file.path(output_roots$production,
+                       interface_versions_raw[[.x]]$type,
+                       .x,
+                       paste0('v', interface_versions_raw[[.x]]$version)),
+      version = interface_versions_raw[[.x]]$version
+    ))
+
   # Set model version and vintage
-  version = read_yaml('./config/interfaces/interface_versions.yaml')$`Tax-Simulator`$version
+  version = interface_versions_raw$`Tax-Simulator`$version
   if (is.null(vintage)) {
     vintage = format(Sys.time(), '%Y%m%d%H%M')
   }
@@ -96,132 +292,58 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     output_root = file.path(local_root, 'model_data', output_branch)
   }
   dir.create(output_root, recursive = T, showWarnings = F)
-  
-  # Determine baseline output path 
+
+  # Determine baseline output path
   if (is.null(baseline_vintage)) {
     baseline_root = output_root
   } else {
-    baseline_root = output_root %>% 
-      str_remove(paste0('/',vintage)) %>% 
+    baseline_root = output_root %>%
+      str_remove(paste0('/',vintage)) %>%
       file.path(baseline_vintage)
-    
+
     if (!dir.exists(baseline_root)) {
       stop('User-supplied vintage for baseline does not exist!')
     }
-    
+
     if(baseline_vintage != vintage) {
       dir.create(file.path(output_root, 'baseline'), showWarnings = T)
-      
+
       file.copy(
         list.files(file.path(baseline_root, 'baseline'), full.names = T),
         file.path(output_root, 'baseline'),
         recursive = T
-      ) 
+      )
     }
   }
-  
-  # Read runscript
-  runscript = runscript_name %>% 
-    paste0('.csv') %>%
-    file.path('./config/runscripts/', .) %>% 
-    read_csv(show_col_types = F)
-  
-  # Add nonspecified default vintages and scenario IDs to runscript
-  for (dep in names(interface_defaults)) {
-    
-    # Skip specified interfaces
-    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
-      if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.ID') %in% colnames(runscript))) {
-        next
-      } else {
-        stop('Users specifying which vintage to use must also supply an ID within that directory.')
-      }
-    } 
-    
-    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.ID') %in% colnames(runscript))) {
-      if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
-        next
-      } else {
-        runscript[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
-        next
-      }
-    }
-    
-    # Add columns
-    runscript[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
-    runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
-  }
-  
-  # State weights are a dependency of STATE mode only: a federal-only row must
-  # not pin -- or require the existence of -- a State-Weights vintage. Blank
-  # the pin on rows without `states`; the dependencies table and the interface
-  # paths below then carry no State-Weights row for them.
-  if ('dep.State-Weights.vintage' %in% colnames(runscript)) {
-    federal_only = if ('states' %in% colnames(runscript)) is.na(runscript$states) else
-                   rep(TRUE, nrow(runscript))
-    runscript$`dep.State-Weights.vintage`[federal_only] = NA
-    runscript$`dep.State-Weights.ID`[federal_only]      = NA
-  }
 
-  # Add nonspecified excess growth scenario
-  if (!('excess_growth' %in% colnames(runscript))) {
-    runscript$excess_growth = 0
-  }
-  if (!('excess_growth_start_year' %in% colnames(runscript))) {
-    runscript$excess_growth_start_year = Inf
-  }
-  if (!('excess_growth_all_rev' %in% colnames(runscript))) {
-    runscript$excess_growth_all_rev = 0
-  }
-  
-  # Validate cross-row state-mode consistency BEFORE any scenario subsetting
-  # (the rule needs visibility into all rows; plan §2.4)
-  validate_runscript_states(runscript)
+  # Read and check the runscript
+  runscript = read_runscript(runscript_name, scenario_id)
 
-  # Subset runscript to specified ID, if supplied
-  if (!is.null(scenario_id)) {
-    runscript %<>%
-      filter(ID == scenario_id)
-  }
-  
-  # Write dependencies CSV; this is a vintage-level file which lists all 
-  # other model vintages on which these Tax-Simmulator results are dependent
-  dependencies = runscript %>% 
-    select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
-    mutate(across(.cols = everything(),
-                  .fns  = as.character)) %>% 
-    pivot_longer(cols         = -TaxSimulatorID, 
-                 names_prefix = 'dep.', 
-                 names_sep    = '[.]', 
-                 names_to     = c('interface', 'series')) %>% 
-    pivot_wider(names_from  = series, 
-                values_from = value) %>% 
-    filter(!is.na(vintage)) %>%                    # State-Weights on federal-only rows
-    left_join(read_yaml('./config/interfaces/interface_versions.yaml') %>% 
-                map(~ .$version) %>% 
-                as_tibble() %>% 
-                pivot_longer(cols      = everything(), 
-                             names_to  = 'interface', 
-                             values_to = 'version'), 
-              by = 'interface') %>% 
-    rename(scenario = ID, ID = TaxSimulatorID) %>% 
-    relocate(version, .before = vintage) %>% 
-    write_csv(file.path(output_root, 'dependencies.csv'))
-  
-  
-  # Write Tax-Simulator-specific behavioral assumptions
-  runscript %>% 
-    select(ID, tax_law, behavior) %>%
-    write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
-  
-  
-  # Create filepaths for data interfaces
-  interface_paths = dependencies %>%     
-    left_join(interface_versions, by = 'interface') %>% 
-    mutate(path = file.path(path, vintage, scenario)) %>% 
-    select(ID, interface, path)
+  # Load each leg's default layer.
+  economy_defaults  = config_load_defaults('economy')
+  behavior_defaults = config_load_defaults('behavior')
 
-  
+  # Resolve every scenario's legs and input paths, and check for stale
+  # calibrations. Done once here rather than in each worker.
+  scenario_configs = resolve_all_scenarios(
+    runscript         = runscript,
+    economy_defaults  = economy_defaults,
+    behavior_defaults = behavior_defaults,
+    interface_meta    = interface_meta
+  )
+
+  # One row per scenario and interface, in runscript order. The baseline row comes
+  # first, which interface_root() relies on.
+  interface_paths = names(scenario_configs) %>%
+    map(.f = function(id) {
+      tibble(
+        ID        = id,
+        interface = names(scenario_configs[[id]]$interface_paths),
+        path      = unlist(scenario_configs[[id]]$interface_paths, use.names = FALSE)
+      )
+    }) %>%
+    bind_rows()
+
   # Confirm that each path exists, throwing exception if not
   for (path in interface_paths$path) {
     if (!dir.exists(path)) {
@@ -230,225 +352,404 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
       stop(msg)
     }
   }
-  
-  # A State-Weights vintage must have been fit on the Tax-Data vintage the row
-  # reads (its own dependencies.csv says which): otherwise ids mostly match,
-  # the join mostly succeeds, and the split is silently wrong
-  validate_state_weights_pins(dependencies, interface_paths)
+
+  # A State-Weights vintage must have been fit on the Tax-Data vintage the
+  # scenario reads (its own dependencies.csv says which): otherwise ids mostly
+  # match, the join mostly succeeds, and the split is silently wrong
+  validate_state_weights_pins(
+    dependencies    = names(scenario_configs) %>%
+      map(.f = ~ tibble(
+        ID        = .x,
+        interface = 'Tax-Data',
+        vintage   = as.character(
+          scenario_configs[[.x]]$economy$values$interfaces$tax_data_vintage))) %>%
+      bind_rows(),
+    interface_paths = interface_paths
+  )
+
+  # A reused baseline must have computed state taxes under the State-Weights
+  # vintage this run pins, or state deltas would count a change in weights as
+  # policy
+  if (!is.null(baseline_vintage)) {
+    validate_reused_baseline_state_weights(baseline_root, scenario_configs)
+  }
+
+  # Write the run manifest
+  write_run_manifest(
+    output_root       = output_root,
+    runscript         = runscript,
+    scenario_configs  = scenario_configs,
+    interface_meta    = interface_meta,
+    economy_defaults  = economy_defaults,
+    behavior_defaults = behavior_defaults
+  )
 
   # Confirm that user has supplied valid multicore argument
   if (!(multicore %in% c('none', 'scenario', 'year'))) {
     stop("Invalid argument for 'multicore' runtime parameter")
   }
-  
-  # DESIGN C: the record set is a property of the YEAR, not of 2017.
-  #
-  # This used to read the 2017 file, keep its id vector, and apply it to every
-  # year via `id %in% sample_ids` in run.R. That is correct only while every
-  # year holds the same records. Under design C each year emits just its own
-  # live records, so the 2017 vector would drop every later year's own
-  # non-filer pool -- the 2018 file would lose the 2018 pool entirely.
-  #
-  # So membership becomes a rule rather than a list, evaluated per year in
-  # run.R against that year's own ids: `in_subsample(id, pct_sample)`, keyed
-  # by record id (src/misc/rng.R). A filer is kept in every year or none, and
-  # each pool is sampled by the same rule, so a subsampled run carries no more
-  # year-over-year sampling noise than a full one.
-  #
-  # `random_numbers` goes the same way. S23 made every draw a function of the
-  # record's id alone, so there is nothing to gain by hoisting it out of the
-  # year loop -- and hoisting it is what forced the id vector to be kept in
-  # file order for a positional bind_cols. run.R now builds the draws for the
-  # year's own ids, and the positional binding goes with it.
-  #
-  # See Tax-Data research/state_weights/nonfiler_design_c_scope.md.
+
+  # Which tax units are in the sample. Take the union across every Tax-Data
+  # path/year pair the run uses: vintages can contain different IDs, and projection
+  # years can add new entrants within a vintage. Building the universe from 2017
+  # alone once dropped 935 records holding $8.2T in wealth, which cut expected
+  # estate tax by about a third.
+  sample_ids = tax_data_sample_universe(interface_paths, runscript) %>%
+    tibble(id = .) %>%
+    sample_frac(size = pct_sample) %>%
+    get_vector('id')
+
+  # Draw the random numbers up front so they are the same across scenarios. Keyed
+  # by ID and joined to tax units each year: the set of IDs varies by year, so
+  # binding them by position would misalign the draws.
+  random_numbers = tibble(
+    id                = sample_ids,
+    r.bus_loss        = runif(length(sample_ids)),             # Excess business loss limitation eligibility rate
+    r.cdctc_takeup    = runif(length(sample_ids)),             # CDCTC takeup rate
+    r.salt_workaround = runif(length(sample_ids)),             # SALT workaround participation rate
+    r.oasdi_exp       = round(rexp(length(sample_ids), 1/4)),  # For OASDI claiming year imputation in do_ss_cola()
+    r.new_car         = runif(length(sample_ids)),             # For imputation of p(new car | car loan interest) for auto loan deduction
+    r.behavior1       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
+    r.behavior2       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
+    r.behavior3       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
+    r.eitc_precert    = runif(length(sample_ids))              # For EITC pre-certification check
+  )
 
   # Specifiy microdata output variable
   detail_vars = c(
-    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2', 
-    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 
-    'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord', 
-    'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm', 
-    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi', 
-    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 
-    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 
-    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
-    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded', 
-    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc', 
-    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc', 
-    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
-    'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee', 
+    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2',
+    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3',
+    'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord',
+    'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm',
+    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi',
+    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded',
+    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded',
+    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
+    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded',
+    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc',
+    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc',
+    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit',
+    'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee',
     'liab_pr', 'simple_filer', 'number_of_credits', 'kg_lt_infl_adj',
-    'alt_max_cap_binds'
+    'alt_max_cap_binds', 'decedent_flag', 'estate_m', 'estate_p_dsue',
+    'liab_estate_nodsue', 'liab_estate_dsue', 'estate_distributable',
+    'net_worth', 'liab_wealth'
   )
-  
-  
-  # Return runtime args and interface paths  
-  return(list(runscript       = runscript,
-              interface_paths = interface_paths, 
-              output_root     = output_root,
-              baseline_root   = baseline_root,
-              pct_sample      = pct_sample,
-              detail_vars     = detail_vars,
-              multicore       = multicore))
+
+
+  # Return runtime args, resolved configurations, and interface paths
+  return(list(random_numbers      = random_numbers,
+              random_seed         = random_seed,
+              runscript           = runscript,
+              scenario_configs    = scenario_configs,
+              interface_paths     = interface_paths,
+              output_root         = output_root,
+              baseline_root       = baseline_root,
+              pct_sample          = pct_sample,
+              sample_ids          = sample_ids,
+              detail_vars         = detail_vars,
+              multicore           = multicore,
+              economy_defaults    = economy_defaults,
+              behavior_defaults   = behavior_defaults,
+              config_schema       = 3L))
 }
 
 
 
-get_scenario_info = function(id) {
-  
+resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
+                                 interface_meta) {
+
   #----------------------------------------------------------------------------
-  # Given a scenario ID, retrieves and transforms scenario-specific runtime
-  # arguments and interface file paths.
-  # 
-  # Parameters:
-  #   - id (str) : scenario ID 
+  # Resolves every scenario's economy and behavior legs, builds its input paths
+  # from the resolved vintages, and runs the checks: stale calibrations, and the
+  # shape of the behavior list.
   #
-  # Returns: list of 3: 
-  #   - id (str)                 : scenario ID
-  #   - tax_law_id (str)         : str
-  #   - output_path (str)        : path to root of output folder
-  #   - interface_paths (list)   : list of scenario-specific interface paths
-  #   - years (int[])            : years to run
-  #   - dist_years (int[])       : years for which to generate microdata output
-  #                                and distribution tables 
-  #   - mtr_vars (str[])         : variables to calculate MTRs for
-  #   - mtr_vars (str[])         : MTR types (same index as mtr_vars)
-  #   - behavior_modules (str[]) : names of behavioral feedback modules to run
+  # Both legs resolve here rather than when the scenario runs, so that a runscript
+  # naming a folder that does not exist, a module that was deleted, or an
+  # inconsistent gains binding fails in the first seconds rather than an hour in.
+  # The resolved behavior list travels inside the scenario object, so every SLURM
+  # driver already has it.
+  #
+  # Returns: list by scenario ID of the two resolved legs and the input paths.
   #----------------------------------------------------------------------------
-  
-  # Scenario-specific output paths
-  output_root = file.path(ifelse(id == 'baseline', 
-                                 globals$baseline_root, 
-                                 globals$output_root), 
-                          id)
-  for (type in c('static', 'conventional')) {
-    dir.create(file.path(output_root, type, 'detail'),       
-               recursive    = T, 
-               showWarnings = F)
-    dir.create(file.path(output_root, type, 'totals'),
-               recursive    = T, 
-               showWarnings = F)
-    dir.create(file.path(output_root, type, 'supplemental'),
-               recursive    = T, 
-               showWarnings = F)
+
+  out = list()
+
+  for (i in seq_len(nrow(runscript))) {
+    id  = runscript$ID[i]
+    row = runscript %>% slice(i) %>% as.list()
+
+    economy = config_resolve('economy', economy_defaults,
+                             alternative = row$economy)
+
+    # The behavior leg holds no values, since its modules carry their own
+    # parameters, so this only checks the folder. The module list itself comes from
+    # behavior.yaml.
+    behavior      = config_resolve('behavior', behavior_defaults,
+                                   alternative = row$behavior)
+    behavior$spec = behavior_resolve(row$behavior)
+    behavior_validate_spec(behavior$spec, id)
+
+    # Input paths, from the resolved vintages
+    interface_paths = interface_meta %>%
+      map(.f = function(m) {
+        v  = economy$values$interfaces[[paste0(m$key, '_vintage')]]
+        sid = economy$values$interfaces[[paste0(m$key, '_id')]]
+        if (is.null(v) || is.null(sid)) {
+          stop('economy interfaces channel is missing entries for ', m$key)
+        }
+        file.path(m$root, as.character(v), as.character(sid))
+      })
+
+    # State weights are read only where the scenario computes state taxes, so a
+    # federal-only run neither depends on nor needs a State-Weights vintage
+    if (length(config_states(economy)) == 0) {
+      interface_paths[['State-Weights']] = NULL
+    }
+
+    interface_vintages = config_interface_vintages(economy)
+
+    config_check_staleness(
+      leg                = 'economy',
+      defaults           = economy_defaults,
+      resolved           = economy,
+      interface_vintages = interface_vintages,
+      cross_values       = list(economy  = economy$values,
+                                behavior = behavior$values),
+      enforce            = CONFIG_ENFORCE_STALENESS
+    )
+
+    # The same check over every calibration file the scenario points at, run here
+    # for the same reason: parse time is the one place both the sequential and the
+    # SLURM paths pass through, so a stale calibration cannot reach a cluster run
+    # unnoticed.
+    calib_check_staleness(
+      behavior_spec      = behavior$spec,
+      interface_vintages = interface_vintages,
+      enforce            = CONFIG_ENFORCE_STALENESS
+    )
+
+    out[[id]] = list(economy         = economy,
+                     behavior        = behavior,
+                     interface_paths = interface_paths)
   }
-  dir.create(file.path(output_root, 'static/supplemental/child_earnings'), 
+
+  validate_scenario_states(out)
+
+  out
+}
+
+
+
+write_run_manifest = function(output_root, runscript, scenario_configs,
+                              interface_meta, economy_defaults,
+                              behavior_defaults) {
+
+  #----------------------------------------------------------------------------
+  # Writes the manifest at the root of the vintage, in six files: the input
+  # versions and vintages, the three leg pointers per scenario, every resolved
+  # value with its kind and whether the scenario overrode it, every calibration in
+  # use and where it came from, the behavior list each scenario resolved to, and
+  # the git commit the run was produced under.
+  #
+  # Returns: invisible NULL (writes files as a side effect)
+  #----------------------------------------------------------------------------
+
+  # The input versions and vintages, in runscript order
+  names(scenario_configs) %>%
+    map(.f = function(id) {
+      eco  = scenario_configs[[id]]$economy
+      meta = interface_meta[names(scenario_configs[[id]]$interface_paths)]
+      tibble(
+        ID        = id,
+        interface = names(meta),
+        version   = map_chr(meta, .f = ~ as.character(.x$version)),
+        vintage   = map_chr(meta,
+                            .f = ~ as.character(eco$values$interfaces[[paste0(.x$key, '_vintage')]])),
+        scenario  = map_chr(meta,
+                            .f = ~ as.character(eco$values$interfaces[[paste0(.x$key, '_id')]]))
+      )
+    }) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'dependencies.csv'))
+
+  # What each scenario is made of
+  runscript %>%
+    mutate(economy  = replace_na(as.character(economy), 'default'),
+           behavior = as.character(behavior)) %>%
+    select(ID, tax_law, economy, behavior, years, dist_years, mtr_vars, mtr_types) %>%
+    write_csv(file.path(output_root, 'scenarios.csv'))
+
+  # Every resolved value, from both legs
+  names(scenario_configs) %>%
+    map(.f = ~ bind_rows(
+      config_manifest('economy',  economy_defaults,
+                      scenario_configs[[.x]]$economy,  .x),
+      config_manifest('behavior', behavior_defaults,
+                      scenario_configs[[.x]]$behavior, .x))) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'scenario_config.csv'))
+
+  # Which calibration file supplied which value, and whether the scenario chose
+  # that file or read it from a fixed path. Written so that an old vintage can be
+  # read back without the code that produced it.
+  names(scenario_configs) %>%
+    map(.f = ~ calib_manifest(scenario_configs[[.x]]$behavior$spec, .x)) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'calibrations.csv'))
+
+  # What responses each scenario ran. The runscript names a folder, and the folder
+  # name alone would not tell a later reader what was in it, so the resolved list
+  # is written out too, in the order it ran.
+  names(scenario_configs) %>%
+    map(.f = function(id) {
+      spec = scenario_configs[[id]]$behavior$spec
+      tibble(
+        ID          = id,
+        tax_law     = runscript$tax_law[runscript$ID == id],
+        behavior    = spec$alternative,
+        kg_dynamics = if (length(spec$kg_pieces) == 0) 'none'
+                      else paste(spec$kg_pieces, collapse = ' '),
+        modules     = paste(spec$modules, collapse = ' '))
+    }) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
+
+  # The code the run was produced under, without which the configuration behind an
+  # old vintage cannot be recovered.
+  tibble(
+    commit = system2('git', c('rev-parse', 'HEAD'), stdout = TRUE, stderr = FALSE),
+    dirty  = length(system2('git', c('status', '--porcelain'), stdout = TRUE, stderr = FALSE)) > 0
+  ) %>%
+    write_csv(file.path(output_root, 'code_version.csv'))
+
+  invisible(NULL)
+}
+
+
+
+ensure_scenario_dirs = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Creates a scenario's output folders. Called once per scenario;
+  # get_scenario_info() is a lookup and does not touch the filesystem.
+  #----------------------------------------------------------------------------
+
+  for (type in c('static', 'mechanical', 'conventional')) {
+    dir.create(file.path(scenario_info$output_path, type, 'detail'),
+               recursive = T, showWarnings = F)
+    dir.create(file.path(scenario_info$output_path, type, 'totals'),
+               recursive = T, showWarnings = F)
+    dir.create(file.path(scenario_info$output_path, type, 'supplemental'),
+               recursive = T, showWarnings = F)
+  }
+  dir.create(file.path(scenario_info$output_path, 'static/supplemental/child_earnings'),
              showWarnings = F)
-  
-  # List of interface paths, named by interface
-  interface_paths = globals$interface_paths %>% 
-    filter(ID == id) %>% 
-    distinct(interface, path) %>% 
-    pivot_wider(names_from  = interface, 
-                values_from = path) %>% 
+
+  invisible(NULL)
+}
+
+
+
+get_scenario_info = function(id, g = globals) {
+
+  #----------------------------------------------------------------------------
+  # Assembles one scenario's runtime information from what was already resolved at
+  # parse time. A lookup: it neither re-resolves anything nor touches the
+  # filesystem.
+  #
+  # Parameters:
+  #   - id (str) : scenario ID
+  #   - g (list) : the globals object (defaulted; passed explicitly where a
+  #                worker holds it under another name)
+  #
+  # Returns: named list (see below)
+  #----------------------------------------------------------------------------
+
+  # Scenario-specific output root
+  output_root = file.path(ifelse(id == 'baseline',
+                                 g$baseline_root,
+                                 g$output_root),
+                          id)
+
+  config = g$scenario_configs[[id]]
+  if (is.null(config)) {
+    stop("Scenario ID '", id, "' has no resolved configuration (not in this runscript?)")
+  }
+
+  # List of scenario-specific runscript row, named by column name
+  runscript_items = g$runscript %>%
+    filter(ID == id) %>%
     as.list()
-  
-  # List of scenario-specific runscript, named by column name
-  runscript_items = globals$runscript %>% 
-    filter(ID == id) %>% 
-    as.list()
-  
-  # Name of tax law scenario
-  tax_law_id = runscript_items$tax_law
-  
-  # Behavioral feedback module names (formatted as {var}/{module})
-  behavior_modules = NULL
-  if (!is.na(runscript_items$behavior)) {
-    behavior_modules = str_split_1(runscript_items$behavior, ' ')
-  }
-  
-  # Years to run. Parse based on format supplied
-  years_input = as.character(runscript_items$years)
-  if (str_detect(years_input, ':')) {
-    years_input = str_split_1(years_input, ':') 
-  }
-  if (length(years_input) == 1) {
-    years = c(as.integer(years_input))
-  } else if (length(years_input) == 2) {
-    years = as.integer(years_input[1]):as.integer(years_input[2])
-  } else {
-    stop('Invalid input for years column in runscript_items')
-  }
-  
-  # Distribution table and microdata output years
-  if (is.na(runscript_items$dist_years)) {
-    dist_years = years
-  } else if (str_detect(as.character(runscript_items$dist_years), ':')) {
-    dist_years_input = str_split_1(as.character(runscript_items$dist_years), ':')
-    dist_years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2]) 
-  } else {
-    dist_years = runscript_items$dist_years %>%
-      as.character() %>%
-      str_split_1(' ') %>% 
-      as.integer()
-  }
-  
+
+  # The scenario's behavior modules, in the order they run and with the gains
+  # module added. NULL rather than an empty vector where there is no response, which
+  # is what run.R has always been given.
+  behavior_modules = config$behavior$spec$modules
+  if (length(behavior_modules) == 0) behavior_modules = NULL
+
+  # Years to run. Distribution years default to all of them.
+  years      = parse_year_spec(runscript_items$years)
+  dist_years = if (is.na(runscript_items$dist_years)) years
+               else parse_year_spec(runscript_items$dist_years)
+
   # Names of variables for which to calculate marginal tax rates
   mtr_vars = NULL
   if (!is.na(runscript_items$mtr_vars)) {
     mtr_vars = str_split_1(runscript_items$mtr_vars, ' ')
   }
-   
+
   # Types of MTRs, with same index as MTR vars above
   mtr_types = NULL
   if (!is.na(runscript_items$mtr_types)) {
     mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
-  
-  # Excess growth scenario
-  excess_growth            = runscript_items$excess_growth
-  excess_growth_start_year = runscript_items$excess_growth_start_year
-  excess_growth_all_rev    = runscript_items$excess_growth_all_rev
 
-  # State income tax mode (plan §2.4): optional space-delimited state list or
-  # 'all' (= every state with a config directory); empty/absent = federal-only
-  states = NULL
-  if (!is.null(runscript_items$states) && !is.na(runscript_items$states)) {
-    states = parse_states_value(runscript_items$states)
-  }
-
-  # State tax law scenario (reform overlay dir under tax_law_state/)
-  state_tax_law_id = 'baseline'
-  if (!is.null(runscript_items$state_tax_law) &&
-      !is.na(runscript_items$state_tax_law)) {
-    state_tax_law_id = runscript_items$state_tax_law
-  }
-
-  # State weights source: 'interface' (default) reads the pinned State-Weights
-  # vintage; 'placeholder' keeps the uniform 1/53 split, for A/B reproduction
-  # of pre-interface runs only
-  state_weights_method = 'interface'
-  if (!is.null(runscript_items$state_weights_method) &&
-      !is.na(runscript_items$state_weights_method)) {
-    state_weights_method = runscript_items$state_weights_method
-  }
-
-  # State detail output: off by default; when on, one compact per-year
-  # liability matrix at detail/state/{year}.csv (plan §5.3)
-  state_detail = 0
-  if (!is.null(runscript_items$state_detail) &&
-      !is.na(runscript_items$state_detail)) {
-    state_detail = as.integer(runscript_items$state_detail)
-  }
+  # State income taxes: the jurisdictions to compute, empty for a federal-only
+  # run, and how they are weighted and reported. State law follows the tax_law
+  # cell; see state_tax_law_overlay()
+  states = config_states(config$economy)
+  if (length(states) == 0) states = NULL
+  state_weights_method = as.character(config$economy$values$states$weights_method)
+  state_detail         = as.integer(config$economy$values$states$detail)
 
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
-              interface_paths          = interface_paths,
-              tax_law_id               = tax_law_id,
+              interface_paths          = config$interface_paths,
+              tax_law_id               = runscript_items$tax_law,
               behavior_modules         = behavior_modules,
               years                    = years,
               dist_years               = dist_years,
               mtr_vars                 = mtr_vars,
               mtr_types                = mtr_types,
-              excess_growth            = excess_growth,
-              excess_growth_start_year = excess_growth_start_year,
-              excess_growth_all_rev    = excess_growth_all_rev,
+              resolved_economy         = config$economy,
+              resolved_behavior        = config$behavior,
               states                   = states,
-              state_tax_law_id         = state_tax_law_id,
               state_weights_method     = state_weights_method,
               state_detail             = state_detail))
+}
+
+
+
+config_states = function(resolved_economy) {
+
+  #----------------------------------------------------------------------------
+  # Returns the jurisdictions a scenario computes state taxes for, from its
+  # economy leg's states channel.
+  #
+  # Parameters:
+  #   - resolved_economy (list) : a resolved economy leg; see config_resolve()
+  #
+  # Returns: uppercase vector of state codes, empty for a federal-only run
+  #          (str[]).
+  #----------------------------------------------------------------------------
+
+  x = resolved_economy$values$states$jurisdictions
+  if (is.null(x) || is.na(x) || tolower(str_trim(as.character(x))) == 'none') {
+    return(character(0))
+  }
+  parse_states_value(x)
 }
 
 
@@ -456,12 +757,11 @@ get_scenario_info = function(id) {
 parse_states_value = function(x) {
 
   #----------------------------------------------------------------------------
-  # Parses a runscript 'states' cell: 'all' expands to enabled jurisdictions
-  # in the state registry; otherwise a space-delimited list of 2-letter postal
-  # codes.
+  # Parses a jurisdictions value: 'all' expands to enabled jurisdictions in the
+  # state registry; otherwise a space-delimited list of 2-letter postal codes.
   #
   # Parameters:
-  #   - x (str) : raw cell value
+  #   - x (str) : raw value
   #
   # Returns: uppercase vector of state codes (str[]).
   #----------------------------------------------------------------------------
@@ -477,7 +777,11 @@ parse_states_value = function(x) {
 
 get_enabled_state_jurisdictions = function() {
 
-  registry_path = './config/scenarios/tax_law_state/jurisdictions.yaml'
+  #----------------------------------------------------------------------------
+  # Lists the jurisdictions the state registry marks enabled (str[]).
+  #----------------------------------------------------------------------------
+
+  registry_path = file.path(state_tax_law_root(), 'jurisdictions.yaml')
   if (!file.exists(registry_path)) {
     stop('Missing state-tax jurisdiction registry: ', registry_path)
   }
@@ -489,65 +793,90 @@ get_enabled_state_jurisdictions = function() {
 
 
 
-validate_runscript_states = function(runscript) {
+validate_reused_baseline_state_weights = function(baseline_root,
+                                                   scenario_configs) {
 
   #----------------------------------------------------------------------------
-  # Validates the cross-row state-mode rule: if any counterfactual row sets
-  # 'states', the baseline row must set a superset (state deltas need baseline
-  # state liability). Skipped when the baseline row is absent from the
-  # runscript (baseline_vintage workflows) -- the state revenue-estimate
-  # builder carries a runtime guard for that case.
+  # Checks that a baseline read from an existing vintage was run with the
+  # State-Weights vintage the current baseline row pins, where any scenario
+  # computes state taxes.
   #
   # Parameters:
-  #   - runscript (df) : full runscript tibble (all rows)
+  #   - baseline_root (str)     : vintage folder holding the reused baseline
+  #   - scenario_configs (list) : resolved configurations by scenario ID
   #
-  # Returns: TRUE invisibly; throws on violation.
+  # Returns: TRUE invisibly; stops on a mismatch.
   #----------------------------------------------------------------------------
 
-  if (!('states' %in% colnames(runscript))) {
+  if (!any(map_lgl(scenario_configs, ~ length(config_states(.x$economy)) > 0))) {
     return(invisible(TRUE))
   }
-
-  cf = runscript %>%
-    filter(ID != 'baseline', !is.na(states))
-  bl = runscript %>%
-    filter(ID == 'baseline')
-  if (nrow(cf) == 0 | nrow(bl) == 0) {
-    return(invisible(TRUE))
+  pin = scenario_configs[['baseline']]$economy$values$interfaces
+  dep_file = file.path(baseline_root, 'dependencies.csv')
+  used = if (file.exists(dep_file)) {
+    read_csv(dep_file, show_col_types = FALSE, col_types = cols(.default = 'c')) %>%
+      filter(ID == 'baseline', interface == 'State-Weights')
+  } else {
+    tibble()
   }
-
-  if (is.na(bl$states[1])) {
-    stop('Counterfactual scenario(s) set the states column but the baseline ',
-         'row does not; baseline state results are required for state deltas')
+  if (nrow(used) != 1 ||
+      used$vintage != as.character(pin$state_weights_vintage) ||
+      used$scenario != as.character(pin$state_weights_id)) {
+    stop('The reused baseline at ', baseline_root, ' was not run with State-Weights ',
+         pin$state_weights_vintage, '/', pin$state_weights_id,
+         '; state deltas against it would count a change in weights as policy. ',
+         'Re-run the baseline with the same states settings.')
   }
-  bl_states = parse_states_value(bl$states[1])
-
-  for (i in 1:nrow(cf)) {
-    cf_states = parse_states_value(cf$states[i])
-    if (!all(cf_states %in% bl_states)) {
-      stop("Scenario '", cf$ID[i], "' requests states (",
-           paste(setdiff(cf_states, bl_states), collapse = ' '),
-           ") that the baseline row does not include")
-    }
-  }
-
-  # State weights are a BASELINE product, frozen across scenarios (Tax-Data
-  # S30): a counterfactual carrying different weights would score geography
-  # movement as policy. Every state-mode row uses the baseline row's vintage.
-  if ('dep.State-Weights.vintage' %in% colnames(runscript)) {
-    for (i in 1:nrow(cf)) {
-      same = identical(cf$`dep.State-Weights.vintage`[i], bl$`dep.State-Weights.vintage`[1]) &&
-             identical(cf$`dep.State-Weights.ID`[i],      bl$`dep.State-Weights.ID`[1])
-      if (!same) {
-        stop("Scenario '", cf$ID[i], "' pins State-Weights ",
-             cf$`dep.State-Weights.vintage`[i], "/", cf$`dep.State-Weights.ID`[i],
-             " but the baseline row pins ", bl$`dep.State-Weights.vintage`[1], "/",
-             bl$`dep.State-Weights.ID`[1], "; state weights are frozen across scenarios")
-      }
-    }
-  }
-  return(invisible(TRUE))
+  invisible(TRUE)
 }
 
 
 
+validate_scenario_states = function(scenario_configs) {
+
+  #----------------------------------------------------------------------------
+  # Checks the state settings across scenarios. If a counterfactual computes
+  # state taxes, the baseline must compute them for at least the same
+  # jurisdictions, since state deltas need baseline state liability. Every
+  # scenario computing state taxes must read the baseline's State-Weights
+  # vintage: weights are a baseline product, and a counterfactual carrying
+  # different ones would score movement between states as policy.
+  #
+  # Parameters:
+  #   - scenario_configs (list) : resolved configurations by scenario ID; see
+  #                               resolve_all_scenarios()
+  #
+  # Returns: TRUE invisibly; stops on violation.
+  #----------------------------------------------------------------------------
+
+  bl = scenario_configs[['baseline']]
+  if (is.null(bl)) {
+    return(invisible(TRUE))
+  }
+  bl_states = config_states(bl$economy)
+  bl_pin    = bl$economy$values$interfaces[c('state_weights_vintage',
+                                             'state_weights_id')]
+
+  for (id in setdiff(names(scenario_configs), 'baseline')) {
+    eco       = scenario_configs[[id]]$economy
+    cf_states = config_states(eco)
+    if (length(cf_states) == 0) next
+    if (length(bl_states) == 0) {
+      stop("Scenario '", id, "' computes state taxes but the baseline does ",
+           'not; baseline state results are required for state deltas')
+    }
+    if (!all(cf_states %in% bl_states)) {
+      stop("Scenario '", id, "' computes state taxes for (",
+           paste(setdiff(cf_states, bl_states), collapse = ' '),
+           ') which the baseline does not')
+    }
+    cf_pin = eco$values$interfaces[c('state_weights_vintage', 'state_weights_id')]
+    if (!identical(map(cf_pin, as.character), map(bl_pin, as.character))) {
+      stop("Scenario '", id, "' reads State-Weights ",
+           paste(unlist(cf_pin), collapse = '/'), ' but the baseline reads ',
+           paste(unlist(bl_pin), collapse = '/'),
+           '; state weights are frozen across scenarios')
+    }
+  }
+  invisible(TRUE)
+}

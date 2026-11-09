@@ -1,0 +1,435 @@
+<title>Two functional forms for the realization response</title>
+<style>
+  .viz-root, :root {
+    /* warm-neutral editorial ground; validated chart surface sits inside cards */
+    --ground:         #f4f2ec;
+    --surface-1:      #fcfcfb;   /* validated chart/card surface (light) */
+    --text-primary:   #14130f;
+    --text-secondary: #55534c;
+    --text-muted:     #86847a;
+    --rule:           #ddd9cf;
+    --rule-strong:    #c7c2b4;
+    --series-levels:  #2a78d6;   /* categorical slot 1 (blue) */
+    --series-logs:    #008300;   /* categorical slot 2 (green) */
+    --accent-soft:    #eef1f7;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      --ground:         #121318;
+      --surface-1:      #1a1a19;
+      --text-primary:   #f4f3ee;
+      --text-secondary: #b8b6ac;
+      --text-muted:     #83817a;
+      --rule:           #2b2c30;
+      --rule-strong:    #3c3d42;
+      --series-levels:  #3987e5;
+      --series-logs:    #2fa32f;
+      --accent-soft:    #1d2530;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:         #121318;
+    --surface-1:      #1a1a19;
+    --text-primary:   #f4f3ee;
+    --text-secondary: #b8b6ac;
+    --text-muted:     #83817a;
+    --rule:           #2b2c30;
+    --rule-strong:    #3c3d42;
+    --series-levels:  #3987e5;
+    --series-logs:    #2fa32f;
+    --accent-soft:    #1d2530;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --ground:         #f4f2ec; --surface-1: #fcfcfb;
+    --text-primary:   #14130f; --text-secondary: #55534c; --text-muted: #86847a;
+    --rule:           #ddd9cf; --rule-strong: #c7c2b4;
+    --series-levels:  #2a78d6; --series-logs: #008300; --accent-soft: #eef1f7;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text-primary);
+    font-family: Charter, "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
+                 Georgia, Cambria, serif;
+    font-size: 18px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .sans {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+                 Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 4.5rem 1.5rem 6rem; }
+
+  .eyebrow {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--series-levels); margin: 0 0 1.1rem;
+  }
+  h1 {
+    font-size: clamp(1.9rem, 4.2vw, 2.7rem); line-height: 1.12; font-weight: 650;
+    letter-spacing: -0.01em; text-wrap: balance; margin: 0 0 0.9rem;
+  }
+  .byline {
+    font-family: ui-sans-serif, system-ui, sans-serif; font-style: normal;
+    color: var(--text-secondary); font-size: 0.92rem; letter-spacing: 0.01em;
+    margin: 0 0 2.6rem; padding-bottom: 2rem; border-bottom: 1px solid var(--rule-strong);
+  }
+  h2 {
+    font-size: 1.32rem; font-weight: 650; letter-spacing: -0.005em;
+    text-wrap: balance; margin: 3.2rem 0 0.5rem;
+  }
+  p { margin: 0 0 1.15rem; }
+  em { font-style: italic; }
+  strong { font-weight: 650; }
+  a { color: var(--series-levels); }
+
+  /* calibration callout */
+  .calib {
+    margin: 2rem 0 0.5rem; padding: 1.15rem 1.35rem; background: var(--surface-1);
+    border: 1px solid var(--rule); border-left: 3px solid var(--series-levels);
+    border-radius: 6px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 2rem;
+  }
+  .calib .row { display: flex; justify-content: space-between; align-items: baseline;
+    gap: 1rem; border-bottom: 1px dotted var(--rule); padding-bottom: 0.35rem; }
+  .calib .k { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.8rem;
+    color: var(--text-secondary); letter-spacing: 0.01em; }
+  .calib .v { font-family: ui-sans-serif, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums; font-weight: 600; font-size: 0.92rem; }
+  @media (max-width: 33rem) { .calib { grid-template-columns: 1fr; } }
+
+  figure { margin: 2rem 0; }
+  figure.wide {
+    max-width: 60rem; margin-left: 50%; transform: translateX(-50%);
+    width: 92vw;
+  }
+  @media (max-width: 64rem) { figure.wide { width: auto; max-width: 100%;
+    margin-left: 0; transform: none; } }
+  figcaption {
+    font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.82rem;
+    color: var(--text-secondary); line-height: 1.5; margin-top: 0.9rem;
+  }
+  .fig-card {
+    background: var(--surface-1); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 1.4rem 1.4rem 1rem;
+  }
+  .fig-head { display: flex; justify-content: space-between; align-items: baseline;
+    flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 0.4rem; }
+  .fig-title { font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 650;
+    font-size: 0.95rem; letter-spacing: 0.01em; }
+  .legend { display: flex; gap: 1.1rem; font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8rem; color: var(--text-secondary); }
+  .legend .item { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .legend .swatch { width: 22px; height: 3px; border-radius: 2px; display: inline-block; }
+  .panels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+  @media (max-width: 52rem) { .panels { grid-template-columns: 1fr; } }
+  .panel { position: relative; }
+  .panel h3 { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.85rem;
+    font-weight: 640; text-align: center; margin: 0.2rem 0 0.1rem; letter-spacing: 0.01em; }
+  .panel .sub { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.72rem;
+    color: var(--text-muted); text-align: center; margin: 0 0 0.2rem; }
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .tick { fill: var(--text-muted); font-size: 10px; }
+  .axis-line { stroke: var(--rule-strong); stroke-width: 1; }
+  .grid-line { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; }
+  .series-line { fill: none; stroke-width: 2; }
+  .peak-ring { fill: var(--surface-1); stroke-width: 2; }
+  .peak-label { font-size: 9.5px; font-weight: 650; }
+  .end-label { font-size: 10px; font-weight: 640; }
+
+  .tip { position: absolute; pointer-events: none; opacity: 0; transition: opacity .08s;
+    background: var(--text-primary); color: var(--ground); border-radius: 6px;
+    padding: 0.4rem 0.55rem; font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.72rem; line-height: 1.35; white-space: nowrap; z-index: 5;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.22); font-variant-numeric: tabular-nums; }
+  .tip b { font-weight: 650; }
+  .tip .sw { display:inline-block; width:8px; height:8px; border-radius:2px;
+    margin-right:4px; vertical-align: middle; }
+  .crosshair { stroke: var(--rule-strong); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+
+  /* Table 1 */
+  .tbl-scroll { overflow-x: auto; margin: 1rem 0 0.5rem; }
+  table { border-collapse: collapse; width: 100%; font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.86rem; }
+  caption { text-align: left; font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.6rem; }
+  th, td { padding: 0.5rem 0.7rem; text-align: right; font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  thead th { border-bottom: 1px solid var(--rule-strong); color: var(--text-secondary);
+    font-weight: 600; font-size: 0.76rem; letter-spacing: 0.02em; }
+  thead .grp { text-align: center; font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.06em; padding-bottom: 0.2rem; }
+  tbody tr:last-child td { border-bottom: 1px solid var(--rule-strong); }
+  .lv { color: var(--series-levels); } .lg { color: var(--series-logs); }
+  td.hl { font-weight: 650; }
+
+  .peaktbl { width: 100%; border-collapse: collapse; font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.84rem; margin: 0.8rem 0; }
+  .peaktbl th, .peaktbl td { text-align: left; padding: 0.45rem 0.7rem; border-bottom: 1px solid var(--rule); }
+  .peaktbl td.n { font-variant-numeric: tabular-nums; text-align: center; white-space: nowrap; }
+  .peaktbl thead th { color: var(--text-secondary); font-size: 0.74rem; text-transform: uppercase;
+    letter-spacing: 0.04em; border-bottom: 1px solid var(--rule-strong); }
+
+  .foot { margin-top: 3.5rem; padding-top: 1.4rem; border-top: 1px solid var(--rule-strong);
+    font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.76rem; color: var(--text-muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Budget Lab at Yale &middot; Capital-gains microsimulation</p>
+  <h1>Two functional forms for the realization response</h1>
+  <p class="byline sans">A comparison prepared for Danny Yagan &mdash; how the choice between a
+     constant semi-elasticity and a constant net-of-tax elasticity changes what the model says,
+     once each is calibrated to the same local moment.</p>
+
+  <h2>The question</h2>
+  <p>Our capital-gains model resolves how much of the realization response to a rate change is
+     timing versus a permanent change in the level of realizations. The permanent margin is
+     governed by an entropy cost of deviating from a taxpayer&rsquo;s baseline realization rate, and
+     that cost implies a <strong>constant semi-elasticity</strong>: the log of realizations moves
+     linearly with the tax wedge. Agersnap and Zidar&rsquo;s preferred specification is instead a
+     <strong>constant net-of-tax elasticity</strong> &mdash; the log of realizations linear in the
+     log of one minus the rate. Their online appendix notes the two are empirically
+     indistinguishable at observed rates; the choice is an extrapolation prior, and it matters
+     precisely for the revenue-maximizing-rate question.</p>
+  <p>This memo adds the net-of-tax form as a selectable alternative alongside the current one,
+     calibrates <em>each independently to the same local moment</em> &mdash; a full-model
+     realization elasticity of &minus;0.6 at current top rates &mdash; and compares the two on three
+     policy experiments and a capital-gains Laffer curve.</p>
+
+  <h2>What each form assumes away from the calibration point</h2>
+  <p>Both forms pass through today&rsquo;s rate with the same slope, so they agree on any small
+     perturbation. They differ in how they extrapolate. The semi-elasticity form treats each
+     additional point of the rate as retiring a constant <em>percent of the realizations that
+     remain</em>; the net-of-tax form treats each additional point of the <em>keep rate</em>
+     (1&nbsp;&minus;&nbsp;&tau;) that way. Read as a distribution of the marginal, just-deterred
+     dollar of gains, the first is an exponential reservation distribution &mdash; a thin tail, few
+     dollars that survive very high rates &mdash; and the second is a Pareto reservation
+     distribution, with a fatter tail. The two priors say nothing different near 23.8%; they say
+     increasingly different things as the rate approaches the neighborhood where revenue peaks.</p>
+
+  <h2>Calibration</h2>
+  <p>Each form is pinned in two steps against the same targets. The long-run parameter is set on the
+     full simulator so the measured realization semi-elasticity at the top rate equals
+     &minus;0.6/0.238&nbsp;=&nbsp;&minus;2.52; the short-run timeable share is then set, given the
+     long-run parameter, against the announcement-year moment (1.2/0.238&nbsp;=&nbsp;5.04). The
+     long-run moment is invariant to the timeable share, so the two identify sequentially.</p>
+  <div class="calib" id="calib"></div>
+  <p style="margin-top:1.4rem">That &eta;&#771; is smaller than &eta; is mechanical, not
+     substantive: the two cost primitives map their parameter into the measured moment on different
+     slopes (1.51 for net-of-tax versus 1.02 for levels), so hitting the same &minus;2.52 requires a
+     different number in each. Confirmation runs reproduce the target within 0.03%.</p>
+
+  <h2>Table&nbsp;1 &mdash; three experiments, two forms</h2>
+  <p>Ten-year conventional revenue, FY2027&ndash;2036, scenario minus baseline ($B). Static shown
+     alongside for reference; all three experiments take effect in 2027 on the full behavioral
+     stack.</p>
+  <div class="tbl-scroll"><table id="table1"></table></div>
+  <p>The static columns are identical across forms by construction (behavior off) &mdash; a check on
+     the harness. The conventional columns differ by at most about 4%: near the current rate, where
+     these experiments sit, the two forms are close, exactly as a shared local calibration implies.</p>
+
+  <h2>Figure&nbsp;1 &mdash; capital-gains Laffer curves</h2>
+  <figure class="wide">
+    <div class="fig-card">
+      <div class="fig-head">
+        <span class="fig-title">Conventional revenue vs. top preferred rate, by death-tax regime</span>
+        <span class="legend">
+          <span class="item"><span class="swatch" style="background:var(--series-levels)"></span>Levels (semi-elasticity)</span>
+          <span class="item"><span class="swatch" style="background:var(--series-logs)"></span>Net-of-tax</span>
+        </span>
+      </div>
+      <div class="panels" id="panels"></div>
+    </div>
+    <figcaption>
+      Conventional revenue over the third projection decade (FY2047&ndash;2056), as a share of GDP,
+      against the top preferred rate. Both curves cross at 20% by construction. Panels use
+      <em>independent vertical scales</em> &mdash; the death-realization regimes raise three to four
+      times the revenue of step-up &mdash; so each shows the shape of the response, not cross-regime
+      magnitude. Dots mark each form&rsquo;s peak inside the grid.
+    </figcaption>
+  </figure>
+
+  <p>The step-up panel is where the form choice shows. At 25% the two are identical over the decade;
+     by 40% they have separated; and at 45% the levels curve is still climbing while the net-of-tax
+     curve has already turned down. Under step-up the pure living-realization response drives
+     revenue, so the extrapolation prior is fully exposed, and the net-of-tax form &mdash; with more
+     of its mass deterrable &mdash; puts the revenue-maximizing rate lower.</p>
+  <p>Under carryover and deemed the death-realization base dominates, and that base is far less
+     sensitive to the living-response form, so the two curves lie almost on top of each other and
+     neither has peaked inside the grid. The practical reading: the form matters for the step-up
+     revenue-maximizing rate and is close to immaterial once gains are taxed at death.</p>
+  <table class="peaktbl" id="peaks"></table>
+
+  <h2>Caveats</h2>
+  <p>The short-run timeable share is re-pinned per form; here it landed at the same value, but that
+     is a result, not an assumption. The form choice propagates through the equivalent realization
+     rate &tau;<sub>eq</sub> into the entity-shifting response, so the net-of-tax runs shift
+     entity-shifting slightly relative to the levels runs &mdash; this is correct and disclosed
+     rather than suppressed. The evaluation rate used as the divisor in the calibration (the top
+     combined federal rate, 23.8%) is a separate lever, and numerically a larger one than the choice
+     of form; it is out of scope here and flagged for its own treatment. The Laffer grid tops out at
+     45%; under carryover and deemed the peak is beyond that, so those peaks are lower bounds.</p>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script id="figdata" type="application/json">__JSON__</script>
+<script>
+(function () {
+  const DATA = JSON.parse(document.getElementById('figdata').textContent);
+  const CAL = {
+    levels: { eta: '2.4825', f: '0.2542' },
+    logs:   { eta: '1.6625', f: '0.2542' }
+  };
+  const fmt1 = x => (x == null ? '—' : x.toLocaleString('en-US', {minimumFractionDigits:1, maximumFractionDigits:1}));
+  const fmtB = x => (x == null ? '—' : '$' + Math.round(x).toLocaleString('en-US') + 'B');
+  const pct  = x => (x == null ? '—' : x.toFixed(3) + '%');
+
+  // ---- Calibration callout -------------------------------------------------
+  const calib = document.getElementById('calib');
+  const crows = [
+    ['Levels &mdash; &eta; (long-run)', CAL.levels.eta],
+    ['Net-of-tax &mdash; &eta;&#771; (long-run)', CAL.logs.eta],
+    ['Levels &mdash; timeable share', CAL.levels.f],
+    ['Net-of-tax &mdash; timeable share', CAL.logs.f],
+  ];
+  calib.innerHTML = crows.map(([k,v]) =>
+    `<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+
+  // ---- Table 1 -------------------------------------------------------------
+  const t1 = DATA.table1;
+  const experiments = [
+    ['rate2pp', '+2pp on all preferred rates'],
+    ['deemed', 'Deemed realization at death'],
+    ['rate2pp_deemed', 'Both together'],
+  ];
+  let thtml = `<caption>Ten-year conventional revenue, FY2027&ndash;2036, scenario &minus; baseline ($B)</caption>
+    <thead>
+      <tr><th rowspan="2">Experiment</th>
+          <th class="grp" colspan="2">Levels</th>
+          <th class="grp" colspan="2">Net-of-tax</th></tr>
+      <tr><th>Static</th><th>Conv.</th><th>Static</th><th>Conv.</th></tr>
+    </thead><tbody>`;
+  for (const [key,label] of experiments) {
+    const lv = t1.levels[key] || {}, lg = t1.logs[key] || {};
+    thtml += `<tr><td>${label}</td>
+      <td>${fmt1(lv.static_10y_B)}</td><td class="hl lv">${fmt1(lv.conventional_10y_B)}</td>
+      <td>${fmt1(lg.static_10y_B)}</td><td class="hl lg">${fmt1(lg.conventional_10y_B)}</td></tr>`;
+  }
+  thtml += '</tbody>';
+  document.getElementById('table1').innerHTML = thtml;
+
+  // ---- Figure: 3 Laffer panels --------------------------------------------
+  const REGIMES = [
+    ['stepup', 'Step-up (current law)'],
+    ['carryover', 'Carryover basis'],
+    ['deemed', 'Deemed realization'],
+  ];
+  const W = 300, H = 210, ML = 34, MR = 14, MT = 14, MB = 30;
+  const cLev = getComputedStyle(document.documentElement); // colors via CSS vars on marks
+  const panelsEl = document.getElementById('panels');
+
+  function peakOf(pts) { return pts.reduce((a,b) => b.conv_3d_B > a.conv_3d_B ? b : a, pts[0]); }
+
+  REGIMES.forEach(([rk, rlabel]) => {
+    const lev = (DATA.laffer.levels[rk]||[]).slice().sort((a,b)=>a.rate_pct-b.rate_pct);
+    const log = (DATA.laffer.logs[rk]||[]).slice().sort((a,b)=>a.rate_pct-b.rate_pct);
+    const rates = lev.map(p=>p.rate_pct);
+    const ymax = Math.max(...lev.map(p=>p.conv_3d_pct_gdp), ...log.map(p=>p.conv_3d_pct_gdp)) * 1.12 || 1;
+    const xmin = Math.min(...rates), xmax = Math.max(...rates);
+    const sx = r => ML + (r - xmin)/(xmax - xmin) * (W - ML - MR);
+    const sy = v => H - MB - (v/ymax) * (H - MT - MB);
+    const path = pts => pts.map((p,i)=>(i?'L':'M') + sx(p.rate_pct).toFixed(1) + ' ' + sy(p.conv_3d_pct_gdp).toFixed(1)).join(' ');
+
+    // y gridlines (4)
+    let grid = '', yl = '';
+    const nY = 4;
+    for (let i=0;i<=nY;i++){ const v = ymax*i/nY; const y = sy(v);
+      grid += `<line class="grid-line" x1="${ML}" y1="${y.toFixed(1)}" x2="${W-MR}" y2="${y.toFixed(1)}"/>`;
+      yl += `<text class="tick" x="${ML-6}" y="${(y+3).toFixed(1)}" text-anchor="end">${v.toFixed(2)}</text>`;
+    }
+    // x ticks
+    let xt = '';
+    rates.forEach(r => { xt += `<text class="tick" x="${sx(r).toFixed(1)}" y="${H-MB+14}" text-anchor="middle">${r}</text>`; });
+    xt += `<text class="tick" x="${((ML+W-MR)/2).toFixed(1)}" y="${H-2}" text-anchor="middle" fill="var(--text-secondary)">Top preferred rate (%)</text>`;
+
+    const pkLev = peakOf(lev), pkLog = peakOf(log);
+    const dot = (p, color) => `<circle class="peak-ring" cx="${sx(p.rate_pct).toFixed(1)}" cy="${sy(p.conv_3d_pct_gdp).toFixed(1)}" r="4.5" stroke="${color}"/>`;
+
+    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${rlabel} Laffer curve">
+      ${grid}${yl}
+      <line class="axis-line" x1="${ML}" y1="${H-MB}" x2="${W-MR}" y2="${H-MB}"/>
+      ${xt}
+      <path class="series-line" d="${path(lev)}" stroke="var(--series-levels)"/>
+      <path class="series-line" d="${path(log)}" stroke="var(--series-logs)"/>
+      ${dot(pkLev, 'var(--series-levels)')}
+      ${dot(pkLog, 'var(--series-logs)')}
+      <text class="peak-label" x="${sx(pkLog.rate_pct).toFixed(1)}" y="${(sy(pkLog.conv_3d_pct_gdp)-9).toFixed(1)}" text-anchor="middle" fill="var(--series-logs)">${pkLog.rate_pct}%</text>
+      <line class="crosshair" y1="${MT}" y2="${H-MB}"/>
+      <g class="hot"></g>
+    </svg>`;
+
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.innerHTML = `<h3>${rlabel}</h3><p class="sub">peak &le; ${xmax}% shown · y = % of GDP</p>${svg}
+      <div class="tip"></div>`;
+    panelsEl.appendChild(panel);
+
+    // hover
+    const svgEl = panel.querySelector('svg');
+    const tip = panel.querySelector('.tip');
+    const cross = panel.querySelector('.crosshair');
+    const byRate = {}; lev.forEach(p=>byRate[p.rate_pct]={lev:p}); log.forEach(p=>{byRate[p.rate_pct]=byRate[p.rate_pct]||{};byRate[p.rate_pct].log=p;});
+    svgEl.addEventListener('mousemove', e => {
+      const rect = svgEl.getBoundingClientRect();
+      const xpix = (e.clientX - rect.left) / rect.width * W;
+      // nearest rate
+      let nr = rates[0], best = 1e9;
+      rates.forEach(r => { const d = Math.abs(sx(r)-xpix); if (d<best){best=d;nr=r;} });
+      const b = byRate[nr]; if (!b) return;
+      cross.setAttribute('x1', sx(nr)); cross.setAttribute('x2', sx(nr)); cross.style.opacity = 1;
+      tip.style.opacity = 1;
+      tip.innerHTML = `<b>Top rate ${nr}%</b><br>
+        <span class="sw" style="background:var(--series-levels)"></span>Levels ${pct(b.lev?.conv_3d_pct_gdp)} &middot; ${fmtB(b.lev?.conv_3d_B)}<br>
+        <span class="sw" style="background:var(--series-logs)"></span>Net-of-tax ${pct(b.log?.conv_3d_pct_gdp)} &middot; ${fmtB(b.log?.conv_3d_B)}`;
+      const px = sx(nr)/W*rect.width, py = 8;
+      tip.style.left = Math.min(Math.max(px, 4), rect.width - tip.offsetWidth - 4) + 'px';
+      tip.style.top = py + 'px';
+    });
+    svgEl.addEventListener('mouseleave', () => { tip.style.opacity = 0; cross.style.opacity = 0; });
+  });
+
+  // ---- Peak summary table --------------------------------------------------
+  const peakRows = REGIMES.map(([rk,rlabel]) => {
+    const lev = DATA.laffer.levels[rk]||[], log = DATA.laffer.logs[rk]||[];
+    const pL = peakOf(lev), pN = peakOf(log);
+    const edge = 45;
+    const lTxt = pL.rate_pct >= edge ? `≥${edge}% (rising)` : `${pL.rate_pct}%`;
+    const nTxt = pN.rate_pct >= edge ? `≥${edge}% (rising)` : `<b>${pN.rate_pct}%</b>`;
+    let behav;
+    if (rk === 'stepup') behav = 'forms diverge above ~35%; net-of-tax turns down';
+    else behav = 'curves nearly coincide, both still rising';
+    return `<tr><td>${rlabel}</td><td class="n lv">${lTxt}</td><td class="n lg">${nTxt}</td><td>${behav}</td></tr>`;
+  }).join('');
+  document.getElementById('peaks').innerHTML =
+    `<thead><tr><th>Regime</th><th>Levels peak</th><th>Net-of-tax peak</th><th>Behavior</th></tr></thead><tbody>${peakRows}</tbody>`;
+
+  // ---- Footer provenance ---------------------------------------------------
+  document.getElementById('foot').innerHTML =
+    `Revenue figures are model output (form_memo &amp; form_laffer vintages, full sample, Tax-Data 2026070814), ` +
+    `scenario minus baseline. Table&nbsp;1 window FY2027&ndash;2036; figure window FY2047&ndash;2056 as a share of ` +
+    `that decade&rsquo;s GDP ($${Math.round(DATA.gdp_3d_B).toLocaleString('en-US')}B). ` +
+    `Both forms calibrated to a &minus;0.6 realization elasticity at 23.8%. Numbers rendered from the run outputs, not hand-entered.`;
+})();
+</script>

@@ -1,0 +1,38 @@
+---
+# Clausing reform — Policy 05: Raise preferential rates by 5pp
+# Starting in 2026, lift all three preferential rate brackets by 5pp:
+#   [0.0, 0.15, 0.20] -> [0.05, 0.20, 0.25]
+# Bracket thresholds and indexation are unchanged from baseline.
+# Carryover-basis regime from policy 04 is preserved (kg_death_regime_* = 1).
+
+# Preferred tax rate schedule (raised 5pp across the board in 2026)
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2026': [0.05, 0.20, 0.25]
+
+# Carryover basis at death (carried forward from policy 04)
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2026': 1
+
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2026': 1
+
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2026': 1
+
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2026': 1
+
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2026': 1

@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,,2026:2057,,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+delayed,tests/kg_dyn_rate_up_2pp_delayed,top_tax_full_timeable_share_logs_15,2026:2057,,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+rate_up_2pp,tests/kg_dyn_rate_up_2pp,top_tax_full_timeable_share_logs_15,2026:2057,,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar

@@ -1,0 +1,418 @@
+<title>Wealth tax → Tax-Simulator · integration review</title>
+<style>
+  /* ───────────────────────────────────────────────────────────
+     Double-entry ledger palette: pale sage ledger paper, green-black
+     ink, deep Treasury teal, and red ledger ink reserved strictly for
+     liabilities — things written off (DROP) and hazards (⚠).
+     Structure carried in monospace (this is a code review; mono is the
+     material), thesis in serif, body in sans.
+     ─────────────────────────────────────────────────────────── */
+  :root {
+    --ground:  #E9EDE6;
+    --paper:   #F4F6F0;
+    --text:    #1B2620;
+    --muted:   #5C6B61;
+    --faint:   #8A968C;
+    --accent:  #0A5F57;   /* teal ink — keepers */
+    --accent-d:#063F39;
+    --debit:   #B23A2E;   /* red ink — liabilities / drops / hazards */
+    --debit-d: #7E2820;
+    --rule:    rgba(27,38,32,.16);
+    --rule-2:  rgba(27,38,32,.09);
+    --mono: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --serif:"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, ui-serif, serif;
+    --s1:.4rem; --s2:.8rem; --s3:1.2rem; --s4:2rem; --s5:3.2rem; --s6:5rem;
+    --maxw: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    /* faint horizontal ledger ruling */
+    background-image: repeating-linear-gradient(
+      to bottom, transparent 0, transparent 31px, var(--rule-2) 31px, var(--rule-2) 32px);
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 clamp(1.1rem, 4vw, 2.6rem); }
+
+  /* type */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: .72rem;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--accent-d);
+    margin: 0;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(2.3rem, 6.2vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: -.015em;
+    margin: var(--s3) 0 var(--s3);
+  }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+    line-height: 1.12;
+    letter-spacing: -.01em;
+    margin: 0 0 var(--s2);
+  }
+  h3 { font-family: var(--sans); font-weight: 700; font-size: 1.02rem; margin: 0 0 var(--s1); letter-spacing: -.005em; }
+  p  { margin: 0 0 var(--s2); }
+  a  { color: var(--accent-d); }
+  code, .ref {
+    font-family: var(--mono);
+    font-size: .82em;
+    background: rgba(10,95,87,.08);
+    color: var(--accent-d);
+    padding: .08em .36em;
+    border-radius: 3px;
+    word-break: break-word;
+  }
+  .lead { font-size: 1.18rem; color: var(--muted); max-width: 60ch; }
+
+  /* section scaffolding — numbered because the review IS an ordered argument */
+  .section { padding: var(--s5) 0; border-top: 1px solid var(--rule); }
+  .sec-head { display: flex; align-items: baseline; gap: var(--s3); margin-bottom: var(--s4); flex-wrap: wrap; }
+  .sec-num {
+    font-family: var(--mono); font-size: .82rem; font-weight: 600;
+    color: var(--accent); letter-spacing: .1em;
+    border: 1px solid var(--accent); border-radius: 2px;
+    padding: .14em .5em; white-space: nowrap; align-self: center;
+  }
+  .sec-head .txt { flex: 1 1 18rem; min-width: 0; }
+  .sec-head p { margin: var(--s1) 0 0; color: var(--muted); font-size: .98rem; }
+
+  /* ── HERO ── */
+  .hero { padding: clamp(3.2rem, 9vw, 6rem) 0 var(--s5); }
+  .hero .eyebrow { animation: rise .7s ease both; }
+  .hero h1 { animation: rise .7s .05s ease both; }
+  .hero .lead { animation: rise .7s .12s ease both; }
+  .equation {
+    font-family: var(--mono);
+    font-size: clamp(.86rem, 2.3vw, 1.08rem);
+    margin: var(--s4) 0 var(--s4);
+    padding: var(--s3) var(--s3);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 2px;
+    overflow-x: auto;
+    animation: rise .7s .2s ease both;
+  }
+  .equation b { color: var(--accent-d); }
+  .equation .note { display:block; color: var(--muted); font-size: .82em; margin-top: .5em; letter-spacing: 0; }
+  .chips { display: flex; gap: var(--s2); flex-wrap: wrap; animation: rise .7s .28s ease both; }
+  .chip {
+    flex: 1 1 14rem; min-width: 0;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 3px;
+    padding: var(--s3);
+  }
+  .chip .k { font-family: var(--mono); font-size: .68rem; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); }
+  .chip .v { font-family: var(--serif); font-size: 1.34rem; line-height: 1.15; margin-top: .3em; }
+  .chip.debit .v { color: var(--debit-d); }
+
+  /* ── THESIS band ── */
+  .thesis { padding: var(--s5) 0; border-top: 1px solid var(--rule); }
+  .thesis .big {
+    font-family: var(--serif); font-weight: 600;
+    font-size: clamp(1.7rem, 4.6vw, 2.9rem); line-height: 1.12; letter-spacing: -.012em;
+    max-width: 22ch;
+  }
+  .thesis .big em { color: var(--accent); font-style: normal; }
+  .thesis .gloss { margin-top: var(--s3); color: var(--muted); max-width: 62ch; }
+
+  /* ── generic ledger rows ── */
+  .ledger { display: flex; flex-direction: column; gap: 0; }
+  .row {
+    display: grid; grid-template-columns: 1.4rem 1fr; gap: var(--s3);
+    padding: var(--s3) 0; border-bottom: 1px solid var(--rule-2);
+    align-items: start;
+  }
+  .row .mark { font-family: var(--mono); color: var(--accent); font-weight: 600; line-height: 1.6; }
+  .row .body p:last-child { margin-bottom: 0; }
+  .row .body .src { font-family: var(--mono); font-size: .76rem; color: var(--faint); }
+
+  /* ── disposition balance sheet ── */
+  .sheet { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--s3); }
+  .col { background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; padding: var(--s3); border-top: 3px solid var(--accent); }
+  .col.adapt { border-top-color: #2E8B7F; }
+  .col.new   { border-top-color: var(--text); }
+  .col.drop  { border-top-color: var(--debit); }
+  .col h3 { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; font-family: var(--mono); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; }
+  .col h3 .tally { color: var(--faint); font-weight: 500; }
+  .col.drop h3 { color: var(--debit-d); }
+  .col ul { list-style: none; margin: var(--s2) 0 0; padding: 0; display: flex; flex-direction: column; gap: .55rem; }
+  .col li { font-size: .92rem; line-height: 1.45; padding-left: 1rem; position: relative; }
+  .col li::before { content: "+"; position: absolute; left: 0; font-family: var(--mono); color: var(--accent); font-weight: 700; }
+  .col.drop li::before { content: "−"; color: var(--debit); }
+  .col li b { font-weight: 600; }
+  .col li .x { color: var(--muted); }
+
+  /* ── two bathtubs ── */
+  .tubs { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: var(--s3); }
+  .tub { background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; padding: var(--s4); }
+  .tub.unbuilt { border-style: dashed; border-color: rgba(178,58,46,.5); }
+  .tub .tag { font-family: var(--mono); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; padding: .2em .5em; border-radius: 2px; display: inline-block; margin-bottom: var(--s2); }
+  .tub.built .tag { background: rgba(10,95,87,.12); color: var(--accent-d); }
+  .tub.unbuilt .tag { background: rgba(178,58,46,.12); color: var(--debit-d); }
+  .tub h3 { font-family: var(--serif); font-weight: 600; font-size: 1.3rem; }
+  .tub p { font-size: .95rem; color: var(--muted); }
+  .tub p strong { color: var(--text); }
+  .flux { margin-top: var(--s3); background: rgba(178,58,46,.06); border: 1px solid rgba(178,58,46,.28); border-radius: 3px; padding: var(--s3); font-size: .9rem; }
+  .flux .k { font-family: var(--mono); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--debit-d); display: block; margin-bottom: .4em; }
+
+  /* ── blind spots (liability cards) ── */
+  .flags { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: var(--s3); }
+  .flag { background: var(--paper); border: 1px solid var(--rule); border-left: 3px solid var(--debit); border-radius: 3px; padding: var(--s3); }
+  .flag h3 { color: var(--debit-d); font-size: .98rem; }
+  .flag p { font-size: .9rem; color: var(--muted); margin: 0; }
+  .flag p + p { margin-top: .5em; }
+
+  /* ── migration sequence ── */
+  .phases { display: flex; flex-direction: column; gap: 0; }
+  .phase { display: grid; grid-template-columns: 4.2rem 1fr; gap: var(--s3); padding: var(--s4) 0; border-bottom: 1px solid var(--rule-2); align-items: start; }
+  .phase:last-child { border-bottom: none; }
+  .phase .pid { font-family: var(--mono); font-weight: 700; font-size: 1.5rem; color: var(--accent); letter-spacing: -.02em; }
+  .phase.last .pid { color: var(--debit); }
+  .phase h3 { font-size: 1.06rem; }
+  .phase p { font-size: .94rem; color: var(--muted); margin: 0; }
+  .phase .gate { margin-top: .6em; font-family: var(--mono); font-size: .76rem; color: var(--faint); }
+  .phase .gate b { color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+
+  /* ── open decisions ── */
+  .decisions { columns: 2 17rem; column-gap: var(--s4); }
+  .decisions .d { break-inside: avoid; margin-bottom: var(--s3); padding-left: 1.4rem; position: relative; font-size: .94rem; }
+  .decisions .d::before { content: "?"; position: absolute; left: 0; font-family: var(--mono); font-weight: 700; color: var(--accent); }
+  .decisions .d b { display: block; }
+  .decisions .d span { color: var(--muted); }
+
+  footer { border-top: 1px solid var(--rule); padding: var(--s4) 0 var(--s6); }
+  footer .eyebrow { margin-bottom: var(--s2); }
+  footer .path { font-family: var(--mono); font-size: .8rem; color: var(--muted); word-break: break-all; }
+  footer .meta { color: var(--faint); font-size: .82rem; margin-top: var(--s2); }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+
+  .row:hover, .col li:hover { /* keep hover quiet — affordance only */ }
+  a:focus-visible, .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Budget Lab at Yale · Tax-Simulator · integration review · 2026-06-22</p>
+    <h1>Fold the wealth tax<br>into the model.</h1>
+    <p class="lead">Deprecate the standalone Wealth-Tax-Simulator and rebuild net worth as a first-class tax base — so it composes with income, payroll, estate, and capital gains instead of living in a parallel universe.</p>
+
+    <div class="equation">
+      net_worth = <b>Σ value.{14 assets}</b> − <b>Σ value.{6 debts}</b>
+      <span class="note">Already on every record, every year, death-agnostic — <code>tax_units_2026.csv</code> cols 146–165. <code>calc_estate()</code> already sums it (<code>estate.R:140-141</code>). One subtraction from a base; no new data plumbing.</span>
+    </div>
+
+    <div class="chips">
+      <div class="chip"><div class="k">The data</div><div class="v">20 balance-sheet columns already per-record</div></div>
+      <div class="chip"><div class="k">The effort</div><div class="v">Mostly write-off, not port</div></div>
+      <div class="chip debit"><div class="k">The hard part</div><div class="v">The 2nd “bathtub” is unbuilt</div></div>
+    </div>
+  </div>
+</header>
+
+<section class="thesis">
+  <div class="wrap">
+    <p class="big">A net-worth tax is structurally <em>the estate tax minus death.</em></p>
+    <p class="gloss">Estate already proves a balance-sheet tax can live in <code>do_taxes()</code>, aggregate with weights, book receipts, and feed distribution. A wealth tax is that — minus mortality, minus DSUE/portability, minus the gift/§2053/valuation death-time adjustments, minus the fiscal-year death-lag. The wiring path is well-trodden; the intellectual weight sits in one place only.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <div class="txt"><h2>Why it’s feasible now</h2>
+      <p>The original reason for a separate model — no wealth on the main model — is gone.</p></div>
+    </div>
+    <div class="ledger">
+      <div class="row"><div class="mark">✓</div><div class="body">
+        <p><b>The full balance sheet is loaded onto every record.</b> <code>read_microdata()</code> does an unrestricted read, so all 14 <code>value.*</code> asset + 6 debt columns sit in-memory in the normal year pass — independent of any death event.</p>
+        <p class="src">src/data/economy.R:477-494 · src/sim/run.R:437-438</p>
+      </div></div>
+      <div class="row"><div class="mark">✓</div><div class="body">
+        <p><b>Net worth is one <code>rowSums</code> away.</b> The estate calculator already computes <code>economic_gross − estate_debts</code> for every living record, weight-free and death-independent. Nuance: Tax-Data stores 20 component columns, not a precomputed scalar — sum in-pass, exactly as estate does.</p>
+        <p class="src">src/calc/functions/tax/estate.R:140-141</p>
+      </div></div>
+      <div class="row"><div class="mark">✓</div><div class="body">
+        <p><b>The standalone already contains a primitive 2nd bathtub.</b> Its <code>track_deccumulation()</code> + <code>age_scf()</code> is a real cross-year saving-financed wealth erosion; its <code>dissaving_rate</code> / <code>mobility_rate</code> levers map onto the planned bathtub’s <code>s</code> and transition matrix <code>M</code>.</p>
+        <p class="src">Wealth-Tax-Simulator/src/sim.R:242-284, 135-203</p>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <div class="txt"><h2>Disposition balance sheet</h2>
+      <p>Every standalone capability, double-entry: kept in ink, written off in red.</p></div>
+    </div>
+    <div class="sheet">
+      <div class="col reuse">
+        <h3>Reuse <span class="tally">as-is</span></h3>
+        <ul>
+          <li><b>Tax-Data <code>value.*</code></b> <span class="x">— the balance sheet itself</span></li>
+          <li><b>Bracket integrator</b> <span class="x">— <code>integrate_rates_brackets()</code></span></li>
+          <li><b>YAML indexation engine</b> <span class="x">— replaces hand-rolled <code>ccpiu_irs</code></span></li>
+          <li><b>kg bathtub scaffolding</b> <span class="x">— aging matrix, <code>m_eff</code>, .rds state, applier</span></li>
+        </ul>
+      </div>
+      <div class="col adapt">
+        <h3>Adapt <span class="tally">onto TS</span></h3>
+        <ul>
+          <li><b><code>calc_wealth()</code></b> <span class="x">— mirror <code>calc_estate</code>, strip death</span></li>
+          <li><b>Avoidance module</b> <span class="x">— <code>do_avoidance</code> → base-erosion behavior</span></li>
+          <li><b>Decumulation</b> <span class="x">— → the 2nd bathtub</span></li>
+          <li><b>Distribution metrics</b> <span class="x">— by-wealth-percentile, <code>share_with_hike</code></span></li>
+        </ul>
+      </div>
+      <div class="col new">
+        <h3>Net-new <span class="tally">build</span></h3>
+        <ul>
+          <li><b><code>wealth.yaml</code></b> <span class="x">— reform-overridable LAW</span></li>
+          <li><b>Indexed exemption</b> <span class="x">— WTS only faked it as a 0% bracket</span></li>
+          <li><b>The 2nd bathtub</b> <span class="x">— saving incidence (unbuilt)</span></li>
+          <li><b>Living-weight clone cap</b> <span class="x">— estate’s is death-weight</span></li>
+        </ul>
+      </div>
+      <div class="col drop">
+        <h3>Write off <span class="tally">superseded</span></h3>
+        <ul>
+          <li><b>SCF build · B101 aging · Forbes re-splice</b> <span class="x">— upstream in Tax-Data</span></li>
+          <li><b>Bespoke writers + hand-rolled MTR</b></li>
+          <li><b>The SZZ “calibration”</b> <span class="x">— a phantom; CSVs never read</span></li>
+          <li><b>The <code>other_debt</code> bug</b> <span class="x">— don’t port the dangling comma</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <div class="txt"><h2>The two bathtubs</h2>
+      <p>Cohort recurrences on age cells. Don’t conflate them — one is built, one is the point.</p></div>
+    </div>
+    <div class="tubs">
+      <div class="tub built">
+        <span class="tag">Built · the template</span>
+        <h3>#1 — kg_dynamics</h3>
+        <p>A capital-gains <strong>realization-timing</strong> recurrence on age cells [18,80]+tail. Provides the reusable machinery: aging matrix, per-year state, the <code>match()</code> applier, a frozen-mechanical vs. behavioral split, SLURM phases 1B/2B, and a calibration-provenance guard built after a 37% silent bias. Load-bearing: effective cell mortality is a wealth-weighted mean, not a cell-mean (~2.7× correction). The Bellman is realization-specific — don’t copy it.</p>
+      </div>
+      <div class="tub unbuilt">
+        <span class="tag">Unbuilt · the core</span>
+        <h3>#2 — wealth-dynamics</h3>
+        <p>The <strong>saving-incidence</strong> channel. A share <code>s = 1−MPC</code> of above-baseline during-life tax is financed out of wealth, compounds at <code>r_total</code>, and drains into the estate base at death — opening income/CG → wealth → estate. Without it, a wealth tax assumes a fixed stock and can <strong>never</strong> erode the future base it logically should. The wealth-tax ΔT is exactly the during-life capital ΔT this is built to consume.</p>
+        <div class="flux">
+          <span class="k">⚠ Design in flux</span>
+          The plan says <em>static inflow / behavioral module</em>; the latest session overturned both → <em>conventional ΔT / mechanical application</em>, and found the “consistency is automatic” claim wrong (replace with a mass-conservation invariant). Reconcile before wiring.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <div class="txt"><h2>Blast radius</h2>
+      <p>Subsystems that change, in dependency order. “SLURM” = mandatory mirror per the sync table.</p></div>
+    </div>
+    <div class="ledger">
+      <div class="row"><div class="mark">1</div><div class="body"><p><b>Shared asset/debt constants.</b> Promote <code>ESTATE_ASSET_COLS</code>/<code>ESTATE_DEBT_COLS</code> to one module so estate + wealth + bathtub import one net-worth definition. Trap: WTS <code>retirement</code> = <code>value.dc</code> + <code>value.db</code>.</p></div></div>
+      <div class="row"><div class="mark">2</div><div class="body"><p><b><code>calc_wealth()</code></b> — new pure fn; one linear bracket calc per record (no DSUE two-branch; the kink-nonlinearity rationale doesn’t transfer). Not in <code>return_vars</code>.</p></div></div>
+      <div class="row"><div class="mark">3</div><div class="body"><p><b><code>do_taxes.R</code> chain</b> — a “Wealth tax” section after the estate block, gated by <code>calc_wealth_flag</code>; drop/rebind <code>WEALTH_OUTPUT_COLS</code> for MTR idempotency.</p></div></div>
+      <div class="row"><div class="mark">4</div><div class="body"><p><b><code>wealth.yaml</code></b> — baseline = no tax. Auto-joins via <code>run.R:459</code> + the YAML glob; no parser change. MFJ doubling is a deliberate choice (estate does it in the calculator, not a mapper).</p></div></div>
+      <div class="row"><div class="mark">5</div><div class="body"><p><b>Totals</b> — <code>get_wealth_totals()</code> = <code>Σ(weight·liab_wealth)</code>, dropping <code>estate_m</code>; into <code>write_pass_outputs()</code>. <span class="src">SLURM Phase 3a</span></p></div></div>
+      <div class="row"><div class="mark">6</div><div class="body"><p><b>Receipts</b> — ⚠ totals alone book nothing. Extend <code>calc_receipts</code>: a <code>revenues_wealth_tax</code> line as a pure on-model level, FY=CY income-style — <b>not</b> the estate <code>t+1</code> lag. Add to every total-sum or it drops from the headline. <span class="src">SLURM Phase 3a/4</span></p></div></div>
+      <div class="row"><div class="mark">7</div><div class="body"><p><b>Distribution</b> — fold <code>liab_wealth</code> into the <code>taxes_included</code> case; attach to the owner’s own record like income tax. ⚠ <b>Not</b> the estate heir allocator (its exhaustion error fires spuriously on a living tax). <span class="src">SLURM Phase 3b</span></p></div></div>
+      <div class="row"><div class="mark">8</div><div class="body"><p><b>SLURM sync is conditional.</b> 3a/3b/4 are required. But <code>setup.R</code>/<code>common.R</code> trigger <b>only</b> for new globals consumed at post-processing — estate sets its params inside <code>run_one_year</code> (a “safe” change). Don’t over-sync.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">05</span>
+      <div class="txt"><h2>Interactions &amp; blind spots</h2>
+      <p>Wealth is the most-coupled base on the model — it lands on the same balance sheet as three other things.</p></div>
+    </div>
+    <div class="flags">
+      <div class="flag"><h3>Double-tax-at-death</h3><p>In the death year both taxes hit the same stock. Paying the wealth tax should shrink the future estate base — but with the fixed-stock model it never does. Only the 2nd bathtub closes the loop; without it, long-run bases are overstated.</p></div>
+      <div class="flag"><h3>Valuation-bridge hazard</h3><p>Don’t reuse <code>estate_valuation_params.yaml</code>. Sharing <code>r/rho_pt</code> couples the bases (an estate recalibration silently moves wealth), and those factors were fit to death-time §2031 returns — a different regime. Reuse the data + the cluster idea, not the bridge.</p></div>
+      <div class="flag"><h3>Donor clones — worse here</h3><p>The estate cap is a <em>death-weight</em> cap; clones “barely die” out of the base. An annual tax weights living clones every year, exposing the full duplicated top-tail mass exactly where a wealth tax concentrates. Needs a fresh living-weight cap.</p></div>
+      <div class="flag"><h3>MTR for a stock</h3><p>A next-dollar wealth MTR <em>does</em> exist (cleaner than income’s). The real issue: the response is base-erosion on stocks, which <code>apply_mtr_elasticity</code> (flow-built) doesn’t support — and WTS’s elasticities (−7/−17) imply near-total disappearance. Recalibrate; don’t copy.</p></div>
+      <div class="flag"><h3>Tax-Data artifacts</h3><p>The wages residual contaminates the bathtub inflow; the sample-universe fix is more critical at the top tail (forces <code>pct_sample=1</code>); <code>age1</code> is top-coded at 80 — the top age bin must be 80+, exactly where wealth concentrates.</p></div>
+      <div class="flag"><h3>Static vs. conventional</h3><p>Estate books FY <code>t+1</code>; wealth must book in-year. The bathtub’s static-inflow approximation is flagged “may not be second-order” at wealth-tax magnitudes — now compounded by the overturn to a conventional inflow.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">06</span>
+      <div class="txt"><h2>Migration path</h2>
+      <p>P0–P2 deliver a usable static + behavioral tax on their own. P3 is what makes it credible.</p></div>
+    </div>
+    <div class="phases">
+      <div class="phase"><div class="pid">P0</div><div><h3>Decide the base</h3><p>Validate top-tail net worth on the living population. Decide economic net worth vs. a reported-valuation bridge — and that any wealth valuation factors live in a new frozen file, never shared with estate.</p><div class="gate"><b>gates:</b> economic vs reported · is a measurement file needed at all</div></div></div>
+      <div class="phase"><div class="pid">P1</div><div><h3>Static first-class tax</h3><p><code>calc_wealth()</code> + <code>wealth.yaml</code> + <code>detail_vars</code> + <code>get_wealth_totals</code> + the <code>calc_receipts</code> extension (pure level, FY=CY) + the SLURM Phase 3a mirror. Low-risk: estate is an exact template.</p><div class="gate"><b>gates:</b> filing-status doubling · payment timing · VAT refuse-vs-guard</div></div></div>
+      <div class="phase"><div class="pid">P2</div><div><h3>Within-year avoidance</h3><p><code>do_wealth_avoidance()</code> base-erosion module with recalibrated elasticities + a provenance guard; a living-weight donor-clone cap; an optional <code>net_worth</code> MTR carve-out.</p><div class="gate"><b>gates:</b> authoritative elasticities · stock-MTR vs ATR anchor</div></div></div>
+      <div class="phase"><div class="pid">P3</div><div><h3>Dynamic saving incidence</h3><p>The credibility phase. <b>Part A:</b> build the 2nd bathtub (reuse kg scaffolding; SLURM 2B-sibling, 2C <code>afterok</code> both). <b>Part B:</b> extend the during-life inflow to add <code>liab_wealth</code> — excluding death-time legs, from raw components. Depends on the bathtub landing first.</p><div class="gate"><b>gates:</b> reconcile plan-vs-overturned design · mass-conservation invariant · clamp binding</div></div></div>
+      <div class="phase last"><div class="pid">P4</div><div><h3>Deprecate the standalone</h3><p>Reconstitute its only live composition (the hand-rolled wealth+income surtax in <code>why_not_analysis.R</code>) as one first-class scenario; port the wealth-percentile distribution flavor; document why standalone revenue won’t reconcile; archive the repo.</p><div class="gate"><b>gates:</b> own distribution tier vs folded · migrate vs drop SZZ series</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">07</span>
+      <div class="txt"><h2>Open decisions</h2>
+      <p>The choices that gate the build — yours to make.</p></div>
+    </div>
+    <div class="decisions">
+      <div class="d"><b>Economic vs. reported base</b><span>Raw net worth, or an estate-style valuation discount? Determines whether a measurement file exists.</span></div>
+      <div class="d"><b>Base composition</b><span>Retirement (dc+db), life-ins, annuities, trusts — in or out? Basis-aware variant?</span></div>
+      <div class="d"><b>Filing status</b><span>MFJ doubling (mapper or calculator) vs. filing-blind like the standalone.</span></div>
+      <div class="d"><b>Exemption form</b><span>A separate indexed subparameter vs. a zero-rated bottom bracket; rounding convention.</span></div>
+      <div class="d"><b>Receipts timing</b><span>Income-style 75/25 vs. full nonwithheld-at-filing — both in-year, not the estate lag.</span></div>
+      <div class="d"><b>MTR registration</b><span>Register a <code>net_worth</code> MTR or not. Recommendation: not initially.</span></div>
+      <div class="d"><b>Bathtub design</b><span>Static/behavioral (plan) vs. conventional-ΔT/mechanical (latest); the mass-conservation invariant.</span></div>
+      <div class="d"><b>Year-of-death interaction</b><span>Is the estate base net of the wealth tax paid that year?</span></div>
+      <div class="d"><b>VAT / excess-growth</b><span>Refuse like kg, or guard explicitly. Stocks are raw, unadjusted dollars.</span></div>
+      <div class="d"><b>Standalone disposition</b><span>Archive vs. delete; migrate the SZZ/Smith series as validation diagnostics or drop them.</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p class="eyebrow">Full written review</p>
+    <p class="path">/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/wealth_tax/INTEGRATION_REVIEW.md</p>
+    <p class="meta">Built from 9 deep-read agents over both repos → 4 synthesis dimensions → 14 adversarial verifications against the code. 2 premises confirmed outright, 12 partial (correct core, important nuance). Tax-Simulator branch <code>wealth</code>.</p>
+  </div>
+</footer>
