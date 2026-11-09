@@ -97,6 +97,11 @@ calc_eitc = function(tax_unit, fill_missings = F) {
                 pmax(0, txbl_kg) + 
                 pmax(0, (net_rent + net_estate)),
       ei = ei * (inv_inc <= eitc.inv_inc_limit),
+      
+      # Record eligibility apart from earned income, for the prior-year election
+      eligible = (qual1 | (filing_status == 2 & qual2)) &
+                 !dep_status & (eitc.mfs_eligible == 1 | filing_status != 3) &
+                 (inv_inc <= eitc.inv_inc_limit),
             
       # Assign credit parameters based on number of children
       pi_rate = case_when(
@@ -134,8 +139,9 @@ calc_eitc = function(tax_unit, fill_missings = F) {
                               max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate)),
 
       # Prior-year EI election: if enabled, compute EITC using prior-year EI
-      # and take the larger of the two
-      ei_prior = ei_prior_yr * (ei > 0),
+      # and take the larger of the two. An eligible filer may elect it with no
+      # current-year earned income, as under the 2021 election (ARPA sec. 9626)
+      ei_prior = ei_prior_yr * eligible,
       eitc_prior     = pmax(0, pmin(pmin(ei_prior, pi_end) * pi_rate,
                                     max_eitc - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate)),
       eitc           = if_else(eitc.ei_prior_yr == 1, pmax(eitc, eitc_prior), eitc),
