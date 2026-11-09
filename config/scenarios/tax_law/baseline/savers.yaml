@@ -1,10 +1,19 @@
 ---
 
-# Whether credit is repealed
+# Whether credit is repealed. The input file's credit is for contributions to
+# retirement plans and IRAs, which earn the credit only in taxable years
+# beginning before 2027 (IRC 25B(d)(1)(B), as amended by SECURE 2.0, Pub. L.
+# 117-328, sec. 103, and OBBBA sec. 70116). From 2027 those contributions earn
+# the Saver's Match (IRC 6433), which is not modelled, and the credit is left
+# only for contributions to the filer's own ABLE account, which the input file
+# does not carry.
 repeal:
-  value: 0
+  value:
+    '2014': 0
+    '2027': 1
 
-# Whether credit is refundable
+# Whether credit is refundable. With the credit repealed from 2027, the 2027
+# value has no effect under this law.
 refundable:
   value:
     '2014': 0
