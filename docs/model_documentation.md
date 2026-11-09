@@ -170,7 +170,7 @@ need SLURM syncing.
 ## 5. Tax law parameterization
 
 Tax law lives in YAML files, one per thematic parameter group
-(`config/scenarios/tax_law/baseline/*.yaml`: `ord`, `pref`, `agi`, `std`,
+(`config/scenarios/tax_law/default/*.yaml`: `ord`, `pref`, `agi`, `std`,
 `item`, `pe`, `qbi`, `amt`, `niit`, `ctc`, `eitc`, `cdctc`, `char`, `below`,
 `pr`, `rebate`, …). Each **parameter** contains **subparameters** holding a
 time series of values plus optional indexation rules (`i_measure`,
