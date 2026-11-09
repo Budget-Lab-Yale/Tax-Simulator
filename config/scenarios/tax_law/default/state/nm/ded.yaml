@@ -62,9 +62,15 @@ std_base_single:
   value:
     '2017': 0
     '2018': 12000
-    '2026': 15750
+    '2025': 15750
   i_measure: default
-  i_base_year: default
+  # As federal std.yaml: the 2025 amount is set in statute and is not indexed.
+  # Later years index from a 2024 base.
+  i_base_year:
+    '2014': 1987
+    '2018': 2017
+    '2025': NA
+    '2026': 2024
   i_direction: default
   i_increment: default
   reference: 'PIT-1 line 12 (the federal standard deduction as claimed); IRC 63(c)(2)/(7). Mirrors config/scenarios/tax_law/baseline/std.yaml value_single -- TCJA $12,000 (2018), OBBBA $15,750 -- value for value and indexation block for indexation block. 2017 is zero because start_point 2 already carries the deduction that year'
@@ -73,9 +79,15 @@ std_base_head:
   value:
     '2017': 0
     '2018': 18000
-    '2026': 23625
+    '2025': 23625
   i_measure: default
-  i_base_year: default
+  # As federal std.yaml: the 2025 amount is set in statute and is not indexed.
+  # Later years index from a 2024 base.
+  i_base_year:
+    '2014': 1987
+    '2018': 2017
+    '2025': NA
+    '2026': 2024
   i_direction: default
   i_increment: default
   reference: 'Mirrors config/scenarios/tax_law/baseline/std.yaml value_head (head-of-household standard deduction); IRC 63(c)(2)(B)'
