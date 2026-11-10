@@ -52,7 +52,10 @@ pi_rate_3:
 
 # Credit phase-out rate for filers with no children  
 po_rate_0:
-  value: 0.0765
+  value: 
+    '2014': 0.0765
+    '2021': 0.153
+    '2022': 0.0765
 
 # Credit phase-out rate for filers with 1 child  
 po_rate_1:

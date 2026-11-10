@@ -14,6 +14,8 @@ pi_rate_0:
 po_rate_0:
   value:
     '2014': 0.0765
+    '2021': 0.153
+    '2022': 0.0765
     '2026': 0.153
 
 # Earned income threshold at which credit is maximized for filers with no children
