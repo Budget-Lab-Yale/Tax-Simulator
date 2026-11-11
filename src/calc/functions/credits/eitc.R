@@ -29,6 +29,8 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'n_dep_eitc',    # (int)  number of EITC-qualifying children
     'age1',          # (int)  age of primary filer
     'age2',          # (int)  age of secondary filer
+    'student1',      # (bool) whether primary filer is a specified student (IRC 32(n)(1))
+    'student2',      # (bool) whether secondary filer is a specified student
     'ei1',           # (dbl)  earned income of primary filer
     'ei2',           # (dbl)  earned income of secondary filer
     'txbl_int',      # (dbl) taxable interest income 
@@ -58,6 +60,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'eitc.po_thresh_3',   # (int) AGI threshold at which credit begins phasing out for filers with 3 children
     'eitc.inv_inc_limit', # (int) maximum allowable investment income for credit eligibility
     'eitc.min_age',       # (int) minimum age for credit eligibility for filers with 0 children
+    'eitc.min_age_student', # (int) minimum age for a specified student with 0 children; applies where it exceeds eitc.min_age
     'eitc.max_age',       # (int) maximum age for credit eligibility for filers with 0 children
     'eitc.ei_prior_yr',   # (int) whether prior year earned income can be elected
     'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns
@@ -75,11 +78,14 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       # Determine qualifying earned income based on age. Without a qualifying
       # child, a joint return qualifies if either spouse meets the age test, and
       # the credit is then based on the couple's combined earned income (IRC
-      # 32(c)(1)(A)(ii) and 32(c)(2))
-      qual1 = (n_dep_eitc > 0) | (age1 >= eitc.min_age & age1 <= eitc.max_age),
+      # 32(c)(1)(A)(ii) and 32(c)(2)). A specified student faces the higher of
+      # the general minimum age and the student one (IRC 32(n)(1)(B)(ii))
+      min_age1 = if_else(student1 == 1, pmax(eitc.min_age, eitc.min_age_student), eitc.min_age),
+      min_age2 = if_else(student2 == 1, pmax(eitc.min_age, eitc.min_age_student), eitc.min_age),
+      qual1 = (n_dep_eitc > 0) | (age1 >= min_age1 & age1 <= eitc.max_age),
       qual2 = if_else(
         !is.na(age2),
-        (n_dep_eitc > 0) | (age2 >= eitc.min_age & age2 <= eitc.max_age),
+        (n_dep_eitc > 0) | (age2 >= min_age2 & age2 <= eitc.max_age),
         F
       ),
       ei = (ei1 + if_else(filing_status == 2, ei2, 0)) * (qual1 | (filing_status == 2 & qual2)),

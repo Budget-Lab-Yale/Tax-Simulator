@@ -71,6 +71,12 @@ min_age:
     '2014': 25
     '2021': 19
 
+# Minimum age for a specified student (24, as in 2021)
+min_age_student:
+  value:
+    '2014': 0
+    '2021': 24
+
 # Maximum age for eligibility (cap removed)
 max_age:
   value:

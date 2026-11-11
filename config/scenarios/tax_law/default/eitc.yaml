@@ -172,6 +172,16 @@ min_age:
     '2021': 19
     '2022': 25
 
+# Minimum age for a specified student without a qualifying child; applies
+# where it exceeds min_age. IRC 32(n)(1)(B)(ii): 24 in 2021, for an eligible
+# student (IRC 25A(b)(3)) in at least five months of the year. The age of 18
+# for former foster youth and homeless youth (32(n)(1)(B)(iii)) is not modeled.
+min_age_student:
+  value:
+    '2014': 0
+    '2021': 24
+    '2022': 0
+
 # Maximum age for credit eligibility
 max_age:
   value:

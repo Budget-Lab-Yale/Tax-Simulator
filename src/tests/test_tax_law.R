@@ -26,6 +26,7 @@ test_tax_law = function() {
 
   test_unrounded_mapper()
   test_eitc_childless_threshold_indexed()
+  test_eitc_student_min_age()
   message('test_tax_law: ALL TESTS PASSED')
   invisible(TRUE)
 }
@@ -142,5 +143,50 @@ test_eitc_childless_threshold_indexed = function() {
   }
 
   message('test_eitc_childless_threshold_indexed: PASSED')
+  invisible(TRUE)
+}
+
+
+
+test_eitc_student_min_age = function() {
+
+  #----------------------------------------------------------------------------
+  # In 2021 the minimum age for the EITC without a qualifying child was 19, but
+  # 24 for a specified student (IRC 32(n)(1)(B)). Checks the student minimum
+  # in 2021, that it binds in no other year, that a joint return qualifies on
+  # either spouse, and that a child makes age irrelevant.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  test_indexes = expand_grid(series = c('cpi', 'chained_cpi', 'awi'),
+                             year   = 1970:2040) %>%
+    mutate(growth = 0.02)
+
+  tax_law = build_tax_law_from_id('default', years = c(2021, 2023),
+                                  indexes = test_indexes) %>%
+    select(year, filing_status, starts_with('eitc.'))
+
+  cases = tribble(
+    ~case,                             ~year, ~filing_status, ~age1, ~age2, ~student1, ~student2, ~n_dep_eitc, ~expect_credit,
+    '2021, 21, not a student',          2021,  1,              21,    NA,    0,         0,         0,           T,
+    '2021, 21, student',                2021,  1,              21,    NA,    1,         0,         0,           F,
+    '2021, 24, student',                2021,  1,              24,    NA,    1,         0,         0,           T,
+    '2021, joint, one a student',       2021,  2,              21,    22,    1,         0,         0,           T,
+    '2021, joint, both students',       2021,  2,              21,    22,    1,         1,         0,           F,
+    '2021, 21, student with a child',   2021,  1,              21,    NA,    1,         0,         1,           T,
+    '2023, 30, student',                2023,  1,              30,    NA,    1,         0,         0,           T,
+    '2023, 21, not a student',          2023,  1,              21,    NA,    0,         0,         0,           F
+  ) %>%
+    mutate(ei1 = 8000, ei2 = 0, agi = 8000, r.eitc_precert = 1) %>%
+    left_join(tax_law, by = c('year', 'filing_status'))
+
+  eitc = calc_eitc(cases, fill_missings = T)$eitc
+  wrong = cases$case[(eitc > 0) != cases$expect_credit]
+  if (length(wrong) > 0) {
+    stop('EITC student minimum age: wrong eligibility for ', paste(wrong, collapse = '; '))
+  }
+
+  message('test_eitc_student_min_age: PASSED')
   invisible(TRUE)
 }
