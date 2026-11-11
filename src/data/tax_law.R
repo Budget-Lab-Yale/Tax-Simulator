@@ -624,6 +624,9 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   i_info$i_measure %<>%
     left_join(indexes, by = c('value' = 'series', 'year')) %>%
     mutate(index = cumprod(1 + growth))
+  if (!('preliminary' %in% colnames(i_info$i_measure))) {
+    i_info$i_measure$preliminary = 1
+  }
 
   # Stop on an index chain broken by missing data: a live measure with no growth
   # rate for a simulation year, which happens when the window runs past the end of
@@ -659,7 +662,7 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   }
 
   i_info$i_measure %<>%
-    select(year, index)
+    select(year, index, preliminary)
   
   # Create series of indexation scaling factors. First, unnest list-cols
   i_info$i_base_year %<>% 
@@ -669,14 +672,18 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
     
     # Then, join index values for current year and base year
     left_join(i_info$i_measure %>% 
-                mutate(index = lag(index)), 
+                mutate(index       = lag(index), 
+                       preliminary = lag(preliminary)), 
               by = 'year') %>% 
     left_join(i_info$i_measure %>% 
-                rename(base_year_index = index), 
+                select(year, base_year_index = index), 
               by = c('base_year' = 'year')) %>% 
     
-    # Calculate scaling factor by dividing current-year value by base-year value
-    mutate(value    = index / base_year_index, 
+    # Calculate scaling factor by dividing current-year value by base-year value.
+    # The current-year value is the prior year's level as first published and the
+    # base-year value is the revised level (see generate_indexes()), unless the
+    # prior year is itself the base year, where the ratio is 1.
+    mutate(value    = index * if_else(base_year < year - 1, preliminary, 1) / base_year_index, 
            variable = 'i_index') %>% 
     select(year, variable, element, value) 
   
