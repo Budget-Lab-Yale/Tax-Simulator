@@ -3,7 +3,7 @@ title: "Archive — superseded documents"
 role: index
 workstream: cross-cutting
 status: current
-updated: 2026-11-10
+updated: 2026-11-11
 sot: research/README.md
 supersedes: []
 superseded_by: null
@@ -142,6 +142,25 @@ is forward-looking, and by `docs/model_documentation.md` section 10 for the
 as-built design. *Still useful for* the reasoning and dates behind each original
 decision, the wage and commuting cross-checks of the weights (ACS, QWI, LODES),
 and the candidate person-level calibration targets.
+
+**`ptet_methodology_2026-11-11_pre-reported-income.md`** (2026-11-11) — the
+first PTET methodology note, written for JI's review. It treated each record's
+pass-through income as true income: the model computed a PTET, subtracted it
+federally, and added it back on the state side.
+
+*Superseded by* the rewritten `research/state_tax/ptet/ptet_methodology.md`
+(2026-11-11, decision S48), which treats the Tax-Data file's pass-through income
+and SALT as already reported, net of PTET, and infers true income state by
+state. *Still useful for* the version JI marked up in Word that day, and for the
+federal-subtraction design should production Tax-Data stay on the aged 2017
+file (methodology section 2 explains when that design is the right one).
+
+**`state_tax_plan_2026-11-10_pre-reported-income.md`** (2026-11-10) — the
+state-tax plan with section 3.2 (PTET) written for the true-income design.
+
+*Superseded by* `research/state_tax/plan.md` with section 3.2 rewritten for the
+reported-income design (decision S48). The other sections are unchanged. *Still
+useful for* the original step table and checkpoints.
 
 ## Stale renders
 

@@ -36,3 +36,4 @@ src/main_state_weights.R,cross-repo,"Tax-Data. The entry point that fits and pub
 src/cex.R,cross-repo,"Tax-Data. The CEX consumption imputation; cited for c_housing_utilities."
 docs/30_supplemental_inputs_bridge.md,cross-repo,"Affordability-Index. The suggested home for the documentation of its supplemental-inputs publishing step."
 research/state_tax/ty2026_indexed_audit.csv,planned,"This repo, plan section 3.3: the audit of statutorily indexed state values for TY2026."
+research/rebuild/README.md,cross-repo,"Tax-Data, branch rebuild-joint-model. The generative-model rebuild that the PTET design (decision S48) assumes as the Tax-Data baseline."

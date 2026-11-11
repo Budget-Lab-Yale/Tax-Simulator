@@ -3,7 +3,7 @@ title: "State Individual Income Tax Module — Plan"
 role: plan
 workstream: state_tax
 status: current
-updated: 2026-11-10
+updated: 2026-11-11
 sot: self
 supersedes: [research/archive/state_tax_plan_2026-10-22_pre-rewrite.md]
 superseded_by: null
@@ -158,11 +158,27 @@ half in every year and every state, and the state calculator has nothing. It is
 the leading explanation for modeled NY, CA and CT liability running 1.2-1.5 times
 the agency figures from TY2021.
 
-Documents: the proposal `research/state_tax/ptet/ptet_proposal.md`; the law table
-`research/state_tax/ptet/ptet_state_law.csv` with notes in
+Documents: the design of record `research/state_tax/ptet/ptet_methodology.md`
+(read its section 2 first); the proposal `research/state_tax/ptet/ptet_proposal.md`;
+the law table `research/state_tax/ptet/ptet_state_law.csv` with notes in
 `research/state_tax/ptet/ptet_state_law.md`; draft per-state parameters and the
 list of law items still on secondary sources in
-`research/state_tax/ptet/params_draft/README.md`. Nothing is implemented.
+`research/state_tax/ptet/params_draft/README.md`. Nothing is implemented. The
+section as it stood before decision S48 is in
+`research/archive/state_tax_plan_2026-11-10_pre-reported-income.md`.
+
+**The income concept (S48, JI 2026-11-11).** The Tax-Data baseline is assumed
+to be John Ricco's generative model (Tax-Data `rebuild-joint-model`), which
+post-trains each year's records to IRS amounts by income bracket. Those amounts
+are reported: net of the PTET for electing owners, in pass-through income and in
+itemized state income tax. So the design holds a record's **reported** income
+fixed across the states it is weighted to and infers income before the PTET
+state by state, `Y_t[r, s] = Y_r / (1 - elect[r, s] x rate[s])`. The alternative,
+holding income before the PTET fixed and subtracting a PTET federally, fits only
+a file aged from a pre-PTET year by one national factor, which is what
+production Tax-Data builds today; applied to the generative file it would gross
+up owners who never elected and move each bracket off its IRS target.
+Methodology section 2 gives the full argument and when to revisit it.
 
 **Decided (JI).**
 
@@ -171,35 +187,47 @@ list of law items still on secondary sources in
   of partnership tax moved off individual returns, an $18.1B federal cost, about
   80% of it in the top 1%; 85% of partnership PTET benefits individuals.
   (2026-10-28)
-- **Two modes.** In a federal-only run each record's PTET uses a national rate
-  series by year and entity type, stored in federal law YAML. In a state-mode
-  run federal tax is computed per state fraction of a tax unit, each with that
-  state's PTET, and summed with the state weights. The state-mode calculation is
-  the reference; the national series is derived from it.
+- **Reported income held fixed** (S48, above). The federal baseline takes no
+  PTET adjustment; `do_salt_workaround_baseline()` is removed and not replaced.
+- **Two modes.** In a state-mode run the baseline federal calculation runs once;
+  in a counterfactual, records whose election changes in some state get federal
+  tax per group of states, each with that group's reported income, summed with
+  the state weights. In a federal-only run a counterfactual prices elections with
+  a national rate series by year and entity type, stored in federal law YAML and
+  derived from a state-mode run.
 - **Rate buckets bound the cost.** States are grouped into K buckets per year
-  (tunable, about 12 by default); each stacked row carries the record's
-  weight-averaged rate within its bucket, so a record's total PTET is exact.
+  (tunable, about 12 by default); each row carries the record's weight-averaged
+  rate within its bucket, so a record's total PTET is exact.
 - **Rate.** The top PTET rate per state, year and entity type. Graduated entity
   schedules (NY and others) are documented, not applied. Maryland's county rate
   is excluded from the state credit.
-- **Enacted law only.** No PTET in 2017; 2018-2020 only where enacted. This
-  raises federal baseline revenue in those years and needs John Ricco's sign-off.
+- **Base.** The owner's share of income before the PTET (2026-11-11).
+- **Enacted law only.** No PTET in 2017; 2018-2020 only where enacted.
 - **Reforms regenerate the national series.** A federal-only reform run needs a
   series produced by a state-mode run of that reform; the model stops with a
   clear error if it is missing.
 
-**Design.** The amount is `rate[state, year, entity] x max(0, income)` where a
-PTET is available, with the partnership amount scaled by the 85% individual
-share. A record elects when its federal gain (marginal rate times the PTET that
-would otherwise be lost to the SALT cap) exceeds a threshold scaled by a take-up
-parameter per entity type, on the existing `salt_workaround` random-number
-stream. Federally the amount is an active loss and reduces `salt_inc_sales`. On
-the state side `st_agi.R` adds the federal deduction back and restores
-`salt_inc_sales` for the SALT add-back, then applies the state's own credit
-(`credit_share x ptet`) or exclusion. This reverses the 2026-07-12 decision that
-the state add-back reads the post-workaround value (section 5, item 7); record
-the reversal in `research/decisions_log.md` when it lands. The stacked pass is a
-wrapper around the unchanged `do_taxes()`, placed after behavioral feedback.
+**Design.** Where a record elects in a state, the PTET is
+`rate / (1 - rate) x max(0, reported income)`, by entity type. A record elects
+when its federal gain (marginal rate times the PTET that would otherwise be lost
+to the SALT cap) exceeds a threshold scaled by a take-up parameter per entity
+type, on the existing `salt_workaround` random-number stream. In a baseline run
+the gain comes from the one federal calculation of the reported file, and the
+elections change nothing federally: they say whose reported income is net of a
+PTET, and where. On the state side `st_agi.R` adds the PTET back where the
+record elects and the state requires the add-back, then `st_credits.R` applies
+the state's credit (`credit_share x PTET`) or exclusion. The state SALT add-back
+keeps reading the file's `salt_inc_sales`, which is the reported amount, so
+section 5 item 7 stands. In a counterfactual, a record that stops electing in a
+state reports income higher by the PTET and itemized state income tax higher by
+the state relief; a record that starts electing reports both lower. The
+state-group federal pass is a wrapper around the unchanged `do_taxes()`, run
+only for records whose election changes, after behavioral feedback.
+
+**Depends on** the generative Tax-Data baseline. Until it is the production
+vintage, the aged 2017 file keeps an even 4-5% netting of pass-through income on
+owners who did not elect (methodology section 2); the design runs on it, and
+step 6's validation shows that error rather than hiding it.
 
 **Steps, each separately verifiable.**
 
@@ -207,24 +235,24 @@ wrapper around the unchanged `do_taxes()`, placed after behavioral feedback.
 |---|---|---|---|
 | 1 | Characterization test pinning today's `do_salt_workaround_baseline()`; a federal test runner | Totals match `research/state_tax/ptet/01_quantify_workaround.R` | No |
 | 2 | `st_ptet.*` schema; generate `{st}/ptet.yaml` from the law table | Quick state tests pass; state totals identical | No |
-| 3 | `calc_ptet()`, federal-only, behind a mode switch (legacy or new) | Legacy mode bit-identical to step 1; zero take-up equals workaround off | Only when the default flips |
-| 4 | State add-back, credit and exclusion | Worksheet cases: NY credit, CT 87.5%, WI exclusion, PA none | No (state totals move) |
-| 5 | Stacked wrapper, state-to-bucket map, unfiltered weights, collapse back to one row per record. Measure runtime and memory for one year at K = 12 and at K = every distinct rate before fixing the default | Zero take-up equals the unstacked run exactly; row weights sum to the record weight | Yes, in state-mode runs |
-| 6 | Calibrate to the TY2024 targets; build the national series; validate against published NY, CA, CT, NYC and MA credit totals and the agency ratios | Targets met; NY, CA and CT ratios fall toward about 1.1 | Yes |
+| 3 | `calc_ptet()` attributes elections and the PTET per record, state and entity type in the baseline; `do_salt_workaround_baseline()` off, behind a mode switch (legacy or new) | Legacy mode bit-identical to step 1; new mode's federal output bit-identical to a run with `item.salt_workaround_allowed_*` set to 0 | Yes, when the default flips: up by today's workaround cost, $3.2B in 2017 and $11-16B a year after |
+| 4 | State add-back, credit and exclusion | Worksheet cases: NY credit, CT 87.5%, WI exclusion, PA none, and one record that elects in NY and not in TX | No (state totals move) |
+| 5 | Counterfactual elections: the reform's gain, the change in reported income and SALT for records whose election changes, the state-group federal pass for those records only, collapse back to one row per record. Measure runtime and memory for one year at K = 12 and at K = every distinct rate before fixing the default | A reform identical to the baseline changes no election and is bit-identical; row weights sum to the record weight | No |
+| 6 | Calibrate to the TY2024 targets; build the national series; validate the federal cost (a no-PTET counterfactual against $18.1B), its top-1% share, and published NY, CA, CT, NYC and MA credit totals and the agency ratios | Targets met; NY, CA and CT ratios fall toward about 1.1 | No |
 | 7 | Retire scenario parameters nothing reads; map `item.salt_workaround_allowed_*` to take-up caps | Scenarios parse | No |
 
 **Checkpoints that need JI, in order.**
 
-1. After step 1: may the PTET adjustment move to after the Social Security
-   cost-of-living, capital and excess-growth adjustments? It must, to stack late,
-   and it changes excess-growth scenarios slightly.
-2. Before step 3: the base. Rate times pass-through income (proposed: brings in
-   non-itemizers, drops sales tax) or itemized SALT as today.
-3. After step 5's measurement: the default K, and whether fractional flags in
+1. Before step 3 flips the default: the sign-off package for John Ricco. The
+   federal baseline rises by today's workaround cost in every year, because the
+   reported data already carry the PTET; check the baseline against CBO
+   receipts at the same time.
+2. After step 5's measurement: the default K, and whether fractional flags in
    collapsed detail files are acceptable for distribution tables.
-4. Before step 6: the sign-off package for John Ricco (the pre-2021 revenue
-   change; the level and mix from 2021).
-5. Deferred unless raised: the MN and OR sunsets after 2027, the resident credit
+3. Before step 6: whether the 85% partnership share applies only in the $33.1B
+   target (the per-record base is already the owner's own share), and whether
+   the election gain nets the QBI deduction and below-100% state credits.
+4. Deferred unless raised: the MN and OR sunsets after 2027, the resident credit
    for another state's PTET, and the law items still on secondary sources.
 
 ### 3.3 TY2026 state law
@@ -319,7 +347,8 @@ Reasons and dates are in the archived plan and `research/decisions_log.md`.
 6. **Fixed-date and selective conformity:** groups reference the enacted federal
    baseline (decision S44).
 7. **State SALT add-back reads the post-workaround `salt_inc_sales`**
-   (2026-07-12). Section 3.2 reverses this when the PTET work lands.
+   (2026-07-12). Under the PTET design (S48) this stands: the file's
+   `salt_inc_sales` is the reported amount, already net of the PTET.
 8. **Year horizon:** law encoded through TY2025 and carried forward; TY2026
    changes recorded per state in the tracker (decision S45). Section 3.3 is the
    work this left.

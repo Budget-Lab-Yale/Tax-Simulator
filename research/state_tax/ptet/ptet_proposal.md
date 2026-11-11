@@ -3,7 +3,7 @@ title: "Pass-through entity taxes (PTET): a proposed update to the federal and s
 role: notes
 workstream: state_tax
 status: open
-updated: 2026-11-10
+updated: 2026-11-11
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null
@@ -12,6 +12,8 @@ superseded_by: null
 # Pass-through entity taxes (PTET): a proposed update to the federal and state models
 
 **For:** John Ricco. **From:** John Iselin. **Status:** draft for discussion; nothing here is implemented.
+
+> **Amended 2026-11-11 (decision S48).** Sections 4.2, 4.4 and 4.5 assume the microdata carry pass-through income before the PTET, so the model subtracts a PTET federally and adds it back on the state side. The design of record now treats the microdata as reported income, net of the PTET, and holds it fixed across a record's states: the federal baseline takes no PTET adjustment, and income before the PTET is inferred state by state. See `research/state_tax/ptet/ptet_methodology.md` section 2. The evidence in sections 1 to 3 is unchanged.
 
 ## Summary
 
