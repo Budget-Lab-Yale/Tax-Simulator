@@ -3,7 +3,7 @@ title: "Potential issues in TAXSIM-35 and PolicyEngine US"
 role: evidence
 workstream: state_tax
 status: current
-updated: 2026-09-30
+updated: 2026-11-10
 sot: research/state_tax/state_parameter_rollout.csv
 supersedes: []
 superseded_by: null

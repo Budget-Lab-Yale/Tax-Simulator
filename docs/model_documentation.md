@@ -1,6 +1,6 @@
 # Tax-Simulator: Model Documentation
 
-**Last updated:** 2026-07-19 (branch `state-tax`)
+**Last updated:** 2026-11-10 for section 10 (branch `state-gap-diagnostics`); other sections 2026-07-19
 **Scope:** the full federal model — data, configuration, calculator, behavior,
 outputs, validation — plus the state income tax module and its current status.
 **Audience:** a new analyst who needs to understand, run, and extend the model.
@@ -296,12 +296,13 @@ workbooks) land at the vintage root, above the scenario folders.
 
 ## 10. The state income tax module
 
-*Status date: 2026-10-13, branch `cross-model-refit-filers`. Design of
-record: `research/state_tax/plan.md`; running status: `research/STATUS.md`
-and the per-state tracker `research/state_tax/state_parameter_rollout.csv`.
-As of this date all 51 jurisdictions are encoded AND enabled (`states = all`),
-30 have closed the cross-model check, and the data gaps are registered in
-`research/state_tax/tax_data_gaps.csv` (decision S43).*
+*Status date: 2026-11-10, branch `state-gap-diagnostics`. Plan:
+`research/state_tax/plan.md`; current status: `research/STATUS.md` and the
+per-state tracker `research/state_tax/state_parameter_rollout.csv`. As of this
+date all 51 jurisdictions are encoded and enabled (`states = all`), all 51 have
+closed the cross-model check, production state weights are the default, and the
+data gaps are registered in `research/state_tax/tax_data_gaps.csv` (decision
+S43).*
 
 ### 10.1 Architecture
 
@@ -321,8 +322,9 @@ the federally-calculated units. Three structural commitments:
    Reform overlays work exactly like federal ones (`state_tax_law` runscript
    column).
 3. **One-way federal → state in v1.** No SALT circularity, no federal↔state
-   iteration (TAXSIM does three rounds), no PTET modeling. Planned for
-   Phase 7.
+   iteration (TAXSIM does three rounds). Pass-through entity taxes are not
+   yet modeled on the state side; that work is section 3.2 of
+   `research/state_tax/plan.md`.
 
 State mode is switched on by three runscript columns: `states` (2-letter
 codes or `all`; the baseline row must cover a superset of every
@@ -352,31 +354,33 @@ Outputs: `totals/state.csv`, `supplemental/state_rev_est.csv` (counterfactual
 deltas vs. baseline), the optional compact per-year state detail matrix, and
 stacked state revenue estimates at the vintage root.
 
-### 10.2 What is encoded (Phase 2/3, done)
+### 10.2 What is encoded
 
-25 states have baseline configs: 16 broad-income-tax states (AZ CA CO CT GA
-IL IN KY MI NC ND NY SC VA, plus OH and UT added July 2026), the narrow-tax
-states NH and TN, WA's excise+credit regime, and six no-tax stubs (AK FL NV
-SD TX WY). Encodings run 2017-forward from forms and statutes, including structural
+All 51 jurisdictions have baseline configs: the 41 states with a broad income
+tax plus DC, the narrow-tax states NH and TN, WA's excise+credit regime, and
+six no-tax stubs (AK FL NV SD TX WY). Encodings run 2017-forward from forms and statutes, including structural
 features like NY's tax-benefit recapture, CO's TABOR rate history, OH's
 Business Income Deduction and ordered credit stack, and UT's taxpayer tax
 credit. Each state's known modeling gaps are documented in
 `research/state_tax/state_parameter_rollout.csv` (the tracker).
 
-### 10.3 State weights (Phase 1) — in production through the interface, provisional vintage
+### 10.3 State weights — production fit, read through the interface
 
 Since 2026-09-29 the dispatcher `build_state_weights(method = "interface")`
 reads `state_weights_{year}.csv.gz` from the pinned **State-Weights**
 interface, written by Tax-Data. Since 2026-10-24 the default vintage is the
 Phase 4 P6 production fit (`2026102315_rebuild`, arm `C_10_warmB_pct`, fitted
 2017-23, carried 2024-97, on Tax-Data `2026102315_rebuild`), replacing the
-dry run (`dryrun_B_2022_2023`, fitted 2022-23, carried 2024-25). No state-mode
-run has yet been validated on it, so state totals stay PROVISIONAL and the
-tracker's `aggregate` column is `blocked_weights` for every state. A 2026-10-13 full-sample
-`states = all` run (TY2022-25, 27 GB peak per year task) gives state totals
-of the right order -- e.g. TY2023 CA $129bn, NY $63bn, IL $25bn, $523bn over
-all states -- with federal totals byte-identical to a federal-only run. The
-bake-off that chose the method concluded 2026-07-19
+dry run (`dryrun_B_2022_2023`, fitted 2022-23, carried 2024-25). Full-sample
+`states = all` baseline runs for TY2017-2025 exist on it (27 GB peak per year
+task; federal totals byte-identical to a federal-only run), and
+`research/state_tax/aggregate/README.md` compares them with published figures:
+modeled liability summed over states is 0.97-1.02 times Census state tax
+collections for TY2017-2022 and 1.06-1.09 for TY2023-2024, and NY, CA and CT
+run 1.2-1.5 times their agencies' resident figures from TY2021 because the
+pass-through entity tax credit is not modeled. These are diagnostics, not yet
+revenue estimates. The bake-off that chose the original method concluded
+2026-07-19
 (`research/state_weights/state_weights_phase1_summary.md` has methods, results, and the TPC/OTA
 comparison):
 
@@ -395,20 +399,19 @@ comparison):
   benchmarks; CO consistent once TABOR refunds are accounted for; NY
   overshoots even after the (large) PTET adjustment.
 
-### 10.4 Cross-model validation (Phase 5) — running, triage open
+### 10.4 Cross-model validation — complete for all 51 jurisdictions
 
-A record-level harness (`research/state_tax/cross_model/`) validates
-each state's calculator against **TAXSIM-35 (2017–2020)** and **PolicyEngine
-US (2021–2024)** on stratified PUF samples, with a federal-alignment "clean
-subset" filter, a machine-readable known-differences list (with predicate-
-based exclusions), and per-state markdown verdicts. Status: **9 states pass**
-(the six stubs, NH, TN, IL); **16 remain in triage**, with failure clusters
-identified (deductions-stage for CA/KY/NY/VA — SALT-circularity-flavored;
-state-AGI-stage for MI/NC; exemptions for IN/AZ/GA; near-threshold CT/WA/OH/UT).
-Notable finding: **neither TAXSIM nor PolicyEngine models the Ohio Business
-Income Deduction** — validated exclusions carry it. Upstream-shareable issues
-for both external models are drafted in
-`cross_model/external_model_issues.md` (not yet sent).
+A record-level harness (code in `src/tests/state/cross_model/`, records in
+`research/state_tax/cross_model/`) validates each state's calculator against
+**TAXSIM-35 (2017–2020)** and **PolicyEngine US (2021–2025)** on stratified
+samples of filers, with a federal-alignment "clean subset" filter, a
+machine-readable known-differences list (with predicate-based exclusions), and
+per-state markdown verdicts. Status (2026-10-22): **all 51 jurisdictions
+pass** — at least 95% of clean records within $100 in every year of both
+windows. Every remaining difference is a row of
+`src/tests/state/cross_model/known_differences.csv`. Issues for the
+maintainers of both external models are written up in
+`research/state_tax/cross_model/external_model_issues.md` (not yet sent).
 
 ### 10.5 Open questions and needed improvements (flagged)
 
@@ -417,15 +420,16 @@ for both external models are drafted in
 - [x] **Wire the decided weights into production** -- the writer is Tax-Data's
   `src/main_state_weights.R` (the `State-Weights` interface, every year
   2017-2097) and `build_state_weights(method = "interface")` reads it
-  (2026-09-29). Still open: the production vintage itself (Tax-Data Phase 4 P6,
-  after the national-weights decision); until then the default vintage is a
-  provisional dry run and the tracker's `blocked_weights` column stays.
-- [ ] **Weights are fit on 2022 only.** The 2017–2024 panel needs per-year
-  fits (HT2 exists for all years) and a policy for projected years — the
-  amortized multi-year approach in the alternatives memo is the candidate.
-- [ ] **Cross-model triage for the 16 open states** — each needs its residual
-  clusters explained (known-difference row or bug fix) to reach the ≥95%
-  clean-match acceptance bar.
+  (2026-09-29). The production vintage `2026102315_rebuild` is the default
+  since 2026-10-24.
+- [x] **Per-year fits.** The production vintage is fitted for each of
+  TY2017-2023; later years carry the TY2023 state shares.
+- [x] **Cross-model triage** — all 51 jurisdictions clear the ≥95%
+  clean-match bar (2026-10-22).
+- [ ] **Aggregate validation.** A first comparison with Census collections and
+  with NY, CA and CT agency tables exists
+  (`research/state_tax/aggregate/README.md`); the gaps it locates, the
+  pass-through entity tax first, are not yet closed.
 
 **Known weaknesses in the weights (documented in the Phase 1 summary):**
 
@@ -450,10 +454,11 @@ for both external models are drafted in
   ~$8bn/yr): residence-based weights cannot represent it; LODES
   origin-destination commuter matrices are the planned Phase 7 basis.
   Reciprocity agreements and other-state credits are in the same bucket.
-- [ ] **PTET (pass-through entity tax) credits** are unmodeled — material for
-  NY/IL/CA liability levels post-2021 and the main wedge in the NY pilot.
-  Per-state PTET rates, effective years and credit/exclusion method, and the
-  JCT 2024 federal targets, are in
+- [ ] **PTET (pass-through entity tax) credits** are unmodeled — the main
+  wedge in NY, CA and CT liability from TY2021. The proposal is
+  `research/state_tax/ptet/ptet_proposal.md`, the state law table
+  `research/state_tax/ptet/ptet_state_law.csv`, and the JCT 2024 federal
+  targets are in
   `docs/papers/summaries/comey_gallagher_gorman_2025_salt_workarounds.md`.
 - [ ] **SALT circularity / federal↔state iteration** (Phase 7) — currently
   one-way; matters most for itemizers near the standard/itemized margin.
@@ -474,9 +479,10 @@ for both external models are drafted in
 - [ ] The cross-model harness's raw per-year files hold only the most recent
   run's state set — partial reruns silently strip other states' stage
   diagnostics from regenerated reports (manual merge required today).
-- [ ] `research/STATUS.md` trails the running log; the tracker CSV
-  (`research/state_tax/state_parameter_rollout.csv`) is the current source of
-  truth for per-state status.
+- [x] `research/STATUS.md` is a short page of current facts (rewritten
+  2026-11-10); the tracker CSV
+  (`research/state_tax/state_parameter_rollout.csv`) is the source of truth
+  for per-state status.
 - [ ] Send the drafted TAXSIM (T-series) and PolicyEngine (P-series) issue
   reports upstream (`research/state_tax/cross_model/external_model_issues.md`).
 

@@ -3,7 +3,7 @@ title: "Research corpus index"
 role: index
 workstream: cross-cutting
 status: current
-updated: 2026-08-20
+updated: 2026-11-10
 sot: self
 supersedes: []
 superseded_by: null
@@ -39,7 +39,12 @@ lives in `src/tests/state/cross_model/`; only its *records* are here.
 | procedure | [`state_tax/state_parameter_workflow.md`](state_tax/state_parameter_workflow.md) — defines the status vocabulary the tracker uses |
 | tracker | [`state_tax/state_parameter_rollout.csv`](state_tax/state_parameter_rollout.csv) — **the single per-state status surface** |
 | review | `state_tax/CODE_REVIEW_2026_07_17.md`, `state_tax/STATE_ENCODING_REVIEW_2026_08_11.md` — point-in-time, see their `true_as_of:` |
+| method | [`state_tax/supplemental_inputs_interface.md`](state_tax/supplemental_inputs_interface.md) — optional data inputs for the state calculator, published by another model (decision S43) |
+| registry | [`state_tax/tax_data_gaps.csv`](state_tax/tax_data_gaps.csv) — every state provision the pinned Tax-Data vintage cannot compute as written, with the variable it needs |
 | evidence | [`state_tax/cross_model/`](state_tax/cross_model/) — per-state triage reports, filed bug packets, divergence records |
+| evidence | [`state_tax/aggregate/`](state_tax/aggregate/README.md) — gap diagnostics: modeled state liability against Census collections and state agency tables |
+| evidence | [`state_tax/acs_test/`](state_tax/acs_test/README.md) — which data gaps the ACS could fill |
+| notes | [`state_tax/ptet/`](state_tax/ptet/ptet_proposal.md) — pass-through entity taxes: the proposal, the state-by-year law table, draft parameters |
 | notes | [`state_tax/notes/`](state_tax/notes/) — cross-state surveys, CA analyses, deferred designs |
 
 ### `state_weights/` — split state weights and the non-filer rework

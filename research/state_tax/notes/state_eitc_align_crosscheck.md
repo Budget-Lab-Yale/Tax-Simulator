@@ -1,3 +1,15 @@
+---
+title: "State EITC cross-check with State-EITC-Align"
+role: notes
+workstream: state_tax
+status: current
+updated: 2026-11-10
+true_as_of: 2026-10-02
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State EITC cross-check with State-EITC-Align (2026-10-02)
 
 State-EITC-Align is the state EITC parameter repo (`johniselin-econ/State-EITC-Align`).

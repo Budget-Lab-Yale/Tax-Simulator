@@ -2,8 +2,8 @@
 title: "Data-gap implementation spec: Hawaii, Kentucky, Pennsylvania"
 role: notes
 workstream: state_tax
-status: open
-updated: 2026-10-13
+status: executed
+updated: 2026-11-10
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null

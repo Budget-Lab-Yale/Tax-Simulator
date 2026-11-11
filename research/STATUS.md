@@ -3,865 +3,124 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-10-22
+updated: 2026-11-10
 sot: self
-supersedes: []
+supersedes: [research/archive/STATUS_2026-10-25_pre-rewrite.md]
 superseded_by: null
 ---
 
 # State income tax workstream — status
 
-## 2026-10-22: every jurisdiction clears the cross-model bar
-
-**All 51 jurisdictions now pass.** Every jurisdiction's `cross_model` status in
-`research/state_tax/state_parameter_rollout.csv` is `done`: on records whose
-federal results agree, at least 95% are within $100 of TAXSIM-35 in every year
-2017-2020 and of PolicyEngine US in every year 2021-2025 (cells under 100 clean
-records are flagged underpowered and not judged). Twenty-one states closed
-between 2026-10-13 and today, the last seven (AZ OR MT SC MA, then NY MO MI PA)
-on 2026-10-21/22. Per-state scores are in `cross_model/results/summary.csv`; the
-reasoning is in each source packet and in the tracker's notes column.
-
-**How the misses were closed.** Every remaining difference is attributed to one
-of three causes, each recorded as a row of
-`src/tests/state/cross_model/known_differences.csv` (324 rows: 285 exclude, 39
-annotate):
-
-- *Our encoding was wrong, and was fixed.* The large ones of the last two weeks:
-  New York's Empire State child credit now follows the IT-213 worksheets (it had
-  paid $330 a child to families with no earnings); Missouri's itemized
-  deduction starts from the capped federal Schedule A and removes a prorated
-  income-tax share, as MO-A Part 2 does; Michigan adds back the federal
-  deduction for half of self-employment tax (Schedule 1 line 2), which both
-  external models do and we did not; Massachusetts nets capital gains and losses
-  in Schedule B order and keeps its income classes separate. Each fix is a
-  generic, default-off switch declared in `params_schema.yaml`, with worksheet
-  tests in `src/tests/state/test_state_calc.R`.
-- *The external model is wrong.* Confirmed by a direct probe of TAXSIM or by
-  reading PolicyEngine's source, and written up for their maintainers in
-  `cross_model/external_model_issues.md`: TAXSIM T1-T81 and PolicyEngine
-  P1-P61. Not yet sent (see below).
-- *Neither side can be right for that record*, because the input that decides it
-  is unobserved: whether a pension is public or private, whether a retiree has
-  retired under the plan's terms, who in a couple receives the Social Security,
-  which state's bonds the tax-exempt interest comes from (we assume 25%
-  out-of-state). These are `data-proxy` or `structural` rows; most clear when a
-  producer publishes the matching optional input (decision S43).
-
-**Federal changes that came with it.** These move federal results for every run,
-federal-only included:
-
-- Qualified passenger-vehicle loan interest (P.L. 119-21) is a below-the-line
-  deduction, not an AGI adjustment (PR #132 to `main`, cherry-picked here as
-  37b87d28e). AGI rises for claimants from TY2025. The 2025 PolicyEngine cells
-  were re-scored for all states on the rebuilt federal pre-pass: all still clear,
-  each gaining about 100 clean records (the claimants now agree on federal AGI).
-- `std_ded_potential`: the federal standard deduction is zero for itemizers, so
-  state rules that read the forgone federal amount (Montana's Worksheet A,
-  Missouri's best-of election, the itemized-less-standard rules among others)
-  now read this column.
-- Three 2026-07-01 audit fixes reach `main` with this branch: dependent standard
-  deduction keeps its age/blind add-ons; the care credit's earned-income cap is
-  one pool across age groups; tax-exempt interest counts in the Social Security
-  taxability test. (The fourth, the 1250/collectibles headroom, is already on
-  `main`.)
-
-**Harness changes since 2026-10-13.** The sample is drawn by record id within
-strata, so a federal fix no longer re-draws the sample (S47; PolicyEngine 10,000
-records a year, equal per stratum). The PolicyEngine driver now fills
-`taxable_private_pension_income` for Missouri and Michigan, whose PolicyEngine
-retirement rules read it and had paid no exemption at all; it exports the New
-York one-time payments and several state credits for keying exclusions; the raw
-output carries `sch_e`, dependent ages and `med_item_ded_potential`.
-
-**Calls JI may want to revisit.** Michigan's TY2022 earned income credit is
-encoded at the statutory 30% (PA 4 of 2023, retroactive) although the extra 24
-points were paid as separate checks; PolicyEngine uses the 6% printed on the
-return (P61). One-time state payments booked to a tax year by an external model
-(New York's 2022 supplemental credits, Maine's 2025 affordability payment) are
-excluded rather than modeled, per S46.
-
-**What is still open.**
-
-1. *Production state weights.* The default State-Weights vintage is the Phase
-   4 P6 production fit as of 2026-10-24 (`2026102315_rebuild`, TY2017-2023
-   fitted, 2024-2097 carried, on Tax-Data `2026102315_rebuild`), replacing the
-   dry run (`dryrun_B_2022_2023`). No state-mode run has been made on it yet,
-   so every state-mode total is still PROVISIONAL and aggregate validation
-   against HT2 and state revenue figures is the next step. The producer lives
-   in Tax-Data (`research/state_weights/MOVED.md` here points to it).
-2. *Upstream reports.* TAXSIM and PolicyEngine issues found since the last send
-   (T61-T81, P45-P61, and earlier unsent items) are written up but not sent.
-3. *PR to `main`.* A trial merge is clean; `main`'s one extra commit is the
-   1250/collectibles fix this branch already carries.
-4. *Per-state reports.* `cross_model/results/reports/{st}.md` were regenerated
-   for each state as it closed; the 2025 re-score after the vehicle-loan fix
-   updated the summary boards only.
-5. Unchanged from 2026-10-13: the circuit-breaker review (S46), TY2026 law for
-   the states the tracker marks UNENCODED, the data-gap imputations
-   (`notes/state_data_imputation_plan.md`), and the deferred items in the plan's
-   section 7.
-
-## 2026-10-13: all 51 enabled, data gaps registered, overlay interface built
-
-The push to take state income tax as far as it goes on the pinned Tax-Data
-vintage, without new imputations (plan of 2026-10-13; decisions S43-S45):
-
-- **51/51 jurisdictions enabled.** CA, SC and VA join `states = all`: every
-  fixed-date/selective conformity group is ready with the enacted federal
-  baseline as its reference law (S44) -- the state YAMLs already carry each
-  departure from enacted law, so the bridge's job is to keep a federal reform
-  out of a fixed-date state. Verified by a 1% run (CA/SC/VA-2022 byte-identical
-  under a federal reform, CO -18%, VA-2023 rolling +1.7%) and a byte-identical
-  baseline with the groups flipped back.
-- **30 jurisdictions clear the cross-model bar** (OK closed 2026-10-13 with the
-  538-S credit encoded). KS clears the TAXSIM window; MA 2021 and NM moved by
-  10-30 points per cell with the TY2021-22 care credits and the LICTR encoded;
-  re-score after the KS ordering fix and the NM MGI fix pending.
-- **Data gaps are one registry**: `research/state_tax/tax_data_gaps.csv`, 613
-  rows over 45 jurisdictions (state x provision x required variable x Tax-Data
-  column status x overlay variable), checked by
-  `research/state_tax/scripts/check_tax_data_gaps.R`; the imputation plan is
-  rebuilt from it at 51 states with three new items (per-person attribution,
-  prior-year liability, source state) and an ordered list of asks of Tax-Data.
-  Thirty-eight rows name a Tax-Data column that exists but is unused
-  (`trad_contr_er1/2` is all zero in every vintage); none is adopted as a
-  proxy (JI).
-- **Supplemental-inputs interface** (S43): optional data columns for the state
-  calculator, published by another model (Affordability-Index first) under
-  one file contract, opted into per run, pinned to the row's Tax-Data vintage
-  (name-equivalence declared for `2026092720_filer_refit_v2` =
-  `2026100117_review_fixes`), joined per state, reported in a coverage file.
-  The AGI stage's interest-share constants are its first consumers.
-- **Year horizon** (S45): TY2025 floor carried forward by indexation; the
-  tracker's `ty2026_law` column records what is encoded, carried, or
-  UNENCODED (SC ND DC RI NM MT).
-- **Release check**: a full-sample `states = all` run (TY2022-25) completes at
-  27 GB per year task (`slurm_run.sh` memory is now `TAXSIM_SLURM_MEM`) with
-  federal totals byte-identical to a federal-only run.
-
-Open from the plan: the remaining 21 cross-model states (W4), the upstream
-bug reports, and the PR to `main`.
-
-## 2026-09-30: the comparison runs on the refit records, filers only
-
-**What changed in the cross-model comparison** (Tax-Simulator vs TAXSIM-35 for
-2017–2020 and PolicyEngine US for 2021–2025, records within $100):
-
-- **It now reads Tax-Data vintage `2026092720_filer_refit_v2`.** That's the
-  population after the non-filer rebuild and the national refit of filer weights
-  (Tax-Data S40), and the vintage the provisional state weights were fit on. The
-  old pin, `2026070814`, can no longer run 2021+: it predates Tax-Data S25, so its
-  synthetic top-tail records carry ids up to ~2.02 billion, outside the
-  `[1, 1e7]` space that the id-keyed random draws (S23, `src/misc/rng.R`) are
-  defined over, and the draw stops rather than silently shifting.
-- **It samples filers only.** On the refit records, constructed non-filers took
-  the AGI ≤ 0 share of the comparison sample from 15% to 35%. That inflated match
-  rates where both models return zero and failed states whose low-income credits
-  TAXSIM pays to them (NM, VT).
-- **The window runs through 2025.** Encoded law stops at 2025; 2026 is a later,
-  separate update (JI, 2026-09-30).
-- **A weighted scoreboard** (`results/summary_weighted.csv`) uses the provisional
-  state weights for 2022–2025. The unweighted cells stay the acceptance metric.
-- **Three harness bugs fixed.** The federal pre-pass bound every payroll column
-  twice; it had been hidden since 2026-08-18 behind cached results. The
-  PolicyEngine driver never said who the dependents were, so PolicyEngine's
-  head/spouse inference made 18+ children the spouse. That was the entire "P9"
-  dependent-age finding: 10 known-difference rows are retired, and MS/MA stay as
-  open annotations. TABOR refunds are now exported, so Colorado gets a narrow 2025
-  row in place of a whole-state exclusion.
-
-**Result:** 16 jurisdictions clear 95% in every 2017–2024 cell (NC newly; VA
-drops one PolicyEngine cell to 0.949). The board is `cross_model/results/summary.csv`;
-the August 23 board is kept locally as `cache/summary_2026_08_23.csv`.
-
-**One law fix:** the federal EITC now allows married-filing-separately filers with a
-qualifying child from 2021 (IRC 32(d)(2)), and the CalEITC follows FTB 3514. It
-moves no result yet, because Tax-Data's EITC-qualifying-child count is zero for
-every separate filer (985 of 4,305 sampled 2023 separate filers have dependents).
-That is a Tax-Data input question.
-
-**Next:** Minnesota (EITC separate-filer rule, then the remaining itemizer gap),
-then New Jersey (the high-income own-base gradient, `cross_model/results/reports/nj_triage_2026_08_24.md`).
-
-**As of 2026-08-24** (branch `state-tax`). Current counts: **ALL 51
-jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
-stubs + DC), **48 enabled** for `states=all` (CA/SC/VA conformity-gated, not
-encoding-gated; all 51 enabled since 2026-10-13, S44). **Encoding coverage is
-complete. Nothing is unstarted.**
-
-**THE TRIAGE LOOP CHANGED SHAPE ON 2026-08-22: divergence classes are now
-SWEPT across states rather than re-derived per state.** Per-state triage had
-found the same crosswalk-exposure class seven separate times, and a single
-harness gap (federal taxable income never compared on the TAXSIM leg) had just
-moved 160 of 200 TAXSIM cells at once. The first sweep asked three verified
-classes of every state's *resolved* law, measured where each bites, and tested
-each measurement against the states whose encoding gives the class no route.
-Result: **13 crosswalk-exposure exclusions + 4 P9 exclusions + 5 P9
-annotations**, and eleven candidates measured and REJECTED rather than
-assumed. All 13 exposure states gained, largest first: AL +19pp, MS +13pp,
-MT +13pp, IA +11pp, AR +12pp; no cell outside the 13 moved. Full record and
-method in `research/state_tax/cross_model/class_sweep_2026_08_22.md`.
-
-Three results from that pass are worth carrying:
-
-1. **The control is what makes a sweep legitimate.** A decisive
-   itemizer/non-itemizer split is NOT evidence of this mechanism — federal
-   itemizers are complex records and unrelated divergences concentrate there.
-   The state-itemizing predicate fires on ZERO records in the ten states with
-   no route (CT IL IN MA MI NJ OH PA RI WV); the federal-itemizing predicate
-   fires everywhere and still depresses match rates there (MA 0.393, PA 0.444,
-   NJ 0.466). So ND/SC/VT got no swept row despite splits of 0.79/0.53/0.27 —
-   those sit inside the range the control reaches WITHOUT the mechanism, and
-   each needs the CO/UT treatment instead.
-2. **A class must also clear the tolerance the harness measures at, and that
-   is checkable from the parameter value before any run.** Five of nine P9
-   rows were wrong as exclusions: AZ's benefit is \$25, LA's \$18.50, MA's
-   \$50, NY's \$55, MS's \$75, all below the \$100 tolerance, so one
-   dependent aged 18+ cannot produce a mismatch and the exclusion removed
-   MATCHING records. AZ's cells moved DOWN 0.3–0.5pp, which is how it was
-   caught. Demoted to `annotate`, per the 2026-08-11 sub-\$100 standard.
-3. **T18 does not generalize.** Five states encode a care deduction off the
-   IRC 21 base; it holds in VA and ID and in none of MD, MA or WI. WI is the
-   clean negative (TAXSIM's care effect goes to exactly \$0.00 when the spouse
-   earns nothing — the 21(d)(1) limit working). MA is the reverse: TAXSIM's
-   Massachusetts liability is invariant to care expenses entirely, so Form 1
-   line 12 appears unmodelled.
-
-**One finding independently corroborates our own encoding.** PolicyEngine's
-Louisiana liability rises \$18.50 when a dependent turns 18 — the \$1,000
-exemption at 1.85%, Louisiana's BOTTOM bracket, where a \$60,000 filer's
-marginal rate is 4.25%. That is `st_ord.exempt_from_bottom`
-(R.S. 47:32(A)(1)/294/295(B)) reproduced from outside, by a different model, on
-a quantity nobody was testing for.
-
-**No state crossed the 0.95 bar in the sweep itself**, and eleven moved
-`todo` -> `in_progress` on a landed, verified cause (AL AR IA LA ME MO MS MT NE
-NM VT), leaving only NJ and WV never triaged.
-
-**ND then CLOSED the same day, and it is the sweep's best argument.** The sweep
-had REFUSED North Dakota a swept row because its federal-itemizer split failed
-the control; the probe that refusal queued
-(`research/state_tax/cross_model/nd_marriage_credit_probe.md`) found that the
-exposure class has no route into ND at all — TAXSIM never populates `v35` there,
-and federal itemizers are 1.3-1.5% of the clean subset, so excluding every one
-of them moves 2019 from 0.929 only to 0.937. The real cause was **entirely
-ours**: the marriage penalty credit (N.D.C.C. 57-38-01.28, Form ND-1 line 22),
-recorded in the packet as "not PUF-representable". It is not. 98.4-98.7% of ND
-misses were two-earner joint returns.
-
-**Encoding it needed NO new calculator code.** The worksheet is arithmetically
-the same mechanism as MN Schedule M1MA, so it reuses the generic `mc_*` family —
-six subparameters x nine years, primary-sourced from the Form ND-1 booklets,
-each citing its worksheet line. All four TAXSIM-observed ceilings (188/192/195/
-198) matched the published maxima exactly, so TAXSIM implements the worksheet and
-none of this was an external-model issue. Result: **all eight ND cells clear,
-worst 0.9857** (TAXSIM 0.925-0.981 -> 0.9986-0.9989, PE 0.969-0.995 ->
-0.9857-1.0000), matching the probe's prediction to four decimals, with no cell
-outside ND moved. **`done` count 14 -> 15.**
-
-Three things from that probe worth carrying:
-
-- **Had the sweep trusted the split, it would have banked a 0.8pp exclusion and
-  hidden a 7pp encoding gap behind it.** That is the concrete value of the
-  control, measured.
-- **Check the external model BEFORE the rerun when a fix reaches a passing
-  window.** The credit also runs 2021-2024, where ND was already clear; had
-  PolicyEngine omitted it, encoding would have broken four passing cells to fix
-  three failing ones. PE models it (286.66 against 287.00).
-- **"Not representable" deserves re-examination whenever the reason is a
-  per-spouse split.** TAXSIM receives per-spouse WAGES only, so any credit it
-  computes is reachable from inputs we already hold. That is a general test, and
-  ND is now the second reversal of such a call in the same state after HB 1515.
-
-**Then 2026-08-23 worked the PolicyEngine window as a window, and RI closed —
-`done` count 15 -> 16.** Entering from the board rather than a state was the
-right call: nearly every catastrophic cell in the set was a PE **2021** cell
-(median clean match 0.887 against 0.923-0.934 for 2022-2024), and two unrelated
-causes came out of one pass.
-
-- **P10, the largest PE finding so far by revenue effect: PolicyEngine deducts
-  Hawaii's own income tax on the Hawaii return** and never applies the
-  Worksheet A-2 disallowance. `hi_salt_deduction` equals `hi_withheld_income_tax`
-  to the cent, and the arithmetic closes exactly — each extra $1,000 of wages
-  adds only $920 of HI taxable income, and 0.92 x the statutory 11% top rate is
-  the 0.1012 effective marginal rate measured at 500k/600k/1,001k in both 2019
-  and 2022. PE's rate *parameters* are the correct HRS 235-51 ladder; the *base*
-  is wrong, so the error grows without bound in income. Cells
-  0.648/0.625/0.699 -> 0.786/0.767/0.878, landing on the predicted
-  below-threshold rates.
-- **Five more P5 rebate instances**, all TY2021 and all year-scoped: HI Act 115
-  $300, ME LD 1995 $850, MA Chapter 62F (proportional at 14.0312% of TY2021
-  liability, *not* flat), MT HB 192 $1,250, SC 2022 $800.
-- **RI CLOSES, all eight cells, worst 0.957, and its lesson generalizes.** The
-  one failing cell was not scatter: RI-1040H, the property-tax relief credit, was
-  excluded on the TAXSIM leg as a Tier-1-blocked class (no rent in the PUF) but
-  the PE window never got the twin row, **though PE models it** — three records
-  carried a difference of exactly $650.00, the RI-1040H maximum. **A
-  Tier-1-blocked class excluded on one leg needs the twin row on the other
-  whenever the second model also implements the credit.** Worth sweeping for.
-- **One bug was ours, and it had already produced a wrong finding.**
-  `mt_income_tax_rebate` is a **person**-entity PolicyEngine variable while the
-  harness driver indexed `sim.calculate()` output by **tax-unit** position, so the
-  arrays misalign as soon as a joint record appears earlier in a batch. That is
-  what made the earlier "excluding the MT rebate moved the cell DOWN" reading
-  look like a second cause. Fixed generally (`map_to='tax_unit'`), and the same
-  fix was needed twice in one session because MA's COVID premium-pay variable is
-  person-entity too.
-
-**VT is the sharpest asymmetry left, and it is already localized.** Its PE window
-agrees with us to a two-dollar median (0.939-0.970) while its TAXSIM window sits
-flat at 0.531-0.558 — so the encoding is corroborated and the TAXSIM leg is the
-entire problem. Taxable income agrees (median gap 0, 87% within $100); the whole
-wedge is credits, and the dominant diff mode is **+$111 on 1,671 of 3,866
-misses**. TAXSIM carries it in v40 with v37/v38/v39 all zero, so it is
-unallocated to any reported component, and a synthetic probe pins the shape: an
-income-tested flat $111 that switches off between $20k and $30k of wages, with or
-without dependents. A flat low-income credit with no Vermont statutory analogue
-is a candidate TAXSIM artifact — which would make this a known-difference row
-rather than an encoding change. Four cells turn on the answer.
-
-**The R6 multi-regime batch is COMPLETE: MT, LA and IA encoded 2026-08-19**,
-closing the encoding programme. All three are two- or three-regime states,
-and each turned on one structural reading that a plain transcription would
-have got wrong.
-
-MONTANA pivots on SB 399 (2021), effective TY2024, and almost nothing
-survives. Its pre-2024 bracket bounds DO NOT VARY BY FILING STATUS, which is
-what made filing status 2a (separate on the same form) near-universally
-better for two-earner couples. Its federal income tax deduction lived INSIDE
-the itemized schedule (`st_ded.fed_tax_ded_in_itemized`), so a
-standard-deduction taker forwent it entirely and the state election cannot be
-inherited from the federal one. Two provisions were enacted and repealed
-before ever applying: SB 399's 6.5% top rate (cut to 5.9% by SB 121) and its
-30% LTCG subtraction (replaced by HB 221's 3.0%/4.1% preferential schedule,
-`st_ord.kg_pref_*`). Head of household is grouped with SINGLE for the
-$5,000 federal-tax cap and with JOINT for the doubled standard-deduction
-bounds -- the two groupings run in opposite directions.
-
-LOUISIANA's dominant feature is where the exemption comes off. R.S.
-47:32(A)(1)/294/295(B) relieve it at the LOWEST brackets with the bracket
-bounds anchored to UNREDUCED income, so `tax = sched(TTI) - sched(E)`, not
-`sched(TTI - E)` (`st_ord.exempt_from_bottom`). All 43,008 cells of the
-published TY2017-TY2024 tables reproduce exactly under the first form and not
-the second; a TY2021 single filer with one exemption and $27,625 of tax table
-income owes $765 where the naive form gives $675. **The biggest correction to
-the secondary literature on Louisiana: Act 395 did NOT repeal the excess
-federal itemized deduction. It narrowed it to medical and dental only, and
-that version is still on the TY2025 return** (`st_ded.item_less_fed_std`).
-Head of household is a hybrid -- joint exemption base, single brackets -- and
-from TY2025 Louisiana has NO dependant allowance of any kind.
-
-IOWA has three regimes and four bracket counts in nine years. Two features
-are unique in the set: its federal income tax deduction reached
-STANDARD-deduction filers and was uncapped, where MO/AL/OR/MT all cap it or
-confine it to itemizers or both; and because its pre-2023 nine-bracket ladder
-is status-invariant, it gave married couples a two-column COMBINED RETURN
-instead of a joint schedule, worth $1,162.61 on a 60k/40k couple in TY2022.
-That election reuses the KY/DE `combined_sep` machinery plus one new
-parameter for the per-column standard deduction, which is NOT a clean
-fraction of the joint one. Its ALTERNATE TAX is a ceiling on tax, so it drops
-straight into the MA no-tax-status formula -- and the single-filer exclusion
-falls out of the arithmetic rather than needing a gate, because a zero single
-threshold makes the ceiling the alternate rate times all of income and that
-rate is at or above Iowa's top marginal rate in every year. Note an ERRATUM
-in a primary source: IDR's own 2023 Statistical Report Table 1 prints the
-third TY2023 bracket as "$31,050", which is the TY2024 figure -- the
-statute, the report's own Figure 1 and the press release all say $30,000.
-
-**The MARRIED-SEPARATE ELECTION PASS IS BUILT (2026-08-19), and MONTANA is
-its first consumer.** `src/calc/state/st_split.R` reruns the WHOLE state
-pipeline on each spouse's half-unit and gives the couple whichever total is
-lower, gated on the new `st_ord.split_election`. This is what the four
-blocked states needed and what `st_ord.combined_sep` (KY/DE/IA) could not
-give them: combined_sep reruns the RATE SCHEDULE only, which suffices where
-the sole per-spouse quantity is the standard deduction, but not where a state
-computes the deduction, exemption or federal-tax deduction on each spouse's
-OWN income -- MT's percentage-of-own-AGI standard deduction and its pension
-phase-out on own federal AGI, AL's deduction slide and dependent tiers on own
-AL AGI. The stage sequence was factored out of `do_state_taxes()` into
-`st_pipeline()` so it can be called three times.
-
-**One design trap, found by a numeric test and worth recording because it
-would have shipped silently.** The `filing_status_mapper` is resolved when
-the law is JOINED to the unit (`by = c('year', 'filing_status')`), before the
-calculator runs. So a half-unit built by relabelling `filing_status = 3`
-still carries every mapped parameter at its JOINT value -- MT-12a came back
-with taxable income 75,000 against 83,000, a gap of exactly 8,000, which is
-each column claiming the joint standard-deduction cap of 11,080 plus 8,000
-instead of the single 5,540 twice. Every electing couple would have taken two
-joint-size deductions. The fix threads a `law_mfs` argument -- one row of the
-state-year law resolved at filing status 3 -- through `do_state_taxes()` to
-the split, which swaps the law columns wholesale and then RE-BACKFILLS via
-`ensure_st_params()`, because law_mfs is the raw row and its unencoded
-parameters are NA (that second bug threw an explicit "missing value where
-TRUE/FALSE needed" out of a feature gate rather than going quiet). It fails
-LOUDLY if an electing state is calculated without law_mfs, and all seven call
-sites now pass it: the production path in `summary_stats.R`, the cross-model
-harness, and five in the test file.
-
-Split convention follows the VA spouse-tax-adjustment / KY precedent -- own
-wages plus half of jointly-held amounts -- but applied at the INPUT level
-rather than to state AGI, which is the point: each column's own means tests
-have to see that spouse's own income. Federal AGI and taxable income are
-rebuilt wage-anchored rather than halved, since halving hands half of one
-spouse's earnings to the other. Dollar outputs come from the winning basis;
-logical and INTEGER outputs stay joint-basis (the selection is on
-`is.double()`, not `is.numeric()`, so the 0/1 flags
-`st_age_package_taken`/`_forgone` are not summed into a meaningless 2). The
-extra passes run on the electing-married ROW SUBSET, not the frame, because a
-mixed law slice carries every state at once.
-
-MT tests 12a/12b/13: at 60k/40k in TY2023 splitting saves $656.00 with
-taxable income unchanged (all of it from running the status-invariant ladder
-twice); at 30k/20k it saves $522.40 and taxable income RISES to 34,540
-because each column recomputes its own percentage deduction -- the case a
-schedule-only rerun gets wrong; and a one-earner couple correctly DECLINES,
-since the second column's deduction and exemption would be wasted. Full
-suite green, all 45 broad states.
-
-**Still to wire: AL separate returns, AR filing status 4, MS combined
-returns.** Each needs its own `split_election: 1` plus a worksheet case; AR
-additionally prorates pooled itemized deductions by AGI share where the
-generic pass halves them, so it needs that as a per-state option. **A SECOND,
-DIFFERENT mechanism remains unbuilt**: an ALTERNATIVE COMPUTATION replacing
-the schedule rather than splitting the unit, which is what AR's five Low
-Income Tax Tables (used instead of the schedule AND instead of any deduction)
-and the WI Act 15 retirement election need. Do not conflate the two.
-
-**Two known differences are large enough to name here.** The IOWA AMT
-(6.7%/6.4% through TY2022, not an election) is unencoded because it needs an
-Iowa AMTI base built from federal AMTI plus nonconformity adjustments, and
-the model has no plumbing for it -- pre-2023 tax is understated for
-high-income filers with large preference items. And LOUISIANA's Schedule E
-codes 02E-05E exempt 100% of LASERS, Teachers' Retirement, federal
-retirement and a long list of other named systems; in a state where public
-employment is a large share of the retiree population that is the single
-largest Louisiana gap, and none of the systems is separable from pension
-income.
-
-**The R6 own-base batch is COMPLETE: MA, NJ, AR and MS encoded 2026-08-18**,
-following MO/AL/OR the same day. (The Mississippi commit message says 47/44;
-the correct figures are 48/45 -- counted from the registry after the fact.)
-Each of the four brought machinery the set did not have. MA is the first
-SCHEDULAR state, though over this window its classes collapse to two rates,
-so only short-term gains needed carving out (`ob_st_gains_share` +
-`st_ord.st_gains_rate`); its No Tax Status and Limited Income Credit turned
-out to be ONE mechanism (`st_credits.lic_*`), with the published 1.75x band
-ceiling and the separate-filer exclusion both falling out of the arithmetic.
-NJ needed an income-banded pension exclusion (`pension_excl_tier_*`) tested
-on TOTAL income before the exclusion itself, plus `pension_excl_orie` for the
-unclaimed component -- whose ceiling runs on total income where the exclusion
-proper runs on pension income, a distinction that fails SILENTLY if collapsed.
-AR's published schedule is a `rate x income - minus adjustment` memo rather
-than a ladder, converted programmatically to base amounts and verified back
-at eight published points; it needs the base-amount shape for a genuine
-whole-income-table NOTCH (about $180 in TY2020) and for its recapture-tail
-cliffs. MS needed no new machinery but one careful reading: its "3% bracket
-phase-out" was a ZERO BRACKET growing from below, not a rate cut.
-
-**Three states now wait on the same missing piece** -- the generic
-minimum-liability election pass already queued for the WI Act 15 retirement
-election: AL separate returns, AR's Low Income Tax Tables (a taxpayer
-election used instead of the schedule AND instead of any deduction, and AR's
-largest known difference), and MS/AR per-spouse column returns. Building it
-once would close the largest remaining gap in four states at a stroke.
-
-**The pension-source PUF limit now binds in five states**: the NY
-government-pension exclusion, MO's public pension exemption, AL's IRC 414(j)
-defined-benefit exclusion, MA's US/MA public contributory pension exclusion,
-and (differently) NJ's 403(b)/457 deferral treatment. All clear with the
-Tier 1 imputation.
-
-**The R6 fed-ded batch is COMPLETE: MO, AL and OR encoded 2026-08-18.** The
-shared `st_ded.fed_tax_ded` component carries all three, with the base set at
-1040 line 22 (`liab_bc - nonref`) so the alternative minimum tax is in and
-self-employment tax is out. The three states' worksheets name genuinely
-different refundable-credit lists, so each credit is its own flag: MO
-subtracts the earned income credit, refundable AOC and net premium tax credit
-but NOT the additional child tax credit; AL subtracts the earned income
-credit, ACTC and refundable AOC but NOT the net premium tax credit, and adds
-the net investment income tax back; OR subtracts the AOC and premium tax
-credit, strips the excess advance premium tax credit repayment out, and is
-the only one of the three that does NOT subtract the earned income credit.
-(In Alabama the federal earned income credit therefore RAISES state tax.)
-The ceiling is a flat filing-status-mapped cap in MO ($5k/$10k), uncapped in
-AL, and in OR an indexed cap cut in five frozen AGI bands. Other new
-generics: `st_ord.combined_split` (MO pools deductions then splits taxable
-income by each spouse's share of state AGI, rounded half UP to whole percent,
-and runs the schedule per spouse — distinct from KY's `combined_sep`),
-`st_ded.std_equals_federal`, `st_ded.item_add_payroll` (MO and AL both let
-employee FICA into the itemized base), `st_ded.retire_exempt_*` (MO takes its
-retirement exemption as a deduction AFTER state AGI, which is load-bearing
-because state AGI is what MO's federal-deduction bands read),
-`st_agi.bus_excl_share`, `st_ded.std_po_amount_per_step`/`_floor` (AL's
-dollar-stepped standard deduction slide), `st_exempt.dep_tier_*` (AL's
-AGI-tiered dependent exemption), `st_agi.ob_ira_share` (AL taxes IRAs but
-exempts defined-benefit pensions), and
-`st_credits.eitc_match_young`/`_max_age` (OR's higher rate for a child under
-three). `sched_tax_at()` is now base-amount aware so MO's combined split uses
-the published chart. **Three known differences are material and share one
-root cause:** MO's public pension exemption and AL's IRC 414(j)
-defined-benefit exclusion are both unmodellable because the pension-source
-split is unobserved in the PUF (the NY government-pension precedent), and
-both clear with the Tier 1 imputation. **OR's kicker is not modeled at all** —
-it is a percentage of PRIOR-year liability, unobservable in a cross-sectional
-model, and it recurs every other year. AL's overtime exemption is a second
-OR-sized hole: it appears in no Form 40 booklet because it runs through
-withholding and Schedule W-2. See research/source_packets/mo.md, al.md and or.md.
-
-**The R6 batch-C transcription set is COMPLETE**:
-KS/DE/RI/WV/NM/VT/OK/DC/NE (2026-08-13/-16) and HI/ME (2026-08-17, closing
-the batch — HI added the 7.25% alternative capital-gains machinery, the
-threshold-gated SALT disallowance, the banded per-person credit table and
-the Act 46/163 enacted future schedules; ME added the pension phase-out,
-CDCC refundable-cap and ctc_po_step generics, the reordered cap-then-
-phase-out itemized flow, and the sales tax fairness credit as a dense
-table — see research/source_packets/hi.md and me.md; both corrected review-§2.1
-assumptions, notably that ME's EITC has been refundable since 2016 and its
-STFC is income-keyed, not Tier-1-blocked).
-
-**Companion documents: see `research/README.md`,** which holds the role table for
-both workstreams — one `plan` each, plus the methods, procedures, evidence and
-reviews around them. The rule the non-filer workstream adopted (**one job per
-document**; a plan is the entry point, a method holds the *why*, evidence is
-frozen) now covers the encoding workstream too, and the index states it rather
-than this document restating it. Settled arguments are in
-`research/decisions_log.md`; conventions and the drift checks are in
-`research/CONVENTIONS.md`; superseded documents are in `research/archive/` with a
-README explaining each.
-
-Two pointers worth keeping here because the names mislead:
-`research/docx_sources/nonfiler_proposal_jii.docx` is the *narrative* case for the
-residual non-filer methodology (JI, Aug 2026) and is a **different document** from
-`research/state_weights/nonfiler_residual_design.md`, the implementation memo. And
-`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` is cited as the origin spec of
-the Phase 1 §4 harness, but its A/B-bake-off premise was reframed by the sweep into
-prior-only-vs-joint-fit — the built harness is
-`research/state_weights/scripts/{sweep,validate}_state_weights.R` (S3).
-
----
-
-## The non-filer and state-weights workstream moved (2026-09-12)
-
-It is built and tracked in **Tax-Data** now — `research/state_weights/` there,
-with the builder modules in `src/nonfilers/` and the S-series decisions in its
-own `research/decisions_log.md`. This repo keeps the state tax law and consumes
-weights through the interface; `research/state_weights/MOVED.md` records the
-split. Statements below that describe that workstream are point-in-time as of
-the move and are not maintained here.
-
-## Done
-
-**Phase 0 — plan and review.** Seven-phase plan committed; full code-verified
-review resolved eight findings (SALT post-workaround semantics decided,
-`st_agi.conformity_year` added for fixed-date IRC conformity states,
-cross-row `states` validation relocated to `parse_globals()`, jurisdiction
-set fixed at 53 = 51 modeled + PR/OA, `filing.yaml` schema home, torch
-question closed). Plan later extended with locality weights (§2.6) and
-LODES-based cross-border liability (Phase 7).
-
-**Phase 2 — parameter schema + pilot states** (`3d0848853`, `bbd285687`).
-`build_state_tax_law()` reuses the federal YAML machinery with `st_`
-prefixing; `parse_subparam()` tolerates `reference` citation keys (indexed
-subparams included — regression-tested). IL, CO, NY encoded 2017-forward
-from primary sources with a citation on every subparameter, including the
-2017 IL blended rate, CO's TABOR temporary rates and three deduction-addback
-regimes, NY's full rate-schedule history through the enacted 2033 reversion,
-NY Pease thresholds pulled per-year from the instruction PDFs, and the
-2025/2026 credit restructurings in both CO and NY. Encoding conventions
-locked: 10-element uniform schedules, anchor-at-2017 year lists,
-feature-absent = NA.
-
-**Phase 3 — state calculator** (`41e818d2f`). `src/calc/state/` implements
-`do_state_taxes()` + `calc_st_{agi,ded,exempt,txbl,tax,credits,liab}` under
-the standard calculator contract, including the NY tax-benefit recapture
-from the published worksheet identity (reproduces the printed constants),
-the NY §615(f)/(g) itemized limitation tiers, both Empire State child credit
-regimes, CO's tiered CTC + FATC, and the state-filer flag. Verified by 12
-hand-computed form-worksheet cases plus smoke/subset-state grids.
-
-**Phase 4 — orchestration + outputs** (`38e3bf201`, `4d1a65560`). Runscript
-`states`/`state_tax_law`/`state_detail` columns; per-state loop inside
-`run_one_year()` (no SLURM worker sync needed); `totals/state.csv`,
-`supplemental/state_rev_est.csv`, compact per-year state detail matrix,
-stacked state reports; SLURM 3a/3b/4 synced. **Acceptance verified on real
-data: with-state federal outputs byte-identical to without-state.** Runs on
-uniform placeholder weights until Phase 1 lands (state levels not yet
-meaningful; all contracts real).
-
-**Phase 1 — state weights (engines and data done; harness remains).**
-- Data: shared stores built and wired — IRS-Ind mirror (HT2 2012–2023,
-  percentile 2013–2023, county 2011–2023, ZIP 2011–2022 + SOI docguides +
-  per-family change notes;
-  public repo johniselin-budget-lab/IRS-Ind, data on the cluster share) and
-  the IPUMS ACS extracts. `read_ht2()` ingests the full 24-series target
-  map; `read_acs_extract()` handles the fixed-width format, implied
-  decimals, and the INCTOT sentinel (`5d92e5763`, `c27cb1c99`).
-- Target assembly (`55ee03ec2`): filer HT2 state×stub targets + non-filer
-  ACS cells, share-normalized to PUF national totals (levels are fixed by
-  construction; only geography is calibrated).
-- Engine root-cause (`51a6eefc2`): invariant leak closed (negative HT2
-  targets → assembly block + assertions; verified 1.1e-15); multi-series
-  IPF non-convergence proven STRUCTURAL (one constraint per cell is its
-  valid class — counts-only converges in 1 iteration to 100%).
-- Vectorized joint fit (`cf3cd19ee`): counts-backbone IPF prior →
-  exponential-tilting gradient engine; 2022 full fit hits 82.9% within 2%,
-  MARD 1.43%, 7.5 min under sbatch, loss still descending.
-- Reconciliation/validation battery (`7bf614823`, `418795efb`, `726de2d54`,
-  `7239c26a6`): model-free individual-level IRS-vs-ACS coverage (married
-  85.6% / single 77.6% / children 109.2%, wide state spreads), wage dollars
-  (96.6% vs ACS — the high anchor), QWI structural check (workplace-basis
-  commuter signature), LODES residence-basis fix (RAC + OD commuter matrix;
-  DC residents hold 31% of DC jobs), and the candidate demographic target
-  dimensions (QWI sex×age, ACS marital×age).
-
-**Ops learned the hard way** (recorded in the issues doc): weight fits
-OOM-kill on the login node (~7 GB cap) and piping masks the kill (pipeline
-exit = tail's); run under `sbatch` with inputs staged on NFS scratch
-(`/nfs/roberts/scratch/pi_nrs36/ji252/state_weights_tmp/`).
-
-## Left to do
-
-1. **Phase 1 close-out** — the §4 comparison harness **is built**: it is
-   `research/state_weights/scripts/sweep_state_weights.R` (part 1, the
-   hyperparameter sweep) and `validate_state_weights.R` (part 2, the
-   decision-relevant validation battery), which say so in their own headers. The
-   *spec* is `research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` §4 — cited as the
-   origin, not as an instruction, since the data refuted its A/B premise
-   (`research/decisions_log.md` S3). What remains is to run it: tune the joint fit to
-   the ≥99%-within-2% bar (steps/lr schedule/per-series λ; SALT and
-   EITC/AGI families carry the residual), β sweep, untargeted validation on
-   the QWI/ACS demographic cells, downstream IL/CO/NY liability under
-   candidate weights; then the `state_weights_{year}.csv` writer for
-   2014–2023 (HT2 TY2023 mirrored 2026-09; 2013 is the only HT2 gap on the store: interpolate or skip,
-   decide — verified 2026-08-27, `ht2_2015.csv.gz` is present with the full
-   series header),
-   projection-year carry-forward, and the dispatcher swap off
-   `placeholder`. The prior-only vs joint-fit comparison IS the reframed
-   A/B decision.
-   **⚠ SEQUENCING (JI, 2026-08-16): the non-filer rework lands BEFORE this
-   swap-in** — see item 1b — so the swap-in fit happens once, on upgraded
-   margins, rather than fit-on-v0-then-re-fit. Do not close Phase 1 first.
-
-<!-- release:begin nonfiler-status -->
-1b. **Non-filer rebuild.** The non-filer population is the one input to the
-   weights fit anchored to nothing. **As of 2026-08-24 it is being REBUILT, not
-   repaired** (`decisions_log.md` S13/S14): the DINA append is replaced by a
-   national pool constructed from the CPS ASEC and calibrated to the residual
-   anchors, and the DINA sex split goes with it, retiring the interface from
-   Tax-Data entirely.
-
-   Why, in one line each — DINA carries **65%** of the anchor's adult mass with
-   77% of the shortfall in 18–44; `fiint`/`fidiv`/`fikgi` are **exactly zero**
-   for every non-filer; wages are **24%** of the administratively implied total;
-   `ageprim` is **three values for everyone** and is largely an income-pattern
-   proxy; and the age composition cannot be reassigned, because 11.71M of the
-   13.09M in DINA's 65+ bucket hold old-age Social Security against an anchor of
-   11.87M. Three vintages of patching could not fix a file wrong in that way.
-
-   Landed the same day and still current: **B1** (differentiated group quarters),
-   **D0** (the 7-band anchor age shape, now a validation target), **F1a** (targets
-   count adults, not tax units — which retired the units-vs-adults MARD the tree
-   had been quoting), and **F1c** (dorm-student netting, shipped on universe
-   consistency alone and explicitly *not* on a fit improvement).
-
-   > **This entry is deliberately a pointer, not a summary.** Five documents own
-   > this workstream and each has one job:
-   > - **`research/state_weights/plan.md`** — the **plan**. Where things stand,
-   >   what is next, the five open decisions. **Start here.**
-   > - **`research/state_weights/nonfiler_residual_design.md`** — the **method**.
-   > - **`research/state_weights/nonfiler_residual/10_asec_tax_unit_design.md`** —
-   >   the **ASEC unit design** (D-A1…D-A7), which group C implements.
-   > - **`research/state_weights/nonfiler_residual/04_findings.md`** — the frozen
-   >   **evidence**, F1–F10.
-   > - **`research/state_weights/nonfiler_federal_validation.md`** — the
-   >   **procedure** for the federal battery, whose 4a table is the acceptance gate.
-   >
-   > Supporting: `nonfiler_residual/05_filing_model_literature.md`,
-   > `raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md`,
-   > `research/docx_sources/nonfiler_proposal_jii.docx` (JI's narrative case).
-   > Detail that used to sit in this section has moved to the plan rather than
-   > being duplicated here.
-
-<!-- release:end nonfiler-status -->
-
-2. **CO child-care expenses credit** (DR 0347) — researched and encoded
-   (TODO carried in `co/credits.yaml`); CO 2026 rate revisit after the
-   TABOR certification (~Sept 2026).
-3. **Phase 5 — cross-model validation harness (record level: BUILT
-   2026-07-18; per-state triage remains).** Harness at
-   `research/state_tax/cross_model/` (see its README):
-   record × state × year design on unweighted PUF samples, TAXSIM-35
-   (usincometaxes WASM, 2017–2020) + PolicyEngine US (pinned venv, 2021+),
-   $15/$100 match rates plus a federally-aligned "clean" metric, stage
-   diagnosis from TAXSIM v32–v40, machine-readable known-differences list
-   with record-level predicates. Fixing the federal `taxsim_crosswalk`
-   took 12 latent-bug repairs plus income-concept alignment (other_gains,
-   part_se double-count, se_health sign, state_ref, gssi rename). Results
-   so far: 6 no-tax stubs + NH + TN + IL validate at ~100% clean match;
-   the other 13 broad-IIT states sit at 27–86% clean match@$100 with
-   per-state stage histograms as punch lists (dominant stages: exemptions
-   for AZ/IN, deductions for CA/VA/NY/KY, state AGI for
-   CO/ND/SC/GA/MI/NC/SC — the fed-taxable-start states' v32 labels are
-   partly a TAXSIM-semantics artifact, see README caveat). PA/ID initial
-   runs 2026-07-23: PA 60-63% clean vs TAXSIM (dominant wedge: TAXSIM nets
-   losses across PA's floored income classes; TAXSIM DOES model Tax
-   Forgiveness — verified) and 81-88% vs PE; ID 59-71% vs TAXSIM (PBF
-   filing-edge ±$10, CTC −$205 cluster) and 43-58% vs PE, where
-   PolicyEngine does not net the grocery credit into state_income_tax
-   (whole-window annotate; candidate exclusion). ID's fed-taxable wedge
-   RESOLVED (2026-07-23 dive, results/reports/id.md): non-itemizers agree
-   (84.5-93.6% at wedge=0 — base machinery confirmed); the wedge is
-   TAXSIM's itemizer deduction rebuild (2018+: v35 median $21.8k below
-   ours + 36% spurious standard elections, consistent with removing full
-   computed state tax instead of the Form 40 line 14 capped
-   property-first formula; 2017: the reverse, cor −0.745 with the SALT
-   income component). QBID-omission hypothesis refuted; TAXSIM
-   care-deduction cap (> the form's 3k/6k) is a candidate upstream issue.
-   2026-08-11: `cross_model_states()` had omitted MD/MN/WI from every
-   class, so their triage reports were silently never generated — fixed,
-   and `results/reports/{md,mn,wi}.md` emitted from the committed
-   summary.csv (their stage-diagnosis tables need a full harness rerun;
-   `results/raw/` is not committed).
-   **KY triage 2026-08-11 (worst state, 0.273-0.476 TAXSIM clean): root
-   causes were OURS and are fixed** — 2017 was encoded flat 5.8% instead
-   of the graduated 2/3/4/5/5.8/6% schedule; married units got one
-   standard deduction where KY combined returns give one PER SPOUSE (new
-   generic `st_ord.combined_sep` machinery: per-column schedule + own
-   std/income-share itemized, floored at zero, lower-of joint/combined —
-   reusable for other combined-filing states); std vintages 2017-2021
-   were shifted one year; and the Form 740 personal tax credits ($10
-   regular 2017, $40 aged/blind all years, applied before the family-size
-   credit) were missing. Tests KY-1..KY-11 (from 1); two TAXSIM bugs
-   probe-verified and pre-registered (2017 double std ded per spouse;
-   unconditional 2x std for one-earner couples); harness rerun pending.
-   **Review item #9 CLOSED 2026-08-11** (the last open 2026-07-17 code
-   review item): (a) worksheet-coverage layer — any credit family the
-   smoke grid activates for a state must be exercised by a hand-computed
-   case (self-maintaining, no param-name map); found and filled three
-   gaps (IL child credit, NY + WI dependent-care) as IL-5/NY-5/WI-8.
-   (b) continuity sweep — single wage-only filer, $500 AGI steps to
-   $300k, all 24 states x 2017/2024, per-state jump allowances each
-   citing its published cliff (IL exemption cliff, VA no-tax-below, OH
-   base amounts, CT Tables A/D, KY Table C, MD exemption bands). The
-   probe surfaced two live items: MN's 31.5-35k slope is exactly 5.35% +
-   the UNVERIFIED 9% childless WFC phase-out (flagged in mn.md), and NY
-   shows a +$327 jump at the 215,400 bracket entry in the recapture zone
-   (tracker note; verify vs the IT-201 worksheet). (c) NH/TN/WA now in
-   the smoke grid (24 states), asserting on net individual liability.
-   **R1 triage sweep completed locally 2026-08-11** (probe-driven, via
-   the local TAXSIM WASM): KY/GA/SC/IN/MN fixed (see tracker rows and
-   dated commits), CO/MI cleared with negative-result or
-   external-model-bug KD rows. Everything that needs the harness
-   machine was queued in `cross_model/HARNESS_RERUN_2026_08_11.md`.
-   **Harness-machine batch EXECUTED 2026-08-11** (runbook stamped; see
-   its header for deviations): ALL-states reruns both windows confirmed
-   the R1 fixes directionally (KY 2017 clean 0.27→0.64, IN 0.84/0.94,
-   GA exemptions stage cleared) — no cell reaches 95%, no tracker
-   flips. MI's $386 mass was NOT the Tier-2 row: TAXSIM nets the
-   MI-1040CR-7 home-heating credit on a collapsed $1.01 household
-   income (issues-doc T6, exclude KD). Every PE-window dig resolved to
-   one class — one-time rebates booked into eligibility-year
-   `state_income_tax` (issues-doc P5): NY 2023 (2025 inflation refund),
-   VA 2021/2023/2024, GA 2021, AZ 2021, and CT 2022 (child tax rebate),
-   each excluded via a `pe_*` rebate export predicate; ID's PE window
-   promoted to whole-window exclude (SNAP-prorated grocery credit + $10
-   PBF omission verified in package source). GA's PE dig also exposed
-   OUR HB 593 std-deduction anchor a year early (fixed, GA-5). The NY
-   +$327 recapture jump verified WORKSHEET-TRUE (IT-201 hand
-   computation exact; PE concurs within cents).
-   **R1 validation close-out 2026-08-11 (`58fd1211c`): all 18 broad-IIT
-   states now carry full residual attribution** — every clean-mismatch
-   cluster maps to a KD row (50 rows, 19 excludes), a filed issue
-   (T1–T9/P1–P5), or an encoding fix. Close-out rerun: **WI clears the
-   95% bar across its whole TAXSIM window (0.952–0.972) — the first
-   broad state since IL**; ND's PE window jumps to 0.948/0.927 (2021/22)
-   on the HB 1515 encoding; NC 2018 0.535→0.741 on the SB 99 vintage
-   fix; UT TAXSIM 0.93 (2018–20) post-exclusion with its PE window
-   passing outright. Lesson pinned in the MD KD row: exclusion
-   predicates must key on where the bug EXCEEDS the match tolerance —
-   sub-$100 bugs get annotate rows (an over-broad MD exclude briefly
-   depressed the 2019 cell by removing passing records). The close-out sweep of the seven
-   previously-unattributed states (UT/MD/WI/NC/CT/ND/PA) found four
-   more OUR-side bugs (NC SB 99 std vintage + missing TY2017 child
-   credit; ND HB 1515 relief credit wrongly documented-not-modeled; WI
-   $500 capital-loss addback wrongly called not-separable; MD missing
-   dependent-care subtraction) and four more probe-verified TAXSIM bugs
-   (UT retirement credit to any SS recipient unphased; MD 2019
-   std-minimum-everywhere; WI stale 2017-18 brackets; CT Table C
-   recapture overshooting its cap), plus the mstat/dependents HoH
-   conflation (UT ±$464). Harness records now carry
-   age1/age2/gross_ss/n_dep so KD predicates key on exposure sets.
-   Remaining: aggregate benchmarks vs HT2 total tax (weights-blocked),
-   revenue-agency comparisons, and sending T1–T9/P1–P5 upstream.
-4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
-   fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
-   deductibility), CA first (CalEITC as the credit-schema acceptance test;
-   CA CPI indexation series). 2026-08-11: the 21 remaining jurisdictions
-   are now classified and batch-sequenced in
-   `research/state_tax/STATE_ENCODING_REVIEW_2026_08_11.md` §2.1/R6 (preliminary classes also
-   in each tracker row): eleven plain graduated-fed-AGI transcription
-   states; MO/OR/AL behind one new `fed_tax_ded` component; NJ/MA/AR/MS on
-   the PA own-base machinery (NJ largest, first); IA/LA/MT as multi-regime
-   restructure states. Only genuinely new machinery for the remainder:
-   federal-tax deductibility and per-class rates on `ob_*`.
-   **MN encoded 2026-07-23** (28th jurisdiction, ~$15bn IIT — largest since
-   the pilots): eight new generic components (two-tier deduction
-   limitation incl. the standard deduction, share-based exemption
-   phase-out, sliding + stepped SS subtraction regimes with automatic
-   greater-of, non-itemizer charitable share, combined CTC+WFC credit
-   with joint phase-out, two-earner marriage credit on single-schedule
-   shares, dependent-care income cap, net-investment-income surtax).
-   Fed-taxable start 2017 → FAGI 2018+ (the switch was TY2018, not 2019);
-   the TY2018 TCJA-nonconformity year encoded as TCJA FAGI + MN's own
-   pre-TCJA stack — and it validates BEST of the TAXSIM years (67.3%
-   clean). Initial cross-model: TAXSIM 49-67% clean (base machinery
-   confirmed: median taxable wedge 0, exemptions to $6; residuals are
-   std-deduction detail, WFC schedule edges, credit point masses), PE
-   75-82% (2024 low = renter's credit, excluded by design). Tests
-   MN-1..MN-11.
-   **PA + ID encoded 2026-07-23** (25 → 27 jurisdictions): PA is the first
-   OWN-BASE state — new generic components landed for class-share bases
-   with per-class loss floors (`st_agi.ob_*`, reusable for NJ/AL/AR/MS),
-   the poverty-forgiveness credit family (Schedule SP), the per-person
-   credit family (ID grocery credit), and a per-return excise (ID PBF —
-   never repealed, contrary to prior belief). ID is fed-taxable with a
-   CPI-indexed flat-tax zero bracket (not the statutory $2,500/$5,000),
-   MFS on the single schedule and HoH on the MARRIED schedule. Research
-   surprises: PA enacted a TY2025 state EITC (Working Pennsylvanians Tax
-   Credit, 10% federal match, refundable) and a TY2025 student-loan
-   deduction; ID's CTC sunsets after TY2025. Worksheet tests PA-1..7b,
-   ID-1..7 pass; cross-model triage started (see rollout tracker rows).
-   **MD + WI encoded 2026-07-24** (29th and 30th jurisdictions). MD is
-   STATE-level only (the county piggyback, 2.25-3.3%, is deferred to the
-   locality phase): graduated schedules incl. the TY2025 BRFA brackets and
-   2% capital-gains surtax, 15%-of-AGI standard deduction, dual EITC
-   election, CTC, senior credit; the PE harness leg now requests
-   `md_income_tax` (state-only) because PE's generic `state_income_tax`
-   bundles county tax. WI: sliding standard deduction, 30% LTCG exclusion,
-   itemized-deduction-as-credit, married couple credit, child-count-keyed
-   EITC (4/11/34/0%), school property tax credit; homestead credit omitted
-   (PE includes it — a one-sided low-income divergence). Initial
-   cross-model: MD TAXSIM 58-70% clean (2019/2020 TAXSIM std-ded values are
-   pre-registered TAXSIM bugs), PE 84-89%; WI TAXSIM 76-92% (2019/20 near
-   the bar), PE 72-78%. Worksheet tests MD-1..9, WI-1..7 pass.
-   Horizon note (2026-08-11): NC and IN encode enacted law through TY2026
-   while other states stop at TY2025 and carry forward — both are
-   deliberate (NC/IN have enacted future rate steps) but the convention
-   should be picked explicitly at the next rollout batch: either encode
-   every state's enacted 2026 law (SC's H.4216 restructure and ND's
-   published 2026 schedule are the known gaps) or document the two
-   exceptions per state.
-5. **Data extensions/imputations** — scoped 2026-07-24 in
-   `research/state_tax/notes/state_data_imputation_plan.md`: tenure/rent/property-tax (homestead
-   family incl. the MN 2024+ on-form renter credit), pension source
-   split (the recurring elderly gap), household-resources income,
-   deferral wage-base, dependent detail — tiered, ACS-driven,
-   sequenced after the Phase 1 weights swap-in.
-6. **Phase 7 — later scope**: coupled federal↔state iteration + sales-tax
-   election imputation; frozen-base mechanics for fixed-date conformity;
-   locality weights from SOI county data (§2.6; NYC first); cross-border
-   wage taxation via the LODES OD matrix; state MTRs and combined-MTR
-   behavior; state distribution tables; pre-2017 law; population-projection
-   aging of weights.
+What is true today, as pointers. The plan is `research/state_tax/plan.md`; settled
+arguments are in `research/decisions_log.md`; per-state status is one row of
+`research/state_tax/state_parameter_rollout.csv` and nowhere else. The running
+log this page used to carry (2026-07 to 2026-10-22) is
+`research/archive/STATUS_2026-10-25_pre-rewrite.md`.
+
+## What is true today
+
+**Law and calculator.** All 51 jurisdictions are encoded from primary sources for
+TY2017-2025, enabled, and in `states = all`: 41 states with a broad income tax
+plus DC, the narrow investment-income taxes of NH and TN, WA's capital-gains
+excise and Working Families Tax Credit, and six no-tax stubs. Law lives in
+`config/scenarios/tax_law_state/baseline/{st}/`, the calculator in
+`src/calc/state/`, worksheet tests in `src/tests/state/test_state_calc.R`.
+
+**Cross-model validation is complete (2026-10-22).** Every jurisdiction's
+`cross_model` cell in the tracker is `done`: on records whose federal results
+agree, at least 95% are within $100 of TAXSIM-35 in every year 2017-2020 and of
+PolicyEngine US in every year 2021-2025.
+
+- Scores: `research/state_tax/cross_model/results/summary.csv`.
+- Every remaining difference is a row of
+  `src/tests/state/cross_model/known_differences.csv` (324 rows: 285 excluded,
+  39 annotated), attributed to our encoding (fixed), the external model
+  (written up), or an input neither side observes.
+- External-model findings, TAXSIM T1-T81 and PolicyEngine P1-P61:
+  `research/state_tax/cross_model/external_model_issues.md`. Not yet sent.
+- How each state closed: `research/state_tax/cross_model/triage_history.md` and
+  the source packets.
+
+**State weights are production weights.** The default `State-Weights` vintage is
+Tax-Data's production fit `2026102315_rebuild` (fitted TY2017-2023, later years
+carried on the TY2023 shares), read through the interface. A state-mode row must
+pin Tax-Data vintage `2026102315_rebuild`. The producer and its plan are in
+Tax-Data; `research/state_weights/MOVED.md` records the split.
+
+**State-mode runs and gap diagnostics exist (2026-10-26).** Full-sample
+`states = all` baseline runs for TY2017-2025 are on the production root. The
+current one is `sw_states_nfgate` (runscript
+`config/runscripts/tests/states_all_components.csv`, after the fix that a federal
+non-filer files no state return). `research/state_tax/aggregate/README.md`
+describes the comparison to published figures. Headlines from that run:
+
+- **Against Census state tax collections** (individual income tax, 43 states
+  with a series): the national ratio of modeled liability to collections is
+  0.97-1.02 for TY2017-2022, 1.06 for TY2023 and 1.09 for TY2024. In TY2022, 25
+  of 43 states are within 10%. Low: ND, DE, NH. High: NJ, CT, MD, and from
+  2023 CO and NE.
+- **Against state agency tables by income class** (resident liability): NY is
+  1.08-1.17 times the Department of Taxation and Finance figure for TY2017-2020
+  and 1.36-1.49 for TY2021-2024; CA is 1.04-1.11 times the Franchise Tax Board
+  figure through TY2020 and 1.31 in TY2022; CT is 1.20-1.30 for TY2021-2024. The
+  jump sits above $2M of state AGI and coincides with the credits for
+  pass-through entity taxes, which the model does not have.
+
+These are diagnostics, not estimates: collections include nonresidents and
+timing, and the largest gaps have a named cause that is not yet modeled.
+
+**Data gaps are one registry.** `research/state_tax/tax_data_gaps.csv` (614 rows)
+lists every state provision the pinned Tax-Data vintage cannot compute as
+written. A blocked provision is encoded against an optional input and switches
+on when a producer publishes it (`research/state_tax/supplemental_inputs_interface.md`,
+decision S43).
+
+## What is open
+
+In order; details and checkpoints are in `research/state_tax/plan.md` section 3.
+
+1. **Documentation** — this rewrite, the plan, the indexes, and the convention
+   checker back to zero findings.
+2. **Pass-through entity taxes (PTET)** — the state-level workaround to the
+   federal cap on the state and local tax deduction. Today a federal-only
+   function approximates it and the state calculator has nothing. Proposal:
+   `research/state_tax/ptet/ptet_proposal.md`; law table:
+   `research/state_tax/ptet/ptet_state_law.csv`; draft parameters:
+   `research/state_tax/ptet/params_draft/README.md`. Nothing is implemented.
+3. **TY2026 state law** — seven states have known unencoded provisions (SC, ND,
+   DC, RI, NM, MT, CT), and most states the tracker calls `carry-forward` hold
+   2025 dollar amounts fixed in 2026 rather than indexing them.
+
+**Waiting, not scheduled:** the data-gap imputations (rent and property tax, the
+pension source split, household resources); JI's review of the circuit-breaker
+provisions (decision S46); sending the TAXSIM and PolicyEngine reports; CO and WI
+AMT documentation; CA miscellaneous deductions and AMT; the Oregon kicker;
+interstate migration; local income taxes; coupled federal-state iteration. Each
+is listed in the plan's section 7.
+
+**Merging to `main`.** This branch (`state-gap-diagnostics`, on top of
+`cross-model-refit-filers`) is 333 commits behind `origin/main` as of
+2026-11-10, and `main` has since moved state law to
+`config/scenarios/tax_law/default/state/{st}/`. The merge is therefore a path
+migration, not the clean trial merge recorded on 2026-10-22.
+
+## Calls JI may want to revisit
+
+- Michigan's TY2022 earned income credit is encoded at the statutory 30% (PA 4
+  of 2023, retroactive), though the extra 24 points were paid as separate
+  checks; PolicyEngine uses the 6% printed on the return (issue P61).
+- One-time state payments that an external model books to a tax year (New York's
+  2022 supplemental credits, Maine's 2025 affordability payment) are excluded
+  from the comparison rather than modeled (decision S46).
+- Wisconsin's 2025 Act 15 retirement-income election is documented in the WI
+  source packet and not encoded.
+
+## Where history lives
+
+| For | Read |
+|---|---|
+| The running log through 2026-10-25, including each encoding batch | `research/archive/STATUS_2026-10-25_pre-rewrite.md` |
+| The plan as it stood through the build (phases 0-6, as-built design) | `research/archive/state_tax_plan_2026-10-22_pre-rewrite.md` |
+| Settled decisions (S-series) | `research/decisions_log.md` |
+| Cross-model triage, state by state | `research/state_tax/cross_model/triage_history.md` |
+| The non-filer and state-weights work | Tax-Data, via `research/state_weights/MOVED.md` |

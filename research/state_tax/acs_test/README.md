@@ -1,3 +1,14 @@
+---
+title: "ACS fill test: which state-tax data gaps the ACS can close"
+role: evidence
+workstream: state_tax
+status: current
+updated: 2026-11-10
+sot: research/state_tax/notes/state_data_imputation_plan.md
+supersedes: []
+superseded_by: null
+---
+
 # ACS fill test: which state-tax data gaps the ACS can close
 
 Step 3a of the ACS state-input test. The question: of the 614 rows in

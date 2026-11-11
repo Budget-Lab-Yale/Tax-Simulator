@@ -103,7 +103,7 @@ credit (2022); NIIT + flat-80% limitation (2024); dependent-care cap
   assumed met. Tests MN-8b/8c/8d. The 2023 M1CWFC instructions were not
   retrieved (the DOR URL pattern for 2023 404s); 2023 rests on the statute.
 - **WFC and M1CWFC eligibility, resolved 2026-10-07.** Prompted by the
-  State-EITC-Align cross-check (`research/state_tax/notes/state_eitc_align_crosscheck_2026_10_02.md`,
+  State-EITC-Align cross-check (`research/state_tax/notes/state_eitc_align_crosscheck.md`,
   used as a check, not a source), and verified here against primary law:
   - *Childless minimum age 19 from TY2021, not 21.* Laws 2021 1Sp ch. 14
     art. 1 s. 10 strikes 21 and inserts 19 in 290.0671 subd. 1(a)(1),

@@ -3,7 +3,7 @@ title: "This workstream lives in Tax-Data"
 role: notes
 workstream: state_weights
 status: current
-updated: 2026-09-12
+updated: 2026-11-10
 sot: self
 supersedes: []
 superseded_by: null
@@ -26,8 +26,8 @@ calculator) and *consumes* weights through the Tax-Data interface.
 | `research/{README,CONVENTIONS,decisions_log}.md`, `tools/`, `archive/` | same paths (the S-series log is maintained there now) |
 
 **What stayed, and why it is only this.** `src/data/state_weights.R` still
-exists, at 87 lines: the jurisdiction set and `build_state_weights()`, the
-runtime dispatcher `src/sim/run.R:430` calls. Nothing else in this repo ever
+exists: the jurisdiction set, the interface reader and `build_state_weights()`,
+the runtime dispatcher `src/sim/run.R` calls. Nothing else in this repo ever
 touched the moved code — verified before deletion by grepping every export of
 the three modules across `src/`, which returned nothing outside the modules
 and their own tests. That asymmetry is the same one
@@ -38,12 +38,14 @@ consumer's schema, but nothing on the run path may depend on a builder.
 a pool built in Tax-Data end to end (pool vintage 2026091201, Tax-Data output
 vintage 2026091119), and a Tax-Simulator baseline run consumed that output.
 
-**What this repo still owes.** `build_state_weights()` has only its
-`placeholder` method — every jurisdiction gets 1/53 of the national weight, so
-state levels are not estimates. When the Phase 1 fit lands in Tax-Data it
-publishes `state_weights_{year}.csv.gz` (it does, since 2026-09-29: `src/main_state_weights.R`
-there, the `State-Weights` interface), and this dispatcher READS it
-(`build_state_weights(method = 'interface')`, Tax-Data Phase 4 P5).
+**What this repo reads.** Tax-Data publishes `state_weights_{year}.csv.gz`
+through the `State-Weights` interface (its `src/main_state_weights.R`, since
+2026-09-29), and `build_state_weights(method = 'interface')` here reads it,
+checks coverage and that each record's state weights sum to its national
+weight, and filters to the requested states. The default vintage is the
+production fit `2026102315_rebuild` (since 2026-10-24). The `placeholder`
+method, 1/53 of the national weight per jurisdiction, remains only for
+reproducing old A/B runs; its state levels are not estimates.
 
 Not moved: `research/state_tax/`, `research/source_packets/`,
 `research/STATUS.md`, `research/raw/`, `research/releases/` — state law, which

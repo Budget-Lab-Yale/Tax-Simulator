@@ -3,7 +3,7 @@ title: "Federal-side divergences (for separate review)"
 role: evidence
 workstream: state_tax
 status: current
-updated: 2026-08-22
+updated: 2026-11-10
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null

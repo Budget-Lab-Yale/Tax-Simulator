@@ -1,19 +1,22 @@
 ---
-title: "State Individual Income Tax Module — Implementation Plan"
+title: "State Individual Income Tax Module — Plan"
 role: plan
 workstream: state_tax
 status: current
-updated: 2026-10-22
+updated: 2026-11-10
 sot: self
-supersedes: []
+supersedes: [research/archive/state_tax_plan_2026-10-22_pre-rewrite.md]
 superseded_by: null
 ---
 
-# State Individual Income Tax Module — Implementation Plan
+# State Individual Income Tax Module — Plan
 
-**Date:** 2026-07-08
-**Companion doc:** `research/state_tax/notes/state_tax_model_research_notes.md` (same directory) — evidence and
-citations behind every design choice here.
+What is decided, what is built, and what is next. The module is built and
+validated record by record; this plan now looks forward. The plan as it stood
+through the build (phases 0-6, the full as-built design, the weights
+prototypes) is `research/archive/state_tax_plan_2026-10-22_pre-rewrite.md`.
+Evidence behind the original design choices:
+`research/state_tax/notes/state_tax_model_research_notes.md`.
 
 ---
 
@@ -47,329 +50,39 @@ Decisions already made (validated by research):
 
 ## 2. Architecture
 
-### 2.1 Data: state weights
+### 2.1 to 2.4 As built (pointers)
 
-**Format:** one file per year, long:
-`state_weights_{year}.csv` with columns `id, state, weight` (rows where weight > 0;
-state = 2-letter code incl. `DC`, plus `PR` and `OA` no-tax buckets — HT2 reports
-Puerto Rico and Other Areas separately, so both are carried: 51 modeled + 2 buckets
-= 53 jurisdictions). Long beats wide because
-downstream joins in the per-state loop are `filter(state == st) %>% left_join(by='id')`.
+The design of record for what exists is `docs/model_documentation.md` section 10.
+In one paragraph: state weights are fit and published by Tax-Data and read here
+through the `State-Weights` interface (`build_state_weights(method = "interface")`
+in `src/data/state_weights.R`; `research/state_weights/MOVED.md`). State law is
+one directory per jurisdiction under `config/scenarios/tax_law_state/baseline/`,
+parsed by the federal machinery with an `st_` prefix
+(`config/scenarios/tax_law_state/README.md` holds the conventions, and
+`params_schema.yaml` there declares every parameter). The calculator is the
+generic `src/calc/state/` stack, run per state after the federal pass inside
+`run_one_year()`. Outputs are `totals/state.csv`, `supplemental/state_rev_est.csv`,
+and the optional detail files described in the repo `CLAUDE.md`.
 
-**Construction (moved to Tax-Data 2026-09-11; read here since 2026-09-29):** the
-weights are fit and published by Tax-Data (`src/main_state_weights.R`, the
-`State-Weights` interface, one `state_weights_{year}.csv.gz` per year 2017-2097 with
-later years carrying the last fit year's shares) and READ by
-`build_state_weights(method = "interface")`, which checks coverage and
-`Σ_st w_{i,st} = w_i` before filtering to the requested states. The methods below
-were the Phase 1 prototypes; the production fit is Tax-Data's S39 chain
-(`research/state_weights/plan.md` there).
-Approach B and the A/B comparison harness are specified in
-`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md`. Approach A (the baseline):
-1. Ingest SOI Historic Table 2 CSVs (latest published year, currently ~2022):
-   per-state × AGI-class return counts — total (N1) AND by filing status
-   (single MARS1, joint MARS2, HoH MARS4) — the number of individuals (N2;
-   labeled "exemptions" through TY2017, "individuals" from TY2018 — same
-   people-on-returns concept, calibrated within-year so the relabel never
-   crosses a cell), and amounts for AGI, wages, interest, dividends, capital
-   gains, SALT deductions, mortgage interest, EITC.
-2. Stratify PUF records into AGI classes matching HT2 (TPC uses 9 strata).
-3. Estimate initial `p(state | x)` from HT2 shares within stratum (x = AGI class ×
-   filing status × Schedule-A-relevant indicators: has `salt_inc_sales`, has
-   mortgage interest, has EITC — mirroring OTA's conditioning set).
-4. Calibrate within each stratum so state-weighted totals hit HT2 targets
-   (raking / Deville-Särndal via R `survey::calibrate` or a small ipfp loop), with
-   the sum-to-national-weight constraint enforced by construction
-   (`w_{i,st} = p̂(st|x_i)·w_i`, probabilities renormalized after calibration).
-5. **Target years:** HT2 is published for every historical year (through ~2022), so
-   calibrate each historical simulation year (2017–2022) to its own HT2 vintage.
-   For later years, hold the last calibrated `p(st|x)` fixed (weights then inherit
-   Tax-Data's national weight growth). Revisit with state population projections in
-   a later phase.
-6. Diagnostics report in the OTA style: per-state correlation and mean absolute
-   relative difference vs HT2 for targeted AND untargeted variables.
+Three conventions from the build still bind new work:
 
-**Filers vs non-filers (both approaches).** The Tax-Data microdata carries a full
-population: filers AND non-filers, each a weighted tax-unit record with the same
-imputed `weight`; `filer` is an exogenous 0/1 field (`variable_guide.csv` line 4),
-only flipped endogenously when a refundable CTC/rebate induces filing
-(`do_taxes.R:127`). HT2 is **filers only**, so it cannot pin non-filer geography, and
-non-filers are geographically unlike filers (low-income, elderly-SS-only, students).
-Therefore **partition records by `filer` status and target each partition separately**,
-then concatenate:
-- **Filers → HT2** (steps 1–6 above).
-- **Non-filers → ACS/Census population margins**, by state × cell, cells built from
-  model-native variables — broad age band (`age1`/`age2`, catches elderly SS-only),
-  an income tier, and dependent presence (`n_dep`). Minimum target: non-filing count
-  by state; preferred: state × age × income-tier.
+- **Anchor every year-keyed value list at 2017**, the state law floor. A
+  subparameter first keyed later produces an empty series when the simulation
+  window ends before that year.
+- **Every subparameter carries a `reference:`** to a form line or statute.
+- **A missing later year silently reuses the last keyed value**
+  (`generate_time_series()` in `src/data/tax_law.R`). Unless the subparameter
+  has an `i_measure` rule, a dollar amount is therefore held fixed, not indexed.
+  Section 3.3 exists because of this.
 
-  > **Amended 2026-08-18 — superseded in part by the non-filer residual rework.**
-  > As implemented, this design gave the non-filer partition *count-only* targets on
-  > single-membership `state × age_band × income_tier` cells, which the calibration
-  > reproduces exactly in one pass — so the "fit" is pure reproduction of the ACS
-  > margin, errors included. Stage D measured those errors: the v0 margins run 0.78×
-  > (DC) to 1.51× (SD) of a population-minus-filers residual anchor. The replacement
-  > targets the **residual anchors** directly (state × age band, adult-counted), keeps
-  > the income tier in the prior rather than as a target, and adds SSA OASDI and
-  > covered-worker margins. See `research/state_weights/nonfiler_residual_design.md` §6.2 and
-  > `research/state_weights/nonfiler_residual/04_findings.md`.
-The per-record split constraint holds automatically (each record is in exactly one
-partition), so federal totals stay invariant. **Reconciliation is at the
-INDIVIDUAL level, by group** (amended JI 2026-07-13, replacing the filing-unit
-comparison, which depended on the v0 ACS filing model): compare weighted counts
-of single adults, married adults, and children/dependents by state — IRS side
-from HT2 filing-status counts and N2 (married adults = 2·MARS2 + MFS residual;
-single = MARS1 + MARS4; dependents = N2 − returns − MARS2), ACS side by direct
-person-level tabulation (18+ × MARST for adults, under-18 for children). The
-difference IS the non-filer population by group and state, model-free.
-Implemented as `compare_individuals_acs_irs()`; 2022 results: married-adult
-coverage 85.6% national (74.5% MS – 95.3% SD), single-adult 77.6% (64.5% WV –
-86.3% MN), children 109.2% (IRS dependents include 18+ students; dependent
-filers double-count — documented construction gap). The plan's original
-`sum(weight · n_people)` Census-population total remains a secondary check.
-
-A companion **wage-based diagnostic** (JI 2026-07-13) compares wage earners
-and wage dollars by state against two independent sources:
-`compare_wages_acs_irs()` (ACS INCWAGE) and `fetch_qwi_state_payroll()`
-(Census QWI/LEHD total payroll + stable job counts; workplace-based, UI-
-covered, requires CENSUS_API_KEY). Dollars are the clean comparison — 2022:
-IRS $9.63T vs ACS $9.97T (96.6% national; 81.7% DC – 101.8% CA, the CA
-overage from ACS top-coding) — a high anchor confirming HT2 wage targets.
-Counts carry concept gaps (returns vs persons vs jobs): returns-with-wages /
-persons-with-wages = 75.5%, tight across states (70.9–78.8%), so residual
-variation is informative.
-
-QWI 2022 results (43/51 states published; payroll proxied as 3·EmpS·EarnS
-since the API's Payroll variable is null at state tabulations): IRS/proxy =
-105% nationally (proxy omits unstable-job earnings), with the
-workplace-vs-residence signature unmistakable — DC 57.8%, MD 131.7%, VA
-117.1% vs their tight residence-based ACS ratios. QWI is therefore a
-STRUCTURAL cross-check and demographic-cell source, not a level anchor.
-
-**LODES resolves the residence problem** (JI 2026-07-13,
-https://lehd.ces.census.gov/data/lodes/): the same LEHD job frame published
-on both bases. RAC files aggregate to residence-based state employment
-directly — with age bands (≤29/30–54/55+) and monthly earnings bands — via
-`fetch_lodes_rac()`; verified 2022 that the residence ordering is restored
-where QWI diverged (DC 285k resident workers vs 485k workplace jobs; MD
-2.51M residents vs 2.16M in-state jobs). OD files give the state-to-state
-commuter matrix via `fetch_lodes_od_matrix()` — 2022: DC residents hold only
-31.0% of DC-workplace primary jobs (MD 39.0%, VA 25.9%), quantifying the
-QWI anomaly exactly — and serve as the reallocation operator for converting
-QWI workplace payroll to residence basis (OD shares × workplace earnings).
-Concept caveats: JT01 primary jobs are point-in-time (below any-wage-in-year
-ACS/IRS counts by construction), same UI universe as QWI, LODES8 runs
-through 2022.
-
-Beyond the weights, **LODES is a candidate source for resolving cross-border
-tax liability** (JI 2026-07-13): states tax nonresidents on wages earned
-in-state, residents claim credits for taxes paid to other states, and
-reciprocity agreements (and DC's Home Rule nonresident-tax bar) rewire the
-DC/MD/VA-type flows entirely. Modeling any of that requires knowing where a
-resident's wages are EARNED — exactly the OD matrix. A future extension
-could impute a work-state distribution to each record's wage income from
-the OD shares (by residence state × earnings band), feeding nonresident
-returns, other-state credits, and reciprocity rules in the calculator.
-Added to the Phase 7 list.
-
-**Candidate person-level target dimensions (JI 2026-07-13).** The PUF splits
-wages by earner with demographics (`wages1/2` × `age1/2` × `male1/2`), so
-record-level x-vectors like "wage dollars earned by males 25–34" are
-directly constructible — fully compatible with the engines' target format:
-- **QWI sex × age** (verified: Emp/EmpS/EarnS publish by sex × 8 WIA age
-  bands × state, quarterly) ↔ PUF earner counts and wage dollars by sex ×
-  age band. Jobs≠persons, workplace-based, UI-covered — use for structure.
-- **ACS marital status × age × wages** (INCWAGE × MARST × AGE): QWI lacks
-  marital status; ACS supplies it residence-based, matching PUF geography.
-  Two-earner-couple rates by state (both spouses with wages) are a sharp
-  derived margin for joint-return geography.
-- **Elderly (65+) wage participation** (QWI A08 / ACS) ↔ PUF earners 65+ —
-  retirement-state signal (FL/AZ).
-- **Not matchable**: QWI race/ethnicity and education crosses, industry,
-  firm size — the PUF carries none of these.
-Recommended use: start as UNTARGETED validation cells in the harness
-(metric 2, where OTA's weights showed weakness); promote to calibration
-targets only where state fit is poor — thin demographic cells overfit.
-Caveats to document: ACS is residence-based vs HT2 filing-address-based (minor at
-state level); "non-filer" is not observed in ACS, so the imputed `filer` flag is the
-authority for *who* is a non-filer and ACS supplies only the geographic *margins*.
-Open sub-decision: non-filer cell granularity (state-total vs state×age×income) —
-tune in Phase 1 against the reconciliation and downstream refundable-credit results.
-This matters most for the EITC and the `rebate` (stimulus/UBI) module, where
-non-filers are the population of interest.
-
-> **Amended 2026-08-18.** The granularity sub-decision is **closed**: state × age band
-> is feasible (Stage D T6 — the smallest state residuals are WY 56k, SD 73k, VT 74k, far
-> above thin-cell territory), and the anchors are adult counts, so the target x-vector
-> becomes `1 + (filing_status == 2)` rather than `1`. Two caveats on the sentence above,
-> both worth knowing before relying on it: the `filer`-flag-is-authority claim still
-> holds, but that flag is itself unanchored upstream and is being recalibrated in
-> Tax-Data; and the EITC case does **not** in fact respond to non-filer geography the way
-> this implies — there is no `become_filer_eitc` in the calculator (only CTC and rebate
-> have one), so non-filers' EITC is multiplied out of every total by the `* filer` gate.
-> The `rebate` module is the one that genuinely depends on this. See
-> `research/state_weights/nonfiler_residual_design.md` §8.
-
-**Home:** prototype as `src/data/state_weights.R` + a build script under `other/`;
-**production home is upstream Tax-Data** (new interface file alongside
-`tax_units_{year}.csv`), versioned via `interface_versions.yaml`. Migrate once stable.
-
-### 2.2 Tax law configuration
-
-**Separate state tax-law root, reusing all existing machinery per state:**
-
-```
-config/scenarios/tax_law_state/
-├── baseline/
-│   ├── il/            # one dir per jurisdiction, lowercase postal code
-│   │   ├── agi.yaml   # conformity + additions/subtractions params
-│   │   ├── ded.yaml   # standard deduction, itemized rules, coupling flags
-│   │   ├── ord.yaml   # rates and brackets
-│   │   ├── credits.yaml  # EITC match, CTC, CDCTC, property/renter credits
-│   │   ├── exempt.yaml   # personal exemptions
-│   │   └── filing.yaml   # filing-requirement thresholds (gross-income tests)
-│   ├── co/ …
-│   └── ny/ …
-└── {public|private|tests}/{reform_name}/{st}/*.yaml   # overrides, same mechanics
-```
-
-- Each state directory is parsed with the **existing** `load_tax_law_input()` /
-  `parse_param()` pipeline (they already handle indexation, filing-status mappers,
-  time series). A new thin wrapper `build_state_tax_law()` loops jurisdictions,
-  prefixes parameter names with `st_` (filenames stay clean), pivots wide exactly
-  like `build_tax_law()`, adds a `state` column, and `bind_rows()`. Output written to
-  `supplemental/tax_law_state.csv`.
-- Reform override semantics identical to federal: reform dir overlays baseline at the
-  subparameter level, per state. Runscript gets an optional `state_tax_law` column
-  (default `baseline`).
-- **Conformity encoded as parameters** in `agi.yaml`/`ded.yaml` per state, e.g.:
-  - `st_agi.start_point`: 0 = own base, 1 = federal AGI, 2 = federal taxable income
-  - `st_agi.conformity_year`: 0 = rolling conformity (state base moves with the
-    scenario's federal law); else the fixed IRC conformity date (e.g. CA ≈ 2015).
-    **Encode from day one** (read off the same statutes as everything else), but v1
-    *mechanics* treat every state as rolling. Fixed-date mechanics are deferred to
-    Phase 7. The reference base must be calculated on the same post-behavior records
-    as the scenario, not joined from a baseline detail file; selective-conformity
-    states also need a configuration bridge. Until then, a federal-reform run that
-    requests a fixed-conformity state must hard-stop rather than publish a
-    rolling-conformity estimate.
-  - `st_ded.item_coupling`: 0 = independent choice, 1 = must match federal,
-    2 = federal itemizers may choose (NE-style)
-  - `st_ded.fed_tax_ded_limit`: deduction cap for federal income tax paid
-    (0 = none, Inf = unlimited (AL)); plus phase-out params (MO, OR)
-  - `st_credits.eitc_match`: share of federal EITC (0 where none)
-  - `st_ded.salt_addback`: 1 if state income tax must be backed out of federal
-    itemized deductions (uncapped line-5a semantics)
-- **Encoding convention — anchor every year-keyed value list at 2017** (the state
-  law floor). A subparameter whose first specified year is later (e.g. a credit
-  enacted in 2025 encoded only as `'2025': …`) produces an empty series when the
-  simulation window ends before that year and breaks the parse; the 2017 anchor
-  (usually `0` for a not-yet-enacted credit) is also the semantically correct
-  value. Discovered in Phase 4 single-year builds; enforced by the year-window
-  regression in `test_state_tax_law`.
-- **`reference` metadata field** (PolicyEngine practice): every parameter cites form
-  line / statute section + URL. Parser status (verified 2026-07-12): unknown keys are
-  already tolerated for **unindexed** subparams (early return, `tax_law.R:311`) but
-  break **indexed** ones — with `indexation_defaults` present, the `map2()` at
-  `tax_law.R:319-320` requires equal lengths and errors; without defaults, the extra
-  key is swept into the indexation-year handling and corrupts the series. Fix: strip
-  `reference` in `parse_subparam()` before the indexation-key sweep. The unit test
-  MUST cover an indexed subparameter under `indexation_defaults` — an
-  unindexed-only test passes vacuously.
-- **Indexation:** state YAML uses existing `i_measure` fields. New index series
-  needed in `generate_indexes()` (`src/data/economy.R`): chained CPI already exists;
-  add GDP deflator (from Macro-Projections) and alias state-specific CPIs (AZ Phoenix
-  MSA, CA CPI) to national CPI-U initially with a documented approximation flag.
-  Per-state base years/rounding already fit `i_base_year`/`i_increment`/`i_direction`.
-
-### 2.3 Calculator
-
-New directory `src/calc/state/`, functions obeying the existing contract
-(`return_vars$…` registration, `req_vars`, `parse_calc_fn_input()`, one `mutate`,
-return registered columns):
-
-```
-do_state_taxes(tax_units_post_federal, st)   # orchestrator, mirrors do_1040()
-├── calc_st_agi()      # start from agi / txbl_inc / own base per st_agi.start_point;
-│                      #   additions (e.g. non-own-state muni interest — data-limited,
-│                      #   phase-in later), subtractions (state refunds via state_ref,
-│                      #   SS/retirement exclusions, federal tax ded for AL/MO/OR)
-├── calc_st_ded()      # standard vs itemized under coupling flag; SALT add-back
-├── calc_st_exempt()   # personal/dependent exemptions or credits
-├── calc_st_txbl()
-├── calc_st_tax()      # reuse integrate_rates_brackets()
-├── calc_st_credits()  # EITC/CTC/CDCTC matches on federal amounts; nonrefundable
-│                      #   ordering per state form
-└── calc_st_liab()     # -> liab_st_iit; applies st_filing.req_threshold
-                       #   (filing-status-mapped gross-income test): records below
-                       #   the state filing requirement get zero liability and are
-                       #   excluded from state filer counts (§6 TPC overcount risk)
-```
-
-- Inputs: federal-pass outputs already on the tibble (`agi`, `txbl_inc`, itemizer
-  flag `itemizing`, itemized components incl. pre-limitation total
-  `item_ded_ex_limits`, `eitc`, `ctc_*`, `cdctc_*`) + `st_*` law columns.
-  **Verified 2026-07-12:** all of the above are registered `return_vars`, and raw
-  input columns survive downstream because `do_taxes()` binds calc output onto the
-  original records — so NO federal `return_vars` plumbing is needed. Uncapped SALT
-  components (`salt_inc_sales`, `salt_prop`, `salt_pers`) reach the state layer as
-  input columns; `calc_st_*` functions declare them in `req_vars` directly.
-  **DECIDED (2026-07-12) — state SALT add-back uses the post-workaround value.**
-  `do_taxes()` mutates `salt_inc_sales` in place (the "Shift SALT" block,
-  `do_taxes.R:713`), subtracting PTE-workaround amounts recharacterized as
-  entity-level losses. Those dollars were not paid as individual state income tax
-  on Schedule A, so the post-workaround value is the *correct* individual amount
-  for state add-back semantics. If a pristine pre-workaround value is ever needed,
-  capture it before that mutation — do not re-derive it downstream.
-- Genuinely idiosyncratic structures that resist parameterization (PA's eight income
-  classes, NJ's own base) get `case_when(st == …)` blocks inside the generic
-  functions — contained, documented exceptions rather than per-state files.
-- **Filing-status caveat:** states with joint-vs-separate optimization (TAXSIM
-  computes both, takes lower) are out of scope for v1; note in known-differences.
-
-### 2.4 Orchestration and outputs
-
-- **Mode switch:** new optional runscript column `states` (empty/absent = current
-  behavior; `all` or space-delimited list, e.g. `IL CO NY`). Per-row parsing in
-  `get_scenario_info()` (`src/misc/config_parser.R`). The cross-row consistency rule
-  — baseline's `states` must be a **superset** of every counterfactual's — cannot
-  live there (`get_scenario_info()` filters to a single ID, `config_parser.R:321`,
-  and never sees other rows); it goes in **`parse_globals()`**, which reads the full
-  runscript CSV (`config_parser.R:114-118`) and already does runscript-level
-  defaulting. Runtime guard for the case parse-time can't see: if `baseline_vintage`
-  points at a pre-existing baseline run without state totals, the state
-  revenue-estimate builder fails fast with a clear message instead of emitting
-  empty deltas.
-- In `run_one_year()`, after the federal static pass:
-  ```
-  for (st in scenario_info$states):
-      join st slice of state tax law (year, filing_status)
-      do_state_taxes() -> liab_st_iit per record
-      join state weights (id) -> aggregate totals
-  ```
-  Per-record results accumulate into (a) a long totals table and (b) optional state
-  detail, off by default; when enabled, written as ONE compact per-year matrix
-  `detail/state/{year}.csv` (`id` + one liability column per state), not 51 full
-  detail files.
-- **Outputs:** `totals/state.csv` (year × state × variable levels; structural
-  precedent is the long `1040_by_agi.csv`), `supplemental/state_rev_est.csv`
-  (deltas vs baseline, by state), and a state distribution cut later. State detail
-  goes exclusively through the compact matrix — do NOT touch `globals$detail_vars`
-  (an unconditional hardcoded vector, `config_parser.R:237-253`; conditional
-  membership would be new machinery for no benefit).
-- **SLURM:** per the CLAUDE.md sync table — the state loop lives inside
-  `run_one_year()` (no worker changes), but new totals/post-processing must be added
-  to `src/slurm/aggregate.R` Phases 3a/3b, and `states`/`state_tax_law` scenario-info
-  fields to `src/slurm/setup.R` serialization.
-
-### 2.5 Coupled mode (deferred, Phase 7)
+### 2.5 Coupled mode (deferred)
 
 For reforms where state tax changes should feed federal SALT (or federal changes feed
 AL/MO/OR bases): iterate federal↔state ≤3 rounds on *liability* (TAXSIM precedent),
 replacing `salt_inc_sales` with computed state income tax + an imputed sales-tax
 election for non-income-tax states (Pub 600-style regression — separate task). Only
 itemizers (~9% of filers) trigger the loop; run it on that subset. Not needed for
-state-static estimates, which is everything in Phases 1–6.
+state-static estimates.
 
 ### 2.6 Local income taxes (deferred; design sketch, JI 2026-07-12)
 
@@ -382,8 +95,8 @@ split a state's weights across sub-state areas, conditional on the state weights
 - **Formal structure:** split `w_{i,st}` into `w_{i,st,loc}` with
   `Σ_loc w_{i,st,loc} = w_{i,st}` — the same per-record split constraint one level
   down, so state totals (and hence national totals) are preserved by construction.
-  Both Phase 1 weight engines (calibration and gradient) apply unchanged with county
-  targets in place of HT2 targets.
+  The Tax-Data fit applies unchanged with county targets in place of the
+  state targets.
 - **Cleanest implementation:** treat taxing localities as **additional jurisdiction
   columns in the same weights file** — e.g., split NY into `NY-NYC` and `NY-xNYC`,
   both running NY state law, with NYC local law layered on the first. The weights
@@ -401,125 +114,160 @@ split a state's weights across sub-state areas, conditional on the state weights
 - **Known limits to document:** residence-based reweighting cannot capture
   **workplace-based** taxes (OH municipal work-place withholding, Yonkers
   nonresident earnings tax, KC/St. Louis earnings taxes on commuters); SOI county
-  data is filer-only (non-filer county margins would need ACS, mirroring §2.1);
+  data is filer-only (non-filer county margins would need ACS);
   sub-county jurisdictions (OH/PA) need an allocation assumption on top of county
   calibration.
 - Open to alternative reweighting refinements — the NYC/non-NYC split is the
   motivating case; the same mechanism generalizes to any sub-state partition with
   SOI county coverage.
 
-Priority: after the 50-state rollout stabilizes (Phase 7 list); NYC first (largest
+Priority: after sections 3.2 and 3.3; NYC first (largest
 local PIT, cleanest county mapping), MD counties second (statewide coverage,
 county-native).
 
 ---
 
-## 3. Phases and deliverables
+## 3. What is built and what is next
 
-**Phase 0 — Scaffold (few days)**
-Branch `state-tax`. Commit both research/plan docs. CLAUDE.md addendum describing the
-state module conventions. Decision sign-off on §5 open items.
+**Built (phases 0-6 of the original plan).** All 51 jurisdictions are encoded
+for TY2017-2025, enabled, and clear the cross-model bar (TAXSIM-35 for
+2017-2020, PolicyEngine US for 2021-2025; 95% of federally aligned records
+within $100 in every cell). Production state weights are the default. Full-sample
+state-mode runs exist, with a first comparison to Census collections and state
+agency tables (`research/state_tax/aggregate/README.md`). Current facts are in
+`research/STATUS.md`; per-state status is in
+`research/state_tax/state_parameter_rollout.csv`.
 
-**Phase 1 — State weights prototype + A/B bake-off (2–3 weeks)**
-HT2 ingestion → build BOTH Approach A (classical calibration) and Approach B
-(differentiable reweighting) behind `build_state_weights(method=)` → run the shared
-comparison harness (`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` §4) → `state_weights_{year}.csv`
-+ OTA-style diagnostics for each. Acceptance: chosen method hits targeted variables
-within 2% for ≥99% of state×stratum targets (TPC benchmark), with untargeted-variable
-MARD and downstream pilot-state liability reported honestly for both methods.
-**Torch question RESOLVED (2026-07-12):** `torch` is not installed on the cluster, so
-Approach B is implemented dependency-free in `src/data/state_weights.R` (softmax/Adam
-with analytic gradients + a finite-difference self-test); reproducibility via
-`globals$random_seed` and deterministic full-batch gradients. **Prototype status:**
-HT2 ingestion, ACS non-filer margins, and both fitting engines exist; still missing
-are the `build_state_weights(method=)` dispatcher and the `state_weights_{year}.csv`
-assembly/writer.
+**Next, in this order** (JI, 2026-11-10): 3.1 documentation, then 3.2 and 3.3 in
+parallel. Everything in section 7 waits.
 
-**Phase 2 — Parameter schema + pilot states (2–3 weeks, parallel with Phase 1)**
-Implement `build_state_tax_law()`, `st_` naming, `reference` field tolerance, index
-series additions. Encode **IL** (flat rate, federal-AGI start — simplest real state),
-**CO** (flat rate, federal-*taxable-income* start — tests deduction flow-through),
-**NY** (graduated brackets, own itemized rules, 30% EITC match, household credit —
-complexity ceiling). Sources: NBER historical forms archive + state DOR current
-forms; Tax Foundation tables as transcription cross-check only. Every parameter cites
-its form line/statute.
+### 3.1 Documentation
 
-**Standing workstream — state parameter packets (starts in Phase 2 and runs through
-Phase 6)**
-Do not wait for the weights to start state-law research. For any state, the following
-can proceed immediately and in parallel with Phases 1–5: source-packet assembly,
-baseline YAML drafting, `reference` cleanup, worksheet-style unit tests,
-known-differences notes, and TAXSIM / PolicyEngine spot checks. Only aggregate
-validation remains weights-blocked. Track the queue in
-`research/state_tax/state_parameter_rollout.csv` and use
-`research/source_packets/TEMPLATE.md` for per-state documentation.
+Shrink `research/STATUS.md` and this plan to what is current, index the gap
+diagnostics and the PTET work, and bring `research/tools/check_conventions.R`
+to zero findings. Done 2026-11-10 except where section 7 says otherwise.
 
-**Phase 3 — State calculator (2–3 weeks)**
-`src/calc/state/` per §2.3, driven by the three pilot states. Federal return-var
-plumbing for uncapped itemized detail. Per-state unit tests from form worksheets
-(`src/tests/state/`): hand-computed returns at multiple income/filing-status points,
-including bracket boundaries and credit phase-outs.
+### 3.2 Pass-through entity taxes (PTET)
 
-**Phase 4 — Orchestration + outputs (1–2 weeks)**
-Runscript `states` column, `run_one_year()` state loop, totals/rev-est outputs, SLURM
-sync. Acceptance: a with-state run's federal outputs are byte-identical to a
-without-state run of the same scenario.
+A PTET is an elective state income tax paid by a partnership or S corporation on
+its owners' behalf. The entity deducts it federally without limit, so the owners
+avoid the federal cap on the deduction for state and local taxes (SALT); the
+state then gives the owners a credit or an income exclusion. Today
+`do_salt_workaround_baseline()` (`src/calc/do_taxes.R`) approximates the federal
+half in every year and every state, and the state calculator has nothing. It is
+the leading explanation for modeled NY, CA and CT liability running 1.2-1.5 times
+the agency figures from TY2021.
 
-**Phase 5 — Validation harness (1–2 weeks)**
-TAXSIM-35 comparison via `usincometaxes` (extends `src/tests/test_taxsim.R`): map
-records, compare `siitax` per state/year, report match rates at $15/$100 tolerances
-with a maintained known-differences list (recent-year TAXSIM state law is inflated
-2020/2021 law — expect systematic gaps there). Aggregate benchmarks: state liability
-totals vs HT2 "total tax" and vs state revenue-agency published estimates for pilot
-states.
+Documents: the proposal `research/state_tax/ptet/ptet_proposal.md`; the law table
+`research/state_tax/ptet/ptet_state_law.csv` with notes in
+`research/state_tax/ptet/ptet_state_law.md`; draft per-state parameters and the
+list of law items still on secondary sources in
+`research/state_tax/ptet/params_draft/README.md`. Nothing is implemented.
 
-**Phase 6 — 50-state completion / backlog burn-down (bulk of calendar time; parallelizable)**
-Batch by structural family, easiest first, validating each batch through the Phase 5
-harness before the next. By the time this phase starts, research packets and many YAML
-drafts should already exist; this phase should finish and validate the backlog rather
-than begin state discovery from zero:
-1. No-broad-income-tax states. Immediate zero-tax stubs apply only to jurisdictions
-   with no state individual fiscal program in the 2017-forward model window
-   (`AK FL NV SD TX WY`). `NH`, `TN`, and `WA` are now implemented through special
-   profiles: narrow investment-income tax for NH/TN, and capital-gains excise plus
-   Working Families Tax Credit transfer for WA. Their remaining Phase 6 work is
-   cross-model and aggregate validation, not initial law discovery.
-2. Flat-rate federal-AGI states (AZ CO* GA† ID† IN KY MI NC PA‡ UT …).
-3. Graduated federal-AGI states (largest group: CA VA MD‡‡ MN WI MO OH OK …).
-4. Federal-taxable-income states (ID MT ND OR SC …).
-5. Own-base states (AL AR MS NJ PA) — most custom logic.
-6. Federal-deductibility states (AL MO OR) — need the §2.5 loop for federal reforms;
-   state-static works without it.
-   (*CO is fed-taxable; †recently flat; ‡PA own-base flat; ‡‡MD county add-on
-   deferred — verify each during encoding, not from this list.)
+**Decided (JI).**
 
-**Phase 7 — Later scope, in rough priority order**
-Coupled federal↔state iteration + sales-tax election imputation; frozen-base
-mechanics for fixed-date-conformity states under federal reforms (§2.2
-`st_agi.conformity_year`); local income taxes via county-level sub-state weights
-(§2.6 — NYC/Yonkers, MD counties first); cross-border wage taxation
-(nonresident returns, other-state credits, reciprocity) with work-state
-imputation from the LODES OD matrix (§2.1); state MTRs and
-combined-MTR behavioral feedback; state distribution tables; state AMTs; historical
-years pre-2017; state population-projection aging of weights.
+- Calibrate to the Joint Committee on Taxation paper (Comey, Gallagher and
+  Gorman 2025; `docs/papers/`): for TY2024, $30.9B of S-corporation and $33.1B
+  of partnership tax moved off individual returns, an $18.1B federal cost, about
+  80% of it in the top 1%; 85% of partnership PTET benefits individuals.
+  (2026-10-28)
+- **Two modes.** In a federal-only run each record's PTET uses a national rate
+  series by year and entity type, stored in federal law YAML. In a state-mode
+  run federal tax is computed per state fraction of a tax unit, each with that
+  state's PTET, and summed with the state weights. The state-mode calculation is
+  the reference; the national series is derived from it.
+- **Rate buckets bound the cost.** States are grouped into K buckets per year
+  (tunable, about 12 by default); each stacked row carries the record's
+  weight-averaged rate within its bucket, so a record's total PTET is exact.
+- **Rate.** The top PTET rate per state, year and entity type. Graduated entity
+  schedules (NY and others) are documented, not applied. Maryland's county rate
+  is excluded from the state credit.
+- **Enacted law only.** No PTET in 2017; 2018-2020 only where enacted. This
+  raises federal baseline revenue in those years and needs John Ricco's sign-off.
+- **Reforms regenerate the national series.** A federal-only reform run needs a
+  series produced by a state-mode run of that reform; the model stops with a
+  clear error if it is missing.
+
+**Design.** The amount is `rate[state, year, entity] x max(0, income)` where a
+PTET is available, with the partnership amount scaled by the 85% individual
+share. A record elects when its federal gain (marginal rate times the PTET that
+would otherwise be lost to the SALT cap) exceeds a threshold scaled by a take-up
+parameter per entity type, on the existing `salt_workaround` random-number
+stream. Federally the amount is an active loss and reduces `salt_inc_sales`. On
+the state side `st_agi.R` adds the federal deduction back and restores
+`salt_inc_sales` for the SALT add-back, then applies the state's own credit
+(`credit_share x ptet`) or exclusion. This reverses the 2026-07-12 decision that
+the state add-back reads the post-workaround value (section 5, item 7); record
+the reversal in `research/decisions_log.md` when it lands. The stacked pass is a
+wrapper around the unchanged `do_taxes()`, placed after behavioral feedback.
+
+**Steps, each separately verifiable.**
+
+| # | Work | Gate | Moves the federal baseline? |
+|---|---|---|---|
+| 1 | Characterization test pinning today's `do_salt_workaround_baseline()`; a federal test runner | Totals match `research/state_tax/ptet/01_quantify_workaround.R` | No |
+| 2 | `st_ptet.*` schema; generate `{st}/ptet.yaml` from the law table | Quick state tests pass; state totals identical | No |
+| 3 | `calc_ptet()`, federal-only, behind a mode switch (legacy or new) | Legacy mode bit-identical to step 1; zero take-up equals workaround off | Only when the default flips |
+| 4 | State add-back, credit and exclusion | Worksheet cases: NY credit, CT 87.5%, WI exclusion, PA none | No (state totals move) |
+| 5 | Stacked wrapper, state-to-bucket map, unfiltered weights, collapse back to one row per record. Measure runtime and memory for one year at K = 12 and at K = every distinct rate before fixing the default | Zero take-up equals the unstacked run exactly; row weights sum to the record weight | Yes, in state-mode runs |
+| 6 | Calibrate to the TY2024 targets; build the national series; validate against published NY, CA, CT, NYC and MA credit totals and the agency ratios | Targets met; NY, CA and CT ratios fall toward about 1.1 | Yes |
+| 7 | Retire scenario parameters nothing reads; map `item.salt_workaround_allowed_*` to take-up caps | Scenarios parse | No |
+
+**Checkpoints that need JI, in order.**
+
+1. After step 1: may the PTET adjustment move to after the Social Security
+   cost-of-living, capital and excess-growth adjustments? It must, to stack late,
+   and it changes excess-growth scenarios slightly.
+2. Before step 3: the base. Rate times pass-through income (proposed: brings in
+   non-itemizers, drops sales tax) or itemized SALT as today.
+3. After step 5's measurement: the default K, and whether fractional flags in
+   collapsed detail files are acceptable for distribution tables.
+4. Before step 6: the sign-off package for John Ricco (the pre-2021 revenue
+   change; the level and mix from 2021).
+5. Deferred unless raised: the MN and OR sunsets after 2027, the resident credit
+   for another state's PTET, and the law items still on secondary sources.
+
+### 3.3 TY2026 state law
+
+Scope (JI, 2026-11-10): the seven states with known unencoded provisions, plus
+an audit of statutorily indexed values in the states the tracker calls
+`carry-forward`. Not a full 51-state re-research. No external model covers 2026,
+so validation is worksheet cases plus the smoke and continuity tests.
+
+| State | Work |
+|---|---|
+| MT | 2026 rate and bracket keys (HB 337 of 2025: 5.65%); confirm the capital-gains rates |
+| ND | 2026 brackets from the estimated-tax form; mark preliminary |
+| NM | 2026 child-credit amounts and low-income rebate table, if published |
+| DC | Child-care credit match of 24.25%; the new $1,000 child credit (D.C. Code 47-1806.17) after researching its phase-out and refundability |
+| RI | Resolve whether the child credit and surtax start in TY2026 or TY2027; encode the published 2026 indexed amounts now |
+| CT | $500 family child care home credit (PA 25-168), against an optional supplemental input because occupation is unobserved |
+| SC | H.4216 / Act 110 restructure: primary research first, then likely new generic parameters. Until encoded, SC 2026 and later must fail loudly or carry an explicit known difference |
+
+Per state, follow `research/state_tax/state_parameter_workflow.md`: packet
+section with the 2026 sources, a `reference:` on every value, "PRELIMINARY" where
+the source is an estimated-tax form, at least one TY2026 worksheet case, and the
+tracker cell updated.
+
+**Indexed-value audit.** For each carry-forward state, list the parameters
+indexed by statute (brackets, standard deduction, exemptions, credit thresholds)
+in `research/state_tax/ty2026_indexed_audit.csv`, then for each row transcribe
+the published TY2026 value, or add an `i_measure` rule where the statute gives a
+formula the parser supports, or leave it fixed and record "awaiting publication".
+Add a coverage script that reports the last keyed year per state parameter, and
+rewrite the tracker's boilerplate `ty2026_law` cells to say what is true.
+
+### 3.4 Later scope, in rough priority order
+
+Coupled federal-state iteration with a sales-tax election imputation (2.5);
+local income taxes through county-level sub-state weights (2.6); cross-border
+wage taxation (nonresident returns, other-state credits, reciprocity) with a
+work-state imputation from the Census LODES origin-destination matrix; state
+marginal rates and combined-rate behavioral feedback; state distribution tables;
+state AMTs; years before 2017; aging the weights with state population
+projections.
 
 ---
-
-**Phase status (2026-10-22).** Phase 5 is built and Phase 6's cross-model
-validation is complete: all 51 jurisdictions are encoded, enabled and clear the
-cross-model bar (TAXSIM-35 2017-2020, PolicyEngine US 2021-2025, 95% of
-federally aligned records within $100 in every cell). Phase 6's aggregate
-validation waits on production state weights (built in Tax-Data). Current
-detail is in `research/STATUS.md`; per-state status in
-`state_parameter_rollout.csv`.
-
-Illinois, Colorado, and New York source packets have now been normalized and
-their next-state research cohorts are documented in
-`research/state_tax/notes/state_tax_batch_analysis.md`: `IL/IN/MI` for rolling
-federal-AGI flat-tax validation, `CO/ND/SC` for federal-taxable-income
-construction, and `NY/CT` for graduated federal-AGI schedules with high-income
-calculation layers. These are research batches, not claims that ND, SC, or CT
-are implemented.
 
 ## 4. Validation strategy (summary)
 
@@ -527,9 +275,9 @@ are implemented.
 |---|---|---|
 | Parameter | transcription check | Tax Foundation / TPC / ITEP tables |
 | Record | form-worksheet unit tests | hand-computed state returns |
-| Record | cross-model | TAXSIM-35 (`usincometaxes`), PolicyEngine spot checks (2021+) |
-| Aggregate | weighted totals | SOI HT2 state × AGI class |
-| Aggregate | revenue estimates | state revenue-agency estimates (pilot states) |
+| Record | cross-model | TAXSIM-35 (2017-2020) and PolicyEngine US (2021-2025), `src/tests/state/cross_model/` |
+| Aggregate | state totals by year | Census state tax collections (`research/state_tax/aggregate/README.md`) |
+| Aggregate | resident totals by income class | state agency tables (NY, CA, CT so far), same README |
 | Invariant | federal unchanged | with-state vs without-state byte-diff |
 
 Federal-side disagreements are logged to
@@ -555,80 +303,78 @@ depresses match rates in states with no route at all).
 
 ---
 
-## 5. Open decisions (need sign-off before/during Phase 0)
+## 5. Decisions (all made)
 
-1. **Years of state law to encode: DECIDED (JI, 2026-07-08) — 2017-forward**, matching
-   the microdata floor so every simulatable year is covered. Validation coverage
-   splits cleanly: 2017–2020 against TAXSIM's actually-coded state law, 2021+ against
-   PolicyEngine (TAXSIM 2021+ uses inflated prior-year parameters).
-2. **Weights home: DECIDED (2026-07-08) — prototype in-repo, migrate to Tax-Data
-   once the calibration spec and diagnostics stabilize.** Discipline: write the
-   weights file in the exact format the eventual Tax-Data interface will use, so
-   migration changes a path, not the model.
-3. **State detail files: DECIDED — off by default.** When enabled, write one compact
-   per-year liability matrix (`id` + one liability column per state, ~100–200 MB/yr)
-   rather than 51 full detail files.
-4. **Non-state buckets: DECIDED (amended 2026-07-12) — carry `PR` AND `OA` as
-   no-tax jurisdictions** (HT2 reports Puerto Rico separately from Other Areas, so
-   the weights prototype carries both: 51 modeled + 2 buckets = 53). Keeps
-   `Σ_st w = w_national` exact and state totals reconcilable to HT2 by construction.
-5. **State mode switch: DECIDED — runscript `states` column** (per-scenario control,
-   reproducible-by-config). Add a validation rule in `get_scenario_info()`: if any
-   counterfactual row sets `states`, the baseline must too (state deltas need
-   baseline state liability).
-6. **Pilot state #3: DECIDED — NY** (complexity gauntlet on strong primary sources
-   and strong TAXSIM/PolicyEngine coverage, so mismatches are likely ours). CA goes
-   first in the Phase 6 rollout, where CalEITC (an independent phase-in/out schedule,
-   not a federal match) is the acceptance test for credit-schema generality and
-   CA-CPI for the indexation series work.
+Reasons and dates are in the archived plan and `research/decisions_log.md`.
+
+1. **Years of state law:** 2017 forward, matching the microdata floor.
+2. **Weights home:** Tax-Data, read through the `State-Weights` interface
+   (moved 2026-09-12).
+3. **State detail files:** off by default; one compact per-year liability matrix
+   when on (`state_detail`), plus the long component file at `state_detail = 2`.
+4. **Non-state buckets:** `PR` and `OA` are carried as no-tax jurisdictions, so
+   53 jurisdictions and the split weights sum to the national weight.
+5. **Mode switch:** the runscript `states` column; the baseline row must cover a
+   superset of every counterfactual.
+6. **Fixed-date and selective conformity:** groups reference the enacted federal
+   baseline (decision S44).
+7. **State SALT add-back reads the post-workaround `salt_inc_sales`**
+   (2026-07-12). Section 3.2 reverses this when the PTET work lands.
+8. **Year horizon:** law encoded through TY2025 and carried forward; TY2026
+   changes recorded per state in the tracker (decision S45). Section 3.3 is the
+   work this left.
 
 ---
 
 ## 6. Risks
 
-- **HT2 lag vs projection years** — weights are as good as the national aging
-  assumption; state-differential growth untracked in v1 (accepted, documented).
-- **Conditional-independence limits (OTA caveat)** — weights can't capture
-  state-policy-driven attribute variation; mitigated by SALT/mortgage/EITC
-  conditioning variables, and by keeping state-varying *attributes* in the calc
-  layer, not the weight layer.
-- **State filer counts** — federal filers ≠ state filers (TPC overcounted 8–35%).
-  Encode state filing thresholds/requirements per state from day one (schema home:
-  `filing.yaml` → `st_filing.*`, applied in `calc_st_liab()`, §2.3).
-- **Fixed-date IRC conformity** — `st_agi.start_point` treats "federal AGI" as the
-  scenario's computed AGI, but fixed-date-conformity states (CA and others) do not
-  move with federal reforms. Invisible for state-static baseline estimates; wrong in
-  detail for federal reforms with states on. `st_agi.conformity_year` encoded from
-  day one, frozen-base mechanics in Phase 7, known-differences warning in between
-  (§2.2).
-- **`salt_inc_sales` conflation** — income vs sales tax not separable in the data;
-  fine for state-static; the coupled mode needs the imputation task before it's real.
-- **TAXSIM recent-year state law is approximate** — validation gaps in 2021+ may be
-  TAXSIM's, not ours; PolicyEngine (2021+) is the tie-breaker.
-- **Maintenance load** — 41 income-tax states × annual updates is the real long-run
-  cost; the `reference` discipline and per-state test suites are what keep it
-  tractable (PolicyEngine's experience).
+- **State weights in projection years** carry the TY2023 state shares;
+  state-differential growth is not tracked.
+- **Conditional-independence limits.** Weights cannot capture attribute variation
+  driven by state policy; state-varying attributes belong in the calculator.
+- **`salt_inc_sales` mixes income and sales tax.** Fine for state-static
+  estimates; the coupled mode and the PTET base (3.2, checkpoint 2) both run
+  into it.
+- **Published benchmarks are not the model's concept.** Census collections
+  include nonresidents, timing and PTET effects; agency tables differ in which
+  credits sit inside liability. The gap diagnostics locate differences; they do
+  not size them.
+- **No external model for 2026.** TY2026 law is validated by worksheet cases only.
+- **Maintenance load.** 41 income-tax states with annual updates is the real
+  long-run cost; the `reference:` discipline, the per-state tests and the
+  frozen-value coverage script (3.3) are what keep it tractable.
 
 ---
 
 ## 7. Open and deferred notes this plan owns
 
 `research/CONVENTIONS.md` requires a note with `status: open` to be cited from
-its workstream's plan — an open note no plan points at is how outstanding work
-goes missing, which is the failure the 2026-08-19 reorganization was fixing.
-This section is that citation, and the place to look for work that is real but
-not on the phase track above.
+its workstream's plan; an open note no plan points at is how outstanding work
+goes missing. This section is that citation, and the waiting list: work that is
+real but not on the track in section 3.
 
 | Note | Status | What it owns, and what unblocks it |
 |---|---|---|
-| `research/state_tax/notes/state_data_imputation_plan.md` | **open** | The data extensions the state calculators need, tiered by materiality — 14 items since 2026-10-13, rebuilt from the machine-readable crosswalk `research/state_tax/tax_data_gaps.csv` (613 rows, 45 jurisdictions; decision S43). **Tier 1 is the live one**: tenure/rent/property tax (23 states, 12 high-materiality rows, incl. MN's 2024+ renter credit), the pension source split (36 states; the military flag alone unlocks most), and household-resources income (12 states). Item 4 (elective deferrals) is a Tax-Data FILL, not an imputation: `trad_contr_er1/2` exists and is all zero. Since S43 encoding no longer waits on any of this — a data-blocked provision is encoded against an optional variable in `config/interfaces/supplemental_inputs_schema.yaml` and switched on by a producer through the supplemental-inputs interface (`research/state_tax/supplemental_inputs_interface.md`, `role: method`). §6's `salt_inc_sales` risk is the same work seen from the coupled-mode side. |
+| `research/state_tax/ptet/ptet_proposal.md` | **open** | The PTET proposal for John Ricco. Active: section 3.2. Its decision 3 (the base) and decision 4 (how the federal pass handles state) are superseded or pending as 3.2 records. |
+| `research/state_tax/ptet/params_draft/README.md` | **open** | 42 draft `ptet.yaml` files and a schema snippet, not read by the model; the list of PTET law items still on secondary sources; five disagreements with our own state rate parameters (NE, GA, AR, MT, ME) that belong to 3.3. |
+| `research/state_tax/aggregate/README.md` | current (evidence) | The gap diagnostics: modeled liability against Census collections and agency tables. Rerun after 3.2 step 6. Per-state aggregate validation beyond NY, CA and CT needs more agency tables in the State-Ind repo. |
+| `research/state_tax/notes/state_data_imputation_plan.md` | **open** | The data extensions the state calculators need, tiered by materiality — 14 items since 2026-10-13, rebuilt from the machine-readable crosswalk `research/state_tax/tax_data_gaps.csv` (614 rows, 45 jurisdictions; decision S43). **Tier 1 is the live one**: tenure/rent/property tax (23 states, 12 high-materiality rows, incl. MN's 2024+ renter credit), the pension source split (36 states; the military flag alone unlocks most), and household-resources income (12 states). Item 4 (elective deferrals) is a Tax-Data FILL, not an imputation: `trad_contr_er1/2` exists and is all zero. Since S43 encoding no longer waits on any of this — a data-blocked provision is encoded against an optional variable in `config/interfaces/supplemental_inputs_schema.yaml` and switched on by a producer through the supplemental-inputs interface (`research/state_tax/supplemental_inputs_interface.md`, `role: method`). §6's `salt_inc_sales` risk is the same work seen from the coupled-mode side. |
 | `research/state_tax/notes/ca_misc_amt_plan.md` | **deferred** (was `open`; changed 2026-08-19 to match the note's own §Sequencing) | CA miscellaneous itemized deductions and CA AMT, in that order — implementing misc without AMT overstates deductions for exactly the high-income itemizers most likely to be in AMT. **Trigger: when top-of-distribution CA output matters** (P1 production use, or CA distributional tables). Not needed for the cross-model bar, which CA already clears. |
 | `research/state_tax/notes/or_kicker_design_note.md` | **deferred** (JI, 2026-10-13; S46) | The Oregon kicker (ORS 291.349) and every other provision that reads a PRIOR-YEAR state liability (HI/IA/LA/MT carryforwards; crosswalk item 13, overlay `prior_year_liab`). Not encoded; excluded in the harness where an external model pays it. **Trigger: when Oregon output matters** -- then design the prior-year carry through the sequential year loop (and its SLURM equivalent) before writing the credit. |
 | `research/state_tax/notes/state_interstate_migration_design_note.md` | **deferred** | Interstate migration. No trigger set. |
-| **JI review: circuit-breaker provisions** (no note yet; S46) | **open** | Before the generic refundable circuit-breaker component (MI-1040CR homestead credit, MO-PTS/PTC property tax credit; reads only the rent / property-tax / household-resources overlays) ships, JI reviews the provisions as encoded: the MI senior rate ladder and senior/disabled exemption ladder, the MO step table, the household-resources income concepts, and which other states' circuit breakers (WI Schedule H, MT 2EC, ME 5219-KK, RI-1040H, VT, NJ ANCHOR) it should carry next. Design: `research/state_tax/notes/datagap_spec_mi_mo_or.md` §1 (one refundable component, 29 neutral-default parameters, two styles, MI ladders in `mi/credit_tables.csv`, the MO step rule parametric); the three review items it flags are `cb_elig_disabled`, `cb_offsets_nonref` and the MO TY2026 values. Sibling spec for the other data-gap states: `research/state_tax/notes/datagap_spec_hi_ky_pa.md` (executed 2026-10-13, commit 507c41ef1). |
+| `research/state_tax/notes/datagap_spec_mi_mo_or.md` | **open** | **JI review of the circuit-breaker provisions (S46).** Before the generic refundable circuit-breaker component (MI-1040CR homestead credit, MO-PTS/PTC property tax credit; reads only the rent / property-tax / household-resources overlays) ships, JI reviews the provisions as encoded: the MI senior rate ladder and senior/disabled exemption ladder, the MO step table, the household-resources income concepts, and which other states' circuit breakers (WI Schedule H, MT 2EC, ME 5219-KK, RI-1040H, VT, NJ ANCHOR) it should carry next. The three review items the spec flags are `cb_elig_disabled`, `cb_offsets_nonref` and the MO TY2026 values. The sibling spec `research/state_tax/notes/datagap_spec_hi_ky_pa.md` was executed 2026-10-13 (commit 507c41ef1). |
 | `research/state_tax/notes/bakija_comparison.md` | **open** | Bakija's IncTaxCalc (2019) read as a mechanism checklist against our module. Owns four items: **document the CO and WI state AMTs** (the no-state-AMT policy requires documenting them and both are silent, unlike MN/CA/IA), feed his 39-parameter circuit-breaker taxonomy into the Tier 1 rent/property case, declare the four spouse-allocation dimensions per state when AL/AR/MS are wired (his `itemalloc`/`stdalloc`/`exalloc`/`credalloc` against our single even-split convention), and audit our low-income relief against his 11 `lowtype` designs. Also records what he models that we ALREADY do, so it is not re-derived. Unblocked by nothing; the AMT documentation is the cheap half. |
+| `research/state_tax/acs_test/README.md` | current (evidence) | Which rows of the data-gap registry the ACS records under the Affordability-Index matched file could fill. Feeds tier 1 of the imputation plan. |
+| `research/state_tax/cross_model/external_model_issues.md` | current (evidence) | The TAXSIM (T1-T81) and PolicyEngine (P1-P61) findings. **Not yet sent upstream.** |
+| Merge to `main` (no note) | waiting | `origin/main` moved state law to `config/scenarios/tax_law/default/state/{st}/` in November 2026 and this branch is several hundred commits behind, so the merge is a path migration. See `research/STATUS.md`. |
+
+Also waiting, with no note of their own: the Wisconsin 2025 Act 15
+retirement-income election (documented in `research/source_packets/wi.md`),
+interstate migration beyond the design note, local income taxes (2.6) and the
+coupled mode (2.5).
 
 Notes with `status: current` (`ca_p1_readiness_analysis`, `ca_parameter_analysis`,
-`child_credit_survey`, `elderly_retirement_provisions`) are surveys cited from
-where they are used; `status: historical` notes are records. Neither kind carries
-outstanding work, so neither is listed here.
+`child_credit_survey`, `elderly_retirement_provisions`,
+`state_eitc_align_crosscheck`) are surveys and cross-checks cited from where they
+are used; `status: historical` and `status: executed` notes are records. Neither
+kind carries outstanding work.

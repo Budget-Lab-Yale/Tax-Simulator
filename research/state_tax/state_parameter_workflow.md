@@ -3,7 +3,7 @@ title: "State Parameter Workflow"
 role: procedure
 workstream: state_tax
 status: current
-updated: 2026-08-19
+updated: 2026-11-10
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null
@@ -25,13 +25,15 @@ Everything below is weights-independent and should proceed now:
 4. Write known-differences notes for data limits, projected years, and omitted features.
 5. Run record-level cross-model checks against TAXSIM and, where useful, PolicyEngine.
 
-Only the last validation layer is weights-dependent:
+The last validation layer needs state weights and a state-mode run:
 
-6. Aggregate validation against SOI HT2 and state revenue-agency totals.
+6. Aggregate validation against Census state tax collections and state
+   revenue-agency tables (`research/state_tax/aggregate/README.md`).
 
-That means a state's parameter packet can be mostly complete before the weights are
-ready. The tracker should show those states as `aggregate = blocked_weights`, not
-`todo`.
+Production weights have been the default since 2026-10-24, so no state is
+`aggregate = blocked_weights` any longer. A state with a Census comparison is
+`in_progress` until its gaps are attributed; the six no-tax stubs are `n/a`; DC
+and WA are `todo` because the Census series does not cover them.
 
 ## Required artifacts per state
 
@@ -106,7 +108,7 @@ Use this sequence for each state:
 2. `yaml_dir = done`: baseline YAML exists and passes parser/lint checks.
 3. `worksheet_tests = done`: form-worksheet cases pass locally.
 4. `cross_model = done`: TAXSIM or other cross-model spot checks documented.
-5. `aggregate = done`: HT2 / revenue-agency validation complete after weights arrive.
+5. `aggregate = done`: the state's gap to Census collections, and to its agency table where one is mirrored, is attributed.
 
 A state with endpoint carry-forwards, a placeholder table approximation, or an
 unimplemented fixed-conformity mechanism must remain `in_progress` for the affected

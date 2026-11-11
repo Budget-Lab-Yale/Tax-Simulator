@@ -3,7 +3,7 @@ title: "Archive — superseded documents"
 role: index
 workstream: cross-cutting
 status: current
-updated: 2026-08-24
+updated: 2026-11-10
 sot: research/README.md
 supersedes: []
 superseded_by: null
@@ -121,6 +121,27 @@ renumbered §7.1 roadmap, and the §8 revisions.
 workstream was added to it as item 1b. Worth keeping only because the omission was
 itself notable: the workstream had been running since 2026-08-16 with no trace in
 the status document, which is why the pass added it.
+
+**`STATUS_2026-10-25_pre-rewrite.md`** (2026-10-25) — `research/STATUS.md` as a
+running log: 867 lines of dated entries from the first encoding batches in July
+2026 to the day all 51 jurisdictions cleared the cross-model comparison
+(2026-10-22).
+
+*Superseded by* the rewritten `research/STATUS.md` (2026-11-10), which keeps only
+what is true today and points here for the history. *Still useful for* the
+account of each encoding batch (what each state's law needed and why), the
+2026-08-22 sweep of divergence classes across states, and the reasoning behind
+individual known-difference rows.
+
+**`state_tax_plan_2026-10-22_pre-rewrite.md`** (2026-10-22) — the state-tax plan
+as written for the build: the weights prototypes and their diagnostics, the
+as-built configuration, calculator and orchestration design, and phases 0 to 6.
+
+*Superseded by* the rewritten `research/state_tax/plan.md` (2026-11-10), which
+is forward-looking, and by `docs/model_documentation.md` section 10 for the
+as-built design. *Still useful for* the reasoning and dates behind each original
+decision, the wage and commuting cross-checks of the weights (ACS, QWI, LODES),
+and the candidate person-level calibration targets.
 
 ## Stale renders
 

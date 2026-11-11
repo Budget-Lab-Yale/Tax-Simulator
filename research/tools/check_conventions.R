@@ -63,8 +63,13 @@ PLAN_WORKSTREAMS <- c('state_tax')   # state_weights moved to Tax-Data (2026-09-
 # stragglers outside them.
 ARTIFACT_DIRS <- c('research/raw/',
                    'research/source_packets/',
-                   'research/archive/')
-ARTIFACT_RE   <- '/results/reports/'
+                   'research/archive/',
+                   # drafts of issues and emails for the external models'
+                   # maintainers: outbound messages, not documents
+                   'research/state_tax/cross_model/bug_reports/')
+# Generated per-state reports: the tracked board (results/reports/) and the
+# per-run copies the harness leaves in its cache (cache_sw/{run}/reports/)
+ARTIFACT_RE   <- '/(results|cache_sw/[^/]+)/reports/'
 
 # File extensions a citation might carry. Used to tell a path citation from
 # prose that merely contains a slash.
@@ -102,7 +107,7 @@ md_files <- function(include_archive = TRUE) {
 }
 
 is_artifact <- function(path) {
-  any(startsWith(path, ARTIFACT_DIRS)) || grepl(ARTIFACT_RE, path, fixed = TRUE)
+  any(startsWith(path, ARTIFACT_DIRS)) || grepl(ARTIFACT_RE, path)
 }
 
 # Returns NULL when the file has no front-matter block, else a list of
@@ -148,7 +153,9 @@ git_last_commit_date <- function(path) {
 # as {year} are skipped: they name a family of files, not one.
 citations <- function(path) {
   lines <- readLines(path, warn = FALSE)
-  re <- sprintf('(?:research|src|config|docs|other)/[A-Za-z0-9_./*-]+\\.(?:%s)\\b',
+  # The lookbehind keeps a URL's path (https://host/.../research/x.pdf) or a
+  # longer path's tail from reading as a repo-root citation
+  re <- sprintf('(?<![A-Za-z0-9_./-])(?:research|src|config|docs|other)/[A-Za-z0-9_./*-]+\\.(?:%s)\\b',
                 CITE_EXT)
   out <- list()
   for (i in seq_along(lines)) {

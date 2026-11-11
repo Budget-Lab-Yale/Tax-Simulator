@@ -32,3 +32,7 @@ research/state_weights/scripts/sweep_state_weights.R,cross-repo,"Tax-Data. The s
 src/data/asec_tax_units.R,cross-repo,"Tax-Data. Moved there 2026-09-12 with the state-weights workstream."
 src/nonfilers/state_weights.R,cross-repo,"Tax-Data. The builder modules moved there 2026-09-12 (were src/data/ here)."
 src/tests/test_state_weights.R,cross-repo,"Tax-Data. Moved there 2026-09-12 with the state-weights workstream."
+src/main_state_weights.R,cross-repo,"Tax-Data. The entry point that fits and publishes the State-Weights interface."
+src/cex.R,cross-repo,"Tax-Data. The CEX consumption imputation; cited for c_housing_utilities."
+docs/30_supplemental_inputs_bridge.md,cross-repo,"Affordability-Index. The suggested home for the documentation of its supplemental-inputs publishing step."
+research/state_tax/ty2026_indexed_audit.csv,planned,"This repo, plan section 3.3: the audit of statutorily indexed state values for TY2026."

@@ -3,7 +3,7 @@ title: "California Individual Income Tax Parameter Analysis"
 role: notes
 workstream: state_tax
 status: current
-updated: 2026-08-19
+updated: 2026-11-10
 true_as_of: 2026-07-13
 sot: research/source_packets/ca.md
 supersedes: []
@@ -33,10 +33,10 @@ This analysis separates the regular resident tax from other amounts reported on 
 | Renter and child/dependent-care credits | Omitted | Need housing/care-expense and eligibility inputs |
 | AMT, credit limitation, special credits, health penalty, use tax | Omitted | Outside the regular-tax release; separately scoped |
 | Behavioral Health Services Tax | Encoded | 1% taxable-income surtax after nonrefundable credits; validated at the $1 million threshold |
-| Fixed/selective conformity | Framework implemented; CA bridges unavailable | Federal-reform runs fail until the 2015- and 2025-based California overlays are researched and validated |
+| Fixed/selective conformity | Implemented (decision S44, 2026-10-13) | California's conformity groups reference the enacted federal baseline, so a federal reform does not flow into California; the state YAML carries each departure from enacted federal law |
 | 540NR/part-year allocation and RDP pro formas | Omitted | Resident Form 540 scope only |
 
-The current state weights are still placeholders. No California aggregate can be treated as a revenue estimate until the weight work is complete.
+State weights are Tax-Data's production fit since 2026-10-24 (this sentence said placeholders until 2026-11-10). California aggregates are compared with Franchise Tax Board tables in `research/state_tax/aggregate/README.md`; they run high from TY2021 for a named cause, the unmodeled pass-through entity tax credit, so they are not yet revenue estimates.
 
 ## Sources And Research Rule
 

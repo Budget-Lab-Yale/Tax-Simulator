@@ -3,7 +3,7 @@ title: "Supplemental inputs — optional data for the state calculator"
 role: method
 workstream: state_tax
 status: current
-updated: 2026-10-13
+updated: 2026-11-10
 sot: self
 supersedes: []
 superseded_by: null

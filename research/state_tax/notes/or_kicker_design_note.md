@@ -2,8 +2,8 @@
 title: "Oregon kicker: modelling a credit keyed to prior-year liability"
 role: notes
 workstream: state_tax
-status: open
-updated: 2026-08-21
+status: deferred
+updated: 2026-11-10
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null
