@@ -1,0 +1,75 @@
+---
+# Georgia: elective entity-level tax, HB 149 (2021) as revised by HB 412 (2023); O.C.G.A.
+# 48-7-21(b)(7) (S corps) and 48-7-23(b) (partnerships). Annual irrevocable election on the timely
+# Form 600S / Form 700. TY2022 partnerships only if 100% owned by persons eligible to hold S stock;
+# from TY2023 the DOR FAQ says all partnerships are eligible. Entity may not deduct income taxes.
+# Owners exclude PTE-taxed income (Form 500 Sch. 1 "PTEDED") and add back PTE-taxed losses ("PTEADD").
+# Rate after 2026: HB 463 reportedly cuts 0.125 pt a year from 2027 to 3.99% (press summaries, not
+# read in the enrolled text, and GA cuts have historically been revenue-trigger-contingent) -- NOT encoded.
+# NOTE: baseline/ga/ord.yaml holds 5.19% for 2026; enacted 2026 rate is 4.99% (HB 463).
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model.
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'HB 149 (2021), O.C.G.A. 48-7-21(b)(7) (S corporations) and 48-7-23(b) (partnerships), taxable years beginning on or after 1/1/2022; Georgia DOR "HB 149 Pass-Through Entity Tax FAQ", https://dor.georgia.gov/hb-149-pass-through-entity-tax-faq. Annual irrevocable election; no end date or IRC 164(b)(6) tie in HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download'
+mandatory:
+  value: 0
+  reference: 'HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(2): "may annually make an irrevocable election"'
+method:
+  value:
+    '2017': 0
+    '2022': 2
+  reference: 'HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(3): partners "shall not recognize their respective share of the portion of income on which tax was actually paid"; Georgia DOR "HB 149 Pass-Through Entity Tax FAQ", https://dor.georgia.gov/hb-149-pass-through-entity-tax-faq: owners subtract it on Form 500 Schedule 1 line 12 ("PTEDED")'
+# The amended 48-7-23(b)(3) text tying the PTET rate to 48-7-20 was not read; tracking rests on Reg. 560-7-3-.03 and the law table
+rate:
+  value:
+    '2017': 0.0
+    '2022': 0.0575
+    '2024': 0.0539
+    '2025': 0.0519
+    '2026': 0.0499
+  reference: 'HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(3) as enacted: "5.75 percent"; Ga. Comp. R. & Regs. 560-7-3-.03 applies 5.75% "or, if subsequently changed, the applicable statutory income tax rate" (Justia regulations); 2024 5.39% HB 1015 (2024), 2025 5.19% HB 111 (2025) per O.C.G.A. 48-7-20 and baseline/ga/ord.yaml; 2026 4.99% HB 463 (signed 5/11/2026): "lowers Georgia''s state income tax rate from 5.19% to 4.99%, beginning January 1, 2026" (Governor press release, https://gov.georgia.gov/press-releases/2026-05-11/gov-kemp-signs-legislation-lowering-taxes-and-supporting-economic-growth). Post-2026 steps not encoded (see header)'
+rate_tracks_top:
+  value: 1
+  reference: 'Ga. Comp. R. & Regs. 560-7-3-.03 ("the applicable statutory income tax rate"); O.C.G.A. 48-7-20 flat rate from TY2024'
+# null = same as rate
+rate_scorp:
+  value: null
+  reference: 'O.C.G.A. 48-7-21(b)(7) (S corporation election) at the same rate as 48-7-23(b) partnerships per Reg. 560-7-3-.03'
+# exclusion state
+credit_share:
+  value: 0
+  reference: 'Exclusion state: HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(3)-(4) (no 48-7-28 credit for the tax paid)'
+# exclusion state; not applicable
+credit_refundable:
+  value: 0
+  reference: 'Exclusion state: no owner credit exists'
+# moot in an exclusion state; the add-back happens at the entity level
+addback:
+  value: 0
+  reference: 'HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(6): the electing entity "shall not be allowed any deduction for taxes that are based on or measured by ... income", so the entity base is already gross of the tax; owners exclude their share'
+resident_scope:
+  value: 2
+  reference: 'HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(3): net income "allocated and apportioned pursuant to Code Section 48-7-31"'
+nonresident_scope:
+  value: 2
+  reference: 'HB 412 (2023), O.C.G.A. 48-7-23(b) as revised, https://gov.georgia.gov/document/2023-signed-legislation/hb-412/download (b)(3) (allocated and apportioned)'
+# NA: no DOR statement on whether another state's PTET qualifies under 48-7-28
+resident_credit_for_other_state_ptet:
+  value: NA
+  reference: 'Georgia DOR "HB 149 Pass-Through Entity Tax FAQ", https://dor.georgia.gov/hb-149-pass-through-entity-tax-faq: credit for taxes paid to another state allowed on income "not taxed at the entity level by Georgia" if O.C.G.A. 48-7-28 is met; silent on other states'' PTET'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in GA (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in GA'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the GA election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the GA election'

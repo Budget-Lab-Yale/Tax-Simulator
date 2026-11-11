@@ -1,0 +1,82 @@
+---
+# Hawaii: pass-through entity tax (HRS 235-51.5).
+#
+# Law: S.B. 1437 (2023), Act 50 SLH 2023, signed 6/1/2023, for TY2023: rate
+# = the highest rate under HRS 235-51 (11%); all members except C
+# corporations included; credit nonrefundable with NO carryforward.
+# S.B. 2725 (2024), Act 50 SLH 2024, signed 6/19/2024, for TY2024+: rate a
+# flat 9%; qualified members limited to individuals, trusts and estates;
+# multi-tier provisions repealed; unused credit carried forward until
+# exhausted. Act 58 SLH 2025: for taxable years beginning after 12/31/2024,
+# qualified members add back their share of the PTE tax. No sunset found on
+# the DOTAX page.
+#
+# Election: separately each tax year; electronic filing and payment required
+# (failure cancels the election). From TY2024 estimated-tax penalties apply.
+#
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'HRS 235-51.5 (Act 50 SLH 2023, S.B. 1437); Hawaii DOTAX PTE page, https://tax.hawaii.gov/pte/; Tax Information Release 2023-03 (amended)'
+mandatory:
+  value: 0
+  reference: 'DOTAX PTE page ("A separate election for PTE taxation must be made for each tax year")'
+method:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'HRS 235-51.5; DOTAX PTE page (members receive a Hawaii income tax credit for the pro rata share of PTE tax paid)'
+rate:
+  value:
+    '2017': 0.0825
+    '2018': 0.11
+    '2024': 0.09
+  reference: 'DOTAX PTE page: "The PTE tax rate for tax year 2023 is set at the highest rate under HRS 235-51, currently 11%. The PTE tax rate for tax year 2024 and forward is set at 9%" (Act 50 SLH 2024); Tax Information Release 2024-01, https://files.hawaii.gov/tax/legal/tir/tir24-01.pdf. 2023 value equals max(st_ord.rates) in baseline/hi/ord.yaml (11%); 2024+ is a flat 9%, BELOW the 11% individual top. Pre-2023 values inert'
+rate_tracks_top:
+  value:
+    '2017': 0
+    '2023': 1
+    '2024': 0
+  reference: 'Act 50 SLH 2023 (TY2023 rate = highest HRS 235-51 rate); Act 50 SLH 2024 (flat 9% from TY2024)'
+rate_scorp:
+  value: NA   # NA = same as rate (schema default)
+  reference: 'HRS 235-51.5'
+credit_share:
+  value: 1
+  reference: 'TIR 2024-01 and DOTAX PTE page ("Each qualified member ... may claim a PTE credit equal to the member''s pro rata share of the PTE tax paid")'
+credit_refundable:
+  value: 0
+  reference: 'DOTAX PTE page: "PTE credits are nonrefundable." TY2023: no carryforward; TY2024+: carried forward until exhausted (Act 50 SLH 2024)'
+addback:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'Act 58 SLH 2025; DOTAX PTE page ("Yes, but only for tax years beginning after December 31, 2024 ... any qualified member claiming a credit must add back to their taxable income the share of the qualified member''s taxes paid by the electing pass-through entity"); 2025 Form N-40 instructions'
+# TIR 2024-01 defines the base as qualified members' "distributive shares
+# and guaranteed payments of Hawaii taxable income" without saying whether a
+# resident's non-Hawaii share is included; HRS 235-51.5 text was not
+# readable (capitol.hawaii.gov blocked the request)
+resident_scope:
+  value: NA
+  reference: 'Unresolved: TIR 2024-01, "Calculation of PTE Tax" (base = sum of qualified members'' distributive shares and guaranteed payments of Hawaii taxable income); statute not read'
+nonresident_scope:
+  value: 2
+  reference: 'TIR 2024-01 ("Hawaii taxable income"; nonresident members with no other Hawaii-source income need not file); DOTAX PTE page (PTE tax satisfies nonresident withholding)'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'TIR 2024-01 and DOTAX PTE page: "Residents and part-year residents who are members of a PTE may claim a credit for the member''s pro rata share of taxes paid to another state or to the District of Columbia ... so long as the taxes paid to the other state are substantially similar to the taxes imposed by HRS 235-51.5"'
+surtax_rate:
+  value: 0
+  reference: 'No second entity-level layer'
+surtax_credit_share:
+  value: 0
+  reference: 'No second entity-level layer'
+local_rate:
+  value: 0
+  reference: 'No local income tax in Hawaii'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in Hawaii'

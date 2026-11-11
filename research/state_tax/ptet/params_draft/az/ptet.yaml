@@ -1,0 +1,75 @@
+---
+# Arizona: entity-level tax election for partnerships and S corporations
+# (A.R.S. 43-1014; owner credit claimed on Form 355 -- its A.R.S. section was
+# not read).
+#
+# Law: SB 1828 (2021 budget reconciliation; bill number from secondary
+# sources only) enacted A.R.S. 43-1014 for taxable years beginning
+# from and after 12/31/2021. SB 1734 (2023) changed the partnership base
+# from TY2023 (separately computed items under 43-1412(1)-(16) included).
+# No sunset in 43-1014.
+#
+# Election: on the timely filed Form 165 / 120S. Only individuals, estates
+# and trusts are covered, and each may OPT OUT within 60 days of notice
+# (43-1014(C)-(D)). Not held by the parameters: the 5-year credit
+# carryforward; the credit for taxes paid to other states is used before the
+# PTE credit (Pub 713).
+#
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'A.R.S. 43-1014(A) ("For taxable years beginning from and after December 31, 2021"), https://www.azleg.gov/ars/43/01014.htm; ADOR Publication 713 (Nov 2025)'
+mandatory:
+  value: 0
+  reference: 'A.R.S. 43-1014(A), (D): owners consent and may opt out'
+method:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'ADOR Publication 713 (owner credit for PTE tax paid on the owner''s behalf); Form 355 (Credit for Taxes Paid by a Partnership or S Corporation) instructions'
+rate:
+  value:
+    '2017': 0.0454
+    '2019': 0.045
+    '2022': 0.0298
+    '2023': 0.025
+  reference: 'A.R.S. 43-1014(A): "a tax rate that is the same as the highest tax rate prescribed by section 43-1011". ADOR Publication 713: "The Arizona Pass-Through Entity (PTE) income tax is assessed at a rate of 2.98%" for TY2022, 2.5% flat from TY2023. Values equal max(st_ord.rates) in baseline/az/ord.yaml; pre-2022 values are inert (available = 0)'
+rate_tracks_top:
+  value: 1
+  reference: 'A.R.S. 43-1014(A)'
+rate_scorp:
+  value: NA   # NA = same as rate (schema default)
+  reference: 'A.R.S. 43-1014(A)'
+credit_share:
+  value: 1
+  reference: 'ADOR Publication 713: credit for the owner''s pro rata share of the PTE tax paid'
+credit_refundable:
+  value: 0
+  reference: 'ADOR Publication 713: "Is the PTE tax credit refundable? No. The PTE tax credit is not refundable. The unused portion ... may be carried forward for not more than 5 taxable years", https://www.azdor.gov/sites/default/files/2023-03/PUBLICATION_713.pdf'
+addback:
+  value: 1
+  reference: 'ADOR Publication 713: "An individual, estate or trust who claims this credit must also adjust their Arizona gross income by adding the amount of tax paid by the PTE for which the tax credit is claimed"'
+resident_scope:
+  value: 1
+  reference: 'A.R.S. 43-1014(A): tax on "the entire portion of its taxable income that is attributable to its resident partners or shareholders"'
+nonresident_scope:
+  value: 2
+  reference: 'A.R.S. 43-1014(A): "the portion of its taxable income derived from sources within this state that is attributable to its nonresident partners or shareholders"'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'ADOR Publication 713, credit for taxes paid to another state: residents enter "Your pro-rata share of the tax paid by the Entity on your behalf", limited to the lesser of the entity tax actually paid or the other state''s individual tax had the entity not elected; Form 309 instructions; A.R.S. 43-1071'
+surtax_rate:
+  value: 0
+  reference: 'No second entity-level layer (the Prop 208 surcharge never took effect)'
+surtax_credit_share:
+  value: 0
+  reference: 'No second entity-level layer'
+local_rate:
+  value: 0
+  reference: 'No local income tax in Arizona'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in Arizona'

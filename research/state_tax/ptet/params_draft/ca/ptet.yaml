@@ -1,0 +1,92 @@
+---
+# California: Pass-Through Entity (PTE) Elective Tax (Small Business Relief Act).
+#
+# Law: AB 150 (Stats. 2021, ch. 82) added R&TC 17052.10 (owner credit) and
+# 19900-19906 (elective tax) for taxable years beginning on or after
+# 1/1/2021 and before 1/1/2026. SB 113 (Stats. 2022, ch. 3, signed 2/9/2022)
+# retroactively to TY2021 let the credit reduce tax below TMT, added
+# guaranteed payments to qualified net income (QNI), and from TY2022 orders
+# the PTE credit AFTER the other state tax credit. SB 132 (signed 6/27/2025)
+# added R&TC 17052.11 and 19910-19916 for taxable years beginning on or after
+# 1/1/2026 and before 1/1/2031 (FTB 3893 2026 instructions, "What's New").
+#
+# Election: annual, on a timely filed original return, irrevocable for the
+# year. Qualified entity: partnership or S corporation whose owners are all
+# corporations or R&TC 17004 taxpayers (not PTPs, not combined-reporting
+# members). Only CONSENTING qualified taxpayers (individuals, fiduciaries,
+# estates, trusts; disregarded SMLLCs owned by them) are in QNI; a
+# non-consenting owner's share is simply left out.
+#
+# Not held by the parameters:
+#   - Prepayment: TY2022-2025, the election is VOID unless the greater of $1,000
+#     or 50% of the prior-year elective tax is paid by June 15 (2022-2025; FTB 3893 2025 instructions, Payment 1 "at least $1,000 or 50% of the elective tax" paid in the prior year).
+#     From TY2026 a missed or short June 15 payment no longer voids the
+#     election; instead each owner's credit is cut by 12.5% of the owner's pro
+#     rata share of the unpaid amount (R&TC 17052.11; FTB 3893 2026 instr.).
+#     credit_share stays 1.0 here because a timely payer loses nothing.
+#   - Credit is nonrefundable with a 5-year carryover (FTB 3804-CR 2025
+#     instructions, sections A and F); the $5M business-credit cap of TY2024-26
+#     does not apply to it.
+#   - QNI excludes owners with negative income and gain on sale of an
+#     interest (FTB PTE FAQ).
+#
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2021': 1
+    '2031': 0
+  reference: 'R&TC 19900 (AB 150, Stats. 2021 ch. 82: taxable years beginning on or after 1/1/2021 and before 1/1/2026) and R&TC 19910 (SB 132, signed 6/27/2025: taxable years beginning on or after 1/1/2026 and before 1/1/2031); FTB 3893 2026 instructions, "What''s New" and "General Information" (https://www.ftb.ca.gov/forms/2026/2026-3893-instructions.pdf)'
+mandatory:
+  value: 0
+  reference: 'R&TC 19900/19910: annual election by the qualified entity; FTB 3893 2026 instructions'
+method:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'R&TC 17052.10 (TY2021-2025) and 17052.11 (TY2026-2030): credit against the personal income tax; FTB 3804-CR 2025 instructions, section C'
+rate:
+  value: 0.093
+  reference: 'R&TC 19900 / 19910: 9.3% of qualified net income; FTB 3893 2026 instructions, "General Information" ("at a rate of 9.3% based on its qualified net income"); FTB 3804 2025 instructions'
+# A statutory 9.3% (the rate on the 9.3% bracket), NOT the 12.3% top rate
+# in baseline/ca/ord.yaml nor the 13.3% including the Behavioral Health
+# Services Tax
+rate_tracks_top:
+  value: 0
+  reference: 'R&TC 19900 / 19910 fix the rate at 9.3% rather than tying it to R&TC 17041'
+rate_scorp:
+  value: NA   # NA = same as rate (schema default); one 9.3% rate for partnerships and S corporations
+  reference: 'R&TC 19900 / 19910; FTB 3893 2026 instructions'
+credit_share:
+  value: 1
+  reference: 'R&TC 17052.10/17052.11: credit equals 9.3% of the owner''s share of QNI, i.e. the full entity tax paid on the owner''s behalf; FTB 3804-CR 2025 instructions, section A. TY2026+: reduced by 12.5% of the owner''s share of any unpaid June 15 prepayment (header)'
+credit_refundable:
+  value: 0
+  reference: 'FTB 3804-CR 2025 instructions, sections A and F: "The credit is nonrefundable, and the unused credit may be carried forward for five years"; R&TC 17052.10'
+addback:
+  value: 1
+  reference: 'FTB PTE elective tax FAQ ("If the qualified entity deducts the PTE elective tax for federal purposes, the amount of the PTE elective tax that was deducted must be added back for California purposes in computing the qualified entity''s California net income"), https://www.ftb.ca.gov/file/business/credits/pass-through-entity-elective-tax/help.html; R&TC 17220 (no deduction for taxes on or measured by income)'
+# QNI is the consenting owner's share of income "subject to personal income
+# tax": all-source for a resident, California-source for a nonresident
+resident_scope:
+  value: 1
+  reference: 'R&TC 19900 definitions, qualified net income = income "subject to personal income tax" (statute subsection not re-read); FTB 3804 2025 instructions, "Qualified net income"; FTB PTE FAQ on nonresident QNI (post-apportionment, "determined by using applicable sourcing rules"). Residents are taxed on all income under R&TC 17041(a), so their full distributive share enters QNI'
+nonresident_scope:
+  value: 2
+  reference: 'FTB PTE elective tax FAQ: "QNI ... would only include the qualified consenting nonresident partners'', members'', or shareholders'' pro rata share or distributive share of income and guaranteed payments subject to the California personal income tax, which would be determined by using applicable sourcing rules"'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'FTB 2025 Schedule S instructions, General Information G ("A partner, member, or shareholder may be eligible for the other state tax credit for their pro rata share of the PTE elective taxes paid, provided the statutory requirements of R&TC Sections 18001 and 18006 are met"), https://www.ftb.ca.gov/forms/2025/2025-540-s-instructions.html'
+surtax_rate:
+  value: 0
+  reference: 'No second entity-level layer in R&TC 19900-19916'
+surtax_credit_share:
+  value: 0
+  reference: 'No second entity-level layer in R&TC 19900-19916'
+local_rate:
+  value: 0
+  reference: 'No local income tax tied to the California election'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax tied to the California election'

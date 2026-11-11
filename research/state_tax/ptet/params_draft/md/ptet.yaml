@@ -1,0 +1,101 @@
+---
+# Maryland: elective pass-through entity tax, Md. Code Tax-General 10-102.1
+# (election for taxable years beginning after 12/31/2019; enacting 2020-21
+# session laws not re-read for this draft -- the CSV notes cite them).
+#
+# Rates (10-102.1(d)): INDIVIDUAL members = top state individual rate (10-105
+# (a)) PLUS the LOWEST county income tax rate (2.25%) -- 8.0% TY2020-2024,
+# 8.75% from TY2025 when HB 352 (2025 BRFA) raised the top state rate to
+# 6.5%. ENTITY members = the corporate rate, 8.25% (not modeled; the owner
+# records are individuals). `rate` below is the individual-member rate.
+#
+# Because the rate (and the member credit) bundles state + county tax,
+# and our MD calculator models the state line only (baseline/md/ord.yaml:
+# "county income tax ... OUT OF SCOPE"), a calculator must split the credit
+# between state and county liability or it will over-credit state tax.
+#
+# Base: TY2020-2026, the electing PTE is taxed on resident AND nonresident
+# members' shares attributable to Maryland. The 2025 BRFA (Ch. 604) moved
+# resident members to all-source income; the 2026 BRFA (Ch. 6) postponed that
+# to TY2027 (Comptroller Tax Alert 04-2026).
+#
+# Election: annual; for TY2026 the Comptroller honors the election made with
+# the first filing/payment after 4/15/2026. Members add back the credit
+# (Comptroller PTE FAQ Q5). No sunset.
+#
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2020': 1
+  reference: 'Md. Code Tax-Gen. 10-102.1 (electing PTE, taxable years beginning after 12/31/2019); Comptroller PTE FAQs (revised), https://www.marylandcomptroller.gov/content/dam/mdcomp/tax/instructions/pass-through-entities/PTE-FAQs.pdf; no sunset'
+
+mandatory:
+  value: 0
+  reference: 'Md. Code Tax-Gen. 10-102.1 (election); Comptroller Tax Alert 04-2026 on TY2026 election timing, https://www.marylandcomptroller.gov/legal-library/ta-13-apr2026pte.html'
+
+method:
+  value: 1   # credit
+  reference: 'Md. Code Tax-Gen. 10-102.1(e) as quoted in Comptroller PTE FAQ Q16: "each member may claim a credit against the tax imposed on the member for the member''s proportionate share of the tax paid by the pass-through entity"'
+
+rate:
+  value:
+    '2017': 0
+    '2020': 0.08
+    '2025': 0.0875
+  reference: 'Md. Code Tax-Gen. 10-102.1(d)(2) (Comptroller Tax Alert 04-2026): individual members taxed at the highest marginal state rate plus the lowest county rate; Comptroller PTE FAQ Q16: "The rates of 8% for individuals and 8.25% for entities are set by statute" (5.75% + 2.25%); HB 352 (2025 BRFA) top state rate 6.5% from TY2025 = max(st_ord.rates) in baseline/md/ord.yaml, so 6.5% + 2.25% = 8.75%. Transcription check (secondary): BDO 2020 alert "5.75% ... and the lowest county individual tax rate is 2.25%, for a total of 8.0%"'
+
+rate_tracks_top:
+  value: 0
+  reference: 'Rate = max(st_ord.rates) + 0.0225 lowest county rate (10-102.1(d)), so it follows the top state rate but does NOT equal it; a load-time check should test rate - 0.0225 == max(st_ord.rates)'
+
+rate_scorp:
+  value: NA   # member-type, not entity-type, difference (entity members 8.25%)
+  reference: 'Md. Code Tax-Gen. 10-102.1(d)(2): the rate differs by MEMBER type (individual vs entity), not by partnership vs S corporation'
+
+credit_share:
+  value:
+    '2017': 0
+    '2020': 1.0
+  reference: 'Md. Code Tax-Gen. 10-102.1(e) (Comptroller PTE FAQ Q16): credit = member''s proportionate share of the tax paid. Note the credit offsets combined state + county tax'
+
+credit_refundable:
+  value: 1
+  reference: 'Comptroller PTE FAQ Q5: the electing-PTE credit is reported on the "nonresident tax paid by pass-through entities" payment line (Form 504 line 29; Form 502 equivalent), i.e. treated as a payment and refunded if it exceeds tax'
+
+addback:
+  value: 1
+  reference: 'Comptroller PTE FAQ Q5: "A fiduciary member of an electing PTE must add back to income the amount of the credit received for the tax paid by the electing pass-through entity" (the individual-member addition modification on Form 502 is the same rule; the Form 502 code letter was not checked)'
+
+resident_scope:
+  value:
+    '2017': NA   # no election
+    '2020': 2
+    '2027': 1
+  reference: 'Comptroller Tax Alert 04-2026, https://www.marylandcomptroller.gov/legal-library/ta-13-apr2026pte.html: 2025 BRFA (Ch. 604) bases resident members'' shares on income "from everywhere"; 2026 BRFA (Ch. 6) postponed the change to TY2027, so for TY2026 electing PTEs are taxed on resident and nonresident shares attributable to Maryland'
+
+nonresident_scope:
+  value:
+    '2017': NA   # no election
+    '2020': 2
+  reference: 'Comptroller Tax Alert 04-2026 (nonresident members: Maryland-derived income)'
+
+resident_credit_for_other_state_ptet:
+  value:
+    '2017': NA   # pre-2020 not researched
+    '2020': 1
+  reference: 'Md. Code Tax-Gen. 10-703; Comptroller PTE FAQ Q15: "An individual resident member of a PTE may take a credit in Maryland, whether the PTE has elected to pay tax in the other state on behalf of the member or at the entity-level"; Form 502CR'
+
+surtax_rate:
+  value: 0
+  reference: 'The 2% capital-gains surtax (TY2025+, FAGI > $350,000) is NOT part of the PTE tax; the PTE pays no surtax for members (Comptroller Tax Alert 04-2026)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer PTET in MD'
+local_rate:
+  value: 0
+  reference: 'The 2.25% lowest county rate is folded into `rate` by statute; there is no separate local entity tax'
+local_credit_share:
+  value: 0
+  reference: 'See local_rate'

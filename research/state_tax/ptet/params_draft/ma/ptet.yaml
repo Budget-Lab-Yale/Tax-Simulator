@@ -1,0 +1,102 @@
+---
+# Massachusetts: two elective pass-through entity excises.
+# (1) G.L. c. 63D (St. 2021 c. 145), TY2021+: 5% on "qualified income taxable
+#     in Massachusetts" allocable to qualified members; refundable credit =
+#     share x 0.9. Applies only while IRC 164(b)(6) is in effect (63D s.3),
+#     which under P.L. 119-21 is every year through 2030.
+# (2) G.L. c. 63E (St. 2026 c. 101 s.21, signed 6/12/2026; s.45 makes it
+#     apply to taxable years beginning on or after 1/1/2026): an ADDITIONAL 4%
+#     excise on the part of each qualified member's allocated MA income that
+#     EXCEEDS the 4% surtax threshold (c. 62 s.4(d)); refundable credit =
+#     share x 0.9; same 164(b)(6) condition (63E s.3). Note the threshold is
+#     tested on the member's allocable share from THIS entity, not on the
+#     member's total income; members whose share does not exceed the
+#     threshold are not "qualified members" (63E s.1).
+#     Threshold = st_surtax.taxable_income_threshold for the year.
+#
+# Qualified members: natural persons, trusts and estates subject to c. 62
+# (resident, nonresident or part-year). Election annual, irrevocable, binds
+# all members (63E s.6; 63D s.6 likewise per TIR 22-6).
+#
+# Possible interaction to watch: St. 2026 c. 101 ss.9, 17, 47 contemplate the
+# Nov 2026 ballot question cutting the c. 62 Part B rate from 5% to 4%; the
+# 63D 5% rate is stated in 63D s.2 and is not linked to it.
+#
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'G.L. c. 63D s.2 (St. 2021 c. 145; taxable years beginning on or after 1/1/2021), https://malegislature.gov/Laws/GeneralLaws/PartI/TitleIX/Chapter63D/Section2; s.3: "This chapter shall not apply to any taxable year for which the federal limitation ... imposed by section 164(b)(6) ... has expired or is otherwise not in effect" -- in effect through 2030 under P.L. 119-21'
+
+mandatory:
+  value: 0
+  reference: 'G.L. c. 63D s.2 ("may elect"); c. 63E s.6 (annual election)'
+
+method:
+  value: 1   # credit
+  reference: 'G.L. c. 63D s.2, https://malegislature.gov/Laws/GeneralLaws/PartI/TitleIX/Chapter63D/Section2'
+
+rate:
+  value:
+    '2017': 0
+    '2021': 0.05
+  reference: 'G.L. c. 63D s.2: "an excise on its qualified income taxable in Massachusetts at a rate of 5 per cent"'
+
+rate_tracks_top:
+  value: 0
+  reference: 'G.L. c. 63D s.2 states 5% in its own terms (equal to the c. 62 Part B rate 2020+, max(st_ord.rates) = 0.05); the 4% surtax layer is in surtax_rate'
+
+rate_scorp:
+  value: NA   # same rate
+  reference: 'G.L. c. 63D s.2 applies one rate to all eligible pass-through entities'
+
+credit_share:
+  value:
+    '2017': 0
+    '2021': 0.9
+  reference: 'G.L. c. 63D s.2: credit "in an amount proportionate to each qualified member''s share of the tax due and paid ... multiplied by 0.9"'
+
+credit_refundable:
+  value: 1
+  reference: 'G.L. c. 63D s.2: "a refundable credit against the tax imposed under this chapter" [sic, i.e. c. 62; c. 63E s.2 corrects the cross-reference to chapter 62]'
+
+addback:
+  value: 1
+  reference: 'SECONDARY ONLY: practitioner summaries of St. 2021 c. 145 / TIR 22-6 ("the state tax will not be deductible on the owners personal Massachusetts tax return and the tax will be an added back"). Primary sources (TIR 22-6 https://www.mass.gov/technical-information-release/working-draft-tir-pass-through-entity-excise ; Form 63D-ELT instructions) returned HTTP 403 from both WebFetch and the cluster; confirm before use'
+
+resident_scope:
+  value:
+    '2017': NA   # no excise
+    '2021': 1
+  reference: 'G.L. c. 63D s.1: "Qualified income taxable in Massachusetts" = entity income allocable to a qualified member "and included in the qualified member''s Massachusetts taxable income under said chapter 62" -- all income for a resident, MA-source for a nonresident, https://malegislature.gov/Laws/GeneralLaws/PartI/TitleIX/Chapter63D/Section1'
+
+nonresident_scope:
+  value:
+    '2017': NA   # no excise
+    '2021': 2
+  reference: 'G.L. c. 63D s.1 (above); TIR 22-6 (as summarized in search results): an entity with nonresident qualified members determines its MA apportionment percentage'
+
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'MA DOR Directive 19-1, "Application of the Massachusetts Personal Income Tax Credit for Taxes Paid to Another Jurisdiction to the Connecticut Pass-Through Entity Tax" (G.L. c. 62 s.6(a)): resident members may claim the s.6(a) credit for their share of the CT PE tax, and must add back their pro rata share of that tax, https://www.mass.gov/directive/directive-19-1-application-of-the-massachusetts-personal-income-tax-credit-for-taxes-paid-to-another-jurisdiction-to-the-connecticut-pass-through-entity-tax (title and summary via search; page body 403)'
+
+surtax_rate:
+  value:
+    '2017': 0
+    '2026': 0.04
+  reference: 'G.L. c. 63E s.2 (St. 2026 c. 101 s.21): "An eligible pass-through entity may elect to pay an excise on its qualified income taxable in Massachusetts at a rate of 4 per cent", qualified income limited to the amounts by which each qualified member''s allocated amount "exceeds the surtax threshold pursuant to subsection (d) of section 4 of chapter 62" (63E s.1); St. 2026 c. 101 s.45: s.21 applies for taxable years beginning on or after 1/1/2026, https://malegislature.gov/Laws/SessionLaws/Acts/2026/Chapter101'
+
+surtax_credit_share:
+  value:
+    '2017': 0
+    '2026': 0.9
+  reference: 'G.L. c. 63E s.2: "a refundable credit against the tax imposed under chapter 62 ... proportionate to each qualified member''s share of the tax due and paid ... multiplied by 0.9", St. 2026 c. 101 s.21'
+
+local_rate:
+  value: 0
+  reference: 'No local income tax in MA'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in MA'

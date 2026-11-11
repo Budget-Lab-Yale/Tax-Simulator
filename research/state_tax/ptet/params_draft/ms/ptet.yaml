@@ -1,0 +1,80 @@
+---
+# Mississippi: electing pass-through entity, Miss. Code 27-7-26 (HB 1691, 2022; HB 1668, 2023).
+# Election/revocation on Form 84-381 by vote of the governing threshold or >50% of voting control;
+# binding until revoked; fiduciaries cannot elect. The entity files Form 84-105 and pays on
+# Mississippi-apportioned income at the 0/4/5 percent schedule (5% over $10,000), which does NOT
+# follow the individual rate cuts. Owners claim a credit for their share (Form 80-161), refundable
+# or carried forward at the owner's election. Entity credits pass through (HB 1668).
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model.
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Miss. Code 27-7-26 (HB 1691, 2022; amended HB 1668, 2023); Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf "Electing Pass-Through Entity": "For calendar year 2022 and each calendar year thereafter"; binding until revoked; no sunset'
+mandatory:
+  value: 0
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf: election by vote/consent on Form 84-381; binding until revoked'
+method:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf: owners report their share of income; credit "equal to the partner''s pro rata or distributive share of the tax paid on form 84-105, line 8"; Mississippi DOR Electing Pass-Through Entity FAQs (rev. 9/11/2023), https://www.dor.ms.gov/sites/default/files/news/EPTE%20Revised%20FAQ%209-11-23.pdf'
+# Graduated entity schedule in rates/brackets below
+rate:
+  value:
+    '2017': 0.0
+    '2022': 0.05
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf "Income Tax (Composite and Electing Pass-Through Entity): 0% on the first $5,000 of taxable income, 4% on the next $5,000 of taxable income and 5% on all taxable income in excess of $10,000" (TY2025). Top rate 5% -- NOT the individual rate (4.7% 2024, 4.4% 2025, 4.0% 2026 in baseline/ms/ord.yaml). 2022-2024 booklets not read; the 0/4/5 schedule is the pre-HB 531 schedule, so 2022-2024 = 5% is consistent with JCT Table B.1 (secondary)'
+rate_tracks_top:
+  value: 0
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf: electing PTEs keep the 0/4/5 percent schedule while the individual rate falls (HB 531 2022, HB 1 2025)'
+# null = same as rate
+rate_scorp:
+  value: null
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf: one schedule for partnerships and S corporations'
+credit_share:
+  value:
+    '2017': 0.0
+    '2022': 1.0
+  reference: 'Mississippi DOR Electing Pass-Through Entity FAQs (rev. 9/11/2023), https://www.dor.ms.gov/sites/default/files/news/EPTE%20Revised%20FAQ%209-11-23.pdf: credit "equal to the partner''s pro rata or distributive share of the tax paid (form 84-105, line 9)"; Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf'
+credit_refundable:
+  value: 1
+  reference: 'Mississippi DOR Electing Pass-Through Entity FAQs (rev. 9/11/2023), https://www.dor.ms.gov/sites/default/files/news/EPTE%20Revised%20FAQ%209-11-23.pdf: excess credit "can be carried forward or refunded at the election of the partner"; Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf same'
+# NA: owner add-back of the entity deduction not stated in the DOR booklet or FAQ
+addback:
+  value: NA
+  reference: 'Not addressed in Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf or Mississippi DOR Electing Pass-Through Entity FAQs (rev. 9/11/2023), https://www.dor.ms.gov/sites/default/files/news/EPTE%20Revised%20FAQ%209-11-23.pdf'
+resident_scope:
+  value: 2
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf Form 84-105 Schedule: line 28 "Income apportioned and directly allocated to Mississippi" carries to line 33 for electing PTEs; line 35 = income subject to tax'
+nonresident_scope:
+  value: 2
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf lines 28-35 (apportioned); Mississippi DOR Electing Pass-Through Entity FAQs (rev. 9/11/2023), https://www.dor.ms.gov/sites/default/files/news/EPTE%20Revised%20FAQ%209-11-23.pdf: nonresidents with only electing-PTE Mississippi income need not file'
+# NA: whether Form 80-160 covers another state's entity-level tax not stated
+resident_credit_for_other_state_ptet:
+  value: NA
+  reference: 'Mississippi DOR Electing Pass-Through Entity FAQs (rev. 9/11/2023), https://www.dor.ms.gov/sites/default/files/news/EPTE%20Revised%20FAQ%209-11-23.pdf: residents may take both the other-state credit (Form 80-160) and the electing-PTE credit; the other-state credit cannot be taken at the entity level. Silent on another state''s PTET'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in MS (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in MS'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the MS election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the MS election'
+# Graduated entity schedule (family st_ptet.brackets*/rates*); brackets on ENTITY income
+brackets:
+  value:
+    '2017': [0, 5000, 10000]
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf: first $5,000; next $5,000; excess over $10,000 of the entity''s Mississippi taxable income'
+rates:
+  value:
+    '2017': [0.0, 0.0, 0.0]
+    '2022': [0.0, 0.04, 0.05]
+  reference: 'Mississippi Form 84-100 Pass-Through Entity Income and Franchise Tax Instructions TY2025 (Rev. 01/26), https://www.dor.ms.gov/sites/default/files/tax-forms/business/2025%20PTE%20INSTRUCTIONS%2084-100%20-%20Final%20%2001.14.2026.pdf (TY2025 schedule; 2022-2024 assumed identical, booklets not read)'

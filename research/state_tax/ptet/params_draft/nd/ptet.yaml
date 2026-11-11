@@ -1,0 +1,56 @@
+---
+# North Dakota: NO pass-through entity tax. No enacted or pending PTET bill
+# was found (search 2026-10-28; Arkansas DFA 2026 similar-tax list,
+# https://www.dfa.arkansas.gov/wp-content/uploads/States_with_Similar_Tax_PET_2026.pdf,
+# lists ND as without a PTET). Recorded only for the resident credit for
+# other states' entity-level taxes.
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value: 0
+  reference: 'No PTET in N.D.C.C. ch. 57-38; Arkansas DFA "States With and Without Similar Taxes" for tax years beginning in 2026 (6/3/2026)'
+mandatory:
+  value: 0
+  reference: 'No PTET'
+method:
+  value: 0
+  reference: 'No PTET'
+rate:
+  value: 0
+  reference: 'No PTET'
+rate_tracks_top:
+  value: 0
+  reference: 'No PTET'
+rate_scorp:
+  value: NA
+  reference: 'No PTET'
+credit_share:
+  value: 0
+  reference: 'No PTET'
+credit_refundable:
+  value: 0
+  reference: 'No PTET'
+addback:
+  value: 0
+  reference: 'No PTET'
+resident_scope:
+  value: NA
+  reference: 'No PTET'
+nonresident_scope:
+  value: NA
+  reference: 'No PTET'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'Schedule ND-1CR instructions (2023): a resident partner/shareholder may claim credit for its allocable share of income tax a pass-through entity paid to another state where the other state''s entity-level payment satisfies the owner''s filing and payment obligation, or the owner filed there and took a credit for it; ND Tax "Credit for income tax paid to another state or local jurisdiction", https://www.tax.nd.gov/credit-income-tax-paid-another-state-or-local-jurisdiction ; https://www.tax.nd.gov/sites/www/files/documents/forms/individual/2023-iit/schedule-nd-1cr-2023.pdf (read via search excerpt)'
+surtax_rate:
+  value: 0
+  reference: 'No PTET'
+surtax_credit_share:
+  value: 0
+  reference: 'No PTET'
+local_rate:
+  value: 0
+  reference: 'No PTET'
+local_credit_share:
+  value: 0
+  reference: 'No PTET'

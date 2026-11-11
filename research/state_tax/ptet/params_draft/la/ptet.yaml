@@ -1,0 +1,82 @@
+---
+# Louisiana: entity election, La. R.S. 47:287.732.2 (Act 442 of 2019), LAC 61:I.1001; Form R-6980
+# election, Form R-6983 termination (no re-election for 5 years after termination). The entity files
+# CIFT-620 and is taxed like a C corporation but at the individual rates of R.S. 47:32 on a graduated
+# entity schedule ($25,000 / $100,000 breaks); flat 3% from TY2025. Owners exclude the income
+# (R.S. 47:297.14). Entities filing a composite return (47:201.1) may not elect.
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model.
+
+available:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 (Act 442 of 2019; amended through Acts 2025 No. 382); LAC 61:I.1001 (LDR regulation, 12-20-2024 current text), https://dam.ldr.la.gov/lawspolicies/12-20-2024%20Current%20Regulation.pdf: LDR accepted elections from 2/1/2020 "for taxable years beginning on or after January 1, 2019". Election continues until terminated (A(3)); no sunset'
+mandatory:
+  value: 0
+  reference: 'La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 A(3): elective, continues until terminated (Form R-6983)'
+method:
+  value:
+    '2017': 0
+    '2019': 2
+  reference: 'La. R.S. 47:297.14 (individual exclusion of income from an entity that filed under 47:287.732.2, "no such exclusion ... for any amount ... that ... will not bear the tax"); LAC 61:I.1001 (LDR regulation, 12-20-2024 current text), https://dam.ldr.la.gov/lawspolicies/12-20-2024%20Current%20Regulation.pdf: residents modify on IT-540 Schedule E, nonresidents on the IT-540B NPR worksheet'
+rate:
+  value:
+    '2017': 0.0
+    '2019': 0.06
+    '2022': 0.0425
+    '2025': 0.03
+  reference: 'Top rate of the schedule in rates/brackets below. La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 B: tax on the entity''s Louisiana taxable income at "the rate levied on individuals pursuant to the provisions of R.S. 47:32"; 2025+ flat 3% = R.S. 47:32 after Act 11 of the 2024 Third Extraordinary Session (baseline/la/ord.yaml)'
+rate_tracks_top:
+  value: 1
+  reference: 'La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 B (rates under R.S. 47:32, applied to the entity''s income on the $25,000/$100,000 brackets in LAC 61:I.1001 (LDR regulation, 12-20-2024 current text), https://dam.ldr.la.gov/lawspolicies/12-20-2024%20Current%20Regulation.pdf)'
+# null = same as rate
+rate_scorp:
+  value: null
+  reference: 'La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883: one schedule for partnerships and S corporations'
+# exclusion state
+credit_share:
+  value: 0
+  reference: 'Exclusion state: La. R.S. 47:297.14'
+# exclusion state; not applicable
+credit_refundable:
+  value: 0
+  reference: 'Exclusion state: no owner credit exists'
+# moot in an exclusion state
+addback:
+  value: 0
+  reference: 'LAC 61:I.1001 (LDR regulation, 12-20-2024 current text), https://dam.ldr.la.gov/lawspolicies/12-20-2024%20Current%20Regulation.pdf: owners exclude every income, deduction or other item included in the entity''s CIFT-620 Louisiana net income'
+resident_scope:
+  value: 2
+  reference: 'La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 A(1): the entity is taxed "in the same manner as if the entity" were a C corporation, on its Louisiana taxable income (CIFT-620 allocation and apportionment)'
+nonresident_scope:
+  value: 2
+  reference: 'La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 A(1) (corporate-style Louisiana taxable income)'
+# NA: not researched to a primary source
+resident_credit_for_other_state_ptet:
+  value: NA
+  reference: 'La. R.S. 47:33 (credit for taxes paid other states) not checked against PTET; no LDR guidance found'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in LA (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in LA'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the LA election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the LA election'
+# Graduated entity schedule (family st_ptet.brackets*/rates*). Brackets are on ENTITY income
+brackets:
+  value:
+    '2017': [0, 25000, 100000]
+  reference: 'LAC 61:I.1001 (LDR regulation, 12-20-2024 current text), https://dam.ldr.la.gov/lawspolicies/12-20-2024%20Current%20Regulation.pdf 1.a-c and 2.a-c: first $25,000; $25,001-$100,000; above $100,000 of the entity''s Louisiana taxable income. 2025+ flat (single rate in every band)'
+rates:
+  value:
+    '2017': [0.0, 0.0, 0.0]
+    '2019': [0.02, 0.04, 0.06]
+    '2022': [0.0185, 0.035, 0.0425]
+    '2025': [0.03, 0.03, 0.03]
+  reference: 'LAC 61:I.1001 (LDR regulation, 12-20-2024 current text), https://dam.ldr.la.gov/lawspolicies/12-20-2024%20Current%20Regulation.pdf 1 (taxable periods beginning before 1/1/2022: 2/4/6 percent) and 2 (on or after 1/1/2022: 1.85/3.5/4.25 percent); 2025+ R.S. 47:32 flat 3% (Act 11 of 2024 3rd Ex. Sess.) via La. R.S. 47:287.732.2, https://www.legis.la.gov/legis/Law.aspx?d=1148883 B'

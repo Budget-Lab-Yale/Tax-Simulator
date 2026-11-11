@@ -1,0 +1,77 @@
+---
+# Montana: elective pass-through entity tax (PTET), SB 554 (2023).
+#
+# Law: SB 554 (68th Legislature, 2023), effective for tax years beginning
+# after 12/31/2022; MCA Title 15, ch. 30, part 33 (section number not read).
+# No sunset found. HB 337 (2025) cuts the top individual rate to 5.65% for
+# TY2026 and 5.4% for TY2027+, which the PTET rate follows.
+#
+# Election: annual, irrevocable for the year, on Form PTE by its due date.
+# Affected owners: individuals, estates, trusts, and certain disregarded
+# entities. Base by default is each affected owner's Montana-source
+# distributive share; the entity may in addition make a RESIDENT ELECTION to
+# tax 100% of resident owners' shares (Form PTE Part 4, Column A vs B).
+#
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'SB 554 (2023), https://leg.mt.gov/bills/2023/SB0599/SB0554_X.pdf; Montana DOR Publication 4, PTET Guide, https://revenue.mt.gov/publications/publication-4; 2023 Montana Form PTE Instructions ("Senate Bill 554 ... created a new elective tax")'
+mandatory:
+  value: 0
+  reference: 'Montana DOR Publication 4 (elective)'
+method:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'Montana DOR Publication 4 ("The affected owners may claim the tax as a refundable credit on their income tax return")'
+rate:
+  value:
+    '2017': 0.069
+    '2022': 0.0675
+    '2024': 0.059
+    '2026': 0.0565
+    '2027': 0.054
+  reference: 'SB 554 (2023): rate = the highest marginal individual rate in MCA 15-30-2103. 2023 Form PTE Instructions: "PTET is a 6.75% elective tax" for TY2023 and "beginning in Tax Year 2024 will be 5.9%", https://revenuefiles.mt.gov/files/Forms/Montana-Form-PTE-Instructions-Booklet/2023_Montana_Form_PTE_Instructions_Booklet.pdf. HB 337 (2025): top rate 5.65% TY2026, 5.4% TY2027+ (Montana DOR HB 337 page https://revenue.mt.gov/news/recent-news/HB-337; Legislative Fiscal Division 2029 Biennium outlook, June 2026). DISAGREES with baseline/mt/ord.yaml, which holds 5.9% from 2024 and leaves HB 337 unencoded pending the TY2026 tables. Pre-2023 values inert'
+rate_tracks_top:
+  value: 1
+  reference: 'SB 554 (2023) (highest marginal rate under MCA 15-30-2103)'
+rate_scorp:
+  value: NA   # NA = same as rate (schema default); corporate owners are outside the PTET base
+  reference: 'Montana DOR Publication 4'
+credit_share:
+  value: 1
+  reference: 'Montana DOR Publication 4; 2023 Form PTE Instructions (owners claim their distributive share of PTET as a credit)'
+credit_refundable:
+  value: 1
+  reference: 'Montana DOR Publication 4 ("refundable credit"); 2023 Form PTE Instructions, line 519 ("a refundable credit on their own Montana tax returns")'
+addback:
+  value: 1
+  reference: '2023 Form PTE Instructions, Montana Additions code AB ("State, local, and foreign income taxes based on income or profits. This includes pass-through entity taxes paid to another state and deducted for federal purposes"), passed to owners on Schedule K-1 line 1'
+# 1 assumes the entity also makes the resident election (100% of residents'
+# shares); without it the default base is Montana-source only (2)
+resident_scope:
+  value: 1
+  reference: 'Montana DOR Publication 4 ("Entities can make a resident election to include 100% of income for Montana residents, even if not all income is Montana-sourced"); 2023 Form PTE Instructions ("By default, an owner''s pass-through entity tax will be 6.75% of the amount on Part 4, Column B, line 14 [Montana source]. Residents may elect ...")'
+nonresident_scope:
+  value: 2
+  reference: '2023 Form PTE Instructions, Part 4 Column B (Montana source income)'
+# Form 2 credit for taxes paid to another state (MCA 15-30-2302) and its
+# instructions were not read for entity-paid taxes
+resident_credit_for_other_state_ptet:
+  value: NA
+  reference: 'Not determined: MCA 15-30-2302 and Form 2 Schedule IV instructions not read'
+surtax_rate:
+  value: 0
+  reference: 'No second entity-level layer'
+surtax_credit_share:
+  value: 0
+  reference: 'No second entity-level layer'
+local_rate:
+  value: 0
+  reference: 'No local income tax in Montana'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in Montana'

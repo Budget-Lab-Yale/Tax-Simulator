@@ -1,0 +1,66 @@
+# PROPOSED addition to config/scenarios/tax_law_state/params_schema.yaml
+# (DRAFT -- not applied; see research/state_tax/ptet/params_draft/README.md).
+#
+# Paste the `scalars:` block under the existing `scalars:` key and the
+# `families:` entries under `families:`. The file name is ptet.yaml, so every
+# name carries the st_ptet. prefix (the loader prefixes st_{file}.).
+#
+# Every default is the neutral no-feature value: a state without ptet.yaml
+# has no PTET, so state liability is unchanged (the calculator applies
+# nothing). Enumerations are numeric, following the st_income_base
+# convention:
+#   method        0 = none, 1 = owner credit, 2 = owner income exclusion
+#   *_scope       1 = all-source income of the owner's distributive share,
+#                 2 = state-source (apportioned) income only
+#   tri-state 0/1 flags use null (NA) where the research could not settle the
+#   law; the calculator must treat NA as "not modeled" and fail loudly if a
+#   run needs the value.
+
+scalars:
+
+  # ptet.yaml (pass-through entity tax, proposal sec. 4.2 and 4.5)
+  st_ptet.available: 0             # 1 = an entity-level tax on owners' shares is in effect for the tax year
+  st_ptet.mandatory: 0             # 1 = entity tax is mandatory, not elective (CT 2018-2023)
+  st_ptet.method: 0                # owner relief: 0 none, 1 credit, 2 exclusion (see header)
+  st_ptet.rate: 0                  # entity rate on an owner's share; the TOP rate where graduated (see families)
+  # 1 = the statute sets the PTET rate equal to the state's top individual rate,
+  # so `rate` must equal max(st_ord.rates) for the year. Documentation and a
+  # load-time consistency check only; the calculator reads `rate`
+  st_ptet.rate_tracks_top: 0
+  # S-corporation rate where it differs from the partnership rate (WI: S corps
+  # pay the 7.9% franchise rate, partnerships the individual schedule).
+  # null = same as `rate`
+  st_ptet.rate_scorp: null
+  st_ptet.credit_share: 0          # owner credit as a share of the owner's portion of entity tax (method 1 only)
+  st_ptet.credit_refundable: 0     # 1 = excess credit refunded; 0 = limited to tax (carryforward not modeled)
+  st_ptet.addback: 0               # 1 = owners add back the entity's PTET deduction to state income
+  st_ptet.resident_scope: null     # entity base for RESIDENT owners: 1 all-source, 2 state-source only
+  st_ptet.nonresident_scope: null  # entity base for NONRESIDENT owners (2 in every state found so far)
+  # 1 = the resident credit for taxes paid to other states covers another
+  # state's PTET paid on the resident's behalf (out of scope for the first
+  # implementation, proposal sec. 4.5; recorded for Phase 7 source-state work)
+  st_ptet.resident_credit_for_other_state_ptet: null
+  # Second elective entity tax layered on income above the state's surtax
+  # threshold (MA c. 63E: 4% on member income above the 4% surtax threshold,
+  # 90% refundable credit, TY2026+). The threshold is the state's own
+  # st_surtax.taxable_income_threshold
+  st_ptet.surtax_rate: 0
+  st_ptet.surtax_credit_share: 0
+  # Local entity tax tied to the state election (NYC Art. 24-B: 3.876% on
+  # resident owners' shares, credit against the city PIT). Recorded for the
+  # NYC validation (proposal sec. 3); the state calculator models no local
+  # income tax, so these are documentation-only until it does
+  st_ptet.local_rate: 0
+  st_ptet.local_credit_share: 0
+
+# Vector family for graduated entity-rate schedules (NY Art. 24-A, NJ BAIT,
+# OR PTE-E, LA). Brackets are on the ENTITY's taxable income, not the owner's
+# share; a record-level calculator can only approximate them, so the first
+# implementation should use `rate` (top rate) and keep these for diagnostics.
+# Sentinel: st_ptet.brackets1 (NA when a state has no schedule)
+sentinels:
+  - st_ptet.brackets1
+
+families:
+  - pattern: '^st_ptet\.(rates|brackets)\d*$'
+    consumer: st_ptet.R   # graduated entity-level PTET schedules (NY, NJ, OR, LA)

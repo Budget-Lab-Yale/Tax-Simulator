@@ -1,0 +1,67 @@
+---
+# Virginia: elective pass-through entity tax, Va. Code 58.1-390.3 (2022 cc. 689/690), TY2021+.
+# Annual election on Form 502PTET; eligible owners = individuals, estates and trusts; 5.75% on the
+# eligible owners' Virginia taxable income (residents' full shares, nonresidents' Virginia shares).
+# Owners get a refundable credit and must add back the entity's state-income-tax deduction. Made
+# permanent by HB 29 (2026 c. 7), which also made permanent the 58.1-332(C)(2) deemed-paid rule for
+# other states' substantially similar PTE taxes.
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model.
+
+available:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ A.1 "taxable years beginning on and after January 1, 2021, but before January 1, 2022"; A.2 "taxable years beginning on and after January 1, 2022" -- no end date in the current text. The end date (before 1/1/2026, then 1/1/2027 under 2025 c. 725) was removed by HB 29, 2026 c. 7, signed 2/20/2026 (EY Tax News 2026-0614, transcription check)'
+mandatory:
+  value: 0
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ A: annual election'
+method:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ E: eligible owners "shall be entitled to a credit against the tax imposed"'
+rate:
+  value:
+    '2017': 0.0
+    '2021': 0.0575
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ B: "A tax at the rate of 5.75 percent is hereby annually imposed on the Virginia taxable income"; Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1. Equals max(st_ord.rates) for VA (5.75%) every year'
+rate_tracks_top:
+  value: 0
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ B hard-codes 5.75 percent; it equals the 58.1-320 top rate but is not defined by reference to it'
+# null = same as rate
+rate_scorp:
+  value: null
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ B: one rate for all pass-through entities'
+credit_share:
+  value:
+    '2017': 0.0
+    '2021': 1.0
+  reference: 'Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1: credit equal to the owner''s pro rata share of the tax paid; Form 502PTET instructions TY2023 ("refundable credit ... for any amount of income tax paid by the PTE"), https://tax.am.virginia.gov/sites/default/files/taxforms/corporation-and-pass-through-entity-tax/2023/502ptet-instruction-package-2023.pdf'
+credit_refundable:
+  value: 1
+  reference: 'Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1: "The PTET credit is a refundable credit"'
+addback:
+  value: 1
+  reference: 'Va. Code 58.1-390.3 (history: 2022 cc. 689, 690; 2023 cc. 686, 687; 2025 c. 725; 2026 c. 7), https://law.lis.virginia.gov/vacode/title58.1/chapter3/section58.1-390.3/ E: owner''s taxable income "adjusted to add back any deduction for state and local income taxes"; Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1: owners claiming the credit "must make an addition equal to the eligible owner''s proportionate share of any deduction for state and local income taxes"'
+resident_scope:
+  value: 1
+  reference: 'Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1: "Virginia residents are taxable on all of their PTE income regardless of the PTE''s allocation and apportionment"; 502PTET instructions TY2023 Section I column B (eligible resident owners). An electing S corporation may instead compute as if all owners were nonresidents'
+nonresident_scope:
+  value: 2
+  reference: 'Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1: nonresident owners taxed on their share attributable to Virginia'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'Va. Code 58.1-332(C)(2) (made permanent by HB 29, 2026 c. 7): another state''s substantially similar PTE tax is deemed paid by the individual owners for the 58.1-332 credit; Virginia Tax Commissioner Ruling 24-1, "Guidelines for the Pass-through Entity Tax", https://www.tax.virginia.gov/laws-rules-decisions/rulings-tax-commissioner/24-1 (nonrefundable, ratio-limited)'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in VA (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in VA'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the VA election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the VA election'

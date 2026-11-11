@@ -1,6 +1,19 @@
+---
+title: "State pass-through entity tax (PTET) law, tax years 2018-2030"
+role: notes
+workstream: state_tax
+status: current
+updated: 2026-11-10
+sot: research/state_tax/ptet/ptet_proposal.md
+supersedes: []
+superseded_by: null
+---
+
 # State pass-through entity tax (PTET) law, tax years 2018–2030
 
 Companion to `ptet_state_law.csv` (one row per state × tax year, 41 broad-income-tax states + DC = 42 jurisdictions, 2018–2030). Compiled 2026-10-26 by web research. The starting point was Comey, Gallagher & Gorman (JCT, Oct 2025), Tables 1 and B.1, which draw on Bloomberg Tax.
+
+**Update 2026-10-28.** A primary-source pass for the draft `ptet.yaml` files corrected the CSV in place: rates for AR, AZ, CO, ID, IN, NE, NJ, OH and WV; credit shares for IA and RI; the NM 2022 method; and several resident-credit and `confirmed` cells. Each changed row has a note tagged `2026-10-28 params_draft:`. The full list, and which items below are now resolved, is in `research/state_tax/ptet/params_draft/README.md`. The "Open and unconfirmed items" section at the end of this file is partly superseded by it.
 
 ## Methods and column conventions
 

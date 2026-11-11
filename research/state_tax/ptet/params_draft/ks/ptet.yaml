@@ -1,0 +1,67 @@
+---
+# Kansas: SALT Parity Act, K.S.A. 79-32,284 to 79-32,289, enacted by
+# HB 2239 (2022) new secs 1-6 for tax year 2022 and after (NOT SB 47, as
+# ptet_state_law.csv had it); amended by SB 410 (2024), retroactive to
+# taxable years beginning on or after 1/1/2022. No sunset.
+# S corporations and partnerships elect annually on the return; binding on
+# all owners. C corporations are not electing owners.
+# SB 410 changes (all retroactive to 2022): rate from a fixed 5.7% to the
+# highest individual rate under K.S.A. 79-32,110(a); entity credits now pass
+# through to owners; resident owners' share may be computed EITHER as all
+# income (in-state plus out-of-state) OR as Kansas-attributable income, at
+# the entity's choice, uniform across resident owners -- hence
+# resident_scope NA. As enacted in 2022 the resident base was all income.
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'HB 2239 (2022) new secs 1-6, K.S.A. 79-32,284 to 79-32,289; KDOR Notice 22-16 (12/13/2022) "applies for tax year 2022 and all tax years thereafter", https://www.ksrevenue.gov/taxnotices/notice22-16.pdf'
+mandatory:
+  value: 0
+  reference: 'K.S.A. 79-32,286 (HB 2239 sec 3): annual election on Form K-120S; KDOR Notice 22-16'
+method:
+  value: 1
+  reference: 'K.S.A. 79-32,288 (HB 2239 sec 5): owners entitled to a credit for their direct share of the entity tax; KDOR Notice 22-16'
+rate:
+  value:
+    '2017': 0.057
+    '2024': 0.0558
+  reference: 'K.S.A. 79-32,287(a): 5.7% as enacted (KDOR Notice 22-16); SB 410 (2024) sec 21 changed it to the highest individual rate under 79-32,110(a) for the year (KDOR Notice 24-15, https://www.ksrevenue.gov/taxnotices/notice24-15.pdf): 5.7% for 2022-2023, 5.58% from 2024. Equals max(st_ord.rates) in baseline/ks/ord.yaml for 2018+'
+rate_tracks_top:
+  value: 1
+  reference: 'K.S.A. 79-32,287(a) as amended by SB 410 (2024), retroactive to 2022; KDOR Notice 24-15'
+rate_scorp:
+  value: NA   # same as rate
+  reference: 'K.S.A. 79-32,287(a): one rate'
+credit_share:
+  value: 1
+  reference: 'K.S.A. 79-32,288; KDOR Notice 22-16 ("credit ... for their direct share of the tax")'
+credit_refundable:
+  value: 1
+  reference: 'K.S.A. 79-32,288 (excess credit refundable to the owner). Transcription check only (statute text not read): Deloitte 2022 multistate alert "Kansas enacts pass-through entity tax election"'
+addback:
+  value: 1
+  reference: 'K.S.A. 79-32,117(b)(ii): individuals add back taxes on or measured by income imposed by Kansas or any other jurisdiction to the extent deductible in computing federal AGI; partner modifications flow through under 79-32,131. Statutory reading; no SALT-Parity-specific instruction read, https://www.ksrevisor.gov/statutes/chapters/ch79/079_032_0117.html'
+resident_scope:
+  value: NA   # entity's choice under SB 410: all income (1) or Kansas-attributable (2); 2022 as enacted = 1
+  reference: 'K.S.A. 79-32,287(a)(2) as amended by SB 410 (2024); KDOR Notice 24-15; original HB 2239 sec 4(a) taxed "each resident owner''s distributive share of the entity''s income" (KDOR Notice 22-16)'
+nonresident_scope:
+  value: 2
+  reference: 'K.S.A. 79-32,287(a): nonresident share limited to income attributable to Kansas; KDOR Notices 22-16 and 24-15'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'K.S.A. 79-32,111(c) (HB 2239 sec 39): income tax paid to another state by an electing pass-through entity on income in a resident''s Kansas AGI is treated as tax paid by the resident; KDOR Notice 22-16'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in Kansas law'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in Kansas law'
+local_rate:
+  value: 0
+  reference: 'No local income tax in the SALT Parity Act'
+local_credit_share:
+  value: 0
+  reference: 'Not applicable'

@@ -1,0 +1,71 @@
+---
+# Kentucky: pass-through entity tax election, KRS 141.209 (HB 5, 2023 Ky. Acts ch. 148),
+# retroactive to TY2022 (TY2022 elections allowed 3/31/2023-8/31/2024). Annual election on Form
+# 740-PTET, irrevocable for the year and binding on all owners; base = ordinary income plus separately
+# stated items under KRS 141.206, apportioned. C-corporation partners' shares are excluded from the base.
+# Owners claim a refundable 100% credit (Form PTET-CR; Form 740/740-NP).
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+# DRAFT: research/state_tax/ptet/params_draft -- not read by the model.
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (2)(a): "For taxable years beginning on or after January 1, 2022"; no end date or IRC 164(b)(6) tie in the section'
+mandatory:
+  value: 0
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (2)(a), (f): annual election, irrevocable for the year and binding on all owners'
+method:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (3): refundable pass-through entity tax credit'
+rate:
+  value:
+    '2017': 0.0
+    '2022': 0.05
+    '2023': 0.045
+    '2024': 0.04
+    '2026': 0.035
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (2)(a): "the tax under KRS 141.020" (individual flat rate); Kentucky Form 740-PTET instructions TY2024, https://revenue.ky.gov/Forms/PKG%20INSTR%20PTET%202024.pdf "The tax rate for 2024 is 4.0% (.04)". 2022 5.0%, 2023 4.5%, 2025 4.0%, 2026 3.5% = KRS 141.020 as encoded in baseline/ky/ord.yaml'
+rate_tracks_top:
+  value: 1
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (2)(a) (tax under KRS 141.020)'
+# null = same as rate
+rate_scorp:
+  value: null
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (2)(a): one rate for all pass-through entities'
+credit_share:
+  value:
+    '2017': 0.0
+    '2022': 1.0
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (3)(a): "one hundred percent (100%) of the entity owner''s proportionate share of the tax paid"'
+credit_refundable:
+  value: 1
+  reference: 'KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 (3): "a refundable pass-through entity tax credit"'
+# NA: searched KRS 141.209 and the 2024 PTET instructions; owner add-back of the entity deduction not stated
+addback:
+  value: NA
+  reference: 'Not addressed in KRS 141.209 (2023 Ky. Acts ch. 148 sec. 9, HB 5), https://apps.legislature.ky.gov/law/statutes/statute.aspx?id=53597 or Kentucky Form 740-PTET instructions TY2024, https://revenue.ky.gov/Forms/PKG%20INSTR%20PTET%202024.pdf'
+resident_scope:
+  value: 2
+  reference: 'Kentucky Form 740-PTET instructions TY2024, https://revenue.ky.gov/Forms/PKG%20INSTR%20PTET%202024.pdf Form 740-PTET line 2 "net distributive share income before apportionment" x line 3 "apportionment fraction from the pass-through entity''s Schedule A or 100%" -- one apportioned base for all owners'
+nonresident_scope:
+  value: 2
+  reference: 'Kentucky Form 740-PTET instructions TY2024, https://revenue.ky.gov/Forms/PKG%20INSTR%20PTET%202024.pdf lines 2-3 (apportioned base)'
+# NA: not researched to a primary source
+resident_credit_for_other_state_ptet:
+  value: NA
+  reference: 'KRS 141.070 (credit for tax paid other states) not checked against PTET; no DOR guidance found'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in KY (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in KY'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the KY election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the KY election'
