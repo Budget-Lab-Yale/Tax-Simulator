@@ -19,7 +19,10 @@ generate_indexes = function(macro_root, vat_price_offset) {
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
   #
-  # Returns: tibble of growth rates by series (df). 
+  # Returns: tibble of growth rates by series (df), with a `preliminary`
+  #          column: the year's price level as first published over its
+  #          revised level (1 unless the series is chained CPI-U and the
+  #          Macro-Projections vintage carries ccpiu_irs_sept).
   #----------------------------------------------------------------------------
   
   
@@ -32,7 +35,24 @@ generate_indexes = function(macro_root, vat_price_offset) {
     mutate(series = 'cpi')
 
   # Read and combine historical and projected macro data
-  macro = read_macro_spliced(macro_root) %>%
+  macro_raw = read_macro_spliced(macro_root)
+
+  # Chained CPI-U is revised after its first release. IRC 1(f)(6)(A) has the
+  # IRS take both the latest year's level and the base year's from the values
+  # BLS publishes as of the initial August release, in which the latest year
+  # is still preliminary and the base year has been revised to final. From
+  # vintage 2026110912 Macro-Projections publishes the revised level as
+  # ccpiu_irs and the first-published one as ccpiu_irs_sept. Earlier vintages
+  # hold only first-published levels, so the ratio is 1 and every indexed
+  # amount is divided by a preliminary base-year level.
+  if ('ccpiu_irs_sept' %in% colnames(macro_raw)) {
+    preliminary = macro_raw %>%
+      transmute(series = 'chained_cpi', year, preliminary = ccpiu_irs_sept / ccpiu_irs)
+  } else {
+    preliminary = tibble(series = character(), year = numeric(), preliminary = numeric())
+  }
+
+  macro = macro_raw %>%
 
     # Select indexation variables and reshape long
     select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>%
@@ -54,6 +74,11 @@ generate_indexes = function(macro_root, vat_price_offset) {
     select(series, year, growth) %>% 
     arrange(series, year)
 
+  # Attach the first-published-over-revised ratio
+  attach_preliminary = . %>%
+    left_join(preliminary, by = c('series', 'year')) %>%
+    mutate(preliminary = replace_na(preliminary, 1))
+
   # Prepend historical CPI growth rates, used for capital gains basis indexation.
   # The historical file also supplies the growth rate at the splice: the macro
   # series' first year, 1970, has no prior-year level to chain from and so no
@@ -67,6 +92,7 @@ generate_indexes = function(macro_root, vat_price_offset) {
     filter(!(series == 'cpi' & year %in% cpi_splice$year)) %>%
     bind_rows(cpi_splice) %>%
     arrange(series, year) %>%
+    attach_preliminary() %>%
     return()
 }
 
