@@ -41,6 +41,14 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
   tax_units %<>% 
     derive_vars()
   
+  # Set the specified-student flags of the EITC age test to 0 if the input 
+  # data does not carry them
+  for (student_var in c('student1', 'student2')) {
+    if (!(student_var %in% colnames(tax_units))) {
+      tax_units[[student_var]] = 0
+    }
+  }
+  
   
   #---------------
   # Payroll taxes
@@ -225,14 +233,6 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
   if (!('corp_tax_change' %in% colnames(tax_units))) {
     tax_units %<>% 
       mutate(corp_tax_change = 0)
-  }
-  
-  # Set the specified-student flags of the EITC age test to 0 if the input 
-  # data does not carry them
-  for (student_var in c('student1', 'student2')) {
-    if (!(student_var %in% colnames(tax_units))) {
-      tax_units[[student_var]] = 0
-    }
   }
   
   
