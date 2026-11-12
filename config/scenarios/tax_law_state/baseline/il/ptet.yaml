@@ -1,0 +1,62 @@
+---
+# Illinois: elective pass-through entity (PTE) tax, IITA 35 ILCS 5/201(p),
+# created by P.A. 102-0658 (SB 2531, 2021) for tax years ending on or after
+# 12/31/2021 and, as enacted, beginning before 1/1/2026. P.A. 104-0453
+# (SB 1911, signed 12/12/2025) removed that sunset; the PTE tax is now
+# permanent. The enrolled act text could NOT be read (ilga.gov blocks
+# automated access); permanence rests on Bloomberg Tax, Forvis Mazars and
+# IDOR Pub-129 (R-12/25), which states no end date.
+# Partnerships (not PTPs) and S corporations elect annually on IL-1065 /
+# IL-1120-ST; irrevocable after the extended due date. An electing entity
+# pays PTE tax instead of pass-through withholding. The credit is usable
+# against Income Tax only (not Replacement Tax).
+
+available:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'IITA 201(p) (P.A. 102-0658): tax years ending on or after 12/31/2021; sunset removed by P.A. 104-0453 (SB 1911, eff. 12/12/2025). IDOR Pub-129 (R-12/25) https://tax.illinois.gov/research/publications/pubs/pass-through-information.html. Transcription check: Bloomberg Tax 12/2025 "Illinois Governor Signs Law Removing Pass-Through Entity Tax Election Sunset Date"; Forvis Mazars 2026-06'
+mandatory:
+  value: 0
+  reference: 'IITA 201(p); IDOR Pub-129: annual election'
+method:
+  value: 1
+  reference: 'IITA 201(p); IDOR Pub-129: each partner/shareholder receives a credit equal to 4.95% of its distributive share of the entity''s net income'
+rate:
+  value: 0.0495
+  reference: 'IDOR Pub-129 (R-12/25): 4.95% of the electing entity''s net income. Equals max(st_ord.rates) in baseline/il/ord.yaml for 2018+ (2017 blended 4.3549% is inert, available = 0)'
+rate_tracks_top:
+  value: 0   # numerically equal to the individual rate; statute text linking the two not read
+  reference: 'IDOR Pub-129 states the rate as a number (4.95%); 201(p) text not read'
+# rate_scorp: omitted, so the schema default (NA) applies -- same as rate
+#   reference: 'IDOR Pub-129: one rate for partnerships and S corporations'
+credit_share:
+  value: 1
+  reference: 'IDOR Pub-129: credit equals 4.95% of the member''s distributive share of entity net income, i.e. the member''s full share of the tax'
+credit_refundable:
+  value: 1
+  reference: 'IL-1040 instructions Step 8 "Payments and Refundable Credit", line 28 (share of PTE tax credit from Schedule K-1-P/K-1-T), https://tax.illinois.gov/forms/incometax/currentyear/individual/il-1040-instr/step-8---payments-and-refundable-credit.html. Transcription check: Deloitte 2021 alert (excess credit treated as an overpayment and refunded)'
+addback:
+  value: 1
+  reference: 'IITA 203(a)(2)(B) and 203(d)(2)(B)/(b)(2)(B): add back "the amount of tax imposed by this Act to the extent deducted" in computing federal income, which reaches the 201(p) tax; member share flows through Schedule K-1-P to IL-1040 line 35. Statutory reading -- neither Pub-129 nor the IL-1040 instructions state it in terms; confirm against IL-1065 Step 3 instructions'
+resident_scope:
+  value: 2
+  reference: 'IITA 201(p): tax on the entity''s net income (Article 3 allocation and apportionment); IDOR Pub-129 states no all-source rule for resident members'
+nonresident_scope:
+  value: 2
+  reference: 'IITA 201(p); IDOR Pub-129'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'IL-1040 Schedule CR instructions, Line 51 note: a partner or shareholder may treat its allocable share of another state''s tax paid by the entity as tax it paid, where that tax is substantially similar to IITA 201(p) (IDOR State Reference Chart), https://tax.illinois.gov/forms/incometax/currentyear/individual/il-1040-schedule-cr-instr.html'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in Illinois law'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in Illinois law'
+local_rate:
+  value: 0
+  reference: 'No local income tax in Illinois'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in Illinois'

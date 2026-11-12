@@ -1,0 +1,69 @@
+---
+# Oklahoma: Pass-Through Entity Tax Equity Act of 2019 (SB 1023), 68 O.S. 2355.1P to 2355.1P-4,
+# amended HB 2963 (2022); member exclusion 68 O.S. 2358(A)(11). Election on Form 586, tax computed on Form 587-PTE; binding until revoked.
+# The tax is the sum over members of each member's Oklahoma distributive share times a member-type
+# rate: top individual rate for individuals/trusts/estates; 4% (6% before 2022) for C-corporation,
+# pass-through and financial-institution members. Members exclude the income.
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+
+available:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'Pass-Through Entity Tax Equity Act of 2019 (SB 1023), 68 O.S. 2355.1P to 2355.1P-4; 68 O.S. 2355.1P-4 as amended by HB 2963 (2022), https://www.oklegislature.gov/cf_pdf/2021-22%20ENR/hB/HB2963%20ENR.PDF subsection A ("For tax years beginning on or after January 1, 2019"). Election binding until revoked; no sunset found in 2355.1P-4'
+mandatory:
+  value: 0
+  reference: '68 O.S. 2355.1P et seq.: election on OTC Form 586, binding until revoked by the entity or the OTC (Deloitte multistate alert 2019, secondary; statute subsection not read)'
+# Exclusion method confirmed by statute citation via secondary source; subsection text itself not read
+method:
+  value:
+    '2017': 0
+    '2019': 2
+  reference: '68 O.S. 2358(A)(11) (added 2019): exclusion from Oklahoma taxable income / AGI of amounts on which an electing pass-through entity paid the tax -- located via Deloitte alert https://www2.deloitte.com/us/en/pages/tax/articles/oklahoma-law-establishes-entity-level-income-tax-election-for-pass-through-entities.html and the 2019 bill title (HB 2665 engrossed); current 2358 text and Form 511 line not read'
+# Corporate, pass-through and financial-institution members pay 4% (6% before 2022), A.1.b-d; not held here
+rate:
+  value:
+    '2017': 0.0
+    '2019': 0.05
+    '2022': 0.0475
+    '2026': 0.045
+  reference: '68 O.S. 2355.1P-4 as amended by HB 2963 (2022), https://www.oklegislature.gov/cf_pdf/2021-22%20ENR/hB/HB2963%20ENR.PDF A.1.a: for individual, trust and estate members "the highest Oklahoma marginal income tax rate levied on the taxable income of natural persons pursuant to Section 2355"; values = max(st_ord.rates) in baseline/ok/ord.yaml (5% 2019-2021, 4.75% 2022-2025, 4.5% 2026 under HB 2764 of 2025)'
+rate_tracks_top:
+  value: 1
+  reference: '68 O.S. 2355.1P-4 as amended by HB 2963 (2022), https://www.oklegislature.gov/cf_pdf/2021-22%20ENR/hB/HB2963%20ENR.PDF A.1.a'
+# null = same as rate
+# rate_scorp: omitted, so the schema default (NA) applies
+#   reference: '68 O.S. 2355.1P-4 as amended by HB 2963 (2022), https://www.oklegislature.gov/cf_pdf/2021-22%20ENR/hB/HB2963%20ENR.PDF: member-type rates apply equally to S corporations and partnerships'
+# exclusion state
+credit_share:
+  value: 0
+  reference: 'Exclusion state (see method)'
+# exclusion state; not applicable
+credit_refundable:
+  value: 0
+  reference: 'Exclusion state: no owner credit exists'
+# moot in an exclusion state
+addback:
+  value: 0
+  reference: 'Moot: members exclude the PET-taxed distributive share (see method)'
+resident_scope:
+  value: 2
+  reference: '68 O.S. 2355.1P-4 as amended by HB 2963 (2022), https://www.oklegislature.gov/cf_pdf/2021-22%20ENR/hB/HB2963%20ENR.PDF A.1: each member''s "Oklahoma distributive share of the electing pass-through entity''s Oklahoma net entity income"'
+nonresident_scope:
+  value: 2
+  reference: '68 O.S. 2355.1P-4 as amended by HB 2963 (2022), https://www.oklegislature.gov/cf_pdf/2021-22%20ENR/hB/HB2963%20ENR.PDF A.1 and E (nonresident members with only electing-PTE Oklahoma income need not file)'
+# NA: not researched to a primary source
+# resident_credit_for_other_state_ptet: omitted, so the schema default (NA) applies
+#   reference: 'Oklahoma resident credit for taxes paid other states not checked against PTET; no OTC guidance found'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in OK (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in OK'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the OK election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the OK election'

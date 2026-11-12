@@ -1,0 +1,66 @@
+---
+# South Carolina: entity-level election on active trade or business income, S.C. Code 12-6-545(G)
+# (2021 Act No. 61, S 627), TY2021+, annual election by the (extended) due date. Qualified entity =
+# partnership or S corporation all of whose owners are qualified owners (individuals, estates,
+# trusts, other non-exempt entities) or partnerships so owned. Rate = the 3% active trade or business
+# rate of 12-6-545(B)(2), not the top individual rate. Owners exclude the income and add back their
+# share of the entity tax; losses from other entities offset tax at no more than 3% (G)(4).
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+
+available:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'S.C. Code 12-6-545(G) (2021 Act No. 61, S 627), tax years beginning after 2020; SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf fn. 9: "does not have a sunset provision"'
+mandatory:
+  value: 0
+  reference: '12-6-545(G)(2) as quoted in SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf: "may elect annually"'
+method:
+  value:
+    '2017': 0
+    '2021': 2
+  reference: '12-6-545(G)(3) as quoted in SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf: "a qualified owner shall exclude active trade or business income from an electing qualified entity"'
+# Applies only to ACTIVE TRADE OR BUSINESS income; passive/investment income of the entity still flows to owners at ordinary rates
+rate:
+  value:
+    '2017': 0.0
+    '2021': 0.03
+  reference: '12-6-545(G)(2): taxed "at the rate provided in subsection (B)(2)", the 3% active trade or business rate (SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf: "has been 3% for tax years beginning in 2014 and thereafter")'
+rate_tracks_top:
+  value: 0
+  reference: '12-6-545(B)(2): fixed 3% rate, independent of the 12-6-510 individual schedule (7% to 6% top rate in baseline/sc/ord.yaml)'
+# null = same as rate
+# rate_scorp: omitted, so the schema default (NA) applies
+#   reference: '12-6-545(G)(1)(a): one rate for partnerships and S corporations'
+# exclusion state
+credit_share:
+  value: 0
+  reference: 'Exclusion state; SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf Q25: "A shareholder or partner is not allowed a South Carolina credit for entity level taxes paid"'
+# exclusion state; not applicable
+credit_refundable:
+  value: 0
+  reference: 'Exclusion state: no owner credit exists'
+addback:
+  value: 1
+  reference: 'SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf Q25 "SC State Tax Addback": an owner must "addback his share of entity level taxes paid directly by a partnership or S corporation making the election"; S.C. Code 12-6-1130(2)'
+resident_scope:
+  value: 2
+  reference: '12-6-545(G)(5) as quoted in SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf: active trade or business income "shall be apportioned by the pass-through entity pursuant to Section 12-6-2240"; SC residents are not taxed on out-of-state business income anyway (RR 21-15 Q26)'
+nonresident_scope:
+  value: 2
+  reference: '12-6-545(G)(5) (apportioned under 12-6-2240)'
+resident_credit_for_other_state_ptet:
+  value: 0
+  reference: 'SC Revenue Ruling #21-15 (Code Section 12-6-545(G) entity-level election), https://dor.sc.gov/resources-site/lawandpolicy/Advisory%20Opinions/RR%2021-15.pdf Q26: 12-6-3400 "does not apply to entity level taxes paid by qualified entities"; residents are not taxed on out-of-state business income, so "a credit for entity taxes paid to other states for South Carolina residents is not needed"'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in SC (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in SC'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the SC election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the SC election'

@@ -53,6 +53,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'elective_deferral1',           # (dbl) optional data; schema default 0; Tax-Data trad_contr_er1 via tax_data_equivalent
     'elective_deferral2',           # (dbl) optional data; schema default 0; Tax-Data trad_contr_er2 via tax_data_equivalent
     'state_ref',      # (dbl)  taxable refunds of state/local taxes
+    'st_ptet_addback', # (dbl) net PTET addition to state income (calc_st_ptet)
     'txbl_ss',        # (dbl)  taxable Social Security benefits (federal)
     'gross_ss',       # (dbl)  gross Social Security benefits received
     'txbl_pens_dist', # (dbl)  taxable pension distributions
@@ -615,7 +616,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_add_seca = st_agi.add_seca_ded * liab_seca_er,
 
       st_additions = st_add_muni + st_add_ot + st_add_cap_loss + st_add_hsa +
-                     st_add_fed_obbba + st_add_seca,
+                     st_add_fed_obbba + st_add_seca + st_ptet_addback,
 
       # Subtraction: state refunds included in the federal base
       st_sub_ref = st_agi.sub_state_ref * state_ref,

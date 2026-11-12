@@ -1,30 +1,28 @@
 ---
-title: "PTET state law parameters: draft ptet.yaml per jurisdiction"
+title: "PTET state law parameters: encoding record for ptet.yaml per jurisdiction"
 role: notes
 workstream: state_tax
 status: open
-updated: 2026-11-10
+updated: 2026-11-11
 sot: research/state_tax/ptet/ptet_proposal.md
 supersedes: []
 superseded_by: null
 ---
 
-# PTET state law parameters: draft `ptet.yaml` per jurisdiction
+# PTET state law parameters: encoding record for `ptet.yaml` per jurisdiction
 
 A pass-through entity tax (PTET) is an elective state income tax paid by a partnership or S corporation on its owners' shares. The entity deducts it federally without limit, so the owners route state tax around the federal SALT (state and local tax) deduction cap. The owners then get a state credit or an income exclusion.
 
-This directory holds a draft parameter file for each of the 42 jurisdictions in `research/state_tax/ptet/ptet_state_law.csv`. That is the 41 states with a broad income tax plus DC. The files implement the "PTET law parameters" row of the implementation table in `research/state_tax/ptet/ptet_proposal.md` section 6. **The model reads none of them.** They are not under `config/`, and `params_schema.yaml` is unchanged.
+**Applied 2026-11-11.** The 42 parameter files drafted here now live in the state law tree as `config/scenarios/tax_law_state/baseline/{st}/ptet.yaml`, and the `st_ptet.*` names are in `config/scenarios/tax_law_state/params_schema.yaml`. The loader parses them, and the state calculator reads them only under the new PTET treatment (`ptet.mode` 1, off by default; `research/state_tax/plan.md` section 3.2). This page stays as the record of the encoding choices, the corrections to `research/state_tax/ptet/ptet_state_law.csv`, and the law items still on secondary sources. The 42 jurisdictions are the 41 states with a broad income tax plus DC.
 
-## Contents
+## Contents of each `{st}/ptet.yaml`
 
-- `{st}/ptet.yaml`: one file per jurisdiction, in the state-YAML style.
-  - Year series begin at 2017, and every subparameter carries a `reference:`.
-  - Unknown values are `NA`, with a comment saying what was searched.
-  - Seven files have no PTET (VT, DE, PA, DC and ND, plus the pre-enactment years everywhere). They still record whether the state credits another state's PTET.
-- `params_schema_ptet_snippet.yaml`: the proposed `st_ptet.*` addition to `config/scenarios/tax_law_state/params_schema.yaml`, not applied. It defines:
-  - 16 scalars.
-  - Numeric enumerations: `method` 0 none / 1 credit / 2 exclusion; `*_scope` 1 all-source / 2 state-source.
-  - A `rates`/`brackets` vector family for graduated entity schedules (NY, NJ, OR, LA, MS).
+- Year series begin at 2017, and every subparameter carries a `reference:`.
+- Seven files have no PTET (VT, DE, PA, DC and ND, plus the pre-enactment years everywhere). They still record whether the state credits another state's PTET.
+- **Unknown values.** The law parser carries a missing value forward from the last stated year, so a parameter cannot be "unknown" in the middle of a series, and a parameter that is unknown in every year cannot be written at all. Two rules follow.
+  - A parameter unknown in every year is left out of the file, with a comment in its place that keeps the reference, and the schema default applies. For `rate_scorp`, `resident_scope`, `nonresident_scope` and `resident_credit_for_other_state_ptet` that default is NA. For `addback` (AL, KY, MS, WV) it is 0, which is a modeling assumption that owners do not add the entity's deduction back, not a finding.
+  - A parameter unknown only before a stated year is written `.na.real` for 2017 (CT, MA, MD, ME, NC, NJ, RI).
+- The schema defines 16 scalars; numeric enumerations (`method` 0 none / 1 credit / 2 exclusion; `*_scope` 1 all-source / 2 state-source); and a `rates`/`brackets` vector family for graduated entity schedules (NY, NJ, OR, LA, MS).
 
 ## Encoding choices to review
 
@@ -100,7 +98,7 @@ Facts corrected in notes only:
 
 ## Disagreements with our own state parameters
 
-Each of these is a gap in `config/scenarios/tax_law_state/baseline/`, not in the PTET drafts, and needs a separate fix. Do not edit those files while the all-state jobs run.
+Each of these is a gap in the individual-tax files of `config/scenarios/tax_law_state/baseline/`, not in the PTET files, and needs a separate fix. Do not edit those files while the all-state jobs run.
 
 | File | Ours | Enacted law | Source |
 |---|---|---|---|

@@ -112,7 +112,7 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
                                    1,
                                    filing_status)) %>%
     left_join(tax_law, by = c('year', 'filing_status')) %>%
-    do_salt_workaround_baseline() %>%
+    calc_ptet() %>%
     do_ss_cola(year, vat_price_offset) %>%
     do_capital_adjustment(year, vat_price_offset) %>%
     do_excess_growth(scenario_info, excess_growth_offset) %>%

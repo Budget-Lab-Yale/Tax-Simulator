@@ -1,0 +1,69 @@
+---
+# West Virginia: elective pass-through entity tax, SB 151 (2023 RS), retroactive to TY2022. Filing
+# Form EPT-100 is the annual election (replaces the PTE-100 and nonresident withholding). Base =
+# resident owners' full income plus nonresident owners' apportioned income, at the top individual
+# rate. Owners claim the Schedule EK-1 credit (reported nonrefundable with carryforward). The entity
+# may claim resident partners' credit for taxes paid to other states at the entity level.
+# NOTE: ptet_state_law.csv holds 4.82% for 2026+; the 2026 top rate is 4.58% (SB 392, 2026 RS).
+# Codes: method 0 none / 1 credit / 2 exclusion; *_scope 1 all-source / 2 state-source (apportioned).
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'SB 151 (2023 Regular Session), retroactive to TY2022 (West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.1 prints "2025 Regular Legislative Session", an evident misprint: the 2022 EPT-100 instructions and the 3/28/2023 approval date place it in 2023). Election made annually by filing the EPT-100; no sunset found. Statute section not read'
+mandatory:
+  value: 0
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.1: "This election is required to be made for each subsequent tax year. The filing of the EPT indicates your election"'
+method:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.1 and Schedule EK-1 credit to owners'
+rate:
+  value:
+    '2017': 0.0
+    '2022': 0.065
+    '2023': 0.0512
+    '2025': 0.0482
+    '2026': 0.0458
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.2 "The elective tax is equal to the top marginal rate for individuals. For Tax Year 2025, the rate is 4.82%". Other years = top rate of W. Va. Code 11-21-4e (6.5%, 2022), 11-21-4g (5.12%, 2023-2024), 11-21-4j (4.58%, 2026; SB 392, 2026 RS) as encoded in baseline/wv/ord.yaml'
+rate_tracks_top:
+  value: 1
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.2 ("equal to the top marginal rate for individuals")'
+# null = same as rate
+# rate_scorp: omitted, so the schema default (NA) applies
+#   reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf: one rate for S corporations and partnerships'
+credit_share:
+  value:
+    '2017': 0.0
+    '2022': 1.0
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf (EK-1 credit = owner''s share of tax paid); ptet_state_law.csv / JCT Table B.1 (transcription check)'
+# nonrefundable rests on secondary sources
+credit_refundable:
+  value: 0
+  reference: 'WV Schedule EK-1 instructions: the credit "may only be claimed against tax liability" (Bloomberg Tax summary of the EK-1 release, secondary); 5-year carryforward per ptet_state_law.csv (secondary). Primary statute text not read'
+# NA: owner add-back of the entity deduction not found
+# addback: omitted, so the schema default (0) applies
+#   reference: 'Not addressed in West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf'
+resident_scope:
+  value: 1
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.1: the tax is imposed on "the resident pass-through entity owners'' income plus the apportioned nonresident pass-through entity owners'' income"'
+nonresident_scope:
+  value: 2
+  reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf p.1 (apportioned nonresident income)'
+# NA
+# resident_credit_for_other_state_ptet: omitted, so the schema default (NA) applies
+#   reference: 'West Virginia Form EPT-100 instructions TY2025, https://tax.wv.gov/Documents/PTE/2025/ept100.Instructions.2025.pdf Resident Partner Report column BJ lets the ENTITY take resident partners'' credit for income tax paid to other states against the WV entity tax; whether a resident''s own return credits another state''s PTET was not found'
+surtax_rate:
+  value: 0
+  reference: 'No surtax-layer entity tax in WV (searched the PTET statute and revenue-department guidance cited above)'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer entity tax in WV'
+local_rate:
+  value: 0
+  reference: 'No local entity-level income tax tied to the WV election'
+local_credit_share:
+  value: 0
+  reference: 'No local entity-level income tax tied to the WV election'

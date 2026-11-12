@@ -1,0 +1,103 @@
+---
+# Connecticut: Pass-Through Entity Tax (PE Tax), Conn. Gen. Stat. 12-699
+# (chapter 228z), enacted by P.A. 18-49 (TY2018+); credit cut to 87.5% by
+# P.A. 19-117 (TY2019+); made ELECTIVE by P.A. 23-204 (TY2024+).
+#
+# TY2018-2023: MANDATORY for every affected business entity (partnerships
+# and S corporations with a CT filing requirement), on either the standard
+# base (CT-source income) or the elective "alternative base" (resident
+# portion of unsourced income + modified CT-source income), with combined
+# returns allowed.
+# TY2024+: elective, annual written notice by the (extended) return due
+# date; ONLY the alternative base remains; combined returns repealed; the
+# corporation business tax credit for PE tax repealed (12-699(f) as amended).
+# "Unsourced income" is income not sourced to any state where the entity has
+# nexus (12-699(a)), so even the alternative base does not reach resident
+# owners' income sourced to OTHER states -- resident_scope = 2.
+#
+# Rate: flat 6.99% fixed in statute (12-699(c)); equals CT's top individual
+# rate but is not defined by reference to it.
+#
+# Members: credit 93.01% (TY2018) / 87.5% (TY2019+) of direct and indirect
+# share, refundable for chapter 229 (income tax) filers. No member add-back
+# of the entity's federal deduction (Schedule CT K-1 Part I additions list
+# has no PE-tax line; the federal deduction is reported only as an
+# informational item to nonresident and PE members, Part VI).
+# No sunset.
+#
+
+available:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'Conn. Gen. Stat. 12-699 (P.A. 18-49, applicable to taxable years commencing on or after 1/1/2018; P.A. 23-204 elective regime for taxable years commencing on or after 1/1/2024), https://www.cga.ct.gov/current/pub/chap_228z.htm (section history note); no sunset'
+
+mandatory:
+  value:
+    '2017': 0
+    '2018': 1
+    '2024': 0
+  reference: 'Conn. Gen. Stat. 12-699(b) as amended by P.A. 23-204: "For taxable years commencing on or after January 1, 2024, an affected business entity ... may elect to pay"; history note: P.A. 23-204 "replac[ed] mandatory tax provisions with provisions re elective tax", https://www.cga.ct.gov/current/pub/chap_228z.htm'
+
+method:
+  value: 1   # credit
+  reference: 'Conn. Gen. Stat. 12-699(f)(1) (formerly (g)(1)(A)), https://www.cga.ct.gov/current/pub/chap_228z.htm'
+
+rate:
+  value:
+    '2017': 0
+    '2018': 0.0699
+  reference: 'Conn. Gen. Stat. 12-699(c): "six and ninety-nine-hundredths per cent multiplied by the tax base" (TY2024+; same 6.99% on both bases TY2018-2023, DRS OCG-7 examples "$1,000,000 * 6.99%"), https://www.cga.ct.gov/current/pub/chap_228z.htm'
+
+rate_tracks_top:
+  value: 0
+  reference: 'Conn. Gen. Stat. 12-699(c) states 6.99% in its own terms; equal to max(st_ord.rates) for every year 2018-2030 but not linked by statute'
+
+# rate_scorp: omitted, so the schema default (NA) applies -- same rate for partnerships and S corporations
+#   reference: 'Conn. Gen. Stat. 12-699(c) applies one rate to all affected business entities'
+
+credit_share:
+  value:
+    '2017': 0
+    '2018': 0.9301
+    '2019': 0.875
+  reference: 'Conn. Gen. Stat. 12-699(f)(1): direct and indirect share "multiplied by eighty-seven and one-half per cent"; history note: P.A. 19-117 replaced the 93.01 per cent multiplier with 87.5 per cent for taxable years commencing on or after 1/1/2019; DRS OCG-7 (8/2019): "93.01% for taxable year 2018; 87.5% for taxable year 2019 and thereafter". P.A. 23-204 (TY2024 elective change) did NOT change the 87.5%'
+
+credit_refundable:
+  value: 1
+  reference: 'Conn. Gen. Stat. 12-699(f)(1): if the credit exceeds the person''s tax liability "the commissioner shall treat such excess as an overpayment and ... shall refund the amount of such excess, without interest"; DRS OCG-7. (Corporate members TY2018-2023: nonrefundable, carryforward; credit repealed TY2024)'
+
+addback:
+  value: 0
+  reference: 'Schedule CT K-1 (2020) Part I Connecticut Modifications: the addition lines (non-CT municipal interest, 168(k), 179, other) contain no PE-tax add-back; the federal deduction of PE tax appears only in Part VI as information for nonresident, noncorporate and PE members. The 87.5% credit share is the statutory offset. Inferred from the form; no DRS statement "members do not add back" was found'
+
+resident_scope:
+  value:
+    '2017': .na.real   # no PE tax
+    '2018': 2
+  reference: 'Conn. Gen. Stat. 12-699(c) (TY2024+): base = resident portion of unsourced income + modified Connecticut source income (12-699(a)(6)-(10)); TY2018-2023 standard base = CT-source income, alternative base as above (former 12-699(k)-(l)). Income of residents sourced to OTHER states is never in the base; "unsourced" income (not sourced to any nexus state) of resident members is. Encoded 2 (state-source) with that caveat'
+
+nonresident_scope:
+  value:
+    '2017': .na.real   # no PE tax
+    '2018': 2
+  reference: 'Conn. Gen. Stat. 12-699(a),(c): modified Connecticut source income'
+
+resident_credit_for_other_state_ptet:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'Conn. Gen. Stat. 12-699(f)(2) (former (g)(1)(B), P.A. 18-49): a resident member "shall also be entitled to a credit ... for such person''s direct and indirect share of taxes paid to another state ... provided the taxes ... result[] from a tax that is substantially similar to the tax imposed under this section", calculated consistently with 12-704, https://www.cga.ct.gov/current/pub/chap_228z.htm'
+
+surtax_rate:
+  value: 0
+  reference: 'CT has no surtax-layer PTET'
+surtax_credit_share:
+  value: 0
+  reference: 'CT has no surtax-layer PTET'
+local_rate:
+  value: 0
+  reference: 'No local income tax in CT'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in CT'

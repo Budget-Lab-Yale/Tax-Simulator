@@ -1,0 +1,32 @@
+---
+# Pass-through entity taxes (PTET): elective state income taxes paid by
+# partnerships and S corporations on their owners' shares, which move the
+# owners' state tax out from under the SALT cap. Read by calc_ptet()
+# (src/calc/ptet.R) and calc_st_ptet() (src/calc/state/st_ptet.R). Method:
+# research/state_tax/ptet/ptet_methodology.md. State PTET law itself is in
+# config/scenarios/tax_law_state/baseline/{st}/ptet.yaml.
+
+# How PTETs are treated
+#   0 = legacy: do_salt_workaround_baseline() moves a share of itemized SALT
+#       into a business loss at the item.salt_workaround_allowed_*
+#       probabilities, in every year; the state calculator has no PTET
+#   1 = the microdata are reported amounts, net of the PTET (decision S48):
+#       no federal adjustment; the state calculator attributes elections by
+#       state and applies each state's add-back, credit or exclusion
+# The default stays 0 until the rise in the federal baseline is signed off
+# (research/state_tax/plan.md section 3.2, checkpoint 1)
+mode:
+  value: 0
+
+# Mode 1. Federal gain, in dollars, above which an owner elects.
+# UNCALIBRATED (plan section 3.2 step 6)
+gain_threshold:
+  value: 0
+
+# Mode 1. Share of S-corporation owners with a gain who elect. UNCALIBRATED
+takeup_scorp:
+  value: 1
+
+# Mode 1. Share of partnership owners with a gain who elect. UNCALIBRATED
+takeup_part:
+  value: 1

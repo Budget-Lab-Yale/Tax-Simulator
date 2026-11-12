@@ -7230,6 +7230,104 @@ run_case('AR', 2024,
   }
   message('test_state_calc no-broad-IIT zero stubs: PASSED')
 
+  #--------------------------------------------------------------------------
+  # Pass-through entity taxes (calc_st_ptet; design in
+  # research/state_tax/ptet/ptet_methodology.md sections 3 to 5, decision S48)
+  #--------------------------------------------------------------------------
+
+  # One owner, single, REPORTING $1,000,000 of S-corporation income and
+  # nothing else, itemizing with $50,000 of state income tax against a
+  # $10,000 SALT cap, at the 37% federal bracket. If the entity elected in a
+  # state with PTET rate r, the reported income is net of the PTET, so the
+  # PTET is r / (1 - r) x 1,000,000. Electing always gains here: none of the
+  # state tax would have been deductible. Each state is compared with the
+  # same owner under the legacy mode, where the state calculator has no PTET.
+  ptet_case = function(st, yr, mode, overrides = list(), ptet_law = law) {
+    unit = st_test_unit(modifyList(list(
+      agi = 1000000, txbl_inc = 950000, scorp = 1000000, part_scorp = 1000000,
+      sch_e = 1000000, sstb_scorp = 0, sstb_part = NA_real_,
+      itemizing = 1, salt_inc_sales = 50000, r.salt_workaround = 0.5,
+      ptet.mode = mode, ptet.gain_threshold = 0, ptet.takeup_part = 1,
+      ptet.takeup_scorp = 1, item.salt_limit = 10000, item.salt_floor = 10000,
+      item.salt_floor_thresh = Inf, item.salt_po_rate = 0,
+      item.salt_workaround_allowed_part = 1,
+      item.salt_workaround_allowed_sstb = 1,
+      item.salt_workaround_allowed_non_sstb = 1,
+      ord.brackets1 = 0, ord.rates1 = 0.10,
+      ord.brackets2 = 609350, ord.rates2 = 0.37), overrides))
+    law_of = function(fs) ptet_law %>%
+      filter(state == st, year == yr, filing_status == fs) %>%
+      select(-state, -year, -filing_status)
+    unit %>%
+      bind_cols(law_of(1)) %>%
+      do_state_taxes(
+        credit_tables = state_credit_tables_for_year(credit_tables, st, yr),
+        law_mfs       = law_of(3))
+  }
+  ptet_check = function(label, got, expected, tol = 0.01) {
+    if (abs(got - expected) > tol) {
+      stop(sprintf('%s: got %.4f, expected %.4f', label, got, expected))
+    }
+  }
+
+  for (st in c('NY', 'CT', 'WI', 'PA')) {
+    legacy  = ptet_case(st, 2024, PTET_MODE_LEGACY)
+    elected = ptet_case(st, 2024, PTET_MODE_REPORTED)
+
+    expected = switch(st,
+      # Credit state with a statutory add-back: 0.109 / 0.891 x 1,000,000 =
+      # 122,334.46; state income rises by it and the credit is all of it
+      NY = list(st_ptet = 122334.46, st_ptet_credit = 122334.46,
+                agi_change = 122334.46),
+      # Credit state without an add-back: 0.0699 / 0.9301 x 1,000,000 =
+      # 75,153.21; state income stays as reported; the credit is 87.5% of it
+      CT = list(st_ptet = 75153.21, st_ptet_credit = 65759.06, agi_change = 0),
+      # Exclusion state: 0.079 / 0.921 x 1,000,000 = 85,776.33 paid by the
+      # entity; the owner excludes the reported 1,000,000 and gets no credit
+      WI = list(st_ptet = 85776.33, st_ptet_credit = 0, agi_change = -1000000),
+      # No PTET: nothing happens
+      PA = list(st_ptet = 0, st_ptet_credit = 0, agi_change = 0)
+    )
+    ptet_check(paste(st, 'st_ptet'), elected$st_ptet, expected$st_ptet)
+    ptet_check(paste(st, 'st_ptet_credit'), elected$st_ptet_credit,
+               expected$st_ptet_credit)
+    ptet_check(paste(st, 'st_agi change'), elected$st_agi - legacy$st_agi,
+               expected$agi_change)
+    ptet_check(paste(st, 'legacy st_ptet'), legacy$st_ptet, 0)
+    if (st == 'PA' && !isTRUE(all.equal(elected, legacy))) {
+      stop('PA: a state without a PTET changed under ptet.mode 1')
+    }
+  }
+
+  # The same record elects in New York and not in Texas, which has no income
+  # tax: its Texas share is untouched
+  law_tx = build_state_tax_law(
+    states  = 'TX', years = 2024,
+    indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+              mutate(growth = 0.025))
+  ptet_check('TX st_ptet',
+             ptet_case('TX', 2024, PTET_MODE_REPORTED, ptet_law = law_tx)$st_ptet, 0)
+
+  # No election: before enactment (NY's PTET starts in 2021); with a draw
+  # above take-up; with no SALT cap, where the owner would deduct the state
+  # tax anyway (credit of 100%, so the gain is zero); for a standard-deduction
+  # filer the gain is the whole PTET, so the election stands
+  ptet_check('NY 2020', ptet_case('NY', 2020, PTET_MODE_REPORTED)$st_ptet, 0)
+  ptet_check('NY draw above take-up',
+             ptet_case('NY', 2024, PTET_MODE_REPORTED,
+                       list(ptet.takeup_scorp = 0.4))$st_ptet, 0)
+  ptet_check('NY no SALT cap',
+             ptet_case('NY', 2024, PTET_MODE_REPORTED,
+                       list(item.salt_limit = Inf, item.salt_floor = 0))$st_ptet, 0)
+  ptet_check('NY standard deduction',
+             ptet_case('NY', 2024, PTET_MODE_REPORTED,
+                       list(itemizing = 0, item.salt_limit = Inf,
+                            item.salt_floor = 0))$st_ptet, 122334.46)
+  ptet_check('NY scenario switch off',
+             ptet_case('NY', 2024, PTET_MODE_REPORTED,
+                       list(item.salt_workaround_allowed_non_sstb = 0))$st_ptet, 0)
+  message('test_state_calc pass-through entity taxes: PASSED')
+
   message('test_state_calc: ALL TESTS PASSED')
   invisible(TRUE)
 }

@@ -119,6 +119,9 @@ st_pipeline = function(tax_units, credit_tables = NULL) {
 
   tax_units %>%
 
+    # Pass-through entity tax: add-back, own-state entity tax, owner credit
+    bind_cols(calc_st_ptet(.)) %>%
+
     # State AGI: starting point plus additions minus subtractions
     bind_cols(calc_st_agi(., credit_tables = credit_tables)) %>%
 

@@ -405,7 +405,8 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
             filter(st_weight > 0) %>%
             transmute(id, state = st, st_weight, st_tax_filer, st_agi,
                       st_txbl_inc, st_tax_pre_credit, st_credits_nonref,
-                      st_credits_ref, st_eitc, st_ctc, st_cdctc, liab_st_iit,
+                      st_credits_ref, st_eitc, st_ctc, st_cdctc, st_ptet,
+                      st_ptet_credit, liab_st_iit,
                       liab_st_individual_net) %>%
             as.data.table()
       }
@@ -428,7 +429,9 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
           st_yctc           = sum(st_weight * st_yctc),
           st_cdctc          = sum(st_weight * st_cdctc),
           st_credits_nonref = sum(st_weight * st_credits_nonref),
-          st_credits_ref    = sum(st_weight * st_credits_ref)
+          st_credits_ref    = sum(st_weight * st_credits_ref),
+          st_ptet           = sum(st_weight * st_ptet),
+          st_ptet_credit    = sum(st_weight * st_ptet_credit)
         ) %>%
         mutate(year = yr, state = st) %>%
         pivot_longer(cols      = -c(year, state),

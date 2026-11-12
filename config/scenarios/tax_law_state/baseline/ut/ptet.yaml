@@ -1,0 +1,78 @@
+---
+# Utah: elective pass-through entity tax (Utah Code 59-10-1403.2(2)).
+#
+# Law: HB 444 (2022 General Session), retrospective to taxable years
+# beginning on or after 1/1/2022 (sec. 10), for taxable years beginning
+# on or before 12/31/2025. It enacted 59-10-1044 (nonrefundable owner credit,
+# 5-year carryforward), the owner add-back in 59-10-114(1)(i), and the
+# definition of "voluntary taxable income" in 59-10-1402(19).
+# HB 77 (2026 General Session, "Tax Modifications"; 59-10-1403.2 effective
+# 5/6/2026, applies beginning 1/1/2026) strikes the bracketed phrase "For each
+# taxable year that begins on or after January 1, 2022, but begins on or
+# before December 31, 2025," from 59-10-1403.2(2)(a), leaving no end date.
+# Read in the enrolled copy (lines 1964-1968).
+#
+# Election: made by paying the tax on or before the last day of the taxable
+# year; the payment is irrevocable and nonrefundable (59-10-1403.2(2)(d),
+# (4)(b)). Not held by the parameters: the 5-year credit carryforward.
+#
+
+available:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Utah Code 59-10-1403.2(2)(a) as enacted by HB 444 (2022), enrolled copy lines 936-937 ("For each taxable year that begins on or after January 1, 2022, but begins on or before December 31, 2025"), https://le.utah.gov/~2022/bills/hbillenr/HB0444.pdf; sunset struck by HB 77 (2026) sec. 18, enrolled copy lines 1964-1966 (applies beginning 1/1/2026), https://le.utah.gov/Session/2026/bills/enrolled/HB0077.pdf'
+mandatory:
+  value: 0
+  reference: 'Utah Code 59-10-1403.2(2)(a) ("may elect to pay a tax")'
+method:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'Utah Code 59-10-1044 (HB 444 (2022) sec. 4): nonrefundable credit equal to the tax paid on the income attributed to the taxpayer'
+rate:
+  value:
+    '2017': 0.0495
+    '2022': 0.0485
+    '2023': 0.0465
+    '2024': 0.0455
+    '2025': 0.045
+    '2026': 0.0445
+  reference: 'Utah Code 59-10-1403.2(2)(a)(i): "the percentage listed in Subsection 59-10-104(2)", the flat individual rate. Values equal max(st_ord.rates) in baseline/ut/ord.yaml for each year (2022 4.85%, 2023 4.65%, 2024 4.55%, 2025 4.5%, 2026 4.45%); pre-2022 values are inert (available = 0)'
+rate_tracks_top:
+  value: 1
+  reference: 'Utah Code 59-10-1403.2(2)(a)(i) (rate = 59-10-104(2) individual rate)'
+# rate_scorp: omitted, so the schema default (NA) applies -- NA = same as rate (schema default)
+#   reference: 'Utah Code 59-10-1403.2(2)(a)'
+credit_share:
+  value: 1
+  reference: 'Utah Code 59-10-1044(2)(b): "The tax credit is equal to the amount of the tax paid under Subsection 59-10-1403.2(2) by the pass-through entity on the income attributed to the taxed pass-through entity taxpayer"'
+credit_refundable:
+  value: 0
+  reference: 'Utah Code 59-10-1044(2)(a) ("nonrefundable tax credit") and (3) (carryforward up to the next five taxable years; no carryback); HB 444 (2022) enrolled copy lines 731-748'
+addback:
+  value: 1
+  reference: 'Utah Code 59-10-114(1)(i) (HB 444 (2022)): the owner adds the tax paid on the owner''s behalf to adjusted gross income; 59-10-1044(1)(c) makes the add-back a condition of the credit'
+# "Voluntary taxable income" = ALL income attributed to resident
+# individuals plus Utah-source income attributed to nonresident individuals
+resident_scope:
+  value: 1
+  reference: 'Utah Code 59-10-1402(19) ("Voluntary taxable income" means income (a) attributed to a final pass-through entity taxpayer who is a resident individual; and (b)(i) business and nonbusiness income derived from or connected with Utah sources and (ii) attributed to a ... nonresident individual), HB 444 (2022) enrolled copy lines 884-889'
+nonresident_scope:
+  value: 2
+  reference: 'Utah Code 59-10-1402(19)(b)'
+resident_credit_for_other_state_ptet:
+  value: 1
+  reference: 'Utah State Tax Commission, "Income Tax Paid to Another State (code 17)" (credit allowed for taxes paid to another state by a pass-through entity if the income is included in Utah taxable income), https://incometax.utah.gov/credits/tax-paid-to-other-states; 59-10-1403.2(2)(c)(ii) requires the entity to report tax paid to another state that the commission determines is substantially similar; Utah Code 59-10-1003'
+surtax_rate:
+  value: 0
+  reference: 'No second entity-level layer'
+surtax_credit_share:
+  value: 0
+  reference: 'No second entity-level layer'
+local_rate:
+  value: 0
+  reference: 'No local income tax in Utah'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in Utah'

@@ -1,0 +1,86 @@
+---
+# Maine: Pass-Through Entity Tax, 36 M.R.S. ch. 815 subch. 3 (ss. 5199-A to
+# 5199-I), credit 36 M.R.S. 5219-CCC, enacted by P.L. 2025 c. 650 Pt. N
+# (enacted 4/10/2026), for taxable years beginning on or after 1/1/2026.
+#
+# Election: annual, declared on a timely filed (extended) return;
+# irrevocable after the due date (5199-B). Qualified members: individuals,
+# trusts, estates (5199-A(9)). Tax may not be reduced by any ch. 822 credit.
+# An electing entity also pays a 10% estimated tax on behalf of nonresident
+# qualified members (5199-D) -- a prepayment, not modeled here.
+# Rate = highest marginal rate under 5111 EXCLUDING the 2% surcharge of
+# 5111(7) (new 2026 surcharge on high incomes; the PTET does not reach it).
+# No sunset found in subch. 3.
+#
+
+available:
+  value:
+    '2017': 0
+    '2026': 1
+  reference: '36 M.R.S. 5199-C: "for every taxable year beginning on or after January 1, 2026, a tax is imposed on every electing pass-through entity" (P.L. 2025 c. 650 Pt. N s.3), https://legislature.maine.gov/statutes/36/title36sec5199-C.html'
+
+mandatory:
+  value: 0
+  reference: '36 M.R.S. 5199-B (annual election), https://legislature.maine.gov/statutes/36/title36sec5199-B.html'
+
+method:
+  value: 1   # credit
+  reference: '36 M.R.S. 5219-CCC, https://legislature.maine.gov/statutes/36/title36sec5219-CCC-1.html'
+
+rate:
+  value:
+    '2017': 0
+    '2026': 0.0715
+  reference: '36 M.R.S. 5199-C: "the pass-through entity taxable income multiplied by the highest marginal tax rate under section 5111 except for the income tax surcharge imposed pursuant to section 5111, subsection 7"; top 5111 rate 7.15% = max(st_ord.rates) in baseline/me/ord.yaml for 2026'
+
+rate_tracks_top:
+  value: 1
+  reference: '36 M.R.S. 5199-C (top 5111 rate, excluding the 5111(7) surcharge)'
+
+# rate_scorp: omitted, so the schema default (NA) applies -- same rate
+#   reference: '36 M.R.S. 5199-C applies one rate to every electing pass-through entity'
+
+credit_share:
+  value:
+    '2017': 0
+    '2026': 0.9
+  reference: '36 M.R.S. 5219-CCC: "a credit ... equal to 90% of the amount of the tax required to be reported to the qualified member" (P.L. 2025 c. 650 Pt. N s.5)'
+
+credit_refundable:
+  value: 1
+  reference: '36 M.R.S. 5219-CCC: "The credit authorized by this section is refundable"'
+
+addback:
+  value: 1
+  reference: '36 M.R.S. 5122(1)(VV) (P.L. 2025 c. 650 Pt. N s.1; reallocated by RR 2025 c. 2 Pt. A s.155): for tax years beginning on or after 1/1/2026, add "the taxpayer''s distributive share of the tax imposed by chapter 815, subchapter 3" and of any substantially similar other-state tax, https://legislature.maine.gov/statutes/36/title36sec5122.html'
+
+resident_scope:
+  value:
+    '2017': .na.real   # no PTET
+    '2026': 1
+  reference: '36 M.R.S. 5199-A(2): for a resident individual, trust or estate, distributive share of income = the portion of entity income "entering into the qualified member''s federal adjusted gross income" (all-source), https://legislature.maine.gov/statutes/36/title36sec5199-A.html'
+
+nonresident_scope:
+  value:
+    '2017': .na.real   # no PTET
+    '2026': 2
+  reference: '36 M.R.S. 5199-A(2): for a nonresident, income "derived from or connected with sources in this State, as provided by section 5142"'
+
+resident_credit_for_other_state_ptet:
+  value:
+    '2017': .na.real   # pre-2026 treatment not researched
+    '2026': 1
+  reference: '36 M.R.S. 5217-A(2) (P.L. 2025 c. 650 Pt. N s.4, TY2026+): the resident credit equals the individual''s distributive share of a pass-through entity tax substantially similar to ch. 815 subch. 3, with respect to income derived from the other jurisdiction, https://legislature.maine.gov/statutes/36/title36sec5217-A.html. Whether pre-2026 Maine law credited other states'' PTETs under the general 5217-A was not found (searched the statute history only)'
+
+surtax_rate:
+  value: 0
+  reference: 'The ME PTET explicitly excludes the 5111(7) surcharge (5199-C); no surtax-layer PTET'
+surtax_credit_share:
+  value: 0
+  reference: 'No surtax-layer PTET in ME'
+local_rate:
+  value: 0
+  reference: 'No local income tax in ME'
+local_credit_share:
+  value: 0
+  reference: 'No local income tax in ME'

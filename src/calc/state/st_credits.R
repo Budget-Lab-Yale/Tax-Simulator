@@ -97,6 +97,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'exempt_int',        # (dbl)  tax-exempt interest (PA forgiveness income)
     'alimony',           # (dbl)  alimony received (PA forgiveness income)
     'st_agi',            # (dbl)  state income base
+    'st_ptet_credit',    # (dbl)  owner credit for a pass-through entity tax (calc_st_ptet)
     'st_txbl_inc',       # (dbl)  state taxable income (MN marriage credit)
     'st_additions',      # (dbl)  additions to the federal AGI base
     'st_bid',            # (dbl)  business carve-out deduction (OH MAGI addback)
@@ -583,6 +584,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_twoearner_credit + st_item_credit +
                         st_char_credit + st_lic + st_kg_credit + st_step_credit +
                         earn$st_pov_credit +
+                        tax_unit$st_ptet_credit *
+                          (1 - tax_unit$st_ptet.credit_refundable) +
                         hh$st_stfc *
                           (1 - tax_unit$st_credits.stfc_refundable) +
                         care$st_care_credit *
@@ -616,7 +619,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                           tax_unit$st_credits.percap_refundable +
                         hh$st_stfc * tax_unit$st_credits.stfc_refundable +
                         care$st_care_credit * tax_unit$st_credits.care_credit_refundable +
-                        hh$st_lictr * tax_unit$st_credits.lictr_refundable
+                        hh$st_lictr * tax_unit$st_credits.lictr_refundable +
+                        tax_unit$st_ptet_credit *
+                          tax_unit$st_ptet.credit_refundable
   ) %>%
     select(all_of(return_vars$calc_st_credits)) %>%
     return()

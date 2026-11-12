@@ -1089,6 +1089,38 @@ scalars:
   st_transfers.wftc_max_income_joint3: 0
   st_transfers.wftc_max_income_joint4: 0
 
+  # ptet.yaml (pass-through entity tax; research/state_tax/plan.md sec. 3.2).
+  # Enumerations are numeric: method 0 = none, 1 = owner credit, 2 = owner
+  # income exclusion; *_scope 1 = all-source income of the owner's share,
+  # 2 = state-source (apportioned) income only. null (NA) on a tri-state
+  # flag means the research could not settle the law
+  st_ptet.available: 0             # 1 = an entity-level tax on owners' shares is in effect for the tax year
+  st_ptet.mandatory: 0             # 1 = entity tax is mandatory, not elective (CT 2018-2023)
+  st_ptet.method: 0                # owner relief: 0 none, 1 credit, 2 exclusion
+  st_ptet.rate: 0                  # entity rate on an owner's share; the TOP rate where graduated (see families)
+  # 1 = the statute sets the PTET rate equal to the state's top individual
+  # rate. Documentation only; the calculator reads `rate`
+  st_ptet.rate_tracks_top: 0
+  # S-corporation rate where it differs from the partnership rate (WI
+  # 2018: only S corporations could elect). null = same as `rate`
+  st_ptet.rate_scorp: null
+  st_ptet.credit_share: 0          # owner credit as a share of the owner's portion of entity tax (method 1 only)
+  st_ptet.credit_refundable: 0     # 1 = excess credit refunded; 0 = limited to tax (carryforward not modeled)
+  st_ptet.addback: 0               # 1 = owners add back the entity's PTET deduction to state income
+  st_ptet.resident_scope: null     # entity base for RESIDENT owners: 1 all-source, 2 state-source only
+  st_ptet.nonresident_scope: null  # entity base for NONRESIDENT owners
+  # 1 = the resident credit for taxes paid to other states covers another
+  # state's PTET paid on the resident's behalf (recorded; not modeled)
+  st_ptet.resident_credit_for_other_state_ptet: null
+  # Second elective entity tax on income above the state's surtax threshold
+  # (MA c. 63E, TY2026+). Recorded; not modeled
+  st_ptet.surtax_rate: 0
+  st_ptet.surtax_credit_share: 0
+  # Local entity tax tied to the state election (NYC Art. 24-B). Recorded;
+  # the state calculator models no local income tax
+  st_ptet.local_rate: 0
+  st_ptet.local_credit_share: 0
+
 # Live parameter names read outside the calculators (no default needed)
 extra_scalars:
   - st_agi.conformity_group   # consumed by state_conformity_groups_for_law()
@@ -1111,6 +1143,7 @@ sentinels:
   - st_credits.jfc_bounds1
   - st_credits.retire_credit_bounds1
   - st_ded.fed_tax_ded_band_upper1
+  - st_ptet.brackets1
 
 # Vector-family name patterns (element count varies by state). The \d*
 # suffix is optional because a single-element vector parses to a
@@ -1161,3 +1194,5 @@ families:
     consumer: st_credits_earned.R   # child-count-keyed EITC match (WI/MD)
   - pattern: '^st_credits\.mc_single_brackets\d*$'
     consumer: st_credits.R   # MN marriage credit single-schedule brackets
+  - pattern: '^st_ptet\.(rates|brackets)\d*$'
+    consumer: none   # graduated ENTITY-level PTET schedules (NY, NJ, OR, LA, MS); recorded, the calculator uses st_ptet.rate

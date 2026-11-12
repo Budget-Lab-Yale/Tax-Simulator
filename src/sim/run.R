@@ -376,8 +376,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # Join tax law
     left_join(tax_law, by = c('year', 'filing_status')) %>%
 
-    # Account for tax law changes manifesting as reporting changes
-    do_salt_workaround_baseline() %>%
+    # Pass-through entity taxes on the federal side (ptet.mode 0: the legacy
+    # SALT workaround; 1: none, the microdata are reported amounts)
+    calc_ptet() %>%
 
     # Adjust Social Security benefits for VAT-driven price level increase
     do_ss_cola(year, vat_price_offset) %>%

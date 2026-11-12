@@ -1,0 +1,114 @@
+---
+# New Jersey: Pass-Through Business Alternative Income Tax (BAIT),
+# N.J.S.A. 54A:12-1 to -10, enacted by P.L. 2019 c.320 (TY2020+), amended by
+# P.L. 2021 c.419 (TY2022+).
+#
+# Election: annual, by the entity (PTE-100 / election made each year; does not
+# carry forward). Eligible: partnerships, S corporations, LLCs with at least
+# one member liable for NJ GIT. Member credit claimed on NJ-1040, NJ-1040NR,
+# NJ-1041, CBT and NJ-1065; refundable.
+#
+# Base ("sum of each member's share of distributive proceeds"):
+# - TY2020-2021: NJ-sourced distributive proceeds for every member.
+# - TY2022+ (c.419): PARTNERSHIPS include resident individual, estate and
+#   trust partners' income "derived from sources both inside and outside New
+#   Jersey"; S CORPORATIONS still use income allocated to NJ. So
+#   resident_scope = 1 from 2022 holds for partnerships only.
+#
+# Rate schedule is on the ENTITY's total distributive proceeds:
+# - TY2020-2021: 5.675% to $250k, 6.52% to $1M, 9.12% to $5M, 10.9% above.
+# - TY2022+: 5.675% to $250k, 6.52% to $1M, 10.9% above (9.12% bracket
+#   eliminated). The individual GIT top rate is 10.75%; BAIT's 10.9% is its
+#   own schedule.
+#
+# Other: overpayments carry forward only if the member's entity elects the
+# next year, otherwise refunded. No sunset.
+#
+
+available:
+  value:
+    '2017': 0
+    '2020': 1
+  reference: 'N.J.S.A. 54A:12-3 (P.L. 2019 c.320, taxable years beginning on or after 1/1/2020); NJ Division of Taxation BAIT page https://www.nj.gov/treasury/taxation/baitpte/ (last updated 4/16/2026, no sunset or end date)'
+
+mandatory:
+  value: 0
+  reference: 'N.J.S.A. 54A:12-3(a): annual election; https://www.nj.gov/treasury/taxation/baitpte/'
+
+method:
+  value: 1   # credit
+  reference: 'N.J.S.A. 54A:12-5 (refundable credit for the member''s direct share of the tax paid), P.L. 2021 c.419 sec.5, https://pub.njleg.gov/bills/2020/PL21/419_.HTM'
+
+rate:
+  value:
+    '2017': 0
+    '2020': 0.109
+  reference: 'N.J.S.A. 54A:12-3(b): top bracket 10.9% in BOTH schedules -- over $5,000,000 for TY2020-2021 (P.L. 2019 c.320) and over $1,000,000 from TY2022 (P.L. 2021 c.419, https://pub.njleg.gov/bills/2020/PL21/419_.HTM: "Over $1,000,000.00 ... $63,087.50 plus 10.9% of the excess"); BAIT page https://www.nj.gov/treasury/taxation/baitpte/ rate table. Transcription checks (secondary): CBIZ/Marcum 2022 alert ("The 9.12% tax bracket (between $1 million and $5 million of income) has been eliminated")'
+
+rate_tracks_top:
+  value: 0
+  reference: 'N.J.S.A. 54A:12-3(b) sets its own schedule; the GIT top rate is 10.75% (N.J.S.A. 54A:2-1), so BAIT does not track it'
+
+# rate_scorp: omitted, so the schema default (NA) applies -- same schedule for partnerships and S corporations
+#   reference: 'N.J.S.A. 54A:12-3(b) applies one schedule to all electing entities'
+
+# Entity-level schedule, lower bounds of the entity's distributive proceeds.
+# TY2022+ is padded to four bands by repeating the top bound (zero-width band)
+rates:
+  value:
+    '2017': [0, 0, 0, 0]
+    '2020': [0.05675, 0.0652, 0.0912, 0.109]
+    '2022': [0.05675, 0.0652, 0.109, 0.109]
+  reference: 'N.J.S.A. 54A:12-3(b): P.L. 2019 c.320 schedule (TY2020-21) and P.L. 2021 c.419 schedule (TY2022+, https://pub.njleg.gov/bills/2020/PL21/419_.HTM); current BAIT page table "$0-$250,000 5.675%; $250,001-$1,000,000 6.52%; Over $1,000,000 10.9%". The TY2020-21 9.12%/$5M tier is from the original act as summarized by BDO/EY/CBIZ (secondary); the original c.320 text was not read'
+brackets:
+  value:
+    '2017': [0, 0, 0, 0]
+    '2020': [0, 250000, 1000000, 5000000]
+    '2022': [0, 250000, 1000000, 1000000]
+  reference: 'N.J.S.A. 54A:12-3(b) (see rates). Not indexed'
+
+credit_share:
+  value:
+    '2017': 0
+    '2020': 1.0
+  reference: 'N.J.S.A. 54A:12-5: credit equal to the member''s direct share of the tax paid; BAIT page: "Credits are refundable"'
+
+credit_refundable:
+  value: 1
+  reference: 'N.J.S.A. 54A:12-5; https://www.nj.gov/treasury/taxation/baitpte/ (credits "refundable and may be applied to" NJ-1040, NJ-1040NR, NJ-1041, CBT, NJ-1065)'
+
+addback:
+  value: 1
+  reference: 'NJ Division of Taxation BAIT FAQ https://www.nj.gov/treasury/taxation/baitpte/baitpte-faq.shtml: BAIT "is a tax based on income and should be added back to partnership and S corporation income on Line 13a of Form NJ-1065 or on Line 4b, Schedule K of Form CBT-100S". The add-back is made at entity level, so the members'' NJ distributive share is gross of BAIT'
+
+resident_scope:
+  value:
+    '2017': .na.real   # no BAIT
+    '2020': 2
+    '2022': 1
+  reference: 'N.J.S.A. 54A:12-2 as amended by P.L. 2021 c.419 (https://pub.njleg.gov/bills/2020/PL21/419_.HTM): partnership distributive proceeds include "the distributive share of partnership income derived from sources both inside and outside New Jersey" of resident individual, estate and trust partners (TY2022+); before 2022 NJ-sourced only. S CORPORATIONS remain "the pro rata share of S corporation income allocated to this State" in all years (resident S-corp shareholders = 2). BAIT page: "Resident individual, estate, and trust members are taxed on all income"'
+
+nonresident_scope:
+  value:
+    '2017': .na.real   # no BAIT
+    '2020': 2
+  reference: 'N.J.S.A. 54A:12-2; https://www.nj.gov/treasury/taxation/baitpte/ ("Other resident and nonresident members are taxed on New Jersey-source income")'
+
+resident_credit_for_other_state_ptet:
+  value:
+    '2017': .na.real   # pre-2022 treatment not found; see comment
+    '2022': 1
+  reference: 'N.J.S.A. 54A:4-1 as amended (resident credit for "any pass-through entity tax imposed by another state ... substantially similar to the New Jersey Business Alternative Income Tax"), quoted in NJ BAIT FAQ https://www.nj.gov/treasury/taxation/baitpte/baitpte-faq.shtml; the credit "shall not exceed what would have been allowed if the income was taxed at the individual level". Effective year assumed to be the P.L. 2021 c.419 TY2022 package; the c.419 text read does not include the 54A:4-1 amendment, so TY2018-2021 is NA (searched NJ FAQ, c.419, CBIZ/Marcum alert)'
+
+surtax_rate:
+  value: 0
+  reference: 'NJ has no surtax-layer PTET'
+surtax_credit_share:
+  value: 0
+  reference: 'NJ has no surtax-layer PTET'
+local_rate:
+  value: 0
+  reference: 'No local entity tax tied to BAIT'
+local_credit_share:
+  value: 0
+  reference: 'No local entity tax tied to BAIT'
