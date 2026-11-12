@@ -15,8 +15,8 @@ For review (JI). This is the short statement of how the model would treat
 pass-through entity taxes. The argument and evidence are in
 `research/state_tax/ptet/ptet_proposal.md`; the steps and checkpoints are in
 `research/state_tax/plan.md` section 3.2; the law is in
-`research/state_tax/ptet/ptet_state_law.csv`, with draft per-state parameter
-files in `research/state_tax/ptet/params_draft/{st}/ptet.yaml`. This version
+`research/state_tax/ptet/ptet_state_law.csv`, with per-state parameter files
+`config/scenarios/tax_law_state/baseline/{st}/ptet.yaml`. This version
 rests on decision S48 (`research/decisions_log.md`): the microdata report
 pass-through income net of the PTET, and the model works back to income before
 it. Section 2 explains why. The earlier version, which went the other way, is
@@ -224,6 +224,15 @@ record and state where the election changes from the baseline:
 
 A reform that changes no election leaves the reported file unchanged.
 
+**Projection years use the same rule.** The file is the baseline as it stands
+only for years fit to observed returns. Later years carry the last observed
+year's netting forward while the incentive changes: the cap is $40,000 from
+2025, phases down, and returns to $10,000 in 2030, and the Minnesota and Oregon
+PTETs end after 2027. From the first projected year the baseline compares each
+year's elections under that year's law with the elections under the last
+observed year's law, and moves reported income and SALT for records whose
+election differs, exactly as for a reform.
+
 *Example, continued.* A reform that removes the SALT cap removes the gain. The
 New York share's reported income rises to $1,122,334 and its itemized state
 income tax rises by $122,334; the Texas share is unchanged.
@@ -268,7 +277,10 @@ where; it moves no federal total.
   $3.2 billion in 2017 and $11 to 16 billion a year from 2018. The reported data
   already carry the PTET, so today's function counts it a second time. This
   needs John Ricco's agreement, and a check of the baseline against CBO
-  receipts.
+  receipts. This holds on the aged 2017 file in production today as well as on
+  the generative file: both grow pass-through income on reported amounts. The
+  switch is not turned on until elections can change in a counterfactual
+  (section 6), so that a reform to the cap still moves them.
 - **Federal cost of the PTET** becomes a counterfactual quantity (no PTET
   against the baseline), checked against the Joint Committee on Taxation's
   $18.1 billion.
@@ -300,14 +312,19 @@ Open:
   the PTET) and the state cost where the credit is below 100%.
 - The timing of the generative Tax-Data baseline, which this design depends on.
 
-Built so far, by the note's previous version: a test pinning the current
-function and its 2017 and 2024 totals; a reordering of the adjustment,
-verified to leave baseline totals unchanged; the state PTET parameters, parsed
-and not yet read by any calculator. None of these was on GitHub as of
-2026-11-11; the parameter files there are the drafts in `params_draft/`.
+Built so far (2026-11-11), behind a switch, `ptet.mode`, that defaults to the
+old method, so no result has changed: a test pinning the current function and
+its 2017 and 2024 totals; the state PTET parameters; `calc_ptet()`, which under
+the new mode makes no federal adjustment; and the state election, add-back,
+credit and exclusion of sections 3 to 5, with worksheet cases. Not built:
+counterfactual and projection-year election changes (section 6), the state-group
+federal pass and the national series (section 7), calibration (section 8).
 
 ## Revision history
 
+- **2026-11-11** — Added the projection-year rule (section 6), that removing
+  the federal adjustment does not depend on the generative file, and that the
+  switch waits for counterfactual elections (section 9); updated what is built.
 - **2026-11-11** — Rewritten for reported income held fixed (S48): the
   federal baseline takes no PTET adjustment, income before the PTET is
   inferred state by state, the state side adds back only where the record

@@ -3,7 +3,7 @@ title: "Research corpus index"
 role: index
 workstream: cross-cutting
 status: current
-updated: 2026-11-10
+updated: 2026-11-11
 sot: self
 supersedes: []
 superseded_by: null
@@ -44,7 +44,7 @@ lives in `src/tests/state/cross_model/`; only its *records* are here.
 | evidence | [`state_tax/cross_model/`](state_tax/cross_model/) — per-state triage reports, filed bug packets, divergence records |
 | evidence | [`state_tax/aggregate/`](state_tax/aggregate/README.md) — gap diagnostics: modeled state liability against Census collections and state agency tables |
 | evidence | [`state_tax/acs_test/`](state_tax/acs_test/README.md) — which data gaps the ACS could fill |
-| notes | [`state_tax/ptet/`](state_tax/ptet/ptet_proposal.md) — pass-through entity taxes: the proposal, the state-by-year law table, draft parameters |
+| notes | [`state_tax/ptet/`](state_tax/ptet/ptet_proposal.md) — pass-through entity taxes: the proposal, the method in short form, the state-by-year law table, the parameter encoding record |
 | notes | [`state_tax/notes/`](state_tax/notes/) — cross-state surveys, CA analyses, deferred designs |
 
 ### `state_weights/` — split state weights and the non-filer rework

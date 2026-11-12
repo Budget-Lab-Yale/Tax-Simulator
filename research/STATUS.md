@@ -3,7 +3,7 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-11-10
+updated: 2026-11-11
 sot: self
 supersedes: [research/archive/STATUS_2026-10-25_pre-rewrite.md]
 superseded_by: null
@@ -85,8 +85,15 @@ In order; details and checkpoints are in `research/state_tax/plan.md` section 3.
    federal cap on the state and local tax deduction. Today a federal-only
    function approximates it and the state calculator has nothing. Proposal:
    `research/state_tax/ptet/ptet_proposal.md`; law table:
-   `research/state_tax/ptet/ptet_state_law.csv`; draft parameters:
-   `research/state_tax/ptet/params_draft/README.md`. Nothing is implemented.
+   `research/state_tax/ptet/ptet_state_law.csv`; parameter encoding record:
+   `research/state_tax/ptet/params_draft/README.md`; the design:
+   `research/state_tax/ptet/ptet_methodology.md` (decision S48: the microdata
+   are reported amounts, net of the PTET, so the federal baseline takes no
+   adjustment); the note to John Ricco on the Tax-Data side:
+   `research/state_tax/ptet/ptet_tax_data_note.md`. Built (2026-11-11), behind
+   the switch `ptet.mode`, which defaults to the old method: a test pinning the
+   current function, the state PTET parameters, and the state election,
+   add-back, credit and exclusion. No result has changed.
 3. **TY2026 state law** — seven states have known unencoded provisions (SC, ND,
    DC, RI, NM, MT, CT), and most states the tracker calls `carry-forward` hold
    2025 dollar amounts fixed in 2026 rather than indexing them.

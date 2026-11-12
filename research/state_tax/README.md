@@ -3,7 +3,7 @@ title: "State-tax encoding workstream"
 role: index
 workstream: state_tax
 status: current
-updated: 2026-11-10
+updated: 2026-11-11
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null
@@ -27,7 +27,7 @@ jurisdictions); what is next is in the plan. See [`../STATUS.md`](../STATUS.md).
 | evidence | [`cross_model/`](cross_model/) — per-state triage reports, filed external-model bug packets, federal-divergence record |
 | evidence | [`aggregate/`](aggregate/README.md) — gap diagnostics: modeled state liability against Census collections and NY, CA and CT agency tables |
 | evidence | [`acs_test/`](acs_test/README.md) — which data gaps the ACS could fill |
-| notes | [`ptet/`](ptet/ptet_proposal.md) — pass-through entity taxes: the proposal ([`ptet_proposal.md`](ptet/ptet_proposal.md)), the state-by-year law table ([`ptet_state_law.md`](ptet/ptet_state_law.md)), draft per-state parameters ([`params_draft/`](ptet/params_draft/README.md)) |
+| notes | [`ptet/`](ptet/ptet_proposal.md) — pass-through entity taxes: the proposal ([`ptet_proposal.md`](ptet/ptet_proposal.md)), the design ([`ptet_methodology.md`](ptet/ptet_methodology.md)), the note on the Tax-Data side ([`ptet_tax_data_note.md`](ptet/ptet_tax_data_note.md)), the state-by-year law table ([`ptet_state_law.md`](ptet/ptet_state_law.md)), the encoding record for the per-state parameters ([`params_draft/`](ptet/params_draft/README.md)) |
 | notes | [`notes/`](notes/) — cross-state feature surveys, the CA cluster, deferred designs |
 | scripts | [`scripts/`](scripts/) — research-maintenance only |
 
