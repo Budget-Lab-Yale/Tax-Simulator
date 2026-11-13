@@ -98,6 +98,24 @@ sl_po_thresh_married:
 sl_po_range_single:
   value: 15000
   
+# Unemployment compensation excluded from gross income, per return. ARPA
+# section 9042 (IRC 85(c)): up to $10,200 per person of 2020 unemployment
+# compensation, for returns with modified AGI (AGI figured without the
+# exclusion) under $150,000, any filing status. The model has one unemployment
+# amount per return, so the limit is applied per return: on a joint return
+# where both spouses received benefits the exclusion is understated by up to
+# $10,200 (the bound applies only to married filers reporting more than
+# $10,200 of unemployment compensation).
+ui_excl_limit:
+  value:
+    '2014': 0
+    '2020': 10200
+    '2021': 0
+
+# Modified AGI at or above which no unemployment compensation is excluded
+ui_excl_magi_limit:
+  value: 150000
+
 # Maximum tuition and fees deduction
 tuition_ded_limit:
   value: 

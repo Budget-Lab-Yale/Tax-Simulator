@@ -4,7 +4,7 @@
 
 # Set return variables for function
 return_vars$calc_agi = c('txbl_ss', 'excess_bus_loss', 'char_above_ded', 
-                         'gross_inc', 'above_ded', 'agi')
+                         'ui_excl', 'gross_inc', 'above_ded', 'agi')
 
 
 calc_agi = function(tax_unit, fill_missings = F) {
@@ -21,6 +21,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
   # Returns: dataframe of following variables:
   #   - txbl_ss        (dbl) Social Security benefits included in AGI
   #   - char_above_ded (dbl) above-the-line charitable deduction
+  #   - ui_excl        (dbl) unemployment compensation excluded from gross income
   #   - gross_inc      (dbl) gross income
   #   - above_ded      (dbl) above-the-line deductions
   #   - agi            (dbl) Adjusted Gross Income
@@ -72,6 +73,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.sl_po_range',            # (int) MAGI phaseout range for student loan interest deduction
     'agi.tuition_ded_limit',      # (int) limit on tuition and feeds deduction 
     'agi.dpad_limit',             # (int) limit on domestic production activities deduction
+    'agi.ui_excl_limit',          # (int) unemployment compensation excluded from gross income, per return
+    'agi.ui_excl_magi_limit',     # (int) modified AGI at or above which no unemployment compensation is excluded
     'char.above_limit'            # (int) maximum deductible above-the-line charitable contributions
   )
   
@@ -123,6 +126,22 @@ calc_agi = function(tax_unit, fill_missings = F) {
       # (IRC section 86 adds back tax-exempt interest even though it's excluded from AGI)
       magi_ss = inc_ex_ss + exempt_int - above_ded_ex_sl
       
+    ) %>% 
+    
+    # Taxable Social Security benefits and AGI as if no unemployment
+    # compensation were excluded: the exclusion's income test (IRC 85(c)) is on
+    # AGI figured without it
+    bind_cols(calc_ss(.) %>% rename(txbl_ss_pre_ui_excl = txbl_ss)) %>% 
+    mutate(
+      agi_pre_ui_excl = inc_ex_ss + txbl_ss_pre_ui_excl - above_ded_ex_sl - sl_int_ded,
+      
+      # Unemployment compensation excluded from gross income (2020 only under
+      # current law), then gross income and MAGI for Social Security without it
+      ui_excl   = if_else(agi_pre_ui_excl < agi.ui_excl_magi_limit, 
+                          pmin(pmax(ui, 0), agi.ui_excl_limit), 
+                          0),
+      inc_ex_ss = inc_ex_ss - ui_excl,
+      magi_ss   = magi_ss - ui_excl
     ) %>% 
     
     # Calculate taxable social security benefits 
